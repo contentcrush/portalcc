@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertProjectSchema } from "@shared/schema";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -67,23 +68,18 @@ const projectFormSchema = insertProjectSchema.extend({
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
-interface ProjectFormDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  project?: any; // O projeto para edição, se necessário
-}
-
-export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialogProps) {
+export function ProjectFormDialog() {
+  const { isFormOpen, closeProjectForm, projectToEdit } = useProjectForm();
   const [activeTab, setActiveTab] = useState("info");
   const { toast } = useToast();
 
   // Fetch clients para o dropdown
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['/api/clients']
   });
 
   // Fetch users para seleção de membros da equipe
-  const { data: users, isLoading: isLoadingUsers } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ['/api/users']
   });
 
@@ -91,18 +87,18 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
-      name: project?.name || "",
-      description: project?.description || "",
-      client_id: project?.client_id || undefined,
-      status: project?.status || "draft",
-      budget: project?.budget || undefined,
-      startDate: project?.startDate ? new Date(project.startDate) : null,
-      endDate: project?.endDate ? new Date(project.endDate) : null,
-      primary_area: project?.primary_area || "",
-      priority: project?.priority || "media",
-      complexity: project?.complexity || "moderada",
-      team_members: project?.team_members || [],
-      thumbnail: project?.thumbnail || ""
+      name: projectToEdit?.name || "",
+      description: projectToEdit?.description || "",
+      client_id: projectToEdit?.client_id || undefined,
+      status: projectToEdit?.status || "draft",
+      budget: projectToEdit?.budget || undefined,
+      startDate: projectToEdit?.startDate ? new Date(projectToEdit.startDate) : null,
+      endDate: projectToEdit?.endDate ? new Date(projectToEdit.endDate) : null,
+      primary_area: projectToEdit?.primary_area || "",
+      priority: projectToEdit?.priority || "media",
+      complexity: projectToEdit?.complexity || "moderada",
+      team_members: projectToEdit?.team_members || [],
+      thumbnail: projectToEdit?.thumbnail || ""
     }
   });
 
@@ -132,7 +128,7 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
       });
       
       // Fechar o diálogo
-      onClose();
+      closeProjectForm();
     },
     onError: (error: Error) => {
       toast({
@@ -146,6 +142,10 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
   // Mutation para atualizar projeto existente
   const updateProjectMutation = useMutation({
     mutationFn: async (data: ProjectFormValues) => {
+      if (!projectToEdit?.id) {
+        throw new Error("ID do projeto não encontrado");
+      }
+      
       // Formatação de alguns campos se necessário
       const formatted = {
         ...data,
@@ -154,12 +154,14 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
         budget: data.budget || null
       };
       
-      const res = await apiRequest("PUT", `/api/projects/${project.id}`, formatted);
+      const res = await apiRequest("PUT", `/api/projects/${projectToEdit.id}`, formatted);
       return await res.json();
     },
     onSuccess: (updatedProject) => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${project.id}`] });
+      if (projectToEdit?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectToEdit.id}`] });
+      }
       
       toast({
         title: "Projeto atualizado",
@@ -167,7 +169,7 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
         variant: "default",
       });
       
-      onClose();
+      closeProjectForm();
     },
     onError: (error: Error) => {
       toast({
@@ -180,7 +182,7 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
 
   // Lidar com a submissão do formulário
   function onSubmit(data: ProjectFormValues) {
-    if (project) {
+    if (projectToEdit) {
       updateProjectMutation.mutate(data);
     } else {
       createProjectMutation.mutate(data);
@@ -347,6 +349,122 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
                       </FormItem>
                     )}
                   />
+                </TabsContent>
+                
+                {/* Tab: Prioridade e Complexidade */}
+                <TabsContent value="priority" className="space-y-4 mt-0">
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-100 mb-4">
+                    <h3 className="text-sm font-medium text-blue-800 mb-2">Sistema de Prioridade Inteligente</h3>
+                    <p className="text-xs text-blue-700">
+                      Defina a prioridade e complexidade do projeto para ajudar a equipe a planejar e executar o trabalho de forma mais eficiente.
+                    </p>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prioridade</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a prioridade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="baixa">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                                <span>Baixa</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="media">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                                <span>Média</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="alta">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
+                                <span>Alta</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="urgente">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                                <span>Urgente</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Define a ordem de execução e alocação de recursos
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="complexity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Complexidade</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a complexidade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="simples">Simples (1-2 dias)</SelectItem>
+                            <SelectItem value="moderada">Moderada (3-7 dias)</SelectItem>
+                            <SelectItem value="complexa">Complexa (1-3 semanas)</SelectItem>
+                            <SelectItem value="muito_complexa">Muito Complexa (1+ mês)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Ajuda a estimar tempo e recursos necessários
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="mt-6 p-4 border rounded-md bg-gray-50">
+                    <h3 className="font-medium text-sm mb-2">Recomendações Baseadas na Prioridade</h3>
+                    <div className="space-y-2 text-sm">
+                      {form.watch("priority") === "urgente" && (
+                        <p className="text-red-600">
+                          <span className="font-medium">Urgente:</span> Aloque pelo menos 2 membros sênior à equipe e considere postergar outros projetos.
+                        </p>
+                      )}
+                      {form.watch("priority") === "alta" && (
+                        <p className="text-amber-600">
+                          <span className="font-medium">Alta:</span> Considere dar preferência a este projeto sobre outros de menor prioridade.
+                        </p>
+                      )}
+                      {form.watch("priority") === "media" && (
+                        <p className="text-blue-600">
+                          <span className="font-medium">Média:</span> Equilibre com outros projetos de mesma prioridade.
+                        </p>
+                      )}
+                      {form.watch("priority") === "baixa" && (
+                        <p className="text-green-600">
+                          <span className="font-medium">Baixa:</span> Pode ser executado quando houver disponibilidade de recursos.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </TabsContent>
                 
                 {/* Tab: Datas e Orçamento */}
