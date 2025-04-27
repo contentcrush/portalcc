@@ -66,10 +66,35 @@ const userFormSchema = z.object({
   role: z.enum(["admin", "manager", "editor", "viewer"], {
     message: "Função deve ser admin, manager, editor ou viewer"
   }),
+  
+  // Campos básicos
   department: z.string().optional().nullable(),
   position: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   bio: z.string().optional().nullable(),
+  
+  // Campos avançados
+  user_type: z.enum(["pf", "pj"]).optional().nullable(),
+  document: z.string().optional().nullable(),
+  mobile_phone: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  area: z.string().optional().nullable(),
+
+  // Contato principal (para PJ)
+  contact_name: z.string().optional().nullable(),
+  contact_position: z.string().optional().nullable(),
+  contact_email: z.string().email({ message: "Email de contato inválido" }).optional().nullable(),
+  
+  // Dados bancários
+  bank: z.string().optional().nullable(),
+  bank_agency: z.string().optional().nullable(),
+  bank_account: z.string().optional().nullable(),
+  account_type: z.enum(["corrente", "poupanca", "investimento", "pagamento"]).optional().nullable(),
+  pix_key: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  
+  is_active: z.boolean().optional().default(true),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -189,151 +214,384 @@ function UserEditDialog({
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome completo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome completo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="exemplo@contentcrush.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {isAdmin && (
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Função</FormLabel>
-                    {!user && (
-                      // Novo usuário - sempre Visualizador sem opção de mudar
-                      <div>
-                        <Input 
-                          value="Visualizador" 
-                          disabled 
-                          className="bg-gray-50"
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <Tabs defaultValue="info_basica" className="w-full">
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="info_basica">Informações Básicas</TabsTrigger>
+                <TabsTrigger value="info_adicional">Dados Adicionais</TabsTrigger>
+                <TabsTrigger value="dados_bancarios">Dados Bancários</TabsTrigger>
+              </TabsList>
+              
+              {/* Tab: Informações Básicas */}
+              <TabsContent value="info_basica" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome/Razão Social*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo ou razão social" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="exemplo@contentcrush.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {isAdmin && (
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Função/Nível de Acesso</FormLabel>
+                        {!user && (
+                          // Novo usuário - sempre Visualizador sem opção de mudar
+                          <div>
+                            <Input 
+                              value="Visualizador" 
+                              disabled 
+                              className="bg-gray-50"
+                            />
+                            <FormDescription className="flex items-center mt-1.5">
+                              <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                              Novos usuários são criados como Visualizadores por segurança
+                            </FormDescription>
+                          </div>
+                        )}
+                        {user && isAdmin && (
+                          // Admin editando usuário existente - pode alterar a função
+                          <>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione uma função" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Gestor</SelectItem>
+                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="viewer">Visualizador</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Define as permissões do usuário no sistema.
+                            </FormDescription>
+                          </>
+                        )}
+                        {user && !isAdmin && (
+                          // Usuário não-admin editando - não pode mudar papéis
+                          <Input 
+                            value={field.value === "admin" ? "Admin" : 
+                                  field.value === "manager" ? "Gestor" :
+                                  field.value === "editor" ? "Editor" : "Visualizador"} 
+                            disabled 
+                            className="bg-gray-50"
+                          />
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="user_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="pf">Pessoa Física</SelectItem>
+                          <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="document"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CNPJ/CPF</FormLabel>
+                      <FormControl>
+                        <Input placeholder="CNPJ ou CPF" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(11) 98765-4321" {...field} value={field.value || ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="mobile_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Celular</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(11) 98765-4321" {...field} value={field.value || ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              {/* Tab: Dados Adicionais */}
+              <TabsContent value="info_adicional" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="www.exemplo.com.br" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Endereço Completo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Endereço, número, complemento, bairro, cidade, estado, CEP" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="area"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Área de Atuação</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Marketing Digital" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="border-t pt-3 mt-4">
+                  <h3 className="text-sm font-semibold mb-2">Contato Principal</h3>
+                  
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="contact_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Contato Principal</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome completo" {...field} value={field.value || ""} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contact_position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cargo do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Diretor Comercial" {...field} value={field.value || ""} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contact_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="contato@exemplo.com" {...field} value={field.value || ""} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Observações Gerais</FormLabel>
+                      <FormControl>
+                        <textarea 
+                          placeholder="Informações adicionais relevantes"
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                          {...field}
+                          value={field.value || ""}
                         />
-                        <FormDescription className="flex items-center mt-1.5">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                          Novos usuários são criados como Visualizadores por segurança
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+              
+              {/* Tab: Dados Bancários */}
+              <TabsContent value="dados_bancarios" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="bank"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Banco</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do banco" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="bank_agency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Agência</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Número da agência" {...field} value={field.value || ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="bank_account"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conta</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Número da conta" {...field} value={field.value || ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="account_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Conta</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo de conta" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="corrente">Corrente</SelectItem>
+                          <SelectItem value="poupanca">Poupança</SelectItem>
+                          <SelectItem value="investimento">Investimento</SelectItem>
+                          <SelectItem value="pagamento">Pagamento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="pix_key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chave PIX</FormLabel>
+                      <FormControl>
+                        <Input placeholder="CPF, email, celular ou chave aleatória" {...field} value={field.value || ""} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Status Ativo</FormLabel>
+                        <FormDescription>
+                          Desmarque para definir como inativo
                         </FormDescription>
                       </div>
-                    )}
-                    {user && isAdmin && (
-                      // Admin editando usuário existente - pode alterar a função
-                      <>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione uma função" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Gestor</SelectItem>
-                            <SelectItem value="editor">Editor</SelectItem>
-                            <SelectItem value="viewer">Visualizador</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Define as permissões do usuário no sistema.
-                        </FormDescription>
-                      </>
-                    )}
-                    {user && !isAdmin && (
-                      // Usuário não-admin editando - não pode mudar papéis
-                      <Input 
-                        value={field.value === "admin" ? "Admin" : 
-                               field.value === "manager" ? "Gestor" :
-                               field.value === "editor" ? "Editor" : "Visualizador"} 
-                        disabled 
-                        className="bg-gray-50"
-                      />
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+            </Tabs>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Departamento</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ex: Marketing" {...field} value={field.value || ""} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="position"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cargo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ex: Diretor de Marketing" {...field} value={field.value || ""} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="(11) 98765-4321" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Uma breve descrição profissional" {...field} value={field.value || ""} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
+            <DialogFooter className="pt-2 border-t">
               <Button 
                 variant="outline" 
                 type="button" 
@@ -416,6 +674,8 @@ export default function Team() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   
   const { toast } = useToast();
   
@@ -570,7 +830,14 @@ export default function Team() {
                         <Mail className="h-3.5 w-3.5 mr-1 inline" />
                         <span>{user.email}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">@{user.username}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <span>@{user.username}</span>
+                        {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
+                          <Button variant="link" size="sm" onClick={() => handleViewProfile(user)} className="h-5 p-0 text-muted-foreground hover:text-primary ml-2">
+                            Ver Perfil Completo
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
