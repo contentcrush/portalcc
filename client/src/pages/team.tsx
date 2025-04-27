@@ -98,9 +98,10 @@ function UserEditDialog({
       phone: user.phone,
       bio: user.bio
     } : {
+      // Novo usuário - sempre começa como "viewer" (Visualizador)
       name: "",
       email: "",
-      role: "viewer",
+      role: "viewer", // Papel padrão - não editável para novos usuários
       department: "",
       position: "",
       phone: "",
@@ -108,9 +109,10 @@ function UserEditDialog({
     }
   });
 
+  // Mutation para atualizar usuários existentes
   const updateUserMutation = useMutation({
     mutationFn: async (data: UserFormValues) => {
-      const res = await apiRequest("PATCH", `/api/users/${user.id}`, data);
+      const res = await apiRequest("PATCH", `/api/users/${user?.id}`, data);
       return await res.json();
     },
     onSuccess: () => {
@@ -130,9 +132,44 @@ function UserEditDialog({
       });
     }
   });
+  
+  // Mutation para criar novos usuários
+  const createUserMutation = useMutation({
+    mutationFn: async (data: any) => { // Usando "any" temporariamente para incluir os campos adicionais
+      const res = await apiRequest("POST", `/api/users`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Usuário criado",
+        description: "O novo usuário foi criado com sucesso como Visualizador. Um administrador precisará alterar o nível de acesso.",
+        variant: "default",
+      });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível criar o usuário",
+        variant: "destructive",
+      });
+    }
+  });
 
   function onSubmit(data: UserFormValues) {
-    updateUserMutation.mutate(data);
+    if (user) {
+      // Atualizar usuário existente
+      updateUserMutation.mutate(data);
+    } else {
+      // Criar novo usuário
+      createUserMutation.mutate({
+        ...data,
+        role: "viewer", // Garante que novos usuários sejam sempre Visualizadores
+        username: data.email.split('@')[0], // Usa parte do email como nome de usuário
+        password: "senha123", // Senha temporária - usuário deve alterá-la depois
+      });
+    }
   }
 
   return (
@@ -188,25 +225,54 @@ function UserEditDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Função</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma função" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Gestor</SelectItem>
-                        <SelectItem value="editor">Editor</SelectItem>
-                        <SelectItem value="viewer">Visualizador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Define as permissões do usuário no sistema.
-                    </FormDescription>
+                    {!user && (
+                      // Novo usuário - sempre Visualizador sem opção de mudar
+                      <div>
+                        <Input 
+                          value="Visualizador" 
+                          disabled 
+                          className="bg-gray-50"
+                        />
+                        <FormDescription className="flex items-center mt-1.5">
+                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                          Novos usuários são criados como Visualizadores por segurança
+                        </FormDescription>
+                      </div>
+                    )}
+                    {user && isAdmin && (
+                      // Admin editando usuário existente - pode alterar a função
+                      <>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma função" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Gestor</SelectItem>
+                            <SelectItem value="editor">Editor</SelectItem>
+                            <SelectItem value="viewer">Visualizador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Define as permissões do usuário no sistema.
+                        </FormDescription>
+                      </>
+                    )}
+                    {user && !isAdmin && (
+                      // Usuário não-admin editando - não pode mudar papéis
+                      <Input 
+                        value={field.value === "admin" ? "Admin" : 
+                               field.value === "manager" ? "Gestor" :
+                               field.value === "editor" ? "Editor" : "Visualizador"} 
+                        disabled 
+                        className="bg-gray-50"
+                      />
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -272,18 +338,18 @@ function UserEditDialog({
                 variant="outline" 
                 type="button" 
                 onClick={onClose}
-                disabled={updateUserMutation.isPending}
+                disabled={updateUserMutation.isPending || createUserMutation.isPending}
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit"
-                disabled={updateUserMutation.isPending}
+                disabled={updateUserMutation.isPending || createUserMutation.isPending}
               >
-                {updateUserMutation.isPending && (
+                {(updateUserMutation.isPending || createUserMutation.isPending) && (
                   <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
                 )}
-                Salvar alterações
+                {user ? "Salvar alterações" : "Criar usuário"}
               </Button>
             </DialogFooter>
           </form>

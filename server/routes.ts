@@ -68,7 +68,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Criar um novo usuário (somente admin)
   app.post("/api/users", authenticateJWT, requireRole(['admin']), validateBody(insertUserSchema), async (req, res) => {
     try {
-      const newUser = await storage.createUser(req.body);
+      // Forçar papel 'viewer' para novos usuários criados pela UI
+      const userData = {
+        ...req.body,
+        role: "viewer" // Garante que novos usuários sejam sempre criados como Visualizadores
+      };
+      
+      const newUser = await storage.createUser(userData);
       
       // Remove a senha da resposta
       const { password, ...userWithoutPassword } = newUser;
