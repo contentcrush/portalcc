@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { X, Edit, CheckCircle2, Circle, MoreHorizontal } from "lucide-react";
+import { X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy } from "lucide-react";
 import { formatDate, formatCurrency, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +68,32 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       stageId,
       data: { completed: !completed }
     });
+  };
+  
+  // Mutation para duplicar um projeto
+  const duplicateProjectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/projects/${projectId}/duplicate`);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({
+        title: "Projeto duplicado com sucesso",
+        description: `O projeto "${data.name}" foi criado.`
+      });
+      onClose(); // Fechar o painel lateral após duplicação
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao duplicar projeto",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleDuplicateProject = () => {
+    duplicateProjectMutation.mutate();
   };
 
   // Get team members with their user details
@@ -267,6 +293,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           </Button>
           <Button className="w-full mt-3" variant="outline">
             Financeiro
+          </Button>
+          <Button 
+            className="w-full mt-3" 
+            variant="outline"
+            onClick={handleDuplicateProject}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Duplicar Projeto
           </Button>
         </div>
       </div>
