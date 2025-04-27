@@ -5,7 +5,7 @@ import {
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
   insertProjectMemberSchema, insertProjectStageSchema, insertTaskCommentSchema, 
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
-  insertExpenseSchema, insertEventSchema 
+  insertExpenseSchema, insertEventSchema, insertUserSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
@@ -62,6 +62,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userWithoutPassword);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Criar um novo usuário (somente admin)
+  app.post("/api/users", authenticateJWT, requireRole(['admin']), validateBody(insertUserSchema), async (req, res) => {
+    try {
+      const newUser = await storage.createUser(req.body);
+      
+      // Remove a senha da resposta
+      const { password, ...userWithoutPassword } = newUser;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+  
+  // Atualizar um usuário existente
+  app.patch("/api/users/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Só admins podem atualizar outros usuários ou alterar funções
+      if (req.user!.id !== id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins podem atualizar outros usuários." });
+      }
+      
+      // Só admins podem alterar a função de um usuário
+      if (req.body.role && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins podem alterar funções de usuários." });
+      }
+      
+      // Verifica se o usuário existe
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Atualiza o usuário
+      const updatedUser = await storage.updateUser(id, req.body);
+      
+      // Remove a senha da resposta
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  // Excluir um usuário (somente admin)
+  app.delete("/api/users/:id", authenticateJWT, requireRole(['admin']), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Não permitir que o admin exclua a si mesmo
+      if (req.user!.id === id) {
+        return res.status(400).json({ message: "Você não pode excluir sua própria conta de admin" });
+      }
+      
+      const success = await storage.deleteUser(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
