@@ -63,7 +63,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
 // Validação para formulário de edição de usuário
-const userFormSchema = z.object({
+export const userFormSchema = z.object({
   name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
   role: z.enum(["admin", "manager", "editor", "viewer"], {
@@ -103,7 +103,7 @@ const userFormSchema = z.object({
 type UserFormValues = z.infer<typeof userFormSchema>;
 
 // Componente de diálogo para edição de usuário
-function UserEditDialog({ 
+export function UserEditDialog({ 
   isOpen, 
   onClose, 
   user, 

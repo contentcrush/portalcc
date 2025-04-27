@@ -40,6 +40,7 @@ export default function UserProfile() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const userId = parseInt(id);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Verifica permissões - apenas admin e manager podem ver perfis detalhados
   useEffect(() => {
