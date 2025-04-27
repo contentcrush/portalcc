@@ -3,7 +3,7 @@ import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
-  expenses, events,
+  expenses, events, refreshTokens,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, 
@@ -1136,8 +1136,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteUser(id: number): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
-    return true; // Drizzle não retorna linhas afetadas, então assumimos sucesso
+    try {
+      // Primeiro, exclui todos os tokens de atualização relacionados ao usuário
+      await db.delete(refreshTokens).where(eq(refreshTokens.user_id, id));
+      
+      // Depois, remove o usuário
+      const result = await db.delete(users).where(eq(users.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error in deleteUser:", error);
+      throw error; // Lança o erro para tratamento adequado na camada de controle
+    }
   }
   
   // Clients
