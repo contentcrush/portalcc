@@ -1127,6 +1127,19 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
   
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return true; // Drizzle não retorna linhas afetadas, então assumimos sucesso
+  }
+  
   // Clients
   async getClient(id: number): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
