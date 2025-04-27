@@ -19,54 +19,70 @@ async function seedDatabase() {
     // Users
     const [user1] = await db.insert(users).values({
       username: "bruno.silva",
-      password: "password",
+      password: "password", // Em produção, usaríamos hashPassword() aqui
       name: "Bruno Silva",
       email: "bruno.silva@contentcrush.com",
-      role: "director",
+      role: "admin",
+      permissions: ["manage_users", "manage_projects", "manage_clients", "manage_finances"],
       department: "Production",
       position: "Director of Production",
       bio: "Director of production with more than 10 years of experience in audiovisual projects for national and international brands.",
       avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-      phone: "(11) 98765-4321"
+      phone: "(11) 98765-4321",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date()
     }).returning();
 
     const [user2] = await db.insert(users).values({
       username: "ana.oliveira",
-      password: "password",
+      password: "password", // Em produção, usaríamos hashPassword() aqui
       name: "Ana Oliveira",
       email: "ana.oliveira@contentcrush.com",
       role: "editor",
+      permissions: ["view_projects", "edit_tasks"],
       department: "Post-production",
       position: "Editor",
       bio: "Video editor specialized in advertising and institutional content.",
       avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      phone: "(11) 98765-1234"
+      phone: "(11) 98765-1234",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date()
     }).returning();
 
     const [user3] = await db.insert(users).values({
       username: "carlos.mendes",
-      password: "password",
+      password: "password", // Em produção, usaríamos hashPassword() aqui
       name: "Carlos Mendes",
       email: "carlos.mendes@contentcrush.com",
-      role: "photographer",
+      role: "editor",
+      permissions: ["view_projects", "edit_tasks"],
       department: "Production",
       position: "Photographer",
       bio: "Photographer with expertise in corporate photography.",
       avatar: "https://randomuser.me/api/portraits/men/67.jpg",
-      phone: "(11) 91234-5678"
+      phone: "(11) 91234-5678",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date()
     }).returning();
 
     const [user4] = await db.insert(users).values({
       username: "julia.santos",
-      password: "password",
+      password: "password", // Em produção, usaríamos hashPassword() aqui
       name: "Julia Santos",
       email: "julia.santos@contentcrush.com",
-      role: "designer",
+      role: "manager",
+      permissions: ["manage_projects", "manage_tasks", "manage_clients"],
       department: "Creative",
       position: "Graphic Designer",
       bio: "Graphic designer with expertise in brand identity and motion graphics.",
       avatar: "https://randomuser.me/api/portraits/women/23.jpg",
-      phone: "(11) 91234-9876"
+      phone: "(11) 91234-9876",
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date()
     }).returning();
 
     // Clients
@@ -192,37 +208,37 @@ async function seedDatabase() {
       {
         project_id: project1.id,
         user_id: user1.id,
-        role: "director"
+        role: "project_manager"
       },
       {
         project_id: project1.id,
         user_id: user2.id,
-        role: "editor"
+        role: "team_member"
       },
       {
         project_id: project1.id,
         user_id: user3.id,
-        role: "photographer"
+        role: "team_member"
       },
       {
         project_id: project2.id,
         user_id: user1.id,
-        role: "director"
+        role: "project_manager"
       },
       {
         project_id: project2.id,
         user_id: user2.id,
-        role: "editor"
+        role: "team_member"
       },
       {
         project_id: project3.id,
         user_id: user4.id,
-        role: "designer"
+        role: "project_manager"
       },
       {
         project_id: project3.id,
         user_id: user2.id,
-        role: "editor"
+        role: "team_member"
       }
     ]);
 
