@@ -208,7 +208,7 @@ export default function Projects() {
           <p className="text-muted-foreground mb-4">
             Tente ajustar os filtros ou adicione um novo projeto.
           </p>
-          <Button onClick={() => setIsNewProjectDialogOpen(true)}>
+          <Button onClick={openProjectForm}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -233,7 +233,7 @@ export default function Projects() {
             </div>
             <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
             <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
-            <Button onClick={() => setIsNewProjectDialogOpen(true)}>Adicionar Projeto</Button>
+            <Button onClick={openProjectForm}>Adicionar Projeto</Button>
           </div>
         </div>
       )}
@@ -359,10 +359,7 @@ export default function Projects() {
       )}
 
       {/* Diálogo de criação/edição de projeto */}
-      <ProjectFormDialog 
-        isOpen={isNewProjectDialogOpen}
-        onClose={() => setIsNewProjectDialogOpen(false)}
-      />
+      <ProjectFormDialog />
     </div>
   );
 }
