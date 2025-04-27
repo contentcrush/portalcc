@@ -1,14 +1,16 @@
+import { eq, and } from "drizzle-orm";
+import { db } from "./db";
 import {
-  users, clients, projects, projectMembers, projectStages,
-  tasks, taskComments, taskAttachments, clientInteractions,
-  financialDocuments, expenses, events,
-  type User, type Client, type Project, type ProjectMember, type ProjectStage,
+  users, clients, projects, projectMembers, projectStages, tasks,
+  taskComments, taskAttachments, clientInteractions, financialDocuments,
+  expenses, events,
+  type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
-  type FinancialDocument, type Expense, type Event,
-  type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember, type InsertProjectStage,
-  type InsertTask, type InsertTaskComment, type InsertTaskAttachment, type InsertClientInteraction,
-  type InsertFinancialDocument, type InsertExpense, type InsertEvent
-} from "@shared/schema";
+  type FinancialDocument, type Expense, type Event, 
+  type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
+  type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
+  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent
+} from "../shared/schema";
 
 export interface IStorage {
   // Users
@@ -1029,4 +1031,321 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // Users
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
+  // Clients
+  async getClient(id: number): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client || undefined;
+  }
+
+  async getClients(): Promise<Client[]> {
+    return await db.select().from(clients);
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const [client] = await db.insert(clients).values(insertClient).returning();
+    return client;
+  }
+
+  async updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined> {
+    const [updated] = await db.update(clients)
+      .set(client)
+      .where(eq(clients.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteClient(id: number): Promise<boolean> {
+    const result = await db.delete(clients).where(eq(clients.id, id));
+    return true; // Drizzle doesn't return affected rows, so we assume success
+  }
+  
+  // Projects
+  async getProject(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async getProjects(): Promise<Project[]> {
+    return await db.select().from(projects);
+  }
+
+  async getProjectsByClient(clientId: number): Promise<Project[]> {
+    return await db.select().from(projects).where(eq(projects.client_id, clientId));
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db.insert(projects).values(insertProject).returning();
+    return project;
+  }
+
+  async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
+    const [updated] = await db.update(projects)
+      .set(project)
+      .where(eq(projects.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    const result = await db.delete(projects).where(eq(projects.id, id));
+    return true;
+  }
+  
+  // Project Members
+  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+    return await db.select().from(projectMembers).where(eq(projectMembers.project_id, projectId));
+  }
+
+  async addProjectMember(insertMember: InsertProjectMember): Promise<ProjectMember> {
+    const [member] = await db.insert(projectMembers).values(insertMember).returning();
+    return member;
+  }
+
+  async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
+    const result = await db.delete(projectMembers)
+      .where(and(
+        eq(projectMembers.project_id, projectId),
+        eq(projectMembers.user_id, userId)
+      ));
+    return true;
+  }
+  
+  // Project Stages
+  async getProjectStages(projectId: number): Promise<ProjectStage[]> {
+    return await db.select()
+      .from(projectStages)
+      .where(eq(projectStages.project_id, projectId))
+      .orderBy(projectStages.order);
+  }
+
+  async createProjectStage(insertStage: InsertProjectStage): Promise<ProjectStage> {
+    const [stage] = await db.insert(projectStages).values(insertStage).returning();
+    return stage;
+  }
+
+  async updateProjectStage(id: number, stage: Partial<InsertProjectStage>): Promise<ProjectStage | undefined> {
+    const [updated] = await db.update(projectStages)
+      .set(stage)
+      .where(eq(projectStages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProjectStage(id: number): Promise<boolean> {
+    const result = await db.delete(projectStages).where(eq(projectStages.id, id));
+    return true;
+  }
+  
+  // Tasks
+  async getTask(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+
+  async getTasks(): Promise<Task[]> {
+    return await db.select().from(tasks);
+  }
+
+  async getTasksByProject(projectId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.project_id, projectId));
+  }
+
+  async getTasksByUser(userId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+  }
+
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    const [task] = await db.insert(tasks).values(insertTask).returning();
+    return task;
+  }
+
+  async updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined> {
+    const [updated] = await db.update(tasks)
+      .set(task)
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTask(id: number): Promise<boolean> {
+    const result = await db.delete(tasks).where(eq(tasks.id, id));
+    return true;
+  }
+  
+  // Task Comments
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    return await db.select().from(taskComments).where(eq(taskComments.task_id, taskId));
+  }
+
+  async createTaskComment(insertComment: InsertTaskComment): Promise<TaskComment> {
+    const [comment] = await db.insert(taskComments).values(insertComment).returning();
+    return comment;
+  }
+
+  async deleteTaskComment(id: number): Promise<boolean> {
+    const result = await db.delete(taskComments).where(eq(taskComments.id, id));
+    return true;
+  }
+  
+  // Task Attachments
+  async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
+    return await db.select().from(taskAttachments).where(eq(taskAttachments.task_id, taskId));
+  }
+
+  async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
+    const [attachment] = await db.insert(taskAttachments).values(insertAttachment).returning();
+    return attachment;
+  }
+
+  async deleteTaskAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(taskAttachments).where(eq(taskAttachments.id, id));
+    return true;
+  }
+  
+  // Client Interactions
+  async getClientInteractions(clientId: number): Promise<ClientInteraction[]> {
+    return await db.select().from(clientInteractions).where(eq(clientInteractions.client_id, clientId));
+  }
+
+  async createClientInteraction(insertInteraction: InsertClientInteraction): Promise<ClientInteraction> {
+    const [interaction] = await db.insert(clientInteractions).values(insertInteraction).returning();
+    return interaction;
+  }
+
+  async deleteClientInteraction(id: number): Promise<boolean> {
+    const result = await db.delete(clientInteractions).where(eq(clientInteractions.id, id));
+    return true;
+  }
+  
+  // Financial Documents
+  async getFinancialDocument(id: number): Promise<FinancialDocument | undefined> {
+    const [document] = await db.select().from(financialDocuments).where(eq(financialDocuments.id, id));
+    return document || undefined;
+  }
+
+  async getFinancialDocuments(): Promise<FinancialDocument[]> {
+    return await db.select().from(financialDocuments);
+  }
+
+  async getFinancialDocumentsByClient(clientId: number): Promise<FinancialDocument[]> {
+    return await db.select().from(financialDocuments).where(eq(financialDocuments.client_id, clientId));
+  }
+
+  async getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]> {
+    return await db.select().from(financialDocuments).where(eq(financialDocuments.project_id, projectId));
+  }
+
+  async createFinancialDocument(insertDocument: InsertFinancialDocument): Promise<FinancialDocument> {
+    const [document] = await db.insert(financialDocuments).values(insertDocument).returning();
+    return document;
+  }
+
+  async updateFinancialDocument(id: number, document: Partial<InsertFinancialDocument>): Promise<FinancialDocument | undefined> {
+    const [updated] = await db.update(financialDocuments)
+      .set(document)
+      .where(eq(financialDocuments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteFinancialDocument(id: number): Promise<boolean> {
+    const result = await db.delete(financialDocuments).where(eq(financialDocuments.id, id));
+    return true;
+  }
+  
+  // Expenses
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async getExpenses(): Promise<Expense[]> {
+    return await db.select().from(expenses);
+  }
+
+  async getExpensesByProject(projectId: number): Promise<Expense[]> {
+    return await db.select().from(expenses).where(eq(expenses.project_id, projectId));
+  }
+
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const [expense] = await db.insert(expenses).values(insertExpense).returning();
+    return expense;
+  }
+
+  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [updated] = await db.update(expenses)
+      .set(expense)
+      .where(eq(expenses.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return true;
+  }
+  
+  // Events
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event || undefined;
+  }
+
+  async getEvents(): Promise<Event[]> {
+    return await db.select().from(events);
+  }
+
+  async getEventsByUser(userId: number): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.user_id, userId));
+  }
+
+  async getEventsByProject(projectId: number): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.project_id, projectId));
+  }
+
+  async getEventsByClient(clientId: number): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.client_id, clientId));
+  }
+
+  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const [event] = await db.insert(events).values(insertEvent).returning();
+    return event;
+  }
+
+  async updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [updated] = await db.update(events)
+      .set(event)
+      .where(eq(events.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEvent(id: number): Promise<boolean> {
+    const result = await db.delete(events).where(eq(events.id, id));
+    return true;
+  }
+}
+
+// Use DatabaseStorage instead of MemStorage
+export const storage = new DatabaseStorage();

@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -196,3 +197,141 @@ export type InsertClientInteraction = z.infer<typeof insertClientInteractionSche
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+// Definição de relações
+export const usersRelations = relations(users, ({ many }) => ({
+  tasks: many(tasks, { relationName: "user_tasks" }),
+  projectMembers: many(projectMembers),
+  taskComments: many(taskComments),
+  taskAttachments: many(taskAttachments),
+  clientInteractions: many(clientInteractions),
+  expenses: many(expenses),
+  events: many(events)
+}));
+
+export const clientsRelations = relations(clients, ({ many }) => ({
+  projects: many(projects),
+  clientInteractions: many(clientInteractions),
+  financialDocuments: many(financialDocuments),
+  events: many(events)
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [projects.client_id],
+    references: [clients.id]
+  }),
+  members: many(projectMembers),
+  stages: many(projectStages),
+  tasks: many(tasks),
+  financialDocuments: many(financialDocuments),
+  expenses: many(expenses),
+  events: many(events)
+}));
+
+export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMembers.project_id],
+    references: [projects.id]
+  }),
+  user: one(users, {
+    fields: [projectMembers.user_id],
+    references: [users.id]
+  })
+}));
+
+export const projectStagesRelations = relations(projectStages, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectStages.project_id],
+    references: [projects.id]
+  })
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [tasks.project_id],
+    references: [projects.id]
+  }),
+  assignedUser: one(users, {
+    fields: [tasks.assigned_to],
+    references: [users.id],
+    relationName: "user_tasks"
+  }),
+  comments: many(taskComments),
+  attachments: many(taskAttachments),
+  events: many(events)
+}));
+
+export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskComments.task_id],
+    references: [tasks.id]
+  }),
+  user: one(users, {
+    fields: [taskComments.user_id],
+    references: [users.id]
+  })
+}));
+
+export const taskAttachmentsRelations = relations(taskAttachments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskAttachments.task_id],
+    references: [tasks.id]
+  }),
+  uploader: one(users, {
+    fields: [taskAttachments.uploaded_by],
+    references: [users.id]
+  })
+}));
+
+export const clientInteractionsRelations = relations(clientInteractions, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientInteractions.client_id],
+    references: [clients.id]
+  }),
+  user: one(users, {
+    fields: [clientInteractions.user_id],
+    references: [users.id]
+  })
+}));
+
+export const financialDocumentsRelations = relations(financialDocuments, ({ one }) => ({
+  client: one(clients, {
+    fields: [financialDocuments.client_id],
+    references: [clients.id]
+  }),
+  project: one(projects, {
+    fields: [financialDocuments.project_id],
+    references: [projects.id]
+  })
+}));
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  project: one(projects, {
+    fields: [expenses.project_id],
+    references: [projects.id]
+  }),
+  paidBy: one(users, {
+    fields: [expenses.paid_by],
+    references: [users.id]
+  })
+}));
+
+export const eventsRelations = relations(events, ({ one }) => ({
+  user: one(users, {
+    fields: [events.user_id],
+    references: [users.id]
+  }),
+  project: one(projects, {
+    fields: [events.project_id],
+    references: [projects.id]
+  }),
+  client: one(clients, {
+    fields: [events.client_id],
+    references: [clients.id]
+  }),
+  task: one(tasks, {
+    fields: [events.task_id],
+    references: [tasks.id]
+  })
+}));
