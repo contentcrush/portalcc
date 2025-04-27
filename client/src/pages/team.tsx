@@ -476,81 +476,68 @@ export default function Team() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              {/* Lista de usuários */}
               {users?.map(user => (
-                <Card key={user.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center">
-                          <UserAvatar user={user} className="h-10 w-10 mr-3" />
-                          <div>
-                            <div className="font-medium text-base">{user.name}</div>
-                            <div className="text-xs text-muted-foreground">@{user.username}</div>
-                          </div>
-                        </div>
+                <div 
+                  key={user.id} 
+                  className="p-4 border rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
+                    <UserAvatar user={user} className="h-12 w-12" />
+                    <div>
+                      <div className="font-medium flex items-center space-x-2">
+                        <span>{user.name}</span>
                         <Badge variant={
                           user.role === "admin" ? "destructive" : 
                           user.role === "manager" ? "default" : 
                           user.role === "editor" ? "secondary" : 
                           "outline"
-                        }>
+                        } className="ml-2">
                           {user.role === "admin" ? "Admin" : 
                           user.role === "manager" ? "Gestor" : 
                           user.role === "editor" ? "Editor" : 
                           "Visualizador"}
                         </Badge>
                       </div>
-                      
-                      <div className="space-y-1 mb-4 text-sm">
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{user.email}</span>
-                        </div>
-                        {user.department && (
-                          <div className="flex items-center">
-                            <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <span>{user.department}</span>
-                          </div>
-                        )}
-                        {user.phone && (
-                          <div className="flex items-center">
-                            <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <span>{user.phone}</span>
-                          </div>
-                        )}
+                      <div className="text-sm text-muted-foreground flex items-center">
+                        <Mail className="h-3.5 w-3.5 mr-1 inline" />
+                        <span>{user.email}</span>
                       </div>
+                      <div className="text-xs text-muted-foreground mt-1">@{user.username}</div>
                     </div>
-                    
-                    <div className="flex border-t border-border">
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => handleEditUser(user)}
-                        className="flex-1 rounded-none py-2 h-12"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => handleDeleteUser(user)}
-                        className="flex-1 rounded-none py-2 h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        disabled={user.id === currentUser?.id}
-                        title={user.id === currentUser?.id ? "Você não pode remover seu próprio usuário" : ""}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remover
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditUser(user)}
+                      className="h-9"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="sm" 
+                      onClick={() => handleDeleteUser(user)}
+                      className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={user.id === currentUser?.id}
+                      title={user.id === currentUser?.id ? "Você não pode remover seu próprio usuário" : ""}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover
+                    </Button>
+                  </div>
+                </div>
               ))}
               
               {/* Card para adicionar novo usuário */}
-              <Card className="border-2 border-dashed border-gray-300 hover:border-primary/40 transition-colors">
-                <CardContent className="flex flex-col items-center justify-center p-6 h-full min-h-[200px]">
+              <div className="p-4 border border-dashed rounded-md flex justify-center items-center hover:border-primary/40 transition-colors">
+                <div className="flex flex-col items-center justify-center py-6">
                   <div className="bg-primary/10 rounded-full p-3 mb-3">
-                    <UserPlus className="h-6 w-6 text-primary" />
+                    <UserPlus className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-medium text-gray-900 mb-1">Adicionar Usuário</h3>
                   <p className="text-sm text-gray-500 text-center mb-4">Adicione um novo usuário ao sistema</p>
@@ -561,8 +548,8 @@ export default function Team() {
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Usuário
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
