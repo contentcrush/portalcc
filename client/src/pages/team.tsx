@@ -266,7 +266,7 @@ function UserEditDialog({
       // Criar novo usuário
       createUserMutation.mutate({
         ...data,
-        role: "viewer", // Garante que novos usuários sejam sempre Visualizadores
+        // Usa o valor selecionado no formulário (sem forçar "viewer")
         username: data.email.split('@')[0], // Usa parte do email como nome de usuário
         password: "senha123", // Senha temporária - usuário deve alterá-la depois
       });
@@ -336,18 +336,28 @@ function UserEditDialog({
                       <FormItem>
                         <FormLabel>Função/Nível de Acesso</FormLabel>
                         {!user && (
-                          // Novo usuário - sempre Visualizador sem opção de mudar
-                          <div>
-                            <Input 
-                              value="Visualizador" 
-                              disabled 
-                              className="bg-gray-50"
-                            />
-                            <FormDescription className="flex items-center mt-1.5">
-                              <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                              Novos usuários são criados como Visualizadores por segurança
+                          // Novo usuário - Admin pode escolher o nível de acesso
+                          <>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione uma função" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Gestor</SelectItem>
+                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="viewer">Visualizador</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Define as permissões do usuário no sistema.
                             </FormDescription>
-                          </div>
+                          </>
                         )}
                         {user && isAdmin && (
                           // Admin editando usuário existente - pode alterar a função
