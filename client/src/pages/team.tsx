@@ -1,5 +1,7 @@
 import { 
   AlertCircle, 
+  ChevronDown,
+  ChevronUp,
   Edit, 
   Loader2,
   Mail, 
@@ -1131,6 +1133,39 @@ export default function Team() {
             </div>
           </CardContent>
         </Card>
+      )}
+      {/* Estatísticas da equipe */}
+      {showTeamStats && (
+        <>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-medium">Visão Geral da Equipe</h2>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowTeamStats(!showTeamStats)}
+              className="h-8 text-xs"
+            >
+              <ChevronDown className="h-4 w-4 mr-1" />
+              Esconder Estatísticas
+            </Button>
+          </div>
+          <TeamStatistics users={users || []} tasks={tasks || []} projects={projects || []} />
+        </>
+      )}
+      
+      {!showTeamStats && (
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-medium">Membros da Equipe</h2>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowTeamStats(!showTeamStats)}
+            className="h-8 text-xs"
+          >
+            <ChevronUp className="h-4 w-4 mr-1" />
+            Mostrar Estatísticas
+          </Button>
+        </div>
       )}
       
       {/* Search and filter */}
