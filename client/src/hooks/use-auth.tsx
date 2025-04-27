@@ -90,11 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
+      // Limpar outras queries do cache para evitar dados antigos
+      queryClient.clear();
       toast({
         title: "Logout bem-sucedido",
         description: "Você foi desconectado com sucesso.",
         variant: "default",
       });
+      // Redirecionar para a página de login
+      window.location.href = "/auth";
     },
     onError: (error: Error) => {
       toast({
@@ -102,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Não foi possível desconectar",
         variant: "destructive",
       });
+      // Mesmo com erro, redirecionar para a página de login para evitar estado inconsistente
+      window.location.href = "/auth";
     },
   });
 

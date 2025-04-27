@@ -39,7 +39,7 @@ export default function Layout({ children }: LayoutProps) {
   // Lidar com logout
   const handleLogout = () => {
     logoutMutation.mutate();
-    navigate("/auth");
+    // O redirecionamento será feito automaticamente pelo mutate
   };
 
   // Close mobile menu when location changes
