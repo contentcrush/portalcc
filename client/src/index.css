@@ -143,5 +143,37 @@
   .priority-low {
     @apply text-green-500;
   }
+
+  .task-card {
+    @apply bg-white rounded-lg p-0 shadow-sm overflow-hidden;
+  }
+
+  .task-priority-indicator {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .task-priority-high {
+    @apply bg-red-600;
+  }
+
+  .task-priority-medium {
+    @apply bg-amber-500;
+  }
+
+  .task-priority-low {
+    @apply bg-green-500;
+  }
+
+  .task-priority-badge-high {
+    @apply bg-red-50 text-red-800 border-red-200;
+  }
+
+  .task-priority-badge-medium {
+    @apply bg-amber-50 text-amber-800 border-amber-200;
+  }
+
+  .task-priority-badge-low {
+    @apply bg-green-50 text-green-800 border-green-200;
+  }
 }
 

@@ -31,7 +31,10 @@ import {
   Building,
   Calendar as CalendarIcon,
   User,
-  PlusCircle
+  PlusCircle,
+  FolderOpen,
+  ListTodo,
+  Users
 } from "lucide-react";
 import { MONTHS } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
@@ -219,44 +222,97 @@ export default function Dashboard() {
       
       {/* Stats Cards */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Receita Total"
-          value={formatCurrency(currentQuarterRevenue)}
-          change={revenueChange}
-          icon={CircleDollarSign}
-          iconColor="text-green-600"
-          iconBg="bg-green-100"
-        />
-        
-        <StatCard
-          title="Despesas Totais"
-          value={formatCurrency(currentQuarterExpenses)}
-          change={expensesChange}
-          icon={CircleDollarSign}
-          iconColor="text-red-600"
-          iconBg="bg-red-100"
-        />
-        
-        <StatCard
-          title="Lucro Líquido"
-          value={formatCurrency(currentQuarterRevenue - currentQuarterExpenses)}
-          change={calculatePercentChange(
-            currentQuarterRevenue - currentQuarterExpenses,
-            previousQuarterRevenue - previousQuarterExpenses
-          )}
-          icon={CircleDollarSign}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-100"
-        />
-        
-        <StatCard
-          title="Projetos Ativos"
-          value={activeProjects.toString()}
-          change={0}
-          icon={Calendar}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-100"
-        />
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Projetos Ativos</h3>
+                <div className="flex items-end space-x-2 mt-1">
+                  <span className="text-3xl font-bold">8</span>
+                </div>
+              </div>
+              <div className="bg-indigo-100 rounded-md p-2">
+                <FolderOpen className="h-5 w-5 text-indigo-600" />
+              </div>
+            </div>
+            <div className="flex items-center mt-3 text-sm">
+              <div className="flex items-center text-green-600">
+                <ArrowUpRight className="h-3 w-3 mr-1" />
+                <span>+12%</span>
+              </div>
+              <span className="text-muted-foreground ml-1.5">desde o mês passado</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Tarefas Pendentes</h3>
+                <div className="flex items-end space-x-2 mt-1">
+                  <span className="text-3xl font-bold">24</span>
+                </div>
+              </div>
+              <div className="bg-amber-100 rounded-md p-2">
+                <ListTodo className="h-5 w-5 text-amber-600" />
+              </div>
+            </div>
+            <div className="flex items-center mt-3 text-sm">
+              <div className="flex items-center text-red-600">
+                <ArrowDownRight className="h-3 w-3 mr-1" />
+                <span>-8%</span>
+              </div>
+              <span className="text-muted-foreground ml-1.5">desde a semana passada</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Clientes Ativos</h3>
+                <div className="flex items-end space-x-2 mt-1">
+                  <span className="text-3xl font-bold">12</span>
+                </div>
+              </div>
+              <div className="bg-green-100 rounded-md p-2">
+                <Users className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <div className="flex items-center mt-3 text-sm">
+              <div className="flex items-center text-green-600">
+                <ArrowUpRight className="h-3 w-3 mr-1" />
+                <span>+20%</span>
+              </div>
+              <span className="text-muted-foreground ml-1.5">desde o trimestre passado</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Receita Mensal</h3>
+                <div className="flex items-end space-x-2 mt-1">
+                  <span className="text-3xl font-bold">R$ 42.500</span>
+                </div>
+              </div>
+              <div className="bg-blue-100 rounded-md p-2">
+                <CircleDollarSign className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="flex items-center mt-3 text-sm">
+              <div className="flex items-center text-green-600">
+                <ArrowUpRight className="h-3 w-3 mr-1" />
+                <span>+15%</span>
+              </div>
+              <span className="text-muted-foreground ml-1.5">comparado ao mês anterior</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Charts */}
@@ -372,47 +428,123 @@ export default function Dashboard() {
         </Card>
       </div>
       
-      {/* Bottom row - Tasks & Upcoming Activities */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      {/* Tarefas Próximas */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-1">
+        <Card className="dashboard-card">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Tarefas do Dia</CardTitle>
-              <Badge>{pendingTasks}</Badge>
+              <CardTitle className="text-base font-medium">Tarefas Próximas</CardTitle>
+              <Link href="/tasks">
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-indigo-600">
+                  Ver todas
+                </Button>
+              </Link>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {tasks?.slice(0, 4).map((task) => (
-                <div key={task.id} className="flex items-start">
-                  {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
-                  ) : (
-                    <div className="h-5 w-5 border border-gray-300 rounded-full mt-0.5 mr-2"></div>
-                  )}
-                  <div>
-                    <p className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </p>
-                    <div className={`flex items-center text-xs ${
-                      task.priority === 'alta' ? 'text-red-600' : 
-                      task.priority === 'media' ? 'text-amber-600' : 
-                      'text-muted-foreground'
-                    }`}>
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>
-                        {task.due_date ? new Date(task.due_date).toLocaleDateString('pt-BR') : 'Sem prazo'}
-                      </span>
-                      <span className="ml-2 capitalize">{task.priority}</span>
+          <CardContent className="p-0">
+            <div>
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                     </div>
                   </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Finalizar edição do teaser - Banco Azul</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 2 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
+                  </div>
                 </div>
-              ))}
-              
-              <Button variant="outline" size="sm" className="w-full">
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Ver Todas as Tarefas
-              </Button>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/32.jpg" 
+                    alt="Bruno Silva" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Aprovar storyboard - Documentário Natureza</p>
+                    <p className="text-xs text-red-600 mt-1">Vence hoje</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Alta</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/women/44.jpg" 
+                    alt="Ana Oliveira" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Reunião de pré-produção - Curso Online Tech</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">Baixa</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/67.jpg" 
+                    alt="Carlos Mendes" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Revisar orçamento - Projeto Marca X</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/32.jpg" 
+                    alt="Bruno Silva" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 flex justify-center">
+                <Button variant="ghost" size="sm" className="text-indigo-600">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar nova tarefa
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
