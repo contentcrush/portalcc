@@ -16,7 +16,7 @@ import { StatusLabels } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import StatusBadge from "./StatusBadge";
-import UserAvatar from "./UserAvatar";
+import { UserAvatar } from "./UserAvatar";
 
 interface ProjectCardProps {
   project: ProjectWithClient;
