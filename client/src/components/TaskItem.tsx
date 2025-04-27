@@ -23,7 +23,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import StatusBadge from "./StatusBadge";
-import UserAvatar from "./UserAvatar";
+import { UserAvatar } from "./UserAvatar";
 
 interface TaskItemProps {
   task: TaskWithDetails;

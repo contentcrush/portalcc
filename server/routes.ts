@@ -111,7 +111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(id, req.body);
       
       // Remove a senha da resposta
-      const { password, ...userWithoutPassword } = updatedUser;
+      const userWithoutPassword = { ...updatedUser };
+      delete (userWithoutPassword as any).password;
       
       res.json(userWithoutPassword);
     } catch (error) {
@@ -140,6 +141,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Obter detalhes de um usuário específico (requer admin ou manager)
+  app.get("/api/users/:id", authenticateJWT, async (req, res) => {
+    try {
+      // Verifica se o usuário autenticado é admin ou manager
+      if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins e gestores podem visualizar detalhes de usuários." });
+      }
+      
+      const id = parseInt(req.params.id);
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Remove a senha da resposta
+      const userWithoutPassword = { ...user };
+      delete (userWithoutPassword as any).password;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error retrieving user:", error);
+      res.status(500).json({ message: "Failed to retrieve user details" });
+    }
+  });
+  
+  // Obter projetos associados a um usuário (requer admin ou manager)
+  app.get("/api/users/:id/projects", authenticateJWT, async (req, res) => {
+    try {
+      // Verifica se o usuário autenticado é admin ou manager
+      if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins e gestores podem visualizar projetos de usuários." });
+      }
+      
+      const userId = parseInt(req.params.id);
+      const projects = await storage.getProjectsByUserId(userId);
+      
+      res.json(projects);
+    } catch (error) {
+      console.error("Error retrieving user projects:", error);
+      res.status(500).json({ message: "Failed to retrieve user projects" });
+    }
+  });
+  
+  // Obter tarefas associadas a um usuário (requer admin ou manager)
+  app.get("/api/users/:id/tasks", authenticateJWT, async (req, res) => {
+    try {
+      // Verifica se o usuário autenticado é admin ou manager
+      if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins e gestores podem visualizar tarefas de usuários." });
+      }
+      
+      const userId = parseInt(req.params.id);
+      const tasks = await storage.getTasksByUserId(userId);
+      
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error retrieving user tasks:", error);
+      res.status(500).json({ message: "Failed to retrieve user tasks" });
+    }
+  });
+  
+  // Obter transações financeiras associadas a um usuário (requer admin)
+  app.get("/api/users/:id/transactions", authenticateJWT, requireRole(['admin']), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const transactions = await storage.getTransactionsByUserId(userId);
+      
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error retrieving user transactions:", error);
+      res.status(500).json({ message: "Failed to retrieve user financial transactions" });
     }
   });
 

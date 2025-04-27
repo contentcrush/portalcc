@@ -5,7 +5,7 @@ import { X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy } from "lucide-reac
 import { formatDate, formatCurrency, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import UserAvatar from "./UserAvatar";
+import { UserAvatar } from "./UserAvatar";
 
 interface ProjectDetailSidebarProps {
   projectId: number;

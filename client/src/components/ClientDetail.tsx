@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { getInteractionIcon } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import UserAvatar from "./UserAvatar";
+import { UserAvatar } from "./UserAvatar";
 
 interface ClientDetailProps {
   clientId: number;

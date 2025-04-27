@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, or } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
@@ -20,6 +20,9 @@ export interface IStorage {
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
   getUsers(): Promise<User[]>;
+  getProjectsByUserId(userId: number): Promise<Project[]>;
+  getTasksByUserId(userId: number): Promise<Task[]>;
+  getTransactionsByUserId(userId: number): Promise<FinancialDocument[]>;
   
   // Clients
   getClient(id: number): Promise<Client | undefined>;
@@ -646,6 +649,39 @@ export class MemStorage implements IStorage {
     this.usersData.set(id, user);
     return user;
   }
+  
+  async getProjectsByUserId(userId: number): Promise<Project[]> {
+    // Encontrar todos os membros de projeto para este usuário
+    const projectMembers = Array.from(this.projectMembersData.values()).filter(
+      (member) => member.user_id === userId
+    );
+    
+    // Obter projetos associados a esses membros
+    const projectIds = projectMembers.map(member => member.project_id);
+    const projects = Array.from(this.projectsData.values()).filter(
+      (project) => projectIds.includes(project.id)
+    );
+    
+    return projects;
+  }
+  
+  async getTasksByUserId(userId: number): Promise<Task[]> {
+    // Retornar tarefas atribuídas a este usuário
+    return Array.from(this.tasksData.values()).filter(
+      (task) => task.assignee_id === userId
+    );
+  }
+  
+  async getTransactionsByUserId(userId: number): Promise<FinancialDocument[]> {
+    // Encontrar todos os projetos do usuário
+    const projects = await this.getProjectsByUserId(userId);
+    const projectIds = projects.map(project => project.id);
+    
+    // Filtrar transações relacionadas a esses projetos ou diretamente ao usuário
+    return Array.from(this.financialDocumentsData.values()).filter(
+      (doc) => doc.user_id === userId || (doc.project_id && projectIds.includes(doc.project_id))
+    );
+  }
 
   async getUsers(): Promise<User[]> {
     return Array.from(this.usersData.values());
@@ -1125,6 +1161,50 @@ export class DatabaseStorage implements IStorage {
 
   async getUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+  
+  async getProjectsByUserId(userId: number): Promise<Project[]> {
+    // Encontrar ids de projetos pelos membros do projeto
+    const projectMembers = await db.select().from(projectMembers).where(eq(projectMembers.user_id, userId));
+    
+    // Sem projetos encontrados
+    if (projectMembers.length === 0) {
+      return [];
+    }
+    
+    // Extrair os IDs dos projetos
+    const projectIds = projectMembers.map(member => member.project_id);
+    
+    // Buscar projetos
+    return await db.select().from(projects).where(inArray(projects.id, projectIds));
+  }
+  
+  async getTasksByUserId(userId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+  }
+  
+  async getTransactionsByUserId(userId: number): Promise<FinancialDocument[]> {
+    // Encontrar todos os projetos do usuário
+    const userProjects = await this.getProjectsByUserId(userId);
+    
+    // Sem projetos encontrados
+    if (userProjects.length === 0) {
+      // Retornar apenas transações diretamente associadas ao usuário
+      return await db.select().from(financialDocuments).where(eq(financialDocuments.user_id, userId));
+    }
+    
+    // Extrair os IDs dos projetos
+    const projectIds = userProjects.map(project => project.id);
+    
+    // Buscar transações relacionadas ao usuário diretamente ou via projetos
+    return await db.select()
+      .from(financialDocuments)
+      .where(
+        or(
+          eq(financialDocuments.user_id, userId),
+          inArray(financialDocuments.project_id, projectIds)
+        )
+      );
   }
   
   async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {

@@ -58,8 +58,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import UserAvatar from "@/components/UserAvatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 // Validação para formulário de edição de usuário
 const userFormSchema = z.object({
@@ -811,6 +812,14 @@ export default function Team() {
     return tasks?.filter(task => task.assigned_to === userId) || [];
   };
   
+  // Hook para navegação
+  const [, setLocation] = useLocation();
+  
+  // Handler for viewing user profile
+  const handleViewProfile = (user: any) => {
+    setLocation(`/team/user/${user.id}`);
+  };
+
   // Handler for editing user
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -830,11 +839,7 @@ export default function Team() {
     }
   };
   
-  // Handler for viewing complete profile
-  const handleViewProfile = (user: any) => {
-    setSelectedUserProfile(user);
-    setProfileDialogOpen(true);
-  };
+  // A função handleViewProfile já foi definida acima
 
   return (
     <div className="space-y-6">
