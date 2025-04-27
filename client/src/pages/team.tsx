@@ -1,0 +1,459 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  CheckCircle,
+  Clock,
+  Calendar,
+  FileText
+} from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
+
+export default function Team() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  
+  // Fetch users
+  const { data: users, isLoading } = useQuery({
+    queryKey: ['/api/users']
+  });
+  
+  // Fetch tasks
+  const { data: tasks } = useQuery({
+    queryKey: ['/api/tasks']
+  });
+  
+  // Fetch projects
+  const { data: projects } = useQuery({
+    queryKey: ['/api/projects']
+  });
+
+  // Filter users based on search term
+  const filteredUsers = users?.filter(user => {
+    if (searchTerm === "") return true;
+    
+    return (
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.department?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  // Get tasks for a user
+  const getTasksForUser = (userId: number) => {
+    return tasks?.filter(task => task.assigned_to === userId) || [];
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Equipe</h1>
+          <p className="text-sm text-gray-500">Gerencie membros da equipe e suas atividades</p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <Button onClick={() => setIsUserDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Membro
+          </Button>
+        </div>
+      </div>
+      
+      {/* Search and filter */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar membros da equipe..."
+          className="pl-10 w-full md:w-80"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+      
+      {/* Team grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <div className="col-span-full flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredUsers?.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <h3 className="text-lg font-medium mb-2">Nenhum membro encontrado</h3>
+            <p className="text-muted-foreground mb-4">
+              Tente ajustar sua busca ou adicione um novo membro à equipe.
+            </p>
+            <Button onClick={() => setIsUserDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Membro
+            </Button>
+          </div>
+        ) : (
+          <>
+            {filteredUsers?.map(user => (
+              <Card key={user.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <UserAvatar user={user} className="h-14 w-14 mr-4" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg truncate">{user.name}</h3>
+                        <div className="flex items-center flex-wrap gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {user.role}
+                          </Badge>
+                          {user.department && (
+                            <Badge variant="secondary" className="capitalize">
+                              {user.department}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar perfil
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Ver projetos
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remover
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm">
+                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{user.email}</span>
+                      </div>
+                      {user.phone && (
+                        <div className="flex items-center text-sm">
+                          <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>{user.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Tabs defaultValue="tasks">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+                        <TabsTrigger value="projects">Projetos</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="tasks" className="mt-2">
+                        <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                          {getTasksForUser(user.id).length > 0 ? (
+                            getTasksForUser(user.id).map(task => (
+                              <div key={task.id} className="flex items-start py-1">
+                                {task.completed ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+                                )}
+                                <div className="text-sm">
+                                  <p className={`${task.completed ? 'line-through text-muted-foreground' : 'font-medium'}`}>
+                                    {task.title}
+                                  </p>
+                                  {task.due_date && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center text-sm text-muted-foreground py-2">
+                              Nenhuma tarefa atribuída
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="projects" className="mt-2">
+                        <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                          {projects?.filter(p => {
+                            // Check if user is a member of this project
+                            const projectMembers = projects.find(pm => pm.id === p.id);
+                            return projectMembers;
+                          }).length > 0 ? (
+                            projects?.map(project => (
+                              <div key={project.id} className="flex items-center py-1">
+                                <div className={`w-2 h-2 rounded-full mr-2 ${
+                                  project.status === 'em_andamento' ? 'bg-green-500' : 
+                                  project.status === 'pre_producao' ? 'bg-blue-500' : 
+                                  project.status === 'em_producao' ? 'bg-yellow-500' : 
+                                  'bg-gray-500'
+                                }`}></div>
+                                <div className="text-sm">
+                                  <p className="font-medium">{project.name}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">
+                                    {project.status.replace(/_/g, ' ')}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center text-sm text-muted-foreground py-2">
+                              Nenhum projeto atribuído
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                  
+                  <div className="flex border-t border-gray-200 divide-x divide-gray-200">
+                    <Button variant="ghost" className="flex-1 rounded-none py-2">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Ver Agenda
+                    </Button>
+                    <Button variant="ghost" className="flex-1 rounded-none py-2">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Atribuir Tarefa
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Add new member card */}
+            <Card className="border-2 border-dashed border-gray-300 hover:border-primary/40 transition-colors">
+              <CardContent className="flex flex-col items-center justify-center p-6 h-full min-h-[280px]">
+                <div className="bg-primary/10 rounded-full p-3 mb-3">
+                  <Plus className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-medium text-gray-900 mb-1">Novo Membro</h3>
+                <p className="text-sm text-gray-500 text-center mb-4">Adicione um novo membro à sua equipe</p>
+                <Button onClick={() => setIsUserDialogOpen(true)}>Adicionar Membro</Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+      
+      {/* Team Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Produtividade da Equipe</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Membro</TableHead>
+                  <TableHead>Tarefas Pendentes</TableHead>
+                  <TableHead>Tarefas Concluídas</TableHead>
+                  <TableHead className="text-right">Taxa de Conclusão</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers?.map(user => {
+                  const userTasks = getTasksForUser(user.id);
+                  const pendingTasks = userTasks.filter(t => !t.completed).length;
+                  const completedTasks = userTasks.filter(t => t.completed).length;
+                  const completionRate = userTasks.length > 0 
+                    ? Math.round((completedTasks / userTasks.length) * 100) 
+                    : 0;
+                    
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <UserAvatar user={user} className="h-6 w-6 mr-2" />
+                          <span>{user.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{pendingTasks}</TableCell>
+                      <TableCell>{completedTasks}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end">
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mr-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                completionRate > 75 ? 'bg-green-500' : 
+                                completionRate > 50 ? 'bg-blue-500' : 
+                                completionRate > 25 ? 'bg-yellow-500' : 
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${completionRate}%` }}
+                            ></div>
+                          </div>
+                          <span>{completionRate}%</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Carga de Trabalho</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {filteredUsers?.map(user => {
+                const userTasks = getTasksForUser(user.id);
+                const taskCount = userTasks.length;
+                const taskHours = userTasks.reduce((sum, task) => sum + (task.estimated_hours || 0), 0);
+                
+                return (
+                  <div key={user.id} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <UserAvatar user={user} className="h-6 w-6 mr-2" />
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {taskCount} tarefas | {taskHours} horas
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          taskHours > 40 ? 'bg-red-500' : 
+                          taskHours > 30 ? 'bg-yellow-500' : 
+                          taskHours > 10 ? 'bg-green-500' : 
+                          'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min(100, (taskHours / 40) * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* New Member Dialog */}
+      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Membro</DialogTitle>
+            <DialogDescription>
+              Preencha os campos abaixo para adicionar um novo membro à equipe.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="firstName" className="text-sm font-medium">
+                  Nome
+                </label>
+                <Input id="firstName" placeholder="Nome" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="lastName" className="text-sm font-medium">
+                  Sobrenome
+                </label>
+                <Input id="lastName" placeholder="Sobrenome" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
+              </label>
+              <Input id="email" type="email" placeholder="exemplo@contentcrush.com" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="role" className="text-sm font-medium">
+                  Cargo
+                </label>
+                <Input id="role" placeholder="Cargo" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="department" className="text-sm font-medium">
+                  Departamento
+                </label>
+                <Input id="department" placeholder="Departamento" />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="phone" className="text-sm font-medium">
+                Telefone
+              </label>
+              <Input id="phone" placeholder="(00) 00000-0000" />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="bio" className="text-sm font-medium">
+                Bio
+              </label>
+              <textarea 
+                id="bio" 
+                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Breve descrição sobre o membro"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button>Adicionar Membro</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
