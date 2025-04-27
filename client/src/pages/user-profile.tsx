@@ -56,28 +56,28 @@ export default function UserProfile() {
   // Buscar dados do usuário
   const { data: user, isLoading, error } = useQuery({
     queryKey: [`/api/users/${userId}`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!userId && (currentUser?.role === "admin" || currentUser?.role === "manager"),
   });
 
   // Buscar projetos associados ao usuário
   const { data: projects } = useQuery({
     queryKey: [`/api/users/${userId}/projects`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!userId && (currentUser?.role === "admin" || currentUser?.role === "manager"),
   });
 
   // Buscar tarefas associadas ao usuário
   const { data: tasks } = useQuery({
     queryKey: [`/api/users/${userId}/tasks`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!userId && (currentUser?.role === "admin" || currentUser?.role === "manager"),
   });
 
   // Buscar transações financeiras associadas ao usuário (apenas para Admin)
   const { data: transactions } = useQuery({
     queryKey: [`/api/users/${userId}/transactions`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!userId && currentUser?.role === "admin",
   });
 
