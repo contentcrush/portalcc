@@ -5,6 +5,8 @@ import { relations } from "drizzle-orm";
 
 // Enum para roles/funções de usuário
 export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'editor', 'viewer']);
+export const userTypeEnum = pgEnum('user_type', ['pf', 'pj']); // Pessoa Física ou Pessoa Jurídica
+export const accountTypeEnum = pgEnum('account_type', ['corrente', 'poupanca', 'investimento', 'pagamento']);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -17,7 +19,30 @@ export const users = pgTable("users", {
   position: text("position"),
   bio: text("bio"),
   avatar: text("avatar"),
+  
+  // Campos básicos
+  user_type: userTypeEnum("user_type"), // PF ou PJ
+  document: text("document"), // CPF ou CNPJ
   phone: text("phone"),
+  mobile_phone: text("mobile_phone"),
+  website: text("website"),
+  address: text("address"),
+  area: text("area"), // Área de atuação
+
+  // Contato principal (para PJ)
+  contact_name: text("contact_name"),
+  contact_position: text("contact_position"),
+  contact_email: text("contact_email"),
+  
+  // Dados bancários
+  bank: text("bank"),
+  bank_agency: text("bank_agency"),
+  bank_account: text("bank_account"),
+  account_type: accountTypeEnum("account_type"),
+  pix_key: text("pix_key"),
+  
+  // Outros campos
+  notes: text("notes"),
   permissions: json("permissions").$type<string[]>().default([]),
   last_login: timestamp("last_login"),
   is_active: boolean("is_active").default(true),
