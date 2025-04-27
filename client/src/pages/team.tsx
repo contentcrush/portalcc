@@ -698,6 +698,199 @@ function DeleteUserConfirmDialog({
 }
 
 // Componente principal da página de equipe
+// Componente de estatísticas da equipe
+function TeamStatistics({ 
+  users = [], 
+  tasks = [], 
+  projects = [] 
+}: { 
+  users: any[];
+  tasks: any[];
+  projects: any[];
+}) {
+  // Contagem de usuários por função
+  const roleCount = users.reduce((acc: Record<string, number>, user: any) => {
+    const role = user.role || 'other';
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  
+  // Total de tarefas em andamento
+  const tasksInProgress = tasks.filter((task: any) => task.status === 'em_andamento').length;
+  
+  // Total de tarefas por user
+  const userTaskData = users.map((user: any) => {
+    const userTasks = tasks.filter((task: any) => task.assigned_to === user.id);
+    const completed = userTasks.filter((t: any) => t.status === 'concluida').length;
+    const total = userTasks.length;
+    return {
+      id: user.id,
+      name: user.name,
+      tasks: total,
+      completed: completed,
+      completion: total > 0 ? Math.round((completed / total) * 100) : 0
+    };
+  }).sort((a, b) => b.tasks - a.tasks).slice(0, 5);
+  
+  // Projetos por membro
+  const userProjectCount = users.reduce((acc: Record<number, number>, user: any) => {
+    const projectsForUser = projects
+      .filter((p: any) => p.members?.some((m: any) => m.user_id === user.id))
+      .length;
+    
+    acc[user.id] = projectsForUser;
+    return acc;
+  }, {});
+  
+  // Desempenho médio da equipe
+  const teamPerformance = users.map((user: any) => {
+    const userTasks = tasks.filter((t: any) => t.assigned_to === user.id);
+    const sum = userTasks.reduce((acc: number, task: any) => {
+      // Pontuação baseada no status e prazo de tarefas
+      if (task.status === 'concluida' && new Date(task.completed_at) <= new Date(task.due_date)) {
+        return acc + 100;
+      } else if (task.status === 'concluida') {
+        return acc + 80;
+      } else if (task.status === 'em_andamento') {
+        return acc + 60;
+      } else {
+        return acc + 20;
+      }
+    }, 0);
+    
+    return userTasks.length > 0 ? Math.round(sum / userTasks.length) : 0;
+  });
+  
+  const averageTeamPerformance = teamPerformance.length 
+    ? Math.round(teamPerformance.reduce((acc, val) => acc + val, 0) / teamPerformance.length) 
+    : 0;
+  
+  return (
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-sm">Membros da Equipe</span>
+            <div className="mt-2 flex items-baseline space-x-2">
+              <span className="text-3xl font-bold">{users.length}</span>
+              <span className="text-xs text-green-500">+2 este mês</span>
+            </div>
+            
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span>Admin</span>
+                <span>{roleCount.admin || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Gestor</span>
+                <span>{roleCount.manager || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Editor</span>
+                <span>{roleCount.editor || 0}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Visualizador</span>
+                <span>{roleCount.viewer || 0}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-sm">Tarefas em Andamento</span>
+            <div className="mt-2 flex items-baseline space-x-2">
+              <span className="text-3xl font-bold">{tasksInProgress}</span>
+              <span className="text-xs text-muted-foreground">de {tasks.length} total</span>
+            </div>
+            
+            <div className="mt-4">
+              <div className="h-2 bg-gray-100 rounded-full">
+                <div 
+                  className="h-2 bg-primary rounded-full" 
+                  style={{ width: `${tasks.length > 0 ? (tasksInProgress / tasks.length) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                <span>Progresso</span>
+                <span>{tasks.length > 0 ? Math.round((tasksInProgress / tasks.length) * 100) : 0}%</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-sm">Desempenho da Equipe</span>
+            <div className="mt-2 flex items-baseline space-x-2">
+              <span className="text-3xl font-bold">{averageTeamPerformance}%</span>
+              <span className={`text-xs ${averageTeamPerformance > 70 ? 'text-green-500' : 'text-amber-500'}`}>
+                {averageTeamPerformance > 70 ? 'Ótimo' : averageTeamPerformance > 50 ? 'Bom' : 'Regular'}
+              </span>
+            </div>
+            
+            <div className="mt-4">
+              <div className="h-2 bg-gray-100 rounded-full">
+                <div 
+                  className={`h-2 rounded-full ${
+                    averageTeamPerformance > 70 ? 'bg-green-500' : 
+                    averageTeamPerformance > 50 ? 'bg-amber-500' : 
+                    'bg-red-500'
+                  }`}
+                  style={{ width: `${averageTeamPerformance}%` }}
+                ></div>
+              </div>
+              <div className="grid grid-cols-3 mt-2 text-xs">
+                <span className="text-red-500">Baixo</span>
+                <span className="text-center text-amber-500">Médio</span>
+                <span className="text-right text-green-500">Alto</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-sm">Carga de Trabalho</span>
+            <div className="mt-2 flex items-baseline space-x-2">
+              <span className="text-3xl font-bold">{Math.round(tasks.length / (users.length || 1))}</span>
+              <span className="text-xs text-muted-foreground">tarefas por membro</span>
+            </div>
+            
+            <div className="mt-4 space-y-2">
+              {userTaskData.map(user => (
+                <div key={user.id} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span title={user.name} className="truncate w-24">{user.name}</span>
+                    <span>{user.tasks}</span>
+                  </div>
+                  <div className="h-1 bg-gray-100 rounded-full">
+                    <div 
+                      className={`h-1 rounded-full ${
+                        user.completion > 70 ? 'bg-green-500' : 
+                        user.completion > 30 ? 'bg-amber-500' : 
+                        'bg-red-400'
+                      }`}
+                      style={{ width: `${user.completion}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Team() {
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -705,6 +898,7 @@ export default function Team() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [showTeamStats, setShowTeamStats] = useState(true);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
@@ -719,6 +913,11 @@ export default function Team() {
   // Fetch tasks
   const { data: tasks } = useQuery({
     queryKey: ['/api/tasks']
+  });
+  
+  // Fetch projects
+  const { data: projects } = useQuery({
+    queryKey: ['/api/projects']
   });
   
   // Filter users based on search term
