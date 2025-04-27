@@ -8,10 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LockIcon, UserIcon, ShieldIcon, BellIcon, Languages, GlobeIcon } from "lucide-react";
+import { 
+  LockIcon, 
+  UserIcon, 
+  ShieldIcon, 
+  BellIcon, 
+  Languages, 
+  GlobeIcon, 
+  EyeIcon, 
+  ZoomInIcon, 
+  MonitorSmartphoneIcon, 
+  MousePointerSquareDashedIcon, 
+  RotateCcw 
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAccessibility } from "@/hooks/use-accessibility";
 
 // Definição dos tipos de usuário e suas permissões
 interface Permission {
@@ -458,6 +471,216 @@ function NotificationSettings() {
   );
 }
 
+// Componente para a aba de Acessibilidade
+function AccessibilitySettings() {
+  const { toast } = useToast();
+  const [previewMode, setPreviewMode] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const {
+    highContrast,
+    largeText,
+    reducedMotion,
+    screenReaderMode,
+    toggleHighContrast,
+    toggleLargeText,
+    toggleReducedMotion,
+    toggleScreenReaderMode,
+    resetAccessibility
+  } = useAccessibility();
+
+  // Simulação de salvamento (estas configurações já estão sendo aplicadas automaticamente)
+  const handleSaveAccessibility = () => {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      toast({
+        title: "Configurações de acessibilidade atualizadas",
+        description: "Suas preferências de acessibilidade foram salvas com sucesso.",
+      });
+      setPreviewMode(null);
+    }, 1500);
+  };
+
+  // Função para mostrar temporariamente uma prévia do modo selecionado
+  const showPreview = (mode: string) => {
+    setPreviewMode(mode);
+    // Volta para as configurações do usuário após 3 segundos
+    setTimeout(() => {
+      setPreviewMode(null);
+    }, 3000);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Alert className="bg-indigo-50 border-indigo-200">
+        <EyeIcon className="h-4 w-4 text-indigo-600" />
+        <AlertTitle className="text-indigo-800">Modo de Acessibilidade</AlertTitle>
+        <AlertDescription className="text-indigo-600">
+          Estas configurações ajudam a melhorar a experiência de uso da aplicação para pessoas com diferentes necessidades.
+          As alterações são aplicadas imediatamente e ficam salvas entre sessões.
+        </AlertDescription>
+      </Alert>
+      
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <EyeIcon className="h-5 w-5 text-purple-500" />
+            <CardTitle>Configurações de Acessibilidade</CardTitle>
+          </div>
+          <CardDescription>
+            Personalize a interface para atender às suas necessidades de acessibilidade.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {/* Alto Contraste */}
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="bg-gray-900 rounded-md p-2">
+                    <MousePointerSquareDashedIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Alto Contraste</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Aumenta o contraste de cores para melhorar a visibilidade e legibilidade.
+                      Útil para pessoas com baixa visão ou daltonismo.
+                    </p>
+                    <Button 
+                      variant="link" 
+                      className="text-sm p-0 h-auto text-blue-600 mt-1"
+                      onClick={() => showPreview('high-contrast')}
+                    >
+                      Ver prévia (3s)
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Switch 
+                    checked={previewMode === 'high-contrast' ? true : highContrast}
+                    onCheckedChange={toggleHighContrast}
+                    aria-label="Ativar modo de alto contraste"
+                  />
+                </div>
+              </div>
+              
+              {/* Texto Grande */}
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 rounded-md p-2">
+                    <ZoomInIcon className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Texto Grande</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Aumenta o tamanho dos textos e elementos da interface para facilitar a leitura.
+                      Recomendado para pessoas com dificuldades visuais.
+                    </p>
+                    <Button 
+                      variant="link" 
+                      className="text-sm p-0 h-auto text-blue-600 mt-1"
+                      onClick={() => showPreview('large-text')}
+                    >
+                      Ver prévia (3s)
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Switch 
+                    checked={previewMode === 'large-text' ? true : largeText}
+                    onCheckedChange={toggleLargeText}
+                    aria-label="Ativar modo de texto grande"
+                  />
+                </div>
+              </div>
+              
+              {/* Movimento Reduzido */}
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="bg-amber-100 rounded-md p-2">
+                    <MonitorSmartphoneIcon className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Movimento Reduzido</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Reduz ou remove animações e efeitos de transição.
+                      Útil para pessoas com transtornos vestibulares ou sensibilidade a movimento.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <Switch 
+                    checked={reducedMotion}
+                    onCheckedChange={toggleReducedMotion}
+                    aria-label="Ativar modo de movimento reduzido"
+                  />
+                </div>
+              </div>
+              
+              {/* Otimização para Leitor de Tela */}
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="bg-green-100 rounded-md p-2">
+                    <MonitorSmartphoneIcon className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Otimização para Leitor de Tela</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Melhora a compatibilidade com leitores de tela, adicionando descrições 
+                      mais detalhadas e melhorando a navegação por teclado.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <Switch 
+                    checked={screenReaderMode}
+                    onCheckedChange={toggleScreenReaderMode}
+                    aria-label="Ativar otimização para leitor de tela"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Recursos Adicionais</h3>
+              <p className="text-sm text-muted-foreground">
+                Além das configurações acima, nossa aplicação também inclui:
+              </p>
+              
+              <ul className="list-disc pl-5 space-y-2 text-sm">
+                <li><span className="font-medium">Teclas de atalho</span> para as principais funções (pressione <kbd className="bg-gray-100 p-1 rounded border">?</kbd> para ver a lista completa)</li>
+                <li><span className="font-medium">Navegação por teclado</span> em todos os elementos interativos</li>
+                <li><span className="font-medium">Etiquetas ARIA</span> em todos os componentes para melhor compatibilidade com leitores de tela</li>
+                <li><span className="font-medium">Texto alternativo</span> em todas as imagens e ícones informativos</li>
+              </ul>
+            </div>
+            
+            <div className="flex justify-between">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2" 
+                onClick={resetAccessibility}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Restaurar Padrões
+              </Button>
+              
+              <Button 
+                onClick={handleSaveAccessibility} 
+                disabled={saving}
+              >
+                {saving ? "Salvando..." : "Salvar Configurações"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Componente para a aba de Idioma e Região
 function LocalizationSettings() {
   const { toast } = useToast();
@@ -580,11 +803,11 @@ function LocalizationSettings() {
 
 export default function Settings() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("rbac");
+  const [activeTab, setActiveTab] = useState("accessibility");
   
-  // Definimos "rbac" como aba padrão para demonstração
+  // Definimos "accessibility" como aba padrão para demonstração
   useEffect(() => {
-    // Comentamos esta lógica temporariamente
+    // Comentamos esta lógica temporariamente para manter a aba de acessibilidade como padrão
     /*
     if (user?.role === "admin") {
       setActiveTab("rbac");
@@ -604,7 +827,7 @@ export default function Settings() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full border-b grid grid-cols-2 md:grid-cols-4 mb-8">
+        <TabsList className="w-full border-b grid grid-cols-1 md:grid-cols-5 mb-8">
           <TabsTrigger value="profile" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
             <UserIcon className="h-4 w-4 mr-2" />
             Perfil
@@ -612,6 +835,10 @@ export default function Settings() {
           <TabsTrigger value="notifications" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
             <BellIcon className="h-4 w-4 mr-2" />
             Notificações
+          </TabsTrigger>
+          <TabsTrigger value="accessibility" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+            <EyeIcon className="h-4 w-4 mr-2" />
+            Acessibilidade
           </TabsTrigger>
           <TabsTrigger value="localization" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
             <Languages className="h-4 w-4 mr-2" />
@@ -630,6 +857,10 @@ export default function Settings() {
         
         <TabsContent value="notifications">
           <NotificationSettings />
+        </TabsContent>
+        
+        <TabsContent value="accessibility">
+          <AccessibilitySettings />
         </TabsContent>
         
         <TabsContent value="localization">

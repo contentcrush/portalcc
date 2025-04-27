@@ -16,6 +16,7 @@ import Team from "@/pages/team";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
+import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -49,10 +50,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <AppContent />
-          <Toaster />
-        </TooltipProvider>
+        <AccessibilityProvider>
+          <TooltipProvider>
+            <AppContent />
+            <Toaster />
+          </TooltipProvider>
+        </AccessibilityProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
