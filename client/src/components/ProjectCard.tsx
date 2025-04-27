@@ -9,12 +9,20 @@ import {
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
+import { Copy, CopyCheck, MoreVertical, Copy as CopyIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ProjectWithClient } from "@/lib/types";
 import { StatusLabels } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import StatusBadge from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
 
@@ -24,6 +32,7 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps) {
+  const { toast } = useToast();
   const { data: projectMembers } = useQuery({
     queryKey: [`/api/projects/${project.id}/members`],
     enabled: !!project.id,
@@ -37,6 +46,30 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
   const { data: users } = useQuery({
     queryKey: ['/api/users'],
     enabled: !!projectMembers,
+  });
+
+  // Mutação para duplicar projeto
+  const duplicateProjectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/projects/${project.id}/duplicate`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Projeto duplicado com sucesso",
+        description: "Uma cópia do projeto foi criada",
+        variant: "default",
+      });
+      // Atualiza a lista de projetos
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao duplicar projeto",
+        description: error.message || "Não foi possível duplicar o projeto",
+        variant: "destructive",
+      });
+    },
   });
 
   // Get team members with their user details
@@ -53,10 +86,18 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
   const progress = calculateProjectProgress(project);
   const daysRemaining = calculateDaysRemaining(project.endDate);
 
-  function handleOpenDetails() {
+  function handleOpenDetails(e?: React.MouseEvent) {
+    if (e) {
+      e.stopPropagation();
+    }
     if (onOpenDetails) {
       onOpenDetails(project.id);
     }
+  }
+
+  function handleDuplicateProject(e: React.MouseEvent) {
+    e.stopPropagation();
+    duplicateProjectMutation.mutate();
   }
 
   return (
@@ -94,6 +135,22 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
              project.status === 'planejamento' ? 'Planejamento' : 
              project.status}
           </div>
+        </div>
+        
+        <div className="absolute top-3 right-3 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/80 hover:bg-white">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDuplicateProject} className="cursor-pointer">
+                <Copy className="mr-2 h-4 w-4" /> 
+                Duplicar Projeto
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
