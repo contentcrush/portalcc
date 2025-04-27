@@ -275,7 +275,7 @@ export function UserEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <UserCog className="mr-2 h-5 w-5" />
@@ -290,7 +290,7 @@ export function UserEditDialog({
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto pr-2">
             <Tabs defaultValue="info_basica" className="w-full">
               <TabsList className="grid grid-cols-3 mb-4">
                 <TabsTrigger value="info_basica">Informações Básicas</TabsTrigger>
@@ -676,28 +676,29 @@ export function UserEditDialog({
                 />
               </TabsContent>
             </Tabs>
-            
-            <DialogFooter className="pt-2 border-t">
-              <Button 
-                variant="outline" 
-                type="button" 
-                onClick={onClose}
-                disabled={updateUserMutation.isPending || createUserMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit"
-                disabled={updateUserMutation.isPending || createUserMutation.isPending}
-              >
-                {(updateUserMutation.isPending || createUserMutation.isPending) && (
-                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
-                )}
-                {user ? "Salvar alterações" : "Criar usuário"}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
+        
+        <DialogFooter className="sticky bottom-0 pt-3 mt-3 border-t bg-white">
+          <Button 
+            variant="outline" 
+            type="button" 
+            onClick={onClose}
+            disabled={updateUserMutation.isPending || createUserMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="button"
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={updateUserMutation.isPending || createUserMutation.isPending}
+          >
+            {(updateUserMutation.isPending || createUserMutation.isPending) && (
+              <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
+            )}
+            {user ? "Salvar alterações" : "Criar usuário"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
