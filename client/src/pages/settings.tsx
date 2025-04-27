@@ -32,7 +32,7 @@ interface Permission {
   name: string;
   admin: boolean;
   manager: boolean;
-  editor: boolean;
+  creator: boolean;
   description?: string;
   category: 'dashboard' | 'projects' | 'tasks' | 'users';
 }
@@ -45,7 +45,7 @@ const permissions: Permission[] = [
     name: "Acessar Dashboard", 
     admin: true, 
     manager: true, 
-    editor: true,
+    creator: true,
     description: "Permite visualizar o painel principal com métricas e resumos",
     category: "dashboard"
   },
@@ -53,9 +53,18 @@ const permissions: Permission[] = [
     id: "view_financial_reports", 
     name: "Visualizar relatórios financeiros", 
     admin: true, 
-    manager: true, 
-    editor: false,
+    manager: false, 
+    creator: false,
     description: "Permite acessar e visualizar relatórios financeiros e orçamentos",
+    category: "dashboard"
+  },
+  { 
+    id: "view_financial_details", 
+    name: "Acessar detalhes financeiros", 
+    admin: true, 
+    manager: false, 
+    creator: false,
+    description: "Permite ver custos, orçamentos e detalhes de faturamento",
     category: "dashboard"
   },
   { 
@@ -63,7 +72,7 @@ const permissions: Permission[] = [
     name: "Ver performance da equipe", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: false,
     description: "Permite visualizar métricas e relatórios de desempenho da equipe",
     category: "dashboard"
   },
@@ -74,8 +83,17 @@ const permissions: Permission[] = [
     name: "Visualizar todos os Jobs", 
     admin: true, 
     manager: true, 
-    editor: true,
+    creator: true,
     description: "Permite ver todos os projetos cadastrados no sistema",
+    category: "projects"
+  },
+  { 
+    id: "view_job_financials", 
+    name: "Ver informações financeiras dos Jobs", 
+    admin: true, 
+    manager: false, 
+    creator: false,
+    description: "Permite visualizar custos e orçamentos dos projetos",
     category: "projects"
   },
   { 
@@ -83,7 +101,7 @@ const permissions: Permission[] = [
     name: "Criar/Editar Jobs", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: true,
     description: "Permite criar novos projetos e editar projetos existentes",
     category: "projects"
   },
@@ -92,7 +110,7 @@ const permissions: Permission[] = [
     name: "Aprovar Jobs / Mudar status", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: false,
     description: "Permite aprovar projetos e alterar seus status",
     category: "projects"
   },
@@ -101,7 +119,7 @@ const permissions: Permission[] = [
     name: "Duplicar Jobs", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: true,
     description: "Permite duplicar projetos existentes para criar novos",
     category: "projects"
   },
@@ -110,7 +128,7 @@ const permissions: Permission[] = [
     name: "Excluir Jobs", 
     admin: true, 
     manager: false, 
-    editor: false,
+    creator: false,
     description: "Permite excluir projetos do sistema",
     category: "projects"
   },
@@ -121,8 +139,17 @@ const permissions: Permission[] = [
     name: "Visualizar todas as tarefas", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: false,
     description: "Permite visualizar todas as tarefas do sistema",
+    category: "tasks"
+  },
+  { 
+    id: "view_assigned_tasks", 
+    name: "Visualizar tarefas atribuídas", 
+    admin: true, 
+    manager: true, 
+    creator: true,
+    description: "Permite visualizar apenas as tarefas atribuídas ao usuário",
     category: "tasks"
   },
   { 
@@ -130,7 +157,7 @@ const permissions: Permission[] = [
     name: "Criar/Editar tarefas", 
     admin: true, 
     manager: true, 
-    editor: true,
+    creator: true,
     description: "Permite criar e editar tarefas",
     category: "tasks"
   },
@@ -139,7 +166,7 @@ const permissions: Permission[] = [
     name: "Atribuir tarefas a usuários", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: false,
     description: "Permite atribuir tarefas a outros usuários",
     category: "tasks"
   },
@@ -148,7 +175,7 @@ const permissions: Permission[] = [
     name: "Upload de arquivos", 
     admin: true, 
     manager: true, 
-    editor: true,
+    creator: true,
     description: "Permite fazer upload de arquivos para os projetos e tarefas",
     category: "tasks"
   },
@@ -159,7 +186,7 @@ const permissions: Permission[] = [
     name: "Visualizar usuários", 
     admin: true, 
     manager: true, 
-    editor: false,
+    creator: false,
     description: "Permite visualizar a lista de usuários do sistema",
     category: "users"
   },
@@ -168,7 +195,7 @@ const permissions: Permission[] = [
     name: "Gerenciar usuários (CRUD)", 
     admin: true, 
     manager: false, 
-    editor: false,
+    creator: false,
     description: "Permite adicionar, editar, visualizar e remover usuários do sistema",
     category: "users"
   },
@@ -177,7 +204,7 @@ const permissions: Permission[] = [
     name: "Atribuir funções a usuários", 
     admin: true, 
     manager: false, 
-    editor: false,
+    creator: false,
     description: "Permite alterar a função (papel) de um usuário no sistema",
     category: "users"
   }
@@ -210,7 +237,7 @@ function RBACSettings() {
   */
 
   // Função para atualizar uma permissão específica e mostrar notificação
-  const handlePermissionChange = (permissionId: string, role: 'admin' | 'manager' | 'editor', value: boolean) => {
+  const handlePermissionChange = (permissionId: string, role: 'admin' | 'manager' | 'creator', value: boolean) => {
     // Atualiza o estado imediatamente
     setLocalPermissions(prevPermissions => 
       prevPermissions.map(perm => 
@@ -223,7 +250,7 @@ function RBACSettings() {
     const roleMap: Record<string, string> = {
       'admin': 'Administrador',
       'manager': 'Gestor',
-      'editor': 'Colaborador'
+      'creator': 'Creator'
     };
     
     toast({
@@ -250,7 +277,7 @@ function RBACSettings() {
             <TableHead className="w-[300px]">Permissão</TableHead>
             <TableHead className="text-center">Admin</TableHead>
             <TableHead className="text-center">Gestor</TableHead>
-            <TableHead className="text-center">Colaborador</TableHead>
+            <TableHead className="text-center">Creator</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -281,11 +308,11 @@ function RBACSettings() {
               </TableCell>
               <TableCell className="text-center">
                 <Switch 
-                  checked={permission.editor} 
-                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'editor', value)}
+                  checked={permission.creator} 
+                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'creator', value)}
                   className="data-[state=checked]:bg-green-500"
                 />
-                {permission.id === "create_edit_jobs" && permission.editor && (
+                {permission.id === "create_edit_jobs" && permission.creator && (
                   <div className="text-xs text-muted-foreground mt-1">(apenas jobs atribuídos)</div>
                 )}
               </TableCell>
