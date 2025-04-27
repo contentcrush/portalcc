@@ -65,8 +65,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clients
-  app.get("/api/clients", async (_req, res) => {
+  // Clients - Adicionando autenticação e permissões
+  app.get("/api/clients", authenticateJWT, async (_req, res) => {
     try {
       const clients = await storage.getClients();
       res.json(clients);
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:id", async (req, res) => {
+  app.get("/api/clients/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const client = await storage.getClient(id);
@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", validateBody(insertClientSchema), async (req, res) => {
+  app.post("/api/clients", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientSchema), async (req, res) => {
     try {
       const client = await storage.createClient(req.body);
       res.status(201).json(client);
@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/clients/:id", async (req, res) => {
+  app.patch("/api/clients/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedClient = await storage.updateClient(id, req.body);
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/clients/:id", async (req, res) => {
+  app.delete("/api/clients/:id", authenticateJWT, requireRole(['admin']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteClient(id);
@@ -130,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Interactions
-  app.get("/api/clients/:id/interactions", async (req, res) => {
+  app.get("/api/clients/:id/interactions", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       const interactions = await storage.getClientInteractions(clientId);
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients/:id/interactions", validateBody(insertClientInteractionSchema), async (req, res) => {
+  app.post("/api/clients/:id/interactions", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientInteractionSchema), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       const interaction = await storage.createClientInteraction({
@@ -153,8 +153,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Projects
-  app.get("/api/projects", async (_req, res) => {
+  // Projects - Adicionando autenticação e permissões
+  app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
       const projects = await storage.getProjects();
       res.json(projects);
@@ -163,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const project = await storage.getProject(id);
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", validateBody(insertProjectSchema), async (req, res) => {
+  app.post("/api/projects", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
       const project = await storage.createProject(req.body);
       res.status(201).json(project);
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:id", async (req, res) => {
+  app.patch("/api/projects/:id", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedProject = await storage.updateProject(id, req.body);
@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/projects/:id", async (req, res) => {
+  app.delete("/api/projects/:id", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteProject(id);
@@ -218,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint para duplicar um projeto
-  app.post("/api/projects/:id/duplicate", async (req, res) => {
+  app.post("/api/projects/:id/duplicate", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const originalProject = await storage.getProject(projectId);
@@ -272,8 +272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project Members
-  app.get("/api/projects/:id/members", async (req, res) => {
+  // Project Members - Adicionando autenticação e permissões
+  app.get("/api/projects/:id/members", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const members = await storage.getProjectMembers(projectId);
@@ -283,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects/:id/members", validateBody(insertProjectMemberSchema), async (req, res) => {
+  app.post("/api/projects/:id/members", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectMemberSchema), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const member = await storage.addProjectMember({
@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/projects/:projectId/members/:userId", async (req, res) => {
+  app.delete("/api/projects/:projectId/members/:userId", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const userId = parseInt(req.params.userId);
@@ -312,8 +312,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project Stages
-  app.get("/api/projects/:id/stages", async (req, res) => {
+  // Project Stages - Adicionando autenticação e permissões
+  app.get("/api/projects/:id/stages", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const stages = await storage.getProjectStages(projectId);
@@ -323,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects/:id/stages", validateBody(insertProjectStageSchema), async (req, res) => {
+  app.post("/api/projects/:id/stages", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectStageSchema), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const stage = await storage.createProjectStage({
@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:projectId/stages/:stageId", async (req, res) => {
+  app.patch("/api/projects/:projectId/stages/:stageId", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const stageId = parseInt(req.params.stageId);
       const updatedStage = await storage.updateProjectStage(stageId, req.body);
@@ -351,8 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tasks
-  app.get("/api/tasks", async (_req, res) => {
+  // Tasks - Adicionando autenticação e permissões
+  app.get("/api/tasks", authenticateJWT, async (_req, res) => {
     try {
       const tasks = await storage.getTasks();
       res.json(tasks);
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:id", async (req, res) => {
+  app.get("/api/tasks/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const task = await storage.getTask(id);
@@ -376,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id/tasks", async (req, res) => {
+  app.get("/api/projects/:id/tasks", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const tasks = await storage.getTasksByProject(projectId);
@@ -386,9 +386,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/:id/tasks", async (req, res) => {
+  app.get("/api/users/:id/tasks", authenticateJWT, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
+      
+      // Verifica se o usuário está solicitando suas próprias tarefas ou se é admin/manager
+      if (req.user!.id !== userId && req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Você só pode visualizar suas próprias tarefas." });
+      }
+      
       const tasks = await storage.getTasksByUser(userId);
       res.json(tasks);
     } catch (error) {
@@ -396,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", validateBody(insertTaskSchema), async (req, res) => {
+  app.post("/api/tasks", authenticateJWT, requirePermission('manage_tasks'), validateBody(insertTaskSchema), async (req, res) => {
     try {
       const task = await storage.createTask(req.body);
       res.status(201).json(task);
@@ -405,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/tasks/:id", async (req, res) => {
+  app.patch("/api/tasks/:id", authenticateJWT, requirePermission('manage_tasks'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedTask = await storage.updateTask(id, req.body);
@@ -420,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tasks/:id", async (req, res) => {
+  app.delete("/api/tasks/:id", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteTask(id);
@@ -435,8 +441,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Task Comments
-  app.get("/api/tasks/:id/comments", async (req, res) => {
+  // Task Comments - Adicionando autenticação e permissões
+  app.get("/api/tasks/:id/comments", authenticateJWT, async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
       const comments = await storage.getTaskComments(taskId);
@@ -446,21 +452,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:id/comments", validateBody(insertTaskCommentSchema), async (req, res) => {
+  app.post("/api/tasks/:id/comments", authenticateJWT, validateBody(insertTaskCommentSchema), async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
+      
+      // Adiciona o ID do usuário autenticado como autor do comentário
       const comment = await storage.createTaskComment({
         ...req.body,
-        task_id: taskId
+        task_id: taskId,
+        user_id: req.user!.id
       });
+      
       res.status(201).json(comment);
     } catch (error) {
       res.status(500).json({ message: "Failed to create task comment" });
     }
   });
 
-  // Financial Documents
-  app.get("/api/financial-documents", async (_req, res) => {
+  // Financial Documents - Adicionando autenticação e permissões
+  app.get("/api/financial-documents", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
     try {
       const documents = await storage.getFinancialDocuments();
       res.json(documents);
@@ -469,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:id/financial-documents", async (req, res) => {
+  app.get("/api/clients/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       const documents = await storage.getFinancialDocumentsByClient(clientId);
@@ -479,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id/financial-documents", async (req, res) => {
+  app.get("/api/projects/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const documents = await storage.getFinancialDocumentsByProject(projectId);
@@ -489,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/financial-documents", validateBody(insertFinancialDocumentSchema), async (req, res) => {
+  app.post("/api/financial-documents", authenticateJWT, requirePermission('manage_financials'), validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
       const document = await storage.createFinancialDocument(req.body);
       res.status(201).json(document);
@@ -498,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/financial-documents/:id", async (req, res) => {
+  app.patch("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedDocument = await storage.updateFinancialDocument(id, req.body);
@@ -513,8 +523,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Expenses
-  app.get("/api/expenses", async (_req, res) => {
+  // Expenses - Adicionando autenticação e permissões
+  app.get("/api/expenses", authenticateJWT, requirePermission('view_financials'), async (_req, res) => {
     try {
       const expenses = await storage.getExpenses();
       res.json(expenses);
@@ -523,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id/expenses", async (req, res) => {
+  app.get("/api/projects/:id/expenses", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const expenses = await storage.getExpensesByProject(projectId);
@@ -533,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses", validateBody(insertExpenseSchema), async (req, res) => {
+  app.post("/api/expenses", authenticateJWT, requirePermission('manage_financials'), validateBody(insertExpenseSchema), async (req, res) => {
     try {
       const expense = await storage.createExpense(req.body);
       res.status(201).json(expense);
@@ -542,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/expenses/:id", async (req, res) => {
+  app.patch("/api/expenses/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedExpense = await storage.updateExpense(id, req.body);
@@ -557,8 +567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Events
-  app.get("/api/events", async (_req, res) => {
+  // Events - Adicionando autenticação e permissões
+  app.get("/api/events", authenticateJWT, async (_req, res) => {
     try {
       const events = await storage.getEvents();
       res.json(events);
@@ -567,9 +577,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/:id/events", async (req, res) => {
+  app.get("/api/users/:id/events", authenticateJWT, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
+      
+      // Verifica se o usuário está solicitando seus próprios eventos ou se é admin/manager
+      if (req.user!.id !== userId && req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Você só pode visualizar seus próprios eventos." });
+      }
+      
       const events = await storage.getEventsByUser(userId);
       res.json(events);
     } catch (error) {
@@ -577,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id/events", async (req, res) => {
+  app.get("/api/projects/:id/events", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const events = await storage.getEventsByProject(projectId);
@@ -587,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:id/events", async (req, res) => {
+  app.get("/api/clients/:id/events", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       const events = await storage.getEventsByClient(clientId);
@@ -597,39 +613,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events", validateBody(insertEventSchema), async (req, res) => {
+  app.post("/api/events", authenticateJWT, validateBody(insertEventSchema), async (req, res) => {
     try {
-      const event = await storage.createEvent(req.body);
+      // Adiciona o ID do usuário autenticado como criador do evento
+      const event = await storage.createEvent({
+        ...req.body,
+        user_id: req.user!.id
+      });
       res.status(201).json(event);
     } catch (error) {
       res.status(500).json({ message: "Failed to create event" });
     }
   });
 
-  app.patch("/api/events/:id", async (req, res) => {
+  app.patch("/api/events/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedEvent = await storage.updateEvent(id, req.body);
+      const event = await storage.getEvent(id);
       
-      if (!updatedEvent) {
+      if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
       
+      // Verifica se o usuário é o criador do evento ou admin/manager
+      if (event.user_id !== req.user!.id && req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Você só pode editar seus próprios eventos." });
+      }
+      
+      const updatedEvent = await storage.updateEvent(id, req.body);
       res.json(updatedEvent);
     } catch (error) {
       res.status(500).json({ message: "Failed to update event" });
     }
   });
 
-  app.delete("/api/events/:id", async (req, res) => {
+  app.delete("/api/events/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteEvent(id);
+      const event = await storage.getEvent(id);
       
-      if (!success) {
+      if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
       
+      // Verifica se o usuário é o criador do evento ou admin/manager
+      if (event.user_id !== req.user!.id && req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Você só pode excluir seus próprios eventos." });
+      }
+      
+      const success = await storage.deleteEvent(id);
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete event" });
