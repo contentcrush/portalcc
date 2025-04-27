@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: ReactNode;
@@ -38,7 +39,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar - hidden on mobile unless menu is open */}
-      <div className={`${isMobile ? (mobileMenuOpen ? 'fixed inset-0 z-50 w-64' : 'hidden') : 'w-64'} bg-sidebar border-r border-sidebar-border`}>
+      <div className={`${isMobile ? (mobileMenuOpen ? 'fixed inset-0 z-50 w-64' : 'hidden') : 'w-64'}`}>
         <Sidebar onNavigate={onNavigate} />
       </div>
 
@@ -108,9 +109,132 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Page content */}
-        <div className="container mx-auto px-4 py-6">
-          {children}
+        {/* Content container with quick actions sidebar */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Main content area */}
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            {children}
+          </div>
+
+          {/* Quick actions sidebar - hidden on mobile */}
+          {!isMobile && (
+            <div className="w-64 border-l border-gray-200 overflow-y-auto bg-white p-4">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
+                    AÇÕES RÁPIDAS
+                  </h3>
+                  <div className="space-y-2">
+                    <Button 
+                      onClick={() => navigate("/projects/new")}
+                      className="w-full justify-start bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <span className="mr-2">+</span> Novo Projeto
+                    </Button>
+                    <Button 
+                      onClick={() => navigate("/tasks/new")}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <span className="mr-2">+</span> Nova Tarefa
+                    </Button>
+                    <Button 
+                      onClick={() => navigate("/clients/new")}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <span className="mr-2">+</span> Novo Cliente
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
+                    CALENDÁRIO
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    {/* Mini calendar would go here */}
+                    <div className="text-center text-sm">
+                      <div className="font-medium">Abril 2025</div>
+                      <div className="grid grid-cols-7 gap-1 mt-2 text-xs">
+                        <div>D</div>
+                        <div>S</div>
+                        <div>T</div>
+                        <div>Q</div>
+                        <div>Q</div>
+                        <div>S</div>
+                        <div>S</div>
+                        {/* Example calendar days */}
+                        {Array.from({ length: 30 }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "w-6 h-6 rounded-full flex items-center justify-center", 
+                              i === 11 ? "bg-indigo-600 text-white" : ""
+                            )}
+                          >
+                            {i + 1}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
+                    EQUIPE
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <img 
+                        src="https://randomuser.me/api/portraits/men/32.jpg" 
+                        alt="Bruno Silva" 
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <div className="ml-2">
+                        <div className="text-sm font-medium">Bruno Silva</div>
+                        <div className="text-xs text-green-500">Online</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <img 
+                        src="https://randomuser.me/api/portraits/women/44.jpg" 
+                        alt="Ana Oliveira" 
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <div className="ml-2">
+                        <div className="text-sm font-medium">Ana Oliveira</div>
+                        <div className="text-xs text-green-500">Online</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <img 
+                        src="https://randomuser.me/api/portraits/men/67.jpg" 
+                        alt="Carlos Mendes" 
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <div className="ml-2">
+                        <div className="text-sm font-medium">Carlos Mendes</div>
+                        <div className="text-xs text-gray-500">Offline</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <img 
+                        src="https://randomuser.me/api/portraits/women/23.jpg" 
+                        alt="Julia Santos" 
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <div className="ml-2">
+                        <div className="text-sm font-medium">Julia Santos</div>
+                        <div className="text-xs text-green-500">Online</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

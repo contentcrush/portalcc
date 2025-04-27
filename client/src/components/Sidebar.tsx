@@ -3,15 +3,15 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { SIDEBAR_ITEMS } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, LucideProps } from "lucide-react";
 import * as LucideIcons from "lucide-react";
+import { Project } from "@/shared/schema";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
-  const Icon = (LucideIcons as Record<string, LucideIcon>)[
-    name.charAt(0).toUpperCase() + name.slice(1)
-  ];
-  return Icon ? <Icon className="h-5 w-5" /> : null;
+  // Type assertion - we know these icons exist in Lucide
+  const IconComponent = (LucideIcons as any)[name.charAt(0).toUpperCase() + name.slice(1)];
+  return IconComponent ? <IconComponent className="h-5 w-5" /> : null;
 };
 
 interface SidebarProps {
@@ -37,13 +37,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   };
 
   return (
-    <aside className="flex flex-col h-full">
+    <aside className="sidebar">
       {/* Logo */}
-      <div className="p-4 flex items-center border-b border-sidebar-border">
-        <div className="bg-primary text-white p-2 rounded-md mr-3">
+      <div className="p-4 flex items-center border-b border-[#202140]">
+        <div className="bg-indigo-600 text-white p-2 rounded-md mr-3">
           <DynamicIcon name="video" />
         </div>
-        <span className="font-semibold text-sidebar-foreground">Content Crush</span>
+        <span className="font-semibold text-white">Content Crush</span>
       </div>
       
       {/* Navigation */}
@@ -59,10 +59,10 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                 onNavigate(item.path);
               }}
               className={cn(
-                "flex items-center px-3 py-2 rounded-md hover:bg-sidebar-accent mb-1 transition-colors",
+                "sidebar-item",
                 location === item.path
-                  ? "bg-sidebar-accent text-primary"
-                  : "text-sidebar-foreground"
+                  ? "active"
+                  : ""
               )}
             >
               <DynamicIcon name={item.icon} />
@@ -72,7 +72,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
         
         <div className="mt-6 px-3">
-          <p className="px-3 text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+          <p className="px-3 text-xs font-medium text-white/60 uppercase tracking-wider">
             PROJETOS RECENTES
           </p>
           <div className="mt-2">
@@ -84,21 +84,21 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                   e.preventDefault();
                   onNavigate(`/projects/${project.id}`);
                 }}
-                className="flex items-center px-3 py-2 text-sidebar-foreground text-sm rounded-md hover:bg-sidebar-accent"
+                className="flex items-center px-3 py-2 text-white text-sm rounded-md hover:bg-[#202140]"
               >
-                <span className={cn("w-2 h-2 rounded-full mr-3", getStatusColor(project.status))}></span>
+                <span className={cn("status-badge", getStatusColor(project.status))}></span>
                 {project.name}
               </a>
             ))}
             
             {!projects && (
-              <div className="px-3 py-2 text-sidebar-foreground/60 text-sm">
+              <div className="px-3 py-2 text-white/60 text-sm">
                 Carregando projetos...
               </div>
             )}
             
             {projects?.length === 0 && (
-              <div className="px-3 py-2 text-sidebar-foreground/60 text-sm">
+              <div className="px-3 py-2 text-white/60 text-sm">
                 Nenhum projeto recente.
               </div>
             )}
@@ -107,14 +107,14 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
       
       {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-[#202140]">
         <a
           href="/settings"
           onClick={(e) => {
             e.preventDefault();
             onNavigate("/settings");
           }}
-          className="flex items-center px-3 py-2 text-sidebar-foreground rounded-md hover:bg-sidebar-accent"
+          className="sidebar-item"
         >
           <DynamicIcon name="settings" />
           <span className="ml-3">Configurações</span>
