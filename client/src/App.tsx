@@ -17,6 +17,7 @@ import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
+import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
 import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -25,30 +26,32 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AccessibilityProvider>
-          <TooltipProvider>
-            <Switch>
-              <Route path="/auth" component={AuthPage} />
-              <Route>
-                <Layout>
-                  <Switch>
-                    <Route path="/" component={Dashboard} />
-                    <Route path="/dashboard" component={Dashboard} />
-                    <Route path="/projects" component={Projects} />
-                    <Route path="/tasks" component={Tasks} />
-                    <Route path="/clients" component={Clients} />
-                    <Route path="/clients/:id" component={ClientDetail} />
-                    <Route path="/financial" component={Financial} />
-                    <Route path="/calendar" component={Calendar} />
-                    <Route path="/team" component={Team} />
-                    <Route path="/team/user/:id" component={UserProfile} />
-                    <Route path="/settings" component={Settings} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </Layout>
-              </Route>
-            </Switch>
-            <Toaster />
-          </TooltipProvider>
+          <ProjectFormProvider>
+            <TooltipProvider>
+              <Switch>
+                <Route path="/auth" component={AuthPage} />
+                <Route>
+                  <Layout>
+                    <Switch>
+                      <Route path="/" component={Dashboard} />
+                      <Route path="/dashboard" component={Dashboard} />
+                      <Route path="/projects" component={Projects} />
+                      <Route path="/tasks" component={Tasks} />
+                      <Route path="/clients" component={Clients} />
+                      <Route path="/clients/:id" component={ClientDetail} />
+                      <Route path="/financial" component={Financial} />
+                      <Route path="/calendar" component={Calendar} />
+                      <Route path="/team" component={Team} />
+                      <Route path="/team/user/:id" component={UserProfile} />
+                      <Route path="/settings" component={Settings} />
+                      <Route component={NotFound} />
+                    </Switch>
+                  </Layout>
+                </Route>
+              </Switch>
+              <Toaster />
+            </TooltipProvider>
+          </ProjectFormProvider>
         </AccessibilityProvider>
       </AuthProvider>
     </QueryClientProvider>

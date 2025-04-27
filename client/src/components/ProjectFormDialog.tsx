@@ -60,6 +60,8 @@ const projectFormSchema = insertProjectSchema.extend({
     invalid_type_error: "Cliente inválido"
   }),
   primary_area: z.string().optional(),
+  priority: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
+  complexity: z.enum(["simples", "moderada", "complexa", "muito_complexa"]).default("moderada"),
   team_members: z.array(z.number()).optional(),
 });
 
@@ -97,6 +99,8 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
       startDate: project?.startDate ? new Date(project.startDate) : null,
       endDate: project?.endDate ? new Date(project.endDate) : null,
       primary_area: project?.primary_area || "",
+      priority: project?.priority || "media",
+      complexity: project?.complexity || "moderada",
       team_members: project?.team_members || [],
       thumbnail: project?.thumbnail || ""
     }
@@ -204,9 +208,10 @@ export function ProjectFormDialog({ isOpen, onClose, project }: ProjectFormDialo
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
             <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-3 mb-4">
+              <TabsList className="grid grid-cols-4 mb-4">
                 <TabsTrigger value="info">Informações Básicas</TabsTrigger>
                 <TabsTrigger value="dates">Datas e Orçamento</TabsTrigger>
+                <TabsTrigger value="priority">Prioridade</TabsTrigger>
                 <TabsTrigger value="team">Equipe</TabsTrigger>
               </TabsList>
               
