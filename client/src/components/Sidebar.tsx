@@ -10,16 +10,12 @@ import * as LucideIcons from "lucide-react";
 const DynamicIcon = ({ name }: { name: string }) => {
   // Mapa de conversão para nomes de ícones específicos
   const iconNameMap: Record<string, string> = {
-    "layout-dashboard": "LayoutDashboard",
+    // Ícones básicos que sabemos que existem na biblioteca Lucide
+    "home": "Home",
     "folder": "Folder",
-    "list-todo": "ListTodo",
-    "list-checks": "ListChecks",
-    "clipboard-list": "ClipboardList",
-    "check-square": "CheckSquare",
+    "list": "List",
     "users": "Users",
-    "wallet": "Wallet",
-    "credit-card": "CreditCard",
-    "landmark": "Landmark",
+    "dollar-sign": "DollarSign",
     "calendar": "Calendar",
     "video": "Video",
     "settings": "Settings"
@@ -37,7 +33,7 @@ const DynamicIcon = ({ name }: { name: string }) => {
     return null;
   }
   
-  return <IconComponent className="h-5 w-5" />;
+  return <IconComponent />;
 };
 
 interface SidebarProps {
@@ -99,7 +95,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
               )}
             >
               <DynamicIcon name={item.icon} />
-              <span className="ml-3">{item.name}</span>
+              <span>{item.name}</span>
             </a>
           ))}
         </div>

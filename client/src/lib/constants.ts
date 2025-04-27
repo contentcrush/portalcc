@@ -5,37 +5,37 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/dashboard",
     name: "Dashboard",
-    icon: "layout-dashboard"
+    icon: "home"
   },
   {
     path: "/projects",
     name: "Projetos",
-    icon: "folder" // Alterado de acordo com o screenshot
+    icon: "folder"
   },
   {
     path: "/tasks",
     name: "Tarefas",
-    icon: "clipboard-list" // Alterado para ícone de lista/tarefas
+    icon: "list"
   },
   {
     path: "/clients",
     name: "Clientes",
-    icon: "users" // Alterado para ícone de grupo de pessoas
+    icon: "users"
   },
   {
     path: "/financial",
     name: "Financeiro",
-    icon: "landmark" // Alterado para ícone bancário/financeiro
+    icon: "dollar-sign"
   },
   {
     path: "/calendar",
     name: "Calendário",
-    icon: "calendar" // Mantido o mesmo
+    icon: "calendar"
   },
   {
     path: "/team",
     name: "Equipe",
-    icon: "users" // Mantido o mesmo
+    icon: "users"
   }
 ];
 
