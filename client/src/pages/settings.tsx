@@ -275,7 +275,7 @@ function RBACSettings() {
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-[300px]">Permissão</TableHead>
-            <TableHead className="text-center">Admin</TableHead>
+            <TableHead className="text-center">Admin <span className="text-xs text-muted-foreground block">(acesso total fixo)</span></TableHead>
             <TableHead className="text-center">Gestor</TableHead>
             <TableHead className="text-center">Creator</TableHead>
           </TableRow>
@@ -293,9 +293,8 @@ function RBACSettings() {
               </TableCell>
               <TableCell className="text-center">
                 <Switch 
-                  checked={permission.admin} 
-                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'admin', value)}
-                  disabled={permission.id === "manage_users"} // Admins sempre precisam poder gerenciar usuários
+                  checked={true} 
+                  disabled={true} // Admins sempre têm todas as permissões
                   className="data-[state=checked]:bg-green-500"
                 />
               </TableCell>
@@ -331,7 +330,7 @@ function RBACSettings() {
           <AlertTitle className="text-blue-800">Permissões do Sistema</AlertTitle>
           <AlertDescription className="text-blue-600">
             Configure quais funções têm acesso a quais recursos. Clique nos seletores para ativar ou desativar permissões.
-            As alterações são aplicadas automaticamente.
+            As alterações são aplicadas automaticamente. Observe que Admins sempre têm acesso total a todas as permissões.
           </AlertDescription>
           <Button 
             variant="ghost" 
