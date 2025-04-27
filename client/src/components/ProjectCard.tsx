@@ -60,7 +60,10 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
   }
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card 
+      className="overflow-hidden h-full flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+      onClick={handleOpenDetails}
+    >
       <div className="relative">
         {project.thumbnail ? (
           <img 
@@ -117,11 +120,9 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           ) : null}
         </div>
         
-        <Link href={`/projects/${project.id}`}>
-          <h3 className="font-medium text-base mb-1 hover:text-indigo-600 cursor-pointer">
-            {project.name}
-          </h3>
-        </Link>
+        <h3 className="font-medium text-base mb-1 hover:text-indigo-600">
+          {project.name}
+        </h3>
         <p className="text-sm text-gray-500 mb-2 line-clamp-2">
           {project.description ? project.description.substring(0, 80) : 
             project.client ? `Projeto para ${project.client.name}` : 

@@ -106,7 +106,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-all duration-300 z-20 border-l border-gray-200 overflow-y-auto">
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <h2 className="font-semibold text-lg">DETALHES DO PROJETO</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -123,75 +123,81 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               color: client ? `rgb(59, 130, 246)` : '#6B7280'
             }}
           >
-            {client ? getInitials(client.name) : 'BA'}
+            {client ? getInitials(client.name) : ''}
           </div>
         </div>
         
         <div className="text-center mb-6">
-          <h3 className="font-medium text-lg">Comercial Banco Azul</h3>
-          <p className="text-sm text-gray-500">Criado em 10/03/2025</p>
+          <h3 className="font-medium text-lg">{project?.name || 'Carregando...'}</h3>
+          <p className="text-sm text-gray-500">
+            Criado em {project?.creation_date ? formatDate(project.creation_date) : '-'}
+          </p>
         </div>
         
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Status:</div>
-            <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Em andamento</div>
+            <div className={`px-2 py-1 rounded text-xs ${
+              project?.status === 'em_andamento' ? 'bg-green-100 text-green-700' : 
+              project?.status === 'pre_producao' ? 'bg-blue-100 text-blue-700' : 
+              project?.status === 'em_producao' ? 'bg-amber-100 text-amber-700' : 
+              project?.status === 'concluido' ? 'bg-gray-100 text-gray-700' : 
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {project?.status === 'em_andamento' ? 'Em andamento' : 
+               project?.status === 'pre_producao' ? 'Pré-produção' : 
+               project?.status === 'em_producao' ? 'Em produção' : 
+               project?.status === 'concluido' ? 'Concluído' : 
+               project?.status || 'Não definido'}
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Cliente:</div>
-            <div className="text-sm font-medium">Banco Azul</div>
+            <div className="text-sm font-medium">{client?.name || 'Não definido'}</div>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Orçamento:</div>
-            <div className="text-sm font-medium">R$ 54.000</div>
+            <div className="text-sm font-medium">
+              {project?.budget ? formatCurrency(project.budget) : 'Não definido'}
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Prazo:</div>
-            <div className="text-sm font-medium">28/04/2025</div>
+            <div className="text-sm font-medium">
+              {project?.endDate ? formatDate(project.endDate) : 'Não definido'}
+            </div>
           </div>
         </div>
         
         <div className="mb-8">
           <h4 className="font-medium text-sm mb-4">EQUIPE DO PROJETO</h4>
           <div className="space-y-4">
-            <div className="flex items-start">
-              <img 
-                src="https://randomuser.me/api/portraits/men/32.jpg" 
-                alt="Bruno Silva"
-                className="w-8 h-8 rounded-full mr-3"
-              />
-              <div>
-                <p className="text-sm font-medium">Bruno Silva</p>
-                <p className="text-xs text-gray-500">Diretor</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start">
-              <img 
-                src="https://randomuser.me/api/portraits/women/44.jpg" 
-                alt="Ana Oliveira"
-                className="w-8 h-8 rounded-full mr-3"
-              />
-              <div>
-                <p className="text-sm font-medium">Ana Oliveira</p>
-                <p className="text-xs text-gray-500">Produtora</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start">
-              <img 
-                src="https://randomuser.me/api/portraits/women/68.jpg" 
-                alt="Julia Santos"
-                className="w-8 h-8 rounded-full mr-3"
-              />
-              <div>
-                <p className="text-sm font-medium">Julia Santos</p>
-                <p className="text-xs text-gray-500">Editora</p>
-              </div>
-            </div>
+            {teamMembers && teamMembers.length > 0 ? (
+              teamMembers.map(member => (
+                <div key={member.id} className="flex items-start">
+                  {member.user?.avatar ? (
+                    <img 
+                      src={member.user.avatar} 
+                      alt={member.user?.name || 'Membro'}
+                      className="w-8 h-8 rounded-full mr-3"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                      {getInitials(member.user?.name || 'U')}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">{member.user?.name || 'Usuário'}</p>
+                    <p className="text-xs text-gray-500">{member.role || 'Membro'}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">Nenhum membro na equipe</p>
+            )}
             
             <div className="flex justify-center">
               <Button variant="ghost" size="sm" className="text-indigo-600">
@@ -204,45 +210,52 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="mb-8">
           <h4 className="font-medium text-sm mb-4">ETAPAS DO PROJETO</h4>
           <div className="space-y-3">
-            <div className="flex items-center">
-              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                <CheckCircle2 className="h-3 w-3 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Pré-produção</p>
-                <p className="text-xs text-green-600">Concluída em 25/03/2025</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <div className="w-5 h-5 bg-indigo-100 border border-indigo-600 rounded-full flex items-center justify-center mr-3">
-                <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Produção</p>
-                <p className="text-xs text-indigo-600">Em andamento</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <div className="w-5 h-5 bg-gray-100 rounded-full mr-3">
-              </div>
-              <div>
-                <p className="text-sm font-medium">Pós-produção</p>
-                <p className="text-xs text-gray-500">Pendente</p>
-              </div>
-            </div>
+            {stages && stages.length > 0 ? (
+              stages.map((stage) => (
+                <div key={stage.id} className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    stage.completed 
+                      ? 'bg-green-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {stage.completed && <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{stage.name}</p>
+                    <p className={`text-xs ${
+                      stage.completed 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {stage.completed 
+                        ? `Concluída em ${formatDate(stage.completion_date || new Date())}` 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">Nenhuma etapa definida</p>
+            )}
           </div>
         </div>
         
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <div className="text-xs font-medium text-gray-500">PROGRESSO</div>
-            <div className="text-xs font-semibold">65%</div>
+            <div className="text-xs font-semibold">{progress}%</div>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-1.5">
-            <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '65%' }}></div>
+            <div 
+              className="bg-indigo-600 h-1.5 rounded-full" 
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
+          {stages && (
+            <div className="text-xs text-gray-500 mt-1">
+              {completedStages} de {totalStages} etapas concluídas
+            </div>
+          )}
         </div>
         
         <div>
