@@ -1,20 +1,40 @@
-import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, json, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+
+// Enum para roles/funções de usuário
+export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'editor', 'viewer']);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  email: text("email").notNull(),
-  role: text("role").notNull().default("user"),
+  email: text("email").notNull().unique(),
+  role: userRoleEnum("role").notNull().default('viewer'),
   department: text("department"),
   position: text("position"),
   bio: text("bio"),
   avatar: text("avatar"),
   phone: text("phone"),
+  permissions: json("permissions").$type<string[]>().default([]),
+  last_login: timestamp("last_login"),
+  is_active: boolean("is_active").default(true),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Tabela para refresh tokens
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text("token").notNull().unique(),
+  expires_at: timestamp("expires_at").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  revoked: boolean("revoked").default(false),
+  ip_address: text("ip_address"),
+  user_agent: text("user_agent"),
 });
 
 export const clients = pgTable("clients", {
@@ -99,6 +119,10 @@ export const taskAttachments = pgTable("task_attachments", {
   file_url: text("file_url").notNull(),
   uploaded_by: integer("uploaded_by"),
   upload_date: timestamp("upload_date").defaultNow(),
+  // Campos para criptografia
+  encrypted: boolean("encrypted").default(false),
+  encryption_iv: text("encryption_iv"), // Vetor de inicialização para AES-256
+  encryption_key_id: text("encryption_key_id"), // Identificador da chave usada
 });
 
 export const clientInteractions = pgTable("client_interactions", {
@@ -157,14 +181,30 @@ export const events = pgTable("events", {
 });
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ 
+  id: true, 
+  created_at: true, 
+  updated_at: true, 
+  last_login: true, 
+  permissions: true 
+});
+export const insertRefreshTokenSchema = createInsertSchema(refreshTokens).omit({ 
+  id: true, 
+  created_at: true 
+});
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true });
 export const insertProjectStageSchema = createInsertSchema(projectStages).omit({ id: true, completion_date: true });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, creation_date: true });
-export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).omit({ id: true, upload_date: true });
+export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).omit({ 
+  id: true, 
+  upload_date: true,
+  encrypted: true,
+  encryption_iv: true,
+  encryption_key_id: true
+});
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
 export const insertFinancialDocumentSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
 export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
@@ -172,6 +212,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 
 // Select types
 export type User = typeof users.$inferSelect;
+export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectMember = typeof projectMembers.$inferSelect;
@@ -186,6 +227,7 @@ export type Event = typeof events.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertRefreshToken = z.infer<typeof insertRefreshTokenSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
@@ -206,7 +248,15 @@ export const usersRelations = relations(users, ({ many }) => ({
   taskAttachments: many(taskAttachments),
   clientInteractions: many(clientInteractions),
   expenses: many(expenses),
-  events: many(events)
+  events: many(events),
+  refreshTokens: many(refreshTokens)
+}));
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [refreshTokens.user_id],
+    references: [users.id]
+  })
 }));
 
 export const clientsRelations = relations(clients, ({ many }) => ({
