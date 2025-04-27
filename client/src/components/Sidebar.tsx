@@ -5,7 +5,6 @@ import { SIDEBAR_ITEMS } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
 import { LucideIcon, LucideProps } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { Project } from "@/shared/schema";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
@@ -21,8 +20,15 @@ interface SidebarProps {
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
 
+  // Define a simple Project type
+  interface Project {
+    id: number;
+    name: string;
+    status: string;
+  }
+
   // Fetch projects for the recent projects section
-  const { data: projects } = useQuery({
+  const { data: projects } = useQuery<any, Error, Project[]>({
     queryKey: ['/api/projects'],
     select: (data) => data.slice(0, 3) // Show only the first 3 projects
   });

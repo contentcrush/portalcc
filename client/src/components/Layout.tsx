@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
 import { Button } from "@/components/ui/button";
-import { Bell, Menu, UserCircle } from "lucide-react";
+import { Bell, Menu, UserCircle, Plus, LayoutDashboard, List, User, Wallet, Calendar, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,21 +129,21 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={() => navigate("/projects/new")}
                       className="w-full justify-start bg-indigo-600 hover:bg-indigo-700"
                     >
-                      <span className="mr-2">+</span> Novo Projeto
+                      <Plus className="mr-2 h-4 w-4" /> Novo Projeto
                     </Button>
                     <Button 
                       onClick={() => navigate("/tasks/new")}
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start flex items-center"
                     >
-                      <span className="mr-2">+</span> Nova Tarefa
+                      <List className="mr-2 h-4 w-4" /> Nova Tarefa
                     </Button>
                     <Button 
                       onClick={() => navigate("/clients/new")}
                       variant="outline"
-                      className="w-full justify-start"
+                      className="w-full justify-start flex items-center"
                     >
-                      <span className="mr-2">+</span> Novo Cliente
+                      <User className="mr-2 h-4 w-4" /> Novo Cliente
                     </Button>
                   </div>
                 </div>

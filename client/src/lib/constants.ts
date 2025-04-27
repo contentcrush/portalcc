@@ -15,7 +15,7 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/tasks",
     name: "Tarefas",
-    icon: "check-circle"
+    icon: "list-todo"
   },
   {
     path: "/clients",
@@ -25,7 +25,7 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/financial",
     name: "Financeiro",
-    icon: "banknote"
+    icon: "wallet"
   },
   {
     path: "/calendar",
@@ -35,7 +35,7 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/team",
     name: "Equipe",
-    icon: "users-2"
+    icon: "users"
   }
 ];
 
