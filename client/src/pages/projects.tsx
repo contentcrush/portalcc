@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
+import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { 
   Plus, 
   Filter, 
@@ -30,6 +31,7 @@ export default function Projects() {
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
 
   // Fetch projects
   const { data: projects, isLoading } = useQuery({
@@ -105,7 +107,7 @@ export default function Projects() {
             </SelectContent>
           </Select>
           
-          <Button>
+          <Button onClick={() => setIsNewProjectDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -205,7 +207,7 @@ export default function Projects() {
           <p className="text-muted-foreground mb-4">
             Tente ajustar os filtros ou adicione um novo projeto.
           </p>
-          <Button>
+          <Button onClick={() => setIsNewProjectDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
