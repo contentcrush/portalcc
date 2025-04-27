@@ -33,6 +33,7 @@ import { ptBR } from "date-fns/locale";
 import { getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { UserEditDialog } from "../pages/team";
 
 export default function UserProfile() {
   const { id } = useParams<{ id: string }>();
@@ -128,10 +129,20 @@ export default function UserProfile() {
         </Button>
         
         {(currentUser?.role === "admin" || (currentUser?.role === "manager" && user.role !== "admin")) && (
-          <Button onClick={() => setLocation(`/team`)}>
+          <Button onClick={() => setEditDialogOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
             Editar Perfil
           </Button>
+        )}
+        
+        {/* Modal de Edição de Usuário */}
+        {user && (
+          <UserEditDialog
+            isOpen={editDialogOpen}
+            onClose={() => setEditDialogOpen(false)}
+            user={user}
+            isAdmin={currentUser?.role === "admin"}
+          />
         )}
       </div>
       
