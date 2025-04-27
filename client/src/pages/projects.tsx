@@ -232,7 +232,7 @@ export default function Projects() {
             </div>
             <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
             <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
-            <Button>Adicionar Projeto</Button>
+            <Button onClick={() => setIsNewProjectDialogOpen(true)}>Adicionar Projeto</Button>
           </div>
         </div>
       )}
@@ -356,6 +356,12 @@ export default function Projects() {
           onClose={handleCloseProjectDetails}
         />
       )}
+
+      {/* Diálogo de criação/edição de projeto */}
+      <ProjectFormDialog 
+        isOpen={isNewProjectDialogOpen}
+        onClose={() => setIsNewProjectDialogOpen(false)}
+      />
     </div>
   );
 }

@@ -53,20 +53,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { PROJECT_STATUS_OPTIONS } from "@/lib/constants";
 
 // Estender o schema para adicionar validações específicas do formulário
-const projectFormSchema = z.object({
+const projectFormSchema = insertProjectSchema.extend({
   name: z.string().min(1, "Nome do projeto é obrigatório"),
-  description: z.string().optional(),
   client_id: z.coerce.number({
     required_error: "Selecione um cliente",
     invalid_type_error: "Cliente inválido"
   }),
-  status: z.string().default("draft"),
-  budget: z.coerce.number().optional(),
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
   primary_area: z.string().optional(),
   team_members: z.array(z.number()).optional(),
-  thumbnail: z.string().optional()
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
