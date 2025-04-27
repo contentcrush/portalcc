@@ -964,6 +964,12 @@ export default function Team() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
+                            <DropdownMenuItem onSelect={() => handleViewProfile(user)}>
+                              <UserCog className="h-4 w-4 mr-2" />
+                              Ver Perfil Completo
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onSelect={() => handleEditUser(user)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar perfil
