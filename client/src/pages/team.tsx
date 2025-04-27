@@ -850,6 +850,17 @@ export default function Team() {
                   </div>
                   
                   <div className="flex items-center space-x-2">
+                    {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
+                      <Button 
+                        variant="ghost"
+                        size="sm" 
+                        onClick={() => handleViewProfile(user)}
+                        className="h-9"
+                      >
+                        <UserCog className="h-4 w-4 mr-2" />
+                        Ver Perfil
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost"
                       size="sm"
@@ -987,6 +998,14 @@ export default function Team() {
                         <div className="flex items-center text-sm">
                           <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
                           <span>{user.phone}</span>
+                        </div>
+                      )}
+                      {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
+                        <div className="flex items-center text-sm mt-2">
+                          <Button variant="link" size="sm" onClick={() => handleViewProfile(user)} className="p-0 h-auto text-primary hover:text-primary/80">
+                            <UserCog className="h-3.5 w-3.5 mr-1" />
+                            Ver Perfil Completo
+                          </Button>
                         </div>
                       )}
                     </div>
