@@ -8,9 +8,36 @@ import * as LucideIcons from "lucide-react";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
+  // Mapa de conversão para nomes de ícones específicos
+  const iconNameMap: Record<string, string> = {
+    "layout-dashboard": "LayoutDashboard",
+    "folder": "Folder",
+    "list-todo": "ListTodo",
+    "list-checks": "ListChecks",
+    "clipboard-list": "ClipboardList",
+    "check-square": "CheckSquare",
+    "users": "Users",
+    "wallet": "Wallet",
+    "credit-card": "CreditCard",
+    "landmark": "Landmark",
+    "calendar": "Calendar",
+    "video": "Video",
+    "settings": "Settings"
+  };
+
+  // Usar o nome mapeado se existir, caso contrário, converter com a primeira letra maiúscula
+  const iconName = iconNameMap[name] || (name.charAt(0).toUpperCase() + name.slice(1));
+  
   // Type assertion - we know these icons exist in Lucide
-  const IconComponent = (LucideIcons as any)[name.charAt(0).toUpperCase() + name.slice(1)];
-  return IconComponent ? <IconComponent className="h-5 w-5" /> : null;
+  const IconComponent = (LucideIcons as any)[iconName];
+  
+  // Se não encontrou o componente, mostrar qual ícone está faltando para depuração
+  if (!IconComponent) {
+    console.warn(`Ícone não encontrado: ${name} (como ${iconName})`);
+    return null;
+  }
+  
+  return <IconComponent className="h-5 w-5" />;
 };
 
 interface SidebarProps {
