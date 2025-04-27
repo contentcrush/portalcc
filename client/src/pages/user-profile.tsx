@@ -127,7 +127,7 @@ export default function UserProfile() {
         </Button>
         
         {(currentUser?.role === "admin" || (currentUser?.role === "manager" && user.role !== "admin")) && (
-          <Button onClick={() => setLocation(`/team?edit=${user.id}`)}>
+          <Button onClick={() => setLocation(`/team`)}>
             <Edit className="mr-2 h-4 w-4" />
             Editar Perfil
           </Button>
