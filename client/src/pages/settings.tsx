@@ -280,14 +280,13 @@ function RBACSettings() {
                 />
               </TableCell>
               <TableCell className="text-center">
-                {permission.id === "create_edit_jobs" ? (
-                  <div className="text-sm text-muted-foreground">(apenas jobs atribuídos a ele)</div>
-                ) : (
-                  <Switch 
-                    checked={permission.editor} 
-                    onCheckedChange={(value) => handlePermissionChange(permission.id, 'editor', value)}
-                    className="data-[state=checked]:bg-green-500"
-                  />
+                <Switch 
+                  checked={permission.editor} 
+                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'editor', value)}
+                  className="data-[state=checked]:bg-green-500"
+                />
+                {permission.id === "create_edit_jobs" && permission.editor && (
+                  <div className="text-xs text-muted-foreground mt-1">(apenas jobs atribuídos)</div>
                 )}
               </TableCell>
             </TableRow>
