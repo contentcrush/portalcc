@@ -24,17 +24,77 @@ function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
   return headers;
 }
 
+// Função para renovar o token expirado
+async function refreshToken(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      // Se o refresh falhar, limpamos o token e redirecionamos para o login
+      localStorage.removeItem('authToken');
+      return null;
+    }
+    
+    const data = await res.json();
+    localStorage.setItem('authToken', data.token);
+    return data.token;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    localStorage.removeItem('authToken');
+    return null;
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  let res = await fetch(url, {
     method,
     headers: getAuthHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  // Se recebemos um erro 403 com "Token inválido ou expirado", tentamos renovar o token
+  if (res.status === 403) {
+    try {
+      const responseText = await res.text();
+      if (responseText.includes('Token inválido ou expirado')) {
+        // Tentar renovar o token
+        const newToken = await refreshToken();
+        
+        if (newToken) {
+          // Retentar a requisição com o novo token
+          res = await fetch(url, {
+            method,
+            headers: {
+              ...getAuthHeaders(!!data),
+              'Authorization': `Bearer ${newToken}`
+            },
+            body: data ? JSON.stringify(data) : undefined,
+            credentials: "include",
+          });
+        } else {
+          // Se não conseguimos renovar o token, redirecionamos para login
+          window.location.href = '/auth';
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        }
+      } else {
+        // Se for outro erro 403, lançamos o erro original
+        throw new Error(`${res.status}: ${responseText}`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Erro ao processar a requisição');
+    }
+  }
 
   await throwIfResNotOk(res);
   return res;
@@ -46,10 +106,47 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    let res = await fetch(queryKey[0] as string, {
       credentials: "include",
       headers: getAuthHeaders(),
     });
+
+    // Tratar token expirado em queries também
+    if (res.status === 403) {
+      try {
+        const responseText = await res.text();
+        if (responseText.includes('Token inválido ou expirado')) {
+          // Tentar renovar o token
+          const newToken = await refreshToken();
+          
+          if (newToken) {
+            // Retentar a query com o novo token
+            res = await fetch(queryKey[0] as string, {
+              credentials: "include",
+              headers: {
+                ...getAuthHeaders(),
+                'Authorization': `Bearer ${newToken}`
+              }
+            });
+          } else {
+            // Se não conseguimos renovar, tratamos de acordo com unauthorizedBehavior
+            if (unauthorizedBehavior === "returnNull") {
+              return null;
+            } else {
+              throw new Error('Sessão expirada. Por favor, faça login novamente.');
+            }
+          }
+        } else {
+          // Se for outro erro 403, lançamos o erro original
+          throw new Error(`${res.status}: ${responseText}`);
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Erro ao processar a requisição');
+      }
+    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
