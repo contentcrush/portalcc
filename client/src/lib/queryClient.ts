@@ -60,6 +60,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  // Se recebemos um erro 401 (não autorizado), redirecionamos para login
+  if (res.status === 401) {
+    window.location.href = '/auth';
+    throw new Error('Sessão expirada. Por favor, faça login novamente.');
+  }
+  
   // Se recebemos um erro 403 com "Token inválido ou expirado", tentamos renovar o token
   if (res.status === 403) {
     try {
@@ -149,8 +155,14 @@ export const getQueryFn: <T>(options?: {
       }
     }
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      } else {
+        // Redirecionar para a página de login quando não autorizado
+        window.location.href = '/auth';
+        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      }
     }
 
     await throwIfResNotOk(res);
