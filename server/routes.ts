@@ -8,8 +8,12 @@ import {
   insertExpenseSchema, insertEventSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configurar autenticação
+  setupAuth(app);
+
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
     return (req: Request, res: Response, next: Function) => {
@@ -26,26 +30,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
-  // Users
-  app.get("/api/users", async (_req, res) => {
+  // Users - requer autenticação e permissões adequadas
+  app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
     try {
       const users = await storage.getUsers();
-      res.json(users);
+      // Remove senhas da resposta
+      const usersWithoutPassword = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPassword);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
 
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Verifica se o usuário está solicitando seus próprios dados ou se é admin/manager
+      if (req.user!.id !== id && req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+        return res.status(403).json({ message: "Acesso negado. Você só pode visualizar seu próprio perfil." });
+      }
+      
       const user = await storage.getUser(id);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      res.json(user);
+      // Remove a senha da resposta
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch user" });
     }
