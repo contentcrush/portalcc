@@ -47,7 +47,9 @@ import {
   AlertCircle,
   X,
   Briefcase,
-  UserPlus
+  UserPlus,
+  Globe,
+  LockKeyhole
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -754,6 +756,12 @@ export default function Team() {
       deleteUserMutation.mutate(userToDelete.id);
     }
   };
+  
+  // Handler for viewing complete profile
+  const handleViewProfile = (user: any) => {
+    setSelectedUserProfile(user);
+    setProfileDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -1198,6 +1206,267 @@ export default function Team() {
         isDeleting={deleteUserMutation.isPending}
         userName={userToDelete?.name || ""}
       />
+      
+      {/* Profile view dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={() => setProfileDialogOpen(false)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <UserCog className="mr-2 h-5 w-5" />
+              Perfil Completo - {selectedUserProfile?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Informações detalhadas do perfil
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUserProfile && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-shrink-0">
+                  <UserAvatar user={selectedUserProfile} className="h-28 w-28" />
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedUserProfile.name}</h3>
+                    <div className="flex items-center mt-1 space-x-2">
+                      <Badge variant={
+                        selectedUserProfile.role === "admin" ? "destructive" : 
+                        selectedUserProfile.role === "manager" ? "default" : 
+                        selectedUserProfile.role === "editor" ? "secondary" : 
+                        "outline"
+                      }>
+                        {selectedUserProfile.role === "admin" ? "Admin" : 
+                        selectedUserProfile.role === "manager" ? "Gestor" : 
+                        selectedUserProfile.role === "editor" ? "Editor" : 
+                        "Visualizador"}
+                      </Badge>
+                      {selectedUserProfile.department && (
+                        <Badge variant="outline">{selectedUserProfile.department}</Badge>
+                      )}
+                      {selectedUserProfile.position && (
+                        <Badge variant="secondary">{selectedUserProfile.position}</Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{selectedUserProfile.email}</span>
+                    </div>
+                    {selectedUserProfile.phone && (
+                      <div className="flex items-center">
+                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{selectedUserProfile.phone}</span>
+                      </div>
+                    )}
+                    {selectedUserProfile.mobile_phone && (
+                      <div className="flex items-center">
+                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{selectedUserProfile.mobile_phone} (Celular)</span>
+                      </div>
+                    )}
+                    {selectedUserProfile.website && (
+                      <div className="flex items-center">
+                        <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{selectedUserProfile.website}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {selectedUserProfile.bio && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Bio</h4>
+                      <p className="text-sm text-muted-foreground">{selectedUserProfile.bio}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <Tabs defaultValue="info">
+                <TabsList className="grid grid-cols-3">
+                  <TabsTrigger value="info">Informações Básicas</TabsTrigger>
+                  <TabsTrigger value="contacts">Contatos & Documentos</TabsTrigger>
+                  <TabsTrigger value="financial">Dados Financeiros</TabsTrigger>
+                </TabsList>
+                
+                {/* Informações Básicas */}
+                <TabsContent value="info" className="space-y-4 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Tipo</h4>
+                      <p className="text-sm">
+                        {selectedUserProfile.user_type === "pf" ? "Pessoa Física" : 
+                         selectedUserProfile.user_type === "pj" ? "Pessoa Jurídica" : 
+                         "Não especificado"}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Username</h4>
+                      <p className="text-sm">@{selectedUserProfile.username}</p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Área de Atuação</h4>
+                      <p className="text-sm">{selectedUserProfile.area || "Não especificado"}</p>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Status</h4>
+                      <div className="flex items-center">
+                        {selectedUserProfile.is_active !== false ? (
+                          <>
+                            <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
+                            <p className="text-sm">Ativo</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-2 w-2 rounded-full bg-red-500 mr-2"></div>
+                            <p className="text-sm">Inativo</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedUserProfile.address && (
+                    <div className="space-y-1 border-t pt-3">
+                      <h4 className="text-sm font-medium">Endereço Completo</h4>
+                      <p className="text-sm">{selectedUserProfile.address}</p>
+                    </div>
+                  )}
+                  
+                  {selectedUserProfile.notes && (
+                    <div className="space-y-1 border-t pt-3">
+                      <h4 className="text-sm font-medium">Observações Gerais</h4>
+                      <p className="text-sm whitespace-pre-line">{selectedUserProfile.notes}</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Contatos e Documentos */}
+                <TabsContent value="contacts" className="space-y-4 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedUserProfile.document && (
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium">
+                          {selectedUserProfile.user_type === "pj" ? "CNPJ" : "CPF"}
+                        </h4>
+                        <p className="text-sm">{selectedUserProfile.document}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Contato Principal (apenas para PJ) */}
+                  {selectedUserProfile.user_type === "pj" && (
+                    <div className="border-t pt-3 space-y-3">
+                      <h4 className="text-sm font-medium">Contato Principal</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedUserProfile.contact_name && (
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-medium text-muted-foreground">Nome</h4>
+                            <p className="text-sm">{selectedUserProfile.contact_name}</p>
+                          </div>
+                        )}
+                        
+                        {selectedUserProfile.contact_position && (
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-medium text-muted-foreground">Cargo</h4>
+                            <p className="text-sm">{selectedUserProfile.contact_position}</p>
+                          </div>
+                        )}
+                        
+                        {selectedUserProfile.contact_email && (
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-medium text-muted-foreground">Email</h4>
+                            <p className="text-sm">{selectedUserProfile.contact_email}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Dados Financeiros */}
+                <TabsContent value="financial" className="space-y-4 py-4">
+                  {isAdmin ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedUserProfile.bank && (
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium">Banco</h4>
+                            <p className="text-sm">{selectedUserProfile.bank}</p>
+                          </div>
+                        )}
+                        
+                        {selectedUserProfile.bank_agency && (
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium">Agência</h4>
+                            <p className="text-sm">{selectedUserProfile.bank_agency}</p>
+                          </div>
+                        )}
+                        
+                        {selectedUserProfile.bank_account && (
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium">Conta</h4>
+                            <p className="text-sm">{selectedUserProfile.bank_account}</p>
+                          </div>
+                        )}
+                        
+                        {selectedUserProfile.account_type && (
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium">Tipo de Conta</h4>
+                            <p className="text-sm capitalize">
+                              {selectedUserProfile.account_type.replace("_", " ")}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {selectedUserProfile.pix_key && (
+                        <div className="space-y-1 border-t pt-3">
+                          <h4 className="text-sm font-medium">Chave PIX</h4>
+                          <p className="text-sm font-mono bg-gray-50 p-2 rounded">
+                            {selectedUserProfile.pix_key}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <LockKeyhole className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium">Acesso Restrito</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mt-1">
+                        Os dados financeiros só podem ser visualizados por usuários com nível de acesso Admin.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setProfileDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setProfileDialogOpen(false);
+                    handleEditUser(selectedUserProfile);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar Perfil
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
