@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, calculatePercentChange } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import {
   PieChart,
   Pie
 } from "recharts";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { MONTHS } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 
 // Custom components for dashboard
 const StatCard = ({ 
@@ -96,6 +97,7 @@ const StatCard = ({
 
 export default function Dashboard() {
   const [period, setPeriod] = useState("Q2 2025");
+  const { openProjectForm } = useProjectForm();
   
   const { data: projects } = useQuery({
     queryKey: ['/api/projects']
@@ -112,6 +114,19 @@ export default function Dashboard() {
   const { data: expenses } = useQuery({
     queryKey: ['/api/expenses']
   });
+  
+  // Escutar evento customizado para abrir o formulário de projeto
+  useEffect(() => {
+    const handleOpenProjectForm = () => {
+      openProjectForm();
+    };
+    
+    window.addEventListener('openProjectForm', handleOpenProjectForm);
+    
+    return () => {
+      window.removeEventListener('openProjectForm', handleOpenProjectForm);
+    };
+  }, [openProjectForm]);
 
   // Calculate dashboard metrics
   const activeProjects = projects?.filter(p => 
@@ -213,7 +228,7 @@ export default function Dashboard() {
             </select>
           </div>
           
-          <Button>
+          <Button onClick={openProjectForm}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Projeto
           </Button>
