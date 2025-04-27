@@ -700,6 +700,157 @@ function DeleteUserConfirmDialog({
 }
 
 // Componente principal da página de equipe
+// Componente de atividades recentes da equipe
+function TeamActivities({ 
+  users = [], 
+  tasks = [] 
+}: { 
+  users: any[];
+  tasks: any[];
+}) {
+  // Filtrar atividades recentes (últimos 7 dias)
+  const recentDate = new Date();
+  recentDate.setDate(recentDate.getDate() - 7);
+  
+  const recentTasks = tasks
+    .filter((task: any) => {
+      const updatedAt = task.updated_at ? new Date(task.updated_at) : null;
+      return updatedAt && updatedAt > recentDate;
+    })
+    .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 5);
+  
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-medium">Atividades Recentes</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {recentTasks.length > 0 ? (
+            recentTasks.map((task: any) => {
+              const user = users.find((u: any) => u.id === task.assigned_to);
+              return (
+                <div key={task.id} className="flex items-start">
+                  <div className="mr-3 mt-0.5">
+                    <UserAvatar user={user || {}} className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <p className="text-sm">
+                      <span className="font-medium">{user?.name || 'Usuário'}</span>{' '}
+                      {task.status === 'concluida' ? 'concluiu' : 'atualizou'}{' '}
+                      <span className="font-medium text-blue-600">{task.title}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {task.updated_at ? new Date(task.updated_at).toLocaleDateString('pt-BR') : ''}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma atividade recente encontrada.</p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" className="w-full mt-4 text-xs">
+          Ver todas as atividades
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Componente de distribuição de projetos por equipe
+function TeamProjectAllocation({ 
+  users = [], 
+  projects = [] 
+}: { 
+  users: any[];
+  projects: any[];
+}) {
+  // Projetos ativos
+  const activeProjects = projects.filter((p: any) => p.status !== 'concluido');
+  
+  // Contagem de projetos por papel/equipe
+  const projectsByRole = {
+    design: activeProjects.filter((p: any) => p.primary_area === 'design').length,
+    video: activeProjects.filter((p: any) => p.primary_area === 'video').length,
+    social: activeProjects.filter((p: any) => p.primary_area === 'social').length,
+    marketing: activeProjects.filter((p: any) => p.primary_area === 'marketing').length,
+    other: activeProjects.filter((p: any) => !p.primary_area || !['design', 'video', 'social', 'marketing'].includes(p.primary_area)).length
+  };
+  
+  // Total
+  const totalProjects = Object.values(projectsByRole).reduce((acc: number, val: number) => acc + val, 0);
+  
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-medium">Distribuição de Projetos</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm">
+            <span>Equipe de Design</span>
+            <div className="flex items-center">
+              <span className="font-medium">{projectsByRole.design}</span>
+              <span className="text-xs text-muted-foreground ml-1">projetos</span>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full">
+            <div 
+              className="h-2 bg-blue-500 rounded-full" 
+              style={{ width: `${totalProjects ? (projectsByRole.design / totalProjects) * 100 : 0}%` }}
+            ></div>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span>Equipe de Vídeo</span>
+            <div className="flex items-center">
+              <span className="font-medium">{projectsByRole.video}</span>
+              <span className="text-xs text-muted-foreground ml-1">projetos</span>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full">
+            <div 
+              className="h-2 bg-indigo-500 rounded-full" 
+              style={{ width: `${totalProjects ? (projectsByRole.video / totalProjects) * 100 : 0}%` }}
+            ></div>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span>Equipe de Mídias Sociais</span>
+            <div className="flex items-center">
+              <span className="font-medium">{projectsByRole.social}</span>
+              <span className="text-xs text-muted-foreground ml-1">projetos</span>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full">
+            <div 
+              className="h-2 bg-green-500 rounded-full" 
+              style={{ width: `${totalProjects ? (projectsByRole.social / totalProjects) * 100 : 0}%` }}
+            ></div>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span>Equipe de Marketing</span>
+            <div className="flex items-center">
+              <span className="font-medium">{projectsByRole.marketing}</span>
+              <span className="text-xs text-muted-foreground ml-1">projetos</span>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full">
+            <div 
+              className="h-2 bg-amber-500 rounded-full" 
+              style={{ width: `${totalProjects ? (projectsByRole.marketing / totalProjects) * 100 : 0}%` }}
+            ></div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Componente de estatísticas da equipe
 function TeamStatistics({ 
   users = [], 
@@ -1149,7 +1300,18 @@ export default function Team() {
               Esconder Estatísticas
             </Button>
           </div>
+          
+          {/* Estatísticas principais */}
           <TeamStatistics users={users || []} tasks={tasks || []} projects={projects || []} />
+          
+          {/* Grid para módulos adicionais */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Atividades recentes */}
+            <TeamActivities users={users || []} tasks={tasks || []} />
+            
+            {/* Distribuição de projetos */}
+            <TeamProjectAllocation users={users || []} projects={projects || []} />
+          </div>
         </>
       )}
       
