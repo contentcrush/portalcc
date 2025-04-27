@@ -45,16 +45,16 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="p-4 flex items-center border-b border-[#202140]">
+      <div className="p-4 flex items-center border-b border-gray-200">
         <div className="bg-indigo-600 text-white p-2 rounded-md mr-3">
           <DynamicIcon name="video" />
         </div>
-        <span className="font-semibold text-white">Content Crush</span>
+        <span className="font-semibold text-gray-800">Content Crush</span>
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-2">
-        <div className="px-3 py-2">
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className="px-3">
           {/* Navigation items */}
           {SIDEBAR_ITEMS.map((item) => (
             <a
@@ -77,11 +77,11 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           ))}
         </div>
         
-        <div className="mt-6 px-3">
-          <p className="px-3 text-xs font-medium text-white/60 uppercase tracking-wider">
+        <div className="mt-8 px-3">
+          <p className="px-3 text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
             PROJETOS RECENTES
           </p>
-          <div className="mt-2">
+          <div className="space-y-1">
             {projects?.map((project) => (
               <a
                 key={project.id}
@@ -90,21 +90,21 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                   e.preventDefault();
                   onNavigate(`/projects/${project.id}`);
                 }}
-                className="flex items-center px-3 py-2 text-white text-sm rounded-md hover:bg-[#202140]"
+                className="flex items-center px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
               >
                 <span className={cn("status-badge", getStatusColor(project.status))}></span>
-                {project.name}
+                <span className="truncate">{project.name}</span>
               </a>
             ))}
             
             {!projects && (
-              <div className="px-3 py-2 text-white/60 text-sm">
+              <div className="px-3 py-2 text-gray-500 text-sm">
                 Carregando projetos...
               </div>
             )}
             
             {projects?.length === 0 && (
-              <div className="px-3 py-2 text-white/60 text-sm">
+              <div className="px-3 py-2 text-gray-500 text-sm">
                 Nenhum projeto recente.
               </div>
             )}
@@ -113,7 +113,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
       
       {/* Footer */}
-      <div className="p-4 border-t border-[#202140]">
+      <div className="p-4 border-t border-gray-200">
         <a
           href="/settings"
           onClick={(e) => {

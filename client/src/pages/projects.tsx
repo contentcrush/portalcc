@@ -29,7 +29,7 @@ export default function Projects() {
   const [clientFilter, setClientFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(1); // Inicialmente seleciona o primeiro projeto para mostrar no mockup
 
   // Fetch projects
   const { data: projects, isLoading } = useQuery({

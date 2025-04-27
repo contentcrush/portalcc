@@ -73,15 +73,15 @@
 
 @layer components {
   .sidebar {
-    @apply bg-[#14142B] text-white h-full flex flex-col;
+    @apply bg-white text-gray-700 h-full flex flex-col border-r border-gray-200;
   }
   
   .sidebar-item {
-    @apply flex items-center px-3 py-2 rounded-md hover:bg-[#202140] mb-1 transition-colors text-white;
+    @apply flex items-center px-3 py-2 rounded-md hover:bg-gray-100 mb-1 transition-colors text-gray-700;
   }
   
   .sidebar-item.active {
-    @apply bg-[#202140] text-white;
+    @apply bg-indigo-50 text-indigo-600;
   }
   
   .status-badge {

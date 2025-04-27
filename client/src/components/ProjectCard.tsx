@@ -66,118 +66,106 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           <img 
             src={project.thumbnail} 
             alt={project.name} 
-            className="w-full h-48 object-cover"
+            className="w-full h-44 object-cover"
           />
         ) : (
-          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+          <div className="w-full h-44 bg-gray-200 flex items-center justify-center">
             <span className="text-gray-400 text-2xl font-semibold">
               {project.name.charAt(0)}
             </span>
           </div>
         )}
-        <div className="absolute top-3 right-3">
-          <StatusBadge status={project.status} />
+        <div className="absolute top-3 left-3">
+          <div className={`px-2 py-1 rounded-md text-xs ${
+            project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
+            project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
+            project.status === 'em_producao' ? 'bg-amber-100 text-amber-800' : 
+            project.status === 'concluido' ? 'bg-gray-100 text-gray-800' : 
+            project.status === 'planejamento' ? 'bg-indigo-100 text-indigo-800' : 
+            'bg-gray-100 text-gray-800'
+          }`}>
+            {project.status === 'em_andamento' ? 'Em andamento' : 
+             project.status === 'pre_producao' ? 'Pré-produção' : 
+             project.status === 'em_producao' ? 'Em produção' : 
+             project.status === 'concluido' ? 'Concluído' : 
+             project.status === 'planejamento' ? 'Planejamento' : 
+             project.status}
+          </div>
         </div>
       </div>
 
       <CardContent className="p-4 flex-1 flex flex-col">
+        <div className="flex items-center space-x-2 mb-1">
+          {teamMembers && teamMembers.length > 0 ? (
+            <div className="flex -space-x-2">
+              {teamMembers.slice(0, 3).map((member) => (
+                <div key={member.id} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
+                  {member.user?.avatar ? (
+                    <img 
+                      src={member.user.avatar} 
+                      alt={member.user.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs">
+                      {getInitials(member.user?.name || "U")}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        
         <Link href={`/projects/${project.id}`}>
-          <h3 className="font-semibold text-lg mb-1 hover:text-primary cursor-pointer">
+          <h3 className="font-medium text-base mb-1 hover:text-indigo-600 cursor-pointer">
             {project.name}
           </h3>
         </Link>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-          {project.description || "Sem descrição disponível."}
+        <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+          {project.description ? project.description.substring(0, 80) : 
+            project.client ? `Projeto para ${project.client.name}` : 
+            "Sem descrição disponível."}
         </p>
 
-        <div className="flex items-center mb-3">
-          <div className="flex -space-x-2 mr-3">
-            {teamMembers && teamMembers.length > 0 ? (
-              teamMembers.slice(0, 3).map((member, index) => (
-                <TooltipProvider key={member.id}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="cursor-pointer">
-                        <UserAvatar
-                          user={member.user}
-                          className="w-6 h-6 border-2 border-white"
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{member.user?.name || "Usuário"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
-                ?
-              </div>
-            )}
-            
-            {teamMembers && teamMembers.length > 3 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs border-2 border-white">
-                      +{teamMembers.length - 3}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Mais {teamMembers.length - 3} membros</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {completedStages}/{totalStages} Etapas
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <div className="flex justify-between text-xs mb-1">
+        <div className="mt-2 mb-4">
+          <div className="flex justify-between text-xs mb-1.5">
             <span>Progresso</span>
             <span className="font-medium">{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <div className="w-full bg-gray-100 rounded-full h-1.5">
+            <div 
+              className="bg-indigo-600 h-1.5 rounded-full" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
         </div>
 
-        <div className="mt-auto flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
           <div className="flex items-center">
-            {project.client ? (
-              <Link href={`/clients/${project.client.id}`}>
-                <div className="flex items-center hover:text-primary cursor-pointer">
-                  <span className="flex items-center justify-center w-5 h-5 bg-primary/10 text-primary rounded-md mr-2 text-xs">
-                    {getInitials(project.client.name)}
-                  </span>
-                  <span className="truncate max-w-[120px]">{project.client.name}</span>
-                </div>
-              </Link>
-            ) : (
-              <div className="flex items-center">
-                <span className="flex items-center justify-center w-5 h-5 bg-gray-100 text-gray-500 rounded-md mr-2 text-xs">
-                  ?
-                </span>
-                <span>Cliente</span>
-              </div>
-            )}
+            <span className="mr-2">Entrega:</span>
+            <span className="font-medium">{formatDate(project.endDate)}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleOpenDetails} className="h-6 w-6">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        {/* Additional info at bottom */}
-        <div className="mt-3 pt-3 border-t border-border flex justify-between text-xs text-muted-foreground">
-          {project.endDate && (
-            <div className={`${daysRemaining < 5 ? 'text-destructive' : ''}`}>
-              Prazo: {formatDate(project.endDate)}
+          
+          {completedStages > 0 && (
+            <div className="flex items-center">
+              <span>{completedStages}/{totalStages} Etapas</span>
             </div>
           )}
+        </div>
+
+        <div className="flex items-center justify-between text-xs mt-2">
+          {project.client && (
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-700 mr-1.5 text-[10px] font-medium">
+                {getInitials(project.client.name)}
+              </div>
+              <span className="text-gray-700 font-medium">{project.client.name}</span>
+            </div>
+          )}
+          
           {project.budget && (
-            <div>
+            <div className="text-gray-700 font-medium">
               {formatCurrency(project.budget)}
             </div>
           )}
