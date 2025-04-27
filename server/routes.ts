@@ -202,6 +202,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/projects/:id/duplicate", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const duplicatedProject = await storage.duplicateProject(id);
+      
+      if (!duplicatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.status(201).json(duplicatedProject);
+    } catch (error) {
+      console.error("Error duplicating project:", error);
+      res.status(500).json({ message: "Failed to duplicate project" });
+    }
+  });
+
   app.delete("/api/projects/:id", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -214,61 +230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete project" });
-    }
-  });
-  
-  // Endpoint para duplicar um projeto
-  app.post("/api/projects/:id/duplicate", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.id);
-      const originalProject = await storage.getProject(projectId);
-      
-      if (!originalProject) {
-        return res.status(404).json({ message: "Projeto não encontrado" });
-      }
-      
-      // Criar novo projeto baseado no original (sem o ID)
-      const newProjectData = {
-        name: `${originalProject.name} (Cópia)`,
-        description: originalProject.description,
-        client_id: originalProject.client_id,
-        status: originalProject.status,
-        budget: originalProject.budget,
-        startDate: originalProject.startDate,
-        endDate: originalProject.endDate,
-        progress: originalProject.progress,
-        thumbnail: originalProject.thumbnail,
-        creation_date: new Date()
-      };
-      
-      const newProject = await storage.createProject(newProjectData);
-      
-      // Duplicar estágios do projeto
-      const originalStages = await storage.getProjectStages(projectId);
-      for (const stage of originalStages) {
-        await storage.createProjectStage({
-          project_id: newProject.id,
-          name: stage.name,
-          order: stage.order,
-          description: stage.description,
-          completed: false // Novo projeto começa com estágios não concluídos
-        });
-      }
-      
-      // Duplicar membros da equipe
-      const originalMembers = await storage.getProjectMembers(projectId);
-      for (const member of originalMembers) {
-        await storage.addProjectMember({
-          project_id: newProject.id,
-          user_id: member.user_id,
-          role: member.role
-        });
-      }
-      
-      res.json(newProject);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Erro ao duplicar projeto" });
     }
   });
 

@@ -32,6 +32,7 @@ export interface IStorage {
   getProjectsByClient(clientId: number): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
+  duplicateProject(id: number): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
   
   // Project Members
@@ -712,6 +713,65 @@ export class MemStorage implements IStorage {
     return updatedProject;
   }
 
+  async duplicateProject(id: number): Promise<Project | undefined> {
+    const existingProject = this.projectsData.get(id);
+    if (!existingProject) return undefined;
+    
+    // Criar uma cópia do projeto com algumas modificações
+    const duplicatedProject = await this.createProject({
+      name: `${existingProject.name} (Cópia)`,
+      description: existingProject.description,
+      client_id: existingProject.client_id,
+      status: "pre_producao", // Sempre começa em pré-produção
+      budget: existingProject.budget,
+      startDate: new Date(), // Data de início atual
+      endDate: existingProject.endDate ? new Date(existingProject.endDate) : undefined,
+      progress: 0, // Inicia com progresso zero
+      thumbnail: existingProject.thumbnail
+    });
+    
+    // Duplicar os estágios do projeto
+    const stages = await this.getProjectStages(id);
+    for (const stage of stages) {
+      await this.createProjectStage({
+        project_id: duplicatedProject.id,
+        name: stage.name,
+        description: stage.description,
+        order: stage.order,
+        completed: false // Todos os estágios começam como não concluídos
+      });
+    }
+    
+    // Duplicar os membros do projeto
+    const members = await this.getProjectMembers(id);
+    for (const member of members) {
+      await this.addProjectMember({
+        project_id: duplicatedProject.id,
+        user_id: member.user_id,
+        role: member.role
+      });
+    }
+    
+    // Duplicar as tarefas do projeto, mas sem completar nenhuma
+    const tasks = await this.getTasksByProject(id);
+    for (const task of tasks) {
+      await this.createTask({
+        title: task.title,
+        description: task.description,
+        project_id: duplicatedProject.id,
+        assigned_to: task.assigned_to,
+        status: "pendente", // Todas as tarefas começam como pendentes
+        priority: task.priority,
+        due_date: task.due_date ? new Date(task.due_date) : undefined,
+        start_date: new Date(), // Data de início atual
+        estimated_hours: task.estimated_hours,
+        completed: false
+      });
+    }
+    
+    return duplicatedProject;
+  }
+
   async deleteProject(id: number): Promise<boolean> {
     return this.projectsData.delete(id);
   }
@@ -1105,6 +1165,65 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projects.id, id))
       .returning();
     return updated;
+  }
+
+  async duplicateProject(id: number): Promise<Project | undefined> {
+    const existingProject = await this.getProject(id);
+    if (!existingProject) return undefined;
+    
+    // Criar uma cópia do projeto com algumas modificações
+    const duplicatedProject = await this.createProject({
+      name: `${existingProject.name} (Cópia)`,
+      description: existingProject.description,
+      client_id: existingProject.client_id,
+      status: "pre_producao", // Sempre começa em pré-produção
+      budget: existingProject.budget,
+      startDate: new Date(), // Data de início atual
+      endDate: existingProject.endDate,
+      progress: 0, // Inicia com progresso zero
+      thumbnail: existingProject.thumbnail
+    });
+    
+    // Duplicar os estágios do projeto
+    const stages = await this.getProjectStages(id);
+    for (const stage of stages) {
+      await this.createProjectStage({
+        project_id: duplicatedProject.id,
+        name: stage.name,
+        description: stage.description,
+        order: stage.order,
+        completed: false // Todos os estágios começam como não concluídos
+      });
+    }
+    
+    // Duplicar os membros do projeto
+    const members = await this.getProjectMembers(id);
+    for (const member of members) {
+      await this.addProjectMember({
+        project_id: duplicatedProject.id,
+        user_id: member.user_id,
+        role: member.role
+      });
+    }
+    
+    // Duplicar as tarefas do projeto, mas sem completar nenhuma
+    const tasks = await this.getTasksByProject(id);
+    for (const task of tasks) {
+      await this.createTask({
+        title: task.title,
+        description: task.description,
+        project_id: duplicatedProject.id,
+        assigned_to: task.assigned_to,
+        status: "pendente", // Todas as tarefas começam como pendentes
+        priority: task.priority,
+        due_date: task.due_date,
+        start_date: new Date(), // Data de início atual
+        estimated_hours: task.estimated_hours,
+        completed: false
+      });
+    }
+    
+    return duplicatedProject;
   }
 
   async deleteProject(id: number): Promise<boolean> {
