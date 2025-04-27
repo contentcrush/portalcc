@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,9 +10,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MailIcon, LockIcon, UserIcon, BuildingIcon, BriefcaseIcon } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { EyeIcon, EyeOffIcon, KeyRound, Lock, User, Users } from "lucide-react";
 
 // Validação para o formulário de login
 const loginSchema = z.object({
@@ -37,12 +36,14 @@ export default function AuthPage() {
   const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Redirecionamento se já estiver autenticado
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  // Redirecionamento se já estiver autenticado usando useEffect
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   // Formulário de login
   const loginForm = useForm<LoginFormValues>({
@@ -80,275 +81,258 @@ export default function AuthPage() {
     registerMutation.mutate(userData);
   };
 
+  // Alternar visibilidade da senha
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className="flex min-h-screen">
-      {/* Formulário */}
-      <div className="flex items-center justify-center w-full lg:w-1/2 px-6 py-8">
-        <div className="w-full max-w-md">
-          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="register">Registrar</TabsTrigger>
-            </TabsList>
-
-            {/* Tab de Login */}
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Login</CardTitle>
-                  <CardDescription>
-                    Entre com suas credenciais para acessar o sistema.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                      <FormField
-                        control={loginForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Usuário</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <UserIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input placeholder="Seu usuário" {...field} className="border-0 focus-visible:ring-0" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Senha</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <LockIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input
-                                  type="password"
-                                  placeholder="Sua senha"
-                                  {...field}
-                                  className="border-0 focus-visible:ring-0"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={loginMutation.isPending}
-                      >
-                        {loginMutation.isPending ? "Entrando..." : "Entrar"}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-                <CardFooter className="flex justify-center">
-                  <Button variant="link" onClick={() => setActiveTab("register")}>
-                    Não tem uma conta? Registre-se
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-
-            {/* Tab de Registro */}
-            <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Registro de Conta</CardTitle>
-                  <CardDescription>
-                    Crie uma conta para acessar o sistema.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome Completo</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <UserIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input placeholder="Seu nome completo" {...field} className="border-0 focus-visible:ring-0" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome de Usuário</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <UserIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input placeholder="Nome de usuário único" {...field} className="border-0 focus-visible:ring-0" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <MailIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input placeholder="seu@email.com" {...field} className="border-0 focus-visible:ring-0" />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={registerForm.control}
-                          name="department"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Departamento</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                  <BuildingIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                  <Input placeholder="Seu departamento" {...field} className="border-0 focus-visible:ring-0" />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={registerForm.control}
-                          name="position"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cargo</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                  <BriefcaseIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                  <Input placeholder="Seu cargo" {...field} className="border-0 focus-visible:ring-0" />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Senha</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <LockIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input
-                                  type="password"
-                                  placeholder="Crie uma senha"
-                                  {...field}
-                                  className="border-0 focus-visible:ring-0"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormDescription>Mínimo de 6 caracteres</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirme a Senha</FormLabel>
-                            <FormControl>
-                              <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring">
-                                <LockIcon className="w-4 h-4 ml-3 text-muted-foreground" />
-                                <Input
-                                  type="password"
-                                  placeholder="Confirme sua senha"
-                                  {...field}
-                                  className="border-0 focus-visible:ring-0"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={registerMutation.isPending}
-                      >
-                        {registerMutation.isPending ? "Registrando..." : "Registrar"}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-                <CardFooter className="flex justify-center">
-                  <Button variant="link" onClick={() => setActiveTab("login")}>
-                    Já tem uma conta? Faça login
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-          </Tabs>
+      {/* Hero Section com gradiente */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-pink-500 via-rose-500 to-blue-500 flex-col justify-center px-16 text-white">
+        <div className="max-w-xl">
+          <h1 className="text-5xl font-bold mb-6">Content Crush</h1>
+          <p className="text-xl mb-10">
+            Gerencie seus projetos e tarefas com facilidade e eficiência
+          </p>
+          
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-3 rounded-lg">
+                <Lock className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">Controle de acesso</h3>
+                <p className="text-white/80 text-sm">
+                  Diferentes níveis de acesso para administradores, gerentes e criadores
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-3 rounded-lg">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-medium text-lg">Gestão de equipe</h3>
+                <p className="text-white/80 text-sm">
+                  Organize sua equipe e atribua tarefas facilmente
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-r from-blue-500 to-blue-700 flex-col items-center justify-center p-12 text-white">
-        <div className="max-w-xl space-y-6">
-          <h1 className="text-4xl font-bold">Content Crush</h1>
-          <h2 className="text-2xl font-semibold">Gerenciamento de Projetos & Equipes</h2>
-          <p className="text-xl opacity-90">
-            Centralize o controle de seus projetos, equipes e clientes em uma única plataforma.
-          </p>
-          <div className="space-y-4 opacity-80">
-            <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <p>Gerencie projetos com facilidade</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <p>Organize tarefas e prazos</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <p>Controle financeiro completo</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <p>Acompanhamento de clientes</p>
-            </div>
+      {/* Formulário */}
+      <div className="flex items-center justify-center w-full lg:w-1/2 px-6 py-8">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">Entrar</h2>
+            <p className="text-gray-500">Faça login com suas credenciais</p>
+          </div>
+
+          <div className="mb-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-10">
+                <TabsTrigger value="login" className="rounded-md">Login</TabsTrigger>
+                <TabsTrigger value="register" className="rounded-md">Registrar</TabsTrigger>
+              </TabsList>
+
+              {/* Tab de Login */}
+              <TabsContent value="login" className="mt-0">
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
+                    <FormField
+                      control={loginForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <User className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <Input 
+                                placeholder="Seu username" 
+                                className="pl-10" 
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Senha</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <KeyRound className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <Input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Sua senha"
+                                className="pl-10 pr-10"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                onClick={togglePasswordVisibility}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3"
+                              >
+                                {showPassword ? (
+                                  <EyeOffIcon className="h-5 w-5 text-gray-400" />
+                                ) : (
+                                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                                )}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-rose-500 hover:bg-rose-600" 
+                      disabled={loginMutation.isPending}
+                    >
+                      {loginMutation.isPending ? "Entrando..." : "Entrar"}
+                    </Button>
+                  </form>
+                </Form>
+
+                <div className="mt-4 text-center">
+                  <Button variant="link" className="text-sm text-rose-500">
+                    Esqueceu sua senha?
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Tab de Registro */}
+              <TabsContent value="register" className="mt-0">
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Completo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Seu nome completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome de Usuário</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome de usuário único" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="seu@email.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={registerForm.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Departamento</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Seu departamento" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="position"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cargo</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Seu cargo" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Senha</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Crie uma senha"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirme a Senha</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Confirme sua senha"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-rose-500 hover:bg-rose-600" 
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? "Registrando..." : "Registrar"}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
