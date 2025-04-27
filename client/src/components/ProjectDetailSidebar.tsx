@@ -73,7 +73,9 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Mutation para duplicar um projeto
   const duplicateProjectMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', `/api/projects/${projectId}/duplicate`);
+      const response = await apiRequest('POST', `/api/projects/${projectId}/duplicate`);
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
@@ -93,7 +95,9 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   });
   
   const handleDuplicateProject = () => {
-    duplicateProjectMutation.mutate();
+    if (window.confirm("Deseja duplicar este projeto? Uma cópia será criada com todos os membros da equipe e etapas.")) {
+      duplicateProjectMutation.mutate();
+    }
   };
 
   // Get team members with their user details
@@ -298,9 +302,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             className="w-full mt-3" 
             variant="outline"
             onClick={handleDuplicateProject}
+            disabled={duplicateProjectMutation.isPending}
           >
-            <Copy className="h-4 w-4 mr-2" />
-            Duplicar Projeto
+            {duplicateProjectMutation.isPending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>
+                Duplicando...
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicar Projeto
+              </>
+            )}
           </Button>
         </div>
       </div>
