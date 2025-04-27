@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
@@ -20,12 +26,17 @@ import {
   LayoutGrid, 
   List, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  MoreVertical,
+  Copy
 } from "lucide-react";
 import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Projects() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
@@ -42,6 +53,30 @@ export default function Projects() {
   // Fetch clients for dropdown and project details
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
+  });
+
+  // Mutação para duplicar projeto
+  const duplicateProjectMutation = useMutation({
+    mutationFn: async (projectId: number) => {
+      const res = await apiRequest("POST", `/api/projects/${projectId}/duplicate`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Projeto duplicado com sucesso",
+        description: "Uma cópia do projeto foi criada",
+        variant: "default",
+      });
+      // Atualiza a lista de projetos
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao duplicar projeto",
+        description: error.message || "Não foi possível duplicar o projeto",
+        variant: "destructive",
+      });
+    },
   });
 
   // Apply filters
@@ -83,6 +118,10 @@ export default function Projects() {
 
   const handleCloseProjectDetails = () => {
     setSelectedProjectId(null);
+  };
+  
+  const handleDuplicateProject = (projectId: number) => {
+    duplicateProjectMutation.mutate(projectId);
   };
 
   return (
@@ -314,13 +353,32 @@ export default function Projects() {
                   </div>
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleOpenProjectDetails(project.id)}
-                >
-                  Detalhes
-                </Button>
+                <div className="flex space-x-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleDuplicateProject(project.id)}
+                        className="cursor-pointer"
+                      >
+                        <Copy className="mr-2 h-4 w-4" /> 
+                        Duplicar Projeto
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenProjectDetails(project.id)}
+                  >
+                    Detalhes
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
