@@ -341,8 +341,8 @@ function DeleteUserConfirmDialog({
 }
 
 export default function Team() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
   
   const [searchTerm, setSearchTerm] = useState("");
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
@@ -535,6 +535,8 @@ export default function Team() {
                         variant="ghost" 
                         onClick={() => handleDeleteUser(user)}
                         className="flex-1 rounded-none py-2 h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        disabled={user.id === currentUser?.id}
+                        title={user.id === currentUser?.id ? "Você não pode remover seu próprio usuário" : ""}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Remover
@@ -637,6 +639,7 @@ export default function Team() {
                               <DropdownMenuItem 
                                 className="text-red-600"
                                 onSelect={() => handleDeleteUser(user)}
+                                disabled={user.id === currentUser?.id}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Remover
