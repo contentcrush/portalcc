@@ -32,7 +32,7 @@ export default function Projects() {
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const { openProjectForm } = useProjectForm();
+  const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
   // Fetch projects
   const { data: projects, isLoading } = useQuery({
@@ -108,7 +108,7 @@ export default function Projects() {
             </SelectContent>
           </Select>
           
-          <Button onClick={() => setIsNewProjectDialogOpen(true)}>
+          <Button onClick={openProjectForm}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
