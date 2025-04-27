@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -40,13 +41,315 @@ import {
   CheckCircle,
   Clock,
   Calendar,
-  FileText
+  FileText,
+  ShieldCheck,
+  UserCog,
+  AlertCircle,
+  X
 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import UserAvatar from "@/components/UserAvatar";
+import { useAuth } from "@/hooks/use-auth";
+
+// Validação para formulário de edição de usuário
+const userFormSchema = z.object({
+  name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
+  email: z.string().email({ message: "Email inválido" }),
+  role: z.enum(["admin", "manager", "editor", "viewer"], {
+    message: "Função deve ser admin, manager, editor ou viewer"
+  }),
+  department: z.string().optional().nullable(),
+  position: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  bio: z.string().optional().nullable(),
+});
+
+type UserFormValues = z.infer<typeof userFormSchema>;
+
+// Componente de diálogo para edição de usuário
+function UserEditDialog({ 
+  isOpen, 
+  onClose, 
+  user, 
+  isAdmin 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  user?: any; 
+  isAdmin: boolean;
+}) {
+  const { toast } = useToast();
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: user ? {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      position: user.position,
+      phone: user.phone,
+      bio: user.bio
+    } : {
+      name: "",
+      email: "",
+      role: "viewer",
+      department: "",
+      position: "",
+      phone: "",
+      bio: ""
+    }
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: UserFormValues) => {
+      const res = await apiRequest("PATCH", `/api/users/${user.id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Usuário atualizado",
+        description: "As informações do usuário foram atualizadas com sucesso.",
+        variant: "default",
+      });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar o usuário",
+        variant: "destructive",
+      });
+    }
+  });
+
+  function onSubmit(data: UserFormValues) {
+    updateUserMutation.mutate(data);
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <UserCog className="mr-2 h-5 w-5" />
+            {user ? "Editar Usuário" : "Novo Usuário"}
+          </DialogTitle>
+          <DialogDescription>
+            {user 
+              ? "Edite as informações do usuário abaixo." 
+              : "Adicione um novo usuário ao sistema."
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome completo</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome completo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="exemplo@contentcrush.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {isAdmin && (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Função</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma função" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Gestor</SelectItem>
+                        <SelectItem value="editor">Editor</SelectItem>
+                        <SelectItem value="viewer">Visualizador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Define as permissões do usuário no sistema.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Departamento</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Marketing" {...field} value={field.value || ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cargo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ex: Diretor de Marketing" {...field} value={field.value || ""} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="(11) 98765-4321" {...field} value={field.value || ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Uma breve descrição profissional" {...field} value={field.value || ""} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={onClose}
+                disabled={updateUserMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={updateUserMutation.isPending}
+              >
+                {updateUserMutation.isPending && (
+                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
+                )}
+                Salvar alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Componente de diálogo de confirmação para exclusão
+function DeleteUserConfirmDialog({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  isDeleting,
+  userName
+}: { 
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  userName: string;
+}) {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center text-red-600">
+            <AlertCircle className="mr-2 h-5 w-5" />
+            Excluir usuário
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir o usuário <span className="font-semibold">{userName}</span>? Esta ação não pode ser desfeita e removerá o usuário permanentemente.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting && (
+              <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full" />
+            )}
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 export default function Team() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  
+  const { toast } = useToast();
   
   // Fetch users
   const { data: users, isLoading } = useQuery({
@@ -61,6 +364,31 @@ export default function Team() {
   // Fetch projects
   const { data: projects } = useQuery({
     queryKey: ['/api/projects']
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/users/${userId}`);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi excluído com sucesso.",
+        variant: "default",
+      });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível excluir o usuário",
+        variant: "destructive",
+      });
+    }
   });
 
   // Filter users based on search term
@@ -79,6 +407,25 @@ export default function Team() {
   const getTasksForUser = (userId: number) => {
     return tasks?.filter(task => task.assigned_to === userId) || [];
   };
+  
+  // Handler for editing user
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setIsUserDialogOpen(true);
+  };
+  
+  // Handler for deleting user
+  const handleDeleteUser = (user: any) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Confirm deletion
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -89,12 +436,99 @@ export default function Team() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button onClick={() => setIsUserDialogOpen(true)}>
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAdminPanelOpen(!isAdminPanelOpen)}
+              className={isAdminPanelOpen ? "bg-primary/10" : ""}
+            >
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Painel Admin
+            </Button>
+          )}
+          <Button onClick={() => {
+            setEditingUser(null);
+            setIsUserDialogOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Membro
           </Button>
         </div>
       </div>
+      
+      {/* Admin Panel */}
+      {isAdmin && isAdminPanelOpen && (
+        <Card className="mb-6 border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center">
+              <ShieldCheck className="mr-2 h-5 w-5 text-primary" />
+              Painel de Administração de Usuários
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Função</TableHead>
+                  <TableHead>Departamento</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users?.map(user => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <UserAvatar user={user} className="h-8 w-8 mr-2" />
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-xs text-muted-foreground">@{user.username}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        user.role === "admin" ? "destructive" : 
+                        user.role === "manager" ? "default" : 
+                        user.role === "editor" ? "secondary" : 
+                        "outline"
+                      }>
+                        {user.role === "admin" ? "Admin" : 
+                        user.role === "manager" ? "Gestor" : 
+                        user.role === "editor" ? "Editor" : 
+                        "Visualizador"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{user.department || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => handleDeleteUser(user)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Search and filter */}
       <div className="relative">
@@ -153,7 +587,7 @@ export default function Team() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleEditUser(user)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar perfil
                           </DropdownMenuItem>
@@ -161,11 +595,18 @@ export default function Team() {
                             <FileText className="h-4 w-4 mr-2" />
                             Ver projetos
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remover
-                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onSelect={() => handleDeleteUser(user)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remover
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -378,82 +819,26 @@ export default function Team() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit User Dialog */}
+      <UserEditDialog 
+        isOpen={isUserDialogOpen} 
+        onClose={() => {
+          setIsUserDialogOpen(false);
+          setEditingUser(null);
+        }}
+        user={editingUser}
+        isAdmin={isAdmin}
+      />
       
-      {/* New Member Dialog */}
-      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Membro</DialogTitle>
-            <DialogDescription>
-              Preencha os campos abaixo para adicionar um novo membro à equipe.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="firstName" className="text-sm font-medium">
-                  Nome
-                </label>
-                <Input id="firstName" placeholder="Nome" />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="lastName" className="text-sm font-medium">
-                  Sobrenome
-                </label>
-                <Input id="lastName" placeholder="Sobrenome" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input id="email" type="email" placeholder="exemplo@contentcrush.com" />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="role" className="text-sm font-medium">
-                  Cargo
-                </label>
-                <Input id="role" placeholder="Cargo" />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="department" className="text-sm font-medium">
-                  Departamento
-                </label>
-                <Input id="department" placeholder="Departamento" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="phone" className="text-sm font-medium">
-                Telefone
-              </label>
-              <Input id="phone" placeholder="(00) 00000-0000" />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="bio" className="text-sm font-medium">
-                Bio
-              </label>
-              <textarea 
-                id="bio" 
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Breve descrição sobre o membro"
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button>Adicionar Membro</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <DeleteUserConfirmDialog 
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteUser}
+        isDeleting={deleteUserMutation.isPending}
+        userName={userToDelete?.name || ""}
+      />
     </div>
   );
 }
