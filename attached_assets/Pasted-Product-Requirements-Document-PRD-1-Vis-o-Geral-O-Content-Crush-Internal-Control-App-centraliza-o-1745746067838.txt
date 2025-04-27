@@ -1,0 +1,78 @@
+Product Requirements Document (PRD)
+1. Visão Geral
+O Content Crush Internal Control App centraliza o fluxo de trabalho da produtora, permitindo acompanhar projetos audiovisuais, tarefas, finanças e relacionamento com clientes em tempo real, com dados acionáveis e interface unificada.
+2. Objetivos de Negócio
+* Ganhar eficiência operacional ➜ reduzir tempo de atualização de status em 50 % até Q4.
+* Visibilidade financeira integrada ➜ projeções de receita e margem por projeto, impactando decisões de produção.
+* Escalabilidade da equipe ➜ permitir que Gestores monitorem até 3× mais jobs sem perder controle.
+3. Personas & Papéis
+Persona	Perfil	Permissões‑chave
+Admin	Founder/COO	CRUD total, gestão financeira, configurações globais, gestão de permissões
+Gestor	Produtor executivo / Coordenador	CRUD projetos, tarefas, clientes, aprovar despesas, ver relatórios
+Creator	Editor, filmmaker	Ver tarefas atribuídas, atualizar status, anexar arquivos, comentar
+4. Métricas de Sucesso
+Métrica	Fórmula	Alvo
+Jobs Ativos	Projetos com status ≠ Concluído	—
+Jobs Atrasados	Projetos cujo prazo final < hoje e status ≠ Concluído	0 % após 30 dias
+SLA de Atualização	Δ tempo entre mudança real & registro no sistema	≤ 24 h
+Receita Mensal	Σ receitas no mês	↑ 15 % trimestre‑a‑trimestre
+5. Escopo Funcional (por Módulo)
+5.1 Dashboard
+* Blocos KPI: Projetos Ativos, Projetos Atrasados, Total a Receber, Total a Pagar (comparativos automáticos).
+* Lista "Tarefas Próximas" (até 5 itens, filtros por prioridade).
+* Gráfico Visão Financeira YTD (linha Receita × Despesa × Lucro).
+* Widget "Próximos Pagamentos" — alerta amarelo caso < 7 dias.
+5.2 Projetos
+* Kanban/grid de cards com thumb, nome, cliente, status (cores):
+    * Em orçamento, Pré‑produção, Produção, Revisão Cliente, Entrega Final, Pago, Concluído.
+* Barra de progresso ligada a nº de etapas concluídas / total.
+* Sidebar de detalhes com equipe, etapas (checklist), botões: Editar, Gerenciar Tarefas, Financeiro.
+* Filtros combináveis: Cliente, Status, Data, Responsável.
+5.3 Tarefas
+* Modos Lista | Quadro | Calendário.
+* Campos: projeto, título, descrição, prioridade (Alta/Média/Baixa), data início & entrega, estimativa horas, anexos, comentários threaded.
+* Regras:
+    * Se data entrega < hoje & status ≠ concluída ➜ Vence hoje! vermelho.
+    * Atualização de tarefa reflete cor no Calendário.
+5.4 Clientes
+* Visão 360º: KPIs (Projetos Totais, Valor Faturado, Tempo de Relação).
+* Histórico de Interações (time‑stamped, categoria tag) com anexos.
+* Documentos Financeiros com status (Pago, Pendente, Assinado, etc.)
+* Contatos e lembretes integrados ao módulo Calendário.
+5.5 Financeiro
+* Filtros: Período, Cliente, Status de Projeto.
+* Cards Resumo: Receita Total, Despesas Totais, Lucro Líquido.
+* Gráficos: Receita por Projeto (barra), Tendência Mensal (linha), Desempenho de Projetos — margem %, Donut de Despesas.
+* Exportação CSV / PDF.
+5.6 Calendário Integrado
+* Visões Dia | Semana | Mês.
+* Tipos de evento: Tarefas, Reuniões, Gravações, Entregas, Financeiro.
+* Arrastar & soltar para reagendar ➜ atualiza datas nos módulos correspondentes.
+* Sidebar "Próximos Prazos" (ordenados por urgência).
+5.7 Configurações
+* Perfil de usuário.
+* Conta & Segurança (2FA opcional, redefinição de senha, sessão ativa).
+* Aparência (Tema claro/escuro, cor de destaque).
+* Faturamento (detalhes bancários da empresa).
+* Integrações: Google Drive, Slack, Calendar, Zapier.
+* Importar/Exportar (CSV: clientes, projetos, tarefas).
+6. Requisitos Não‑Funcionais
+Categoria	Descrição
+Performance	Dashboard < 2 s para render até 2 k registros
+Segurança	JWT + refresh, encriptação AES‑256 de anexos, RBAC
+Escalabilidade	DB físico inicial SQLite ‑‑> migração Postgres (fase 2)
+Disponibilidade	99.5 % uptime
+Acessibilidade	WCAG 2.1 AA
+7. MoSCoW – MVP (Fase 1)
+Must‑have
+* CRUD Projetos, Tarefas, Clientes.
+* Dashboard KPIs + Tarefas Próximas.
+* Calendário Semana com sync de Tarefas.
+* Financeiro: Receita/Despesa manual, exportação CSV.
+* Autenticação JWT e 3 níveis de usuário (Admin/Gestor/Creator).
+Should‑have
+* Upload de anexos (local storage).
+* Comentários em tarefas.
+* Histórico de Interações de Cliente.
+
+
