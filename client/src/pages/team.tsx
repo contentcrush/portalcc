@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,15 +116,7 @@ function UserEditDialog({
   const { toast } = useToast();
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: user ? {
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      department: user.department,
-      position: user.position,
-      phone: user.phone,
-      bio: user.bio
-    } : {
+    defaultValues: {
       // Novo usuário - sempre começa como "viewer" (Visualizador)
       name: "",
       email: "",
@@ -132,9 +124,90 @@ function UserEditDialog({
       department: "",
       position: "",
       phone: "",
-      bio: ""
+      bio: "",
+      // Campos adicionais
+      user_type: null,
+      document: "",
+      mobile_phone: "",
+      website: "",
+      address: "",
+      area: "",
+      // Contato principal (para PJ)
+      contact_name: "",
+      contact_position: "",
+      contact_email: "",
+      // Dados bancários
+      bank: "",
+      bank_agency: "",
+      bank_account: "",
+      account_type: null,
+      pix_key: "",
+      notes: "",
+      is_active: true
     }
   });
+
+  // Atualiza os dados do formulário quando o usuário muda
+  useEffect(() => {
+    if (user) {
+      // Se temos um usuário, carregamos os dados dele no formulário
+      form.reset({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        position: user.position,
+        phone: user.phone,
+        bio: user.bio,
+        // Campos adicionais
+        user_type: user.user_type,
+        document: user.document,
+        mobile_phone: user.mobile_phone,
+        website: user.website,
+        address: user.address,
+        area: user.area,
+        // Contato principal (para PJ)
+        contact_name: user.contact_name,
+        contact_position: user.contact_position,
+        contact_email: user.contact_email,
+        // Dados bancários
+        bank: user.bank,
+        bank_agency: user.bank_agency,
+        bank_account: user.bank_account,
+        account_type: user.account_type,
+        pix_key: user.pix_key,
+        notes: user.notes,
+        is_active: user.is_active !== false
+      });
+    } else {
+      // Se não temos usuário, resetamos o formulário para os valores padrão
+      form.reset({
+        name: "",
+        email: "",
+        role: "viewer",
+        department: "",
+        position: "",
+        phone: "",
+        bio: "",
+        user_type: null,
+        document: "",
+        mobile_phone: "",
+        website: "",
+        address: "",
+        area: "",
+        contact_name: "",
+        contact_position: "",
+        contact_email: "",
+        bank: "",
+        bank_agency: "",
+        bank_account: "",
+        account_type: null,
+        pix_key: "",
+        notes: "",
+        is_active: true
+      });
+    }
+  }, [user, form]);
 
   // Mutation para atualizar usuários existentes
   const updateUserMutation = useMutation({
