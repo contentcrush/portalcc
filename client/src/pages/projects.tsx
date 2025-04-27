@@ -23,6 +23,7 @@ import {
   ChevronRight 
 } from "lucide-react";
 import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 
 export default function Projects() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,7 +32,7 @@ export default function Projects() {
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const { openProjectForm } = useProjectForm();
 
   // Fetch projects
   const { data: projects, isLoading } = useQuery({

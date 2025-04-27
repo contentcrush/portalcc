@@ -194,14 +194,14 @@ export function ProjectFormDialog() {
   const isLoading = isLoadingClients || isLoadingUsers;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isFormOpen} onOpenChange={closeProjectForm}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {project ? "Editar Projeto" : "Novo Projeto"}
+            {projectToEdit ? "Editar Projeto" : "Novo Projeto"}
           </DialogTitle>
           <DialogDescription>
-            {project 
+            {projectToEdit 
               ? "Edite as informações do projeto existente."
               : "Adicione um novo projeto ao sistema."}
           </DialogDescription>
@@ -628,7 +628,7 @@ export function ProjectFormDialog() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={onClose}
+                    onClick={closeProjectForm}
                     disabled={isSubmitting}
                   >
                     Cancelar
@@ -638,7 +638,7 @@ export function ProjectFormDialog() {
                     disabled={isSubmitting}
                   >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {project ? "Salvar Alterações" : "Criar Projeto"}
+                    {projectToEdit ? "Salvar Alterações" : "Criar Projeto"}
                   </Button>
                 </div>
               </div>
