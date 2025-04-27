@@ -7,6 +7,23 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Função para obter o token de autenticação
+function getAuthToken(): string | null {
+  return localStorage.getItem("authToken");
+}
+
+// Adicionar o token de autenticação às requisições
+function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
+  const headers: HeadersInit = hasContentType ? { "Content-Type": "application/json" } : {};
+  const token = getAuthToken();
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -14,7 +31,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: getAuthHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -31,6 +48,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers: getAuthHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

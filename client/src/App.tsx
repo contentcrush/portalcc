@@ -14,34 +14,46 @@ import Financial from "@/pages/financial";
 import Calendar from "@/pages/calendar";
 import Team from "@/pages/team";
 import Settings from "@/pages/settings";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/projects" component={Projects} />
-      <Route path="/tasks" component={Tasks} />
-      <Route path="/clients" component={Clients} />
-      <Route path="/clients/:id" component={ClientDetail} />
-      <Route path="/financial" component={Financial} />
-      <Route path="/calendar" component={Calendar} />
-      <Route path="/team" component={Team} />
-      <Route path="/settings" component={Settings} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/projects" component={Projects} />
+      <ProtectedRoute path="/tasks" component={Tasks} />
+      <ProtectedRoute path="/clients" component={Clients} />
+      <ProtectedRoute path="/clients/:id" component={ClientDetail} />
+      <ProtectedRoute path="/financial" component={Financial} />
+      <ProtectedRoute path="/calendar" component={Calendar} />
+      <ProtectedRoute path="/team" component={Team} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AppContent() {
+  return (
+    <Layout>
+      <Router />
+    </Layout>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Layout>
-          <Router />
-        </Layout>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <AppContent />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

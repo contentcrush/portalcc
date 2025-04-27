@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
 import { Button } from "@/components/ui/button";
-import { Bell, Menu, UserCircle, Plus, LayoutDashboard, List, User, Wallet, Calendar, Users } from "lucide-react";
+import { Bell, Menu, UserCircle, Plus, List, User, LogOut, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -23,9 +24,22 @@ export default function Layout({ children }: LayoutProps) {
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const { user, logoutMutation } = useAuth();
+  
+  // Se estivermos na rota de autenticação ou não houver usuário, renderize apenas o conteúdo sem layout
+  const isAuthPage = location === "/auth";
+  if (isAuthPage || !user) {
+    return <>{children}</>;
+  }
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  // Lidar com logout
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    navigate("/auth");
   };
 
   // Close mobile menu when location changes
@@ -34,6 +48,14 @@ export default function Layout({ children }: LayoutProps) {
     if (isMobile) {
       setMobileMenuOpen(false);
     }
+  };
+
+  // Iniciais para avatar (se não houver foto)
+  const getUserInitials = () => {
+    if (!user?.name) return "U";
+    const parts = user.name.split(" ");
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   return (
@@ -82,26 +104,30 @@ export default function Layout({ children }: LayoutProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
-                    <img 
-                      src="https://randomuser.me/api/portraits/men/32.jpg" 
-                      alt="Avatar" 
-                      className="h-8 w-8 rounded-full border-2 border-white"
-                    />
+                    <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                      {getUserInitials()}
+                    </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Bruno Silva</DropdownMenuLabel>
+                  <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-gray-500 font-normal">{user.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/")}>
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/")}>
-                    Configurações
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    Sair
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -127,7 +153,7 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="space-y-2">
                     <Button 
                       onClick={() => navigate("/projects/new")}
-                      className="w-full justify-start bg-indigo-600 hover:bg-indigo-700"
+                      className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                     >
                       <Plus className="mr-2 h-4 w-4" /> Novo Projeto
                     </Button>
@@ -170,7 +196,7 @@ export default function Layout({ children }: LayoutProps) {
                             key={i} 
                             className={cn(
                               "w-6 h-6 rounded-full flex items-center justify-center", 
-                              i === 11 ? "bg-indigo-600 text-white" : ""
+                              i === 11 ? "bg-blue-600 text-white" : ""
                             )}
                           >
                             {i + 1}
@@ -187,44 +213,36 @@ export default function Layout({ children }: LayoutProps) {
                   </h3>
                   <div className="space-y-2">
                     <div className="flex items-center">
-                      <img 
-                        src="https://randomuser.me/api/portraits/men/32.jpg" 
-                        alt="Bruno Silva" 
-                        className="h-8 w-8 rounded-full"
-                      />
+                      <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
+                        BS
+                      </div>
                       <div className="ml-2">
                         <div className="text-sm font-medium">Bruno Silva</div>
                         <div className="text-xs text-green-500">Online</div>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <img 
-                        src="https://randomuser.me/api/portraits/women/44.jpg" 
-                        alt="Ana Oliveira" 
-                        className="h-8 w-8 rounded-full"
-                      />
+                      <div className="h-8 w-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">
+                        AO
+                      </div>
                       <div className="ml-2">
                         <div className="text-sm font-medium">Ana Oliveira</div>
                         <div className="text-xs text-green-500">Online</div>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <img 
-                        src="https://randomuser.me/api/portraits/men/67.jpg" 
-                        alt="Carlos Mendes" 
-                        className="h-8 w-8 rounded-full"
-                      />
+                      <div className="h-8 w-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs">
+                        CM
+                      </div>
                       <div className="ml-2">
                         <div className="text-sm font-medium">Carlos Mendes</div>
                         <div className="text-xs text-gray-500">Offline</div>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <img 
-                        src="https://randomuser.me/api/portraits/women/23.jpg" 
-                        alt="Julia Santos" 
-                        className="h-8 w-8 rounded-full"
-                      />
+                      <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs">
+                        JS
+                      </div>
                       <div className="ml-2">
                         <div className="text-sm font-medium">Julia Santos</div>
                         <div className="text-xs text-green-500">Online</div>
