@@ -34,41 +34,20 @@ interface Permission {
   manager: boolean;
   editor: boolean;
   description?: string;
+  category: 'dashboard' | 'projects' | 'tasks' | 'users';
 }
 
-// Lista de permissões conforme a imagem de referência
+// Lista de permissões organizadas por categoria
 const permissions: Permission[] = [
+  // Dashboard
   { 
     id: "access_dashboard", 
     name: "Acessar Dashboard", 
     admin: true, 
     manager: true, 
     editor: true,
-    description: "Permite visualizar o painel principal com métricas e resumos"
-  },
-  { 
-    id: "view_all_jobs", 
-    name: "Visualizar todos os Jobs", 
-    admin: true, 
-    manager: true, 
-    editor: true,
-    description: "Permite ver todos os projetos cadastrados no sistema"
-  },
-  { 
-    id: "create_edit_jobs", 
-    name: "Criar/Editar Jobs", 
-    admin: true, 
-    manager: true, 
-    editor: false,
-    description: "Permite criar novos projetos e editar projetos existentes"
-  },
-  { 
-    id: "manage_users", 
-    name: "Gerenciar usuários (CRUD)", 
-    admin: true, 
-    manager: false, 
-    editor: false,
-    description: "Permite adicionar, editar, visualizar e remover usuários do sistema"
+    description: "Permite visualizar o painel principal com métricas e resumos",
+    category: "dashboard"
   },
   { 
     id: "view_financial_reports", 
@@ -76,15 +55,93 @@ const permissions: Permission[] = [
     admin: true, 
     manager: true, 
     editor: false,
-    description: "Permite acessar e visualizar relatórios financeiros e orçamentos"
+    description: "Permite acessar e visualizar relatórios financeiros e orçamentos",
+    category: "dashboard"
   },
   { 
-    id: "approve_jobs", 
-    name: "Aprovar Jobs / Mudar status de outros", 
+    id: "view_team_performance", 
+    name: "Ver performance da equipe", 
     admin: true, 
     manager: true, 
     editor: false,
-    description: "Permite aprovar projetos e alterar seus status"
+    description: "Permite visualizar métricas e relatórios de desempenho da equipe",
+    category: "dashboard"
+  },
+  
+  // Projetos
+  { 
+    id: "view_all_jobs", 
+    name: "Visualizar todos os Jobs", 
+    admin: true, 
+    manager: true, 
+    editor: true,
+    description: "Permite ver todos os projetos cadastrados no sistema",
+    category: "projects"
+  },
+  { 
+    id: "create_edit_jobs", 
+    name: "Criar/Editar Jobs", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite criar novos projetos e editar projetos existentes",
+    category: "projects"
+  },
+  { 
+    id: "approve_jobs", 
+    name: "Aprovar Jobs / Mudar status", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite aprovar projetos e alterar seus status",
+    category: "projects"
+  },
+  { 
+    id: "duplicate_jobs", 
+    name: "Duplicar Jobs", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite duplicar projetos existentes para criar novos",
+    category: "projects"
+  },
+  { 
+    id: "delete_jobs", 
+    name: "Excluir Jobs", 
+    admin: true, 
+    manager: false, 
+    editor: false,
+    description: "Permite excluir projetos do sistema",
+    category: "projects"
+  },
+  
+  // Tarefas
+  { 
+    id: "view_all_tasks", 
+    name: "Visualizar todas as tarefas", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite visualizar todas as tarefas do sistema",
+    category: "tasks"
+  },
+  { 
+    id: "create_edit_tasks", 
+    name: "Criar/Editar tarefas", 
+    admin: true, 
+    manager: true, 
+    editor: true,
+    description: "Permite criar e editar tarefas",
+    category: "tasks"
+  },
+  { 
+    id: "assign_tasks", 
+    name: "Atribuir tarefas a usuários", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite atribuir tarefas a outros usuários",
+    category: "tasks"
   },
   { 
     id: "upload_files", 
@@ -92,7 +149,37 @@ const permissions: Permission[] = [
     admin: true, 
     manager: true, 
     editor: true,
-    description: "Permite fazer upload de arquivos para os projetos"
+    description: "Permite fazer upload de arquivos para os projetos e tarefas",
+    category: "tasks"
+  },
+  
+  // Usuários
+  { 
+    id: "view_users", 
+    name: "Visualizar usuários", 
+    admin: true, 
+    manager: true, 
+    editor: false,
+    description: "Permite visualizar a lista de usuários do sistema",
+    category: "users"
+  },
+  { 
+    id: "manage_users", 
+    name: "Gerenciar usuários (CRUD)", 
+    admin: true, 
+    manager: false, 
+    editor: false,
+    description: "Permite adicionar, editar, visualizar e remover usuários do sistema",
+    category: "users"
+  },
+  { 
+    id: "assign_roles", 
+    name: "Atribuir funções a usuários", 
+    admin: true, 
+    manager: false, 
+    editor: false,
+    description: "Permite alterar a função (papel) de um usuário no sistema",
+    category: "users"
   }
 ];
 
@@ -102,7 +189,7 @@ function RBACSettings() {
   const { toast } = useToast();
   const [localPermissions, setLocalPermissions] = useState<Permission[]>(permissions);
   const [showEditorNote, setShowEditorNote] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<'dashboard' | 'projects' | 'tasks' | 'users'>('dashboard');
 
   // Nota: Comentamos temporariamente a verificação de permissão para que todos possam ver a aba de RBAC
   /*
@@ -122,26 +209,92 @@ function RBACSettings() {
   }
   */
 
-  // Função para atualizar uma permissão específica
+  // Função para atualizar uma permissão específica e mostrar notificação
   const handlePermissionChange = (permissionId: string, role: 'admin' | 'manager' | 'editor', value: boolean) => {
+    // Atualiza o estado imediatamente
     setLocalPermissions(prevPermissions => 
       prevPermissions.map(perm => 
         perm.id === permissionId ? { ...perm, [role]: value } : perm
       )
     );
+    
+    // Mostra notificação de alteração feita
+    const permission = permissions.find(p => p.id === permissionId);
+    const roleMap: Record<string, string> = {
+      'admin': 'Administrador',
+      'manager': 'Gestor',
+      'editor': 'Colaborador'
+    };
+    
+    toast({
+      title: `Permissão ${value ? 'ativada' : 'desativada'}`,
+      description: `${permission?.name} para ${roleMap[role]} foi ${value ? 'ativada' : 'desativada'}.`,
+      duration: 3000,
+    });
+    
+    // Aqui seria feita uma requisição ao backend para persistir as alterações
+    // No caso real, enviaria os dados para a API
   };
 
-  // Função para salvar as alterações
-  const handleSave = () => {
-    setSaving(true);
-    // Simulação de requisição ao backend
-    setTimeout(() => {
-      setSaving(false);
-      toast({
-        title: "Permissões atualizadas",
-        description: "As configurações de RBAC foram salvas com sucesso.",
-      });
-    }, 1500);
+  // Filtra as permissões pela categoria ativa
+  const filteredPermissions = localPermissions.filter(
+    permission => permission.category === activeCategory
+  );
+
+  // Renderiza a tabela de permissões para uma categoria específica
+  const renderPermissionsTable = () => {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead className="w-[300px]">Permissão</TableHead>
+            <TableHead className="text-center">Admin</TableHead>
+            <TableHead className="text-center">Gestor</TableHead>
+            <TableHead className="text-center">Colaborador</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredPermissions.map((permission) => (
+            <TableRow key={permission.id}>
+              <TableCell className="font-medium">
+                <div>
+                  {permission.name}
+                  {permission.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{permission.description}</p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch 
+                  checked={permission.admin} 
+                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'admin', value)}
+                  disabled={permission.id === "manage_users"} // Admins sempre precisam poder gerenciar usuários
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch 
+                  checked={permission.manager} 
+                  onCheckedChange={(value) => handlePermissionChange(permission.id, 'manager', value)}
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </TableCell>
+              <TableCell className="text-center">
+                {permission.id === "create_edit_jobs" ? (
+                  <div className="text-sm text-muted-foreground">(apenas jobs atribuídos a ele)</div>
+                ) : (
+                  <Switch 
+                    checked={permission.editor} 
+                    onCheckedChange={(value) => handlePermissionChange(permission.id, 'editor', value)}
+                    className="data-[state=checked]:bg-green-500"
+                  />
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
   };
 
   return (
@@ -149,10 +302,10 @@ function RBACSettings() {
       {showEditorNote && (
         <Alert className="bg-blue-50 border-blue-200">
           <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-800">Configurações de RBAC</AlertTitle>
+          <AlertTitle className="text-blue-800">Permissões do Sistema</AlertTitle>
           <AlertDescription className="text-blue-600">
-            Aqui você pode definir quais permissões cada tipo de usuário terá. 
-            Estas configurações afetam todos os usuários do sistema de acordo com seus papéis.
+            Configure quais funções têm acesso a quais recursos. Clique nos seletores para ativar ou desativar permissões.
+            As alterações são aplicadas automaticamente.
           </AlertDescription>
           <Button 
             variant="ghost" 
@@ -176,73 +329,38 @@ function RBACSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[300px]">Permissão</TableHead>
-                <TableHead className="text-center">Admin</TableHead>
-                <TableHead className="text-center">Gestor</TableHead>
-                <TableHead className="text-center">Colaborador</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {localPermissions.map((permission) => (
-                <TableRow key={permission.id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      {permission.name}
-                      {permission.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{permission.description}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch 
-                      checked={permission.admin} 
-                      onCheckedChange={(value) => handlePermissionChange(permission.id, 'admin', value)}
-                      disabled={permission.id === "manage_users"} // Admins sempre precisam poder gerenciar usuários
-                      className="data-[state=checked]:bg-green-500"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch 
-                      checked={permission.manager} 
-                      onCheckedChange={(value) => handlePermissionChange(permission.id, 'manager', value)}
-                      className="data-[state=checked]:bg-green-500"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {permission.id === "create_edit_jobs" ? (
-                      <div className="text-sm text-muted-foreground">(apenas jobs atribuídos a ele)</div>
-                    ) : (
-                      <Switch 
-                        checked={permission.editor} 
-                        onCheckedChange={(value) => handlePermissionChange(permission.id, 'editor', value)}
-                        className="data-[state=checked]:bg-green-500"
-                      />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-medium mb-4">Resumo:</h3>
-            <ul className="space-y-2 list-disc pl-5">
-              <li><span className="font-semibold">Admin:</span> Acesso total</li>
-              <li><span className="font-semibold">Gestor:</span> Gerencia projetos e equipe, mas não cria nem edita usuários</li>
-              <li><span className="font-semibold">Colaborador:</span> Trabalha apenas nos jobs atribuídos a ele</li>
-            </ul>
+          {/* Navegação entre categorias de permissões */}
+          <div className="mb-6">
+            <div className="border rounded-lg flex overflow-hidden">
+              <button 
+                className={`flex-1 py-2 px-4 text-center font-medium ${activeCategory === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                onClick={() => setActiveCategory('dashboard')}
+              >
+                Dashboard
+              </button>
+              <button 
+                className={`flex-1 py-2 px-4 text-center font-medium ${activeCategory === 'projects' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                onClick={() => setActiveCategory('projects')}
+              >
+                Projetos
+              </button>
+              <button 
+                className={`flex-1 py-2 px-4 text-center font-medium ${activeCategory === 'tasks' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                onClick={() => setActiveCategory('tasks')}
+              >
+                Tarefas
+              </button>
+              <button 
+                className={`flex-1 py-2 px-4 text-center font-medium ${activeCategory === 'users' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                onClick={() => setActiveCategory('users')}
+              >
+                Usuários
+              </button>
+            </div>
           </div>
-
-          <div className="mt-6 flex justify-end">
-            <Button 
-              onClick={handleSave} 
-              disabled={saving}
-            >
-              {saving ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </div>
+          
+          {/* Tabela de permissões da categoria selecionada */}
+          {renderPermissionsTable()}
         </CardContent>
       </Card>
     </div>
@@ -803,11 +921,11 @@ function LocalizationSettings() {
 
 export default function Settings() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("accessibility");
+  const [activeTab, setActiveTab] = useState("rbac");
   
-  // Definimos "accessibility" como aba padrão para demonstração
+  // Definimos "rbac" como aba padrão para demonstração
   useEffect(() => {
-    // Comentamos esta lógica temporariamente para manter a aba de acessibilidade como padrão
+    // Comentamos esta lógica temporariamente para manter a aba de permissões como padrão
     /*
     if (user?.role === "admin") {
       setActiveTab("rbac");
