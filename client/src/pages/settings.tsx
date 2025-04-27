@@ -91,7 +91,8 @@ function RBACSettings() {
   const [showEditorNote, setShowEditorNote] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Apenas administradores podem acessar esta página
+  // Nota: Comentamos temporariamente a verificação de permissão para que todos possam ver a aba de RBAC
+  /*
   if (user?.role !== "admin") {
     return (
       <div className="py-6">
@@ -106,6 +107,7 @@ function RBACSettings() {
       </div>
     );
   }
+  */
 
   // Função para atualizar uma permissão específica
   const handlePermissionChange = (permissionId: string, role: 'admin' | 'manager' | 'editor', value: boolean) => {
@@ -578,13 +580,18 @@ function LocalizationSettings() {
 
 export default function Settings() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("rbac");
   
+  // Definimos "rbac" como aba padrão para demonstração
   useEffect(() => {
-    // Se o usuário for administrador, começar pela aba de RBAC
+    // Comentamos esta lógica temporariamente
+    /*
     if (user?.role === "admin") {
       setActiveTab("rbac");
+    } else {
+      setActiveTab("profile");
     }
+    */
   }, [user]);
 
   return (
@@ -610,12 +617,11 @@ export default function Settings() {
             <Languages className="h-4 w-4 mr-2" />
             Idioma e Região
           </TabsTrigger>
-          {user?.role === "admin" && (
-            <TabsTrigger value="rbac" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-              <ShieldIcon className="h-4 w-4 mr-2" />
-              <span>Permissões</span>
-            </TabsTrigger>
-          )}
+          {/* Mostrar para todos temporariamente - normalmente seria apenas para administradores */}
+          <TabsTrigger value="rbac" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+            <ShieldIcon className="h-4 w-4 mr-2" />
+            <span>Permissões</span>
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
