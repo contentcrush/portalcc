@@ -45,7 +45,9 @@ import {
   ShieldCheck,
   UserCog,
   AlertCircle,
-  X
+  X,
+  Briefcase,
+  UserPlus
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -460,72 +462,106 @@ export default function Team() {
       {isAdmin && isAdminPanelOpen && (
         <Card className="mb-6 border-primary/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <ShieldCheck className="mr-2 h-5 w-5 text-primary" />
-              Painel de Administração de Usuários
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg flex items-center">
+                <ShieldCheck className="mr-2 h-5 w-5 text-primary" />
+                Painel de Administração de Usuários
+              </CardTitle>
+              <Input 
+                placeholder="Buscar usuário..." 
+                className="w-64"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users?.map(user => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <UserAvatar user={user} className="h-8 w-8 mr-2" />
-                        <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-xs text-muted-foreground">@{user.username}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {users?.map(user => (
+                <Card key={user.id} className="overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <UserAvatar user={user} className="h-10 w-10 mr-3" />
+                          <div>
+                            <div className="font-medium text-base">{user.name}</div>
+                            <div className="text-xs text-muted-foreground">@{user.username}</div>
+                          </div>
                         </div>
+                        <Badge variant={
+                          user.role === "admin" ? "destructive" : 
+                          user.role === "manager" ? "default" : 
+                          user.role === "editor" ? "secondary" : 
+                          "outline"
+                        }>
+                          {user.role === "admin" ? "Admin" : 
+                          user.role === "manager" ? "Gestor" : 
+                          user.role === "editor" ? "Editor" : 
+                          "Visualizador"}
+                        </Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        user.role === "admin" ? "destructive" : 
-                        user.role === "manager" ? "default" : 
-                        user.role === "editor" ? "secondary" : 
-                        "outline"
-                      }>
-                        {user.role === "admin" ? "Admin" : 
-                        user.role === "manager" ? "Gestor" : 
-                        user.role === "editor" ? "Editor" : 
-                        "Visualizador"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.department || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => handleDeleteUser(user)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      
+                      <div className="space-y-1 mb-4 text-sm">
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span>{user.email}</span>
+                        </div>
+                        {user.department && (
+                          <div className="flex items-center">
+                            <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{user.department}</span>
+                          </div>
+                        )}
+                        {user.phone && (
+                          <div className="flex items-center">
+                            <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                    
+                    <div className="flex border-t border-border">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => handleEditUser(user)}
+                        className="flex-1 rounded-none py-2 h-12"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => handleDeleteUser(user)}
+                        className="flex-1 rounded-none py-2 h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remover
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {/* Card para adicionar novo usuário */}
+              <Card className="border-2 border-dashed border-gray-300 hover:border-primary/40 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center p-6 h-full min-h-[200px]">
+                  <div className="bg-primary/10 rounded-full p-3 mb-3">
+                    <UserPlus className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">Adicionar Usuário</h3>
+                  <p className="text-sm text-gray-500 text-center mb-4">Adicione um novo usuário ao sistema</p>
+                  <Button onClick={() => {
+                    setEditingUser(null);
+                    setIsUserDialogOpen(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Usuário
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </CardContent>
         </Card>
       )}
