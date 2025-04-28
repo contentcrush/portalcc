@@ -173,6 +173,7 @@ export default function Projects() {
   };
   
   const handleDeleteProject = (projectId: number) => {
+    setProjectToDelete(null);
     deleteProjectMutation.mutate(projectId);
   };
 
@@ -441,37 +442,16 @@ export default function Projects() {
                             Duplicar Projeto
                           </DropdownMenuItem>
                           
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem
-                                onClick={(e) => e.stopPropagation()}
-                                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir Projeto
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o projeto "{project.name}"? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteProject(project.id);
-                                  }}
-                                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project.id);
+                            }}
+                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir Projeto
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       
@@ -531,6 +511,39 @@ export default function Projects() {
       {activeTab === "gantt" && projectsWithClient && projectsWithClient.length > 0 && (
         <ProjectGantt projects={projectsWithClient} />
       )}
+      
+      {/* AlertDialog separado para confirmação de exclusão */}
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
+            <AlertDialogDescription>
+              {projectToDelete && projectsWithClient ? (
+                <>
+                  Tem certeza que deseja excluir o projeto "{projectsWithClient.find(p => p.id === projectToDelete)?.name}"? 
+                  Esta ação não pode ser desfeita.
+                </>
+              ) : (
+                'Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation();
+                if (projectToDelete) {
+                  handleDeleteProject(projectToDelete);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
