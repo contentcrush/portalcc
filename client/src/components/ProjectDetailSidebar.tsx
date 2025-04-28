@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign } from "lucide-react";
+import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2 } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
@@ -21,6 +21,17 @@ import {
   DialogFooter,
   DialogClose
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -148,6 +159,31 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     };
   });
 
+  // Mutation para remover um membro da equipe
+  const removeMemberMutation = useMutation({
+    mutationFn: async ({ projectId, userId }: { projectId: number, userId: number }) => {
+      return apiRequest('DELETE', `/api/projects/${projectId}/members/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/members`] });
+      toast({
+        title: "Membro removido",
+        description: "O membro foi removido da equipe com sucesso."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao remover membro",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleRemoveMember = (userId: number, userName: string) => {
+    removeMemberMutation.mutate({ projectId, userId });
+  };
+
   // Calculate progress
   const progress = project?.progress || 0;
   const completedStages = stages?.filter(stage => stage.completed)?.length || 0;
@@ -234,22 +270,54 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           <div className="space-y-4">
             {teamMembers && teamMembers.length > 0 ? (
               teamMembers.map(member => (
-                <div key={member.id} className="flex items-start">
-                  {member.user?.avatar ? (
-                    <img 
-                      src={member.user.avatar} 
-                      alt={member.user?.name || 'Membro'}
-                      className="w-8 h-8 rounded-full mr-3"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
-                      {getInitials(member.user?.name || 'U')}
+                <div key={member.id} className="flex items-start justify-between group">
+                  <div className="flex items-start">
+                    {member.user?.avatar ? (
+                      <img 
+                        src={member.user.avatar} 
+                        alt={member.user?.name || 'Membro'}
+                        className="w-8 h-8 rounded-full mr-3"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                        {getInitials(member.user?.name || 'U')}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{member.user?.name || 'Usuário'}</p>
+                      <p className="text-xs text-gray-500">{formatTeamRole(member.role) || 'Membro'}</p>
                     </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{member.user?.name || 'Usuário'}</p>
-                    <p className="text-xs text-gray-500">{formatTeamRole(member.role) || 'Membro'}</p>
                   </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover membro da equipe</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja remover {member.user?.name || 'este membro'} da equipe do projeto?
+                          Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleRemoveMember(member.user_id, member.user?.name || 'Usuário')}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ))
             ) : (
