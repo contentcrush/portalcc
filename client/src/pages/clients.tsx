@@ -25,6 +25,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -708,6 +711,66 @@ export default function Clients() {
         </div>
       )}
 
+      {/* Export dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exportar Dados</DialogTitle>
+            <DialogDescription>
+              Selecione o formato e as opções de exportação desejadas.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Formato</h4>
+              <div className="flex space-x-3">
+                <div className="flex items-center space-x-2">
+                  <RadioGroup defaultValue="excel">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="excel" id="excel" />
+                      <Label htmlFor="excel">Excel (.xlsx)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="csv" id="csv" />
+                      <Label htmlFor="csv">CSV (.csv)</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Opções</h4>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="includeProjects" defaultChecked />
+                  <Label htmlFor="includeProjects">Incluir projetos</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="includeContacts" defaultChecked />
+                  <Label htmlFor="includeContacts">Incluir informações de contato</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="includeRevenue" defaultChecked />
+                  <Label htmlFor="includeRevenue">Incluir faturamento</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={exportToExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       {/* Dialog para criação de novo projeto */}
       <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
         <DialogContent className="max-w-lg">
