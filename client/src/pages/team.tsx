@@ -14,7 +14,7 @@ import {
   UserPlus 
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -132,32 +132,92 @@ export function UserEditDialog({
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
-      username: user?.username || "",
-      role: user?.role || "viewer",
-      department: user?.department || "",
-      position: user?.position || "",
-      phone: user?.phone || "",
-      mobile_phone: user?.mobile_phone || "",
-      user_type: user?.user_type || "pf",
-      document: user?.document || "",
-      website: user?.website || "",
-      address: user?.address || "",
-      area: user?.area || "",
-      contact_name: user?.contact_name || "",
-      contact_position: user?.contact_position || "",
-      contact_email: user?.contact_email || "",
-      bank: user?.bank || "",
-      bank_agency: user?.bank_agency || "",
-      bank_account: user?.bank_account || "",
-      account_type: user?.account_type || "corrente",
-      pix_key: user?.pix_key || "",
-      is_active: user?.is_active ?? true,
-      bio: user?.bio || "",
-      notes: user?.notes || "",
+      name: "",
+      email: "",
+      username: "",
+      role: "viewer",
+      department: "",
+      position: "",
+      phone: "",
+      mobile_phone: "",
+      user_type: "pf",
+      document: "",
+      website: "",
+      address: "",
+      area: "",
+      contact_name: "",
+      contact_position: "",
+      contact_email: "",
+      bank: "",
+      bank_agency: "",
+      bank_account: "",
+      account_type: "corrente",
+      pix_key: "",
+      is_active: true,
+      bio: "",
+      notes: "",
     },
   });
+  
+  // Atualizar o formulário quando o usuário for alterado
+  useEffect(() => {
+    if (user) {
+      console.log("Atualizando formulário com dados do usuário:", user);
+      form.reset({
+        name: user.name || "",
+        email: user.email || "",
+        username: user.username || "",
+        role: user.role || "viewer",
+        department: user.department || "",
+        position: user.position || "",
+        phone: user.phone || "",
+        mobile_phone: user.mobile_phone || "",
+        user_type: user.user_type || "pf",
+        document: user.document || "",
+        website: user.website || "",
+        address: user.address || "",
+        area: user.area || "",
+        contact_name: user.contact_name || "",
+        contact_position: user.contact_position || "",
+        contact_email: user.contact_email || "",
+        bank: user.bank || "",
+        bank_agency: user.bank_agency || "",
+        bank_account: user.bank_account || "",
+        account_type: user.account_type || "corrente",
+        pix_key: user.pix_key || "",
+        is_active: user.is_active ?? true,
+        bio: user.bio || "",
+        notes: user.notes || "",
+      });
+    } else {
+      form.reset({
+        name: "",
+        email: "",
+        username: "",
+        role: "viewer",
+        department: "",
+        position: "",
+        phone: "",
+        mobile_phone: "",
+        user_type: "pf",
+        document: "",
+        website: "",
+        address: "",
+        area: "",
+        contact_name: "",
+        contact_position: "",
+        contact_email: "",
+        bank: "",
+        bank_agency: "",
+        bank_account: "",
+        account_type: "corrente",
+        pix_key: "",
+        is_active: true,
+        bio: "",
+        notes: "",
+      });
+    }
+  }, [user, form]);
   
   // Criar usuário mutation
   const createUserMutation = useMutation({
