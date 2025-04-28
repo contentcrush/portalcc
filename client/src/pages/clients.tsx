@@ -597,10 +597,11 @@ export default function Clients() {
                             mode="single"
                             selected={field.value ? new Date(field.value) : undefined}
                             onSelect={field.onChange}
-                            disabled={(date) => 
-                              date < new Date("1900-01-01") || 
-                              (projectForm.getValues("startDate") && date < new Date(projectForm.getValues("startDate")))
-                            }
+                            disabled={(date) => {
+                              const startDate = projectForm.getValues("startDate");
+                              return date < new Date("1900-01-01") || 
+                                (startDate ? date < new Date(startDate) : false);
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
