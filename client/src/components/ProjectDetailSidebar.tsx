@@ -144,10 +144,36 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
+  // Mutation para excluir o projeto
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('DELETE', `/api/projects/${projectId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({
+        title: "Projeto excluído com sucesso",
+        description: "O projeto foi removido permanentemente."
+      });
+      onClose(); // Fechar o painel lateral após exclusão
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir projeto",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
   const handleDuplicateProject = () => {
     if (window.confirm("Deseja duplicar este projeto? Uma cópia será criada com todos os membros da equipe e etapas.")) {
       duplicateProjectMutation.mutate();
     }
+  };
+  
+  const handleDeleteProject = () => {
+    deleteProjectMutation.mutate();
   };
 
   // Get team members with their user details
@@ -433,6 +459,47 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </>
             )}
           </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                className="w-full mt-3 border-red-600 text-red-600 hover:bg-red-50" 
+                variant="outline"
+                disabled={deleteProjectMutation.isPending}
+              >
+                {deleteProjectMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Projeto
+                  </>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o projeto "{project.name}"? Esta ação não pode ser desfeita.
+                  <br /><br />
+                  <strong>Todos os dados associados, como tarefas e arquivos, também serão excluídos permanentemente.</strong>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteProject}
+                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       
