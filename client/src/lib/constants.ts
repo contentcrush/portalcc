@@ -73,10 +73,19 @@ export const TASK_PRIORITY_OPTIONS = [
 ];
 
 export const TASK_PRIORITY_COLORS = {
-  baixa: "#a3e635", // lime-500 (verde claro)
-  media: "#facc15", // yellow-500 (amarelo)
-  alta: "#f43f5e", // rose-500 (vermelho rosado)
-  critica: "#7c3aed" // purple-600 (roxo)
+  baixa: "#10B981", // emerald-500 (Verde 500)
+  media: "#F59E0B", // amber-500 (Amarelo 500)
+  alta: "#FB923C", // orange-500 (Laranja 500)
+  critica: "#EF4444" // red-600 (Vermelho 600)
+};
+
+// Classes Tailwind para as cores de prioridade
+export const PRIORITY_COLOR_CLASSES = {
+  baixa: "bg-emerald-500", // Verde 500 - #10B981
+  media: "bg-amber-500",   // Amarelo 500 - #F59E0B
+  alta: "bg-orange-500",   // Laranja 500 - #FB923C
+  critica: "bg-red-600",    // Vermelho 600 - #EF4444
+  default: "bg-gray-500"
 };
 
 // Valores numéricos para ordenação de prioridades

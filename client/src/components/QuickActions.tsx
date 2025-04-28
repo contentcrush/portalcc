@@ -14,8 +14,9 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefor
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PRIORITY_COLOR_CLASSES } from "@/lib/constants";
+import PriorityBadge from "@/components/PriorityBadge";
 
 export default function QuickActions() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -91,15 +92,10 @@ export default function QuickActions() {
     }
   };
   
-  // Obter cores para prioridade
+  // Obter cores para prioridade a partir das constantes
   const getPriorityColor = (priority: string) => {
-    switch(priority) {
-      case 'baixa': return 'bg-blue-500';
-      case 'média': return 'bg-amber-400';
-      case 'alta': return 'bg-orange-500';
-      case 'crítica': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+    const normalizedPriority = priority.toLowerCase().replace('é', 'e').replace('í', 'i');
+    return PRIORITY_COLOR_CLASSES[normalizedPriority] || PRIORITY_COLOR_CLASSES.default;
   };
   
   // Verificar se uma tarefa está atrasada
@@ -249,11 +245,10 @@ export default function QuickActions() {
                     {format(dueDate, 'dd/MM/yyyy')}
                   </div>
                   
-                  <Badge 
-                    className={`text-xs px-3 py-0.5 rounded-full text-white ${getPriorityColor(task.priority)}`}
-                  >
-                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                  </Badge>
+                  <PriorityBadge 
+                    priority={task.priority}
+                    size="sm"
+                  />
                 </div>
               </div>
             );
