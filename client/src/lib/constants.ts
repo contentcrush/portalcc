@@ -126,7 +126,12 @@ export const EVENT_TYPE_OPTIONS = [
   { value: "gravacao", label: "Gravação" },
   { value: "entrega", label: "Entrega" },
   { value: "edicao", label: "Edição" },
-  { value: "financeiro", label: "Financeiro" }
+  { value: "financeiro", label: "Financeiro" },
+  { value: "prazo", label: "Prazo de Entrega" },
+  { value: "externo", label: "Evento Externo" },
+  { value: "planejamento", label: "Planejamento" },
+  { value: "capacitacao", label: "Capacitação" },
+  { value: "projeto", label: "Início de Projeto" }
 ];
 
 export const CLIENT_TYPE_OPTIONS = [
@@ -186,10 +191,15 @@ export const INTERACTION_TYPE_OPTIONS = [
 
 export const EVENT_COLORS = {
   reuniao: "#3B82F6", // blue
-  gravacao: "#F59E0B", // yellow
-  entrega: "#6366F1", // purple
+  gravacao: "#F59E0B", // amber
+  entrega: "#6366F1", // indigo
   edicao: "#EF4444", // red
-  financeiro: "#10B981" // green
+  financeiro: "#10B981", // emerald
+  prazo: "#E11D48", // rose
+  externo: "#8B5CF6", // violet
+  planejamento: "#0EA5E9", // sky
+  capacitacao: "#14B8A6", // teal
+  projeto: "#8D8D8D" // slate
 };
 
 export const MONTHS = [
