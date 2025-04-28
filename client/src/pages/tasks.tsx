@@ -44,6 +44,7 @@ import {
   Filter,
   Clock,
   Calendar,
+  CalendarDays,
   MessageSquare,
   Paperclip,
   ArrowUpDown
@@ -256,7 +257,15 @@ export default function Tasks() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Task Detail Sidebar */}
+      {taskDetailId && (
+        <TaskDetailSidebar
+          taskId={taskDetailId}
+          onClose={handleCloseTaskDetails}
+        />
+      )}
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tarefas</h1>
@@ -264,7 +273,7 @@ export default function Tasks() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button onClick={handleNewTask}>
+          <Button onClick={handleNewTask} className="shadow-sm">
             <Plus className="h-4 w-4 mr-2" />
             Nova Tarefa
           </Button>
@@ -355,73 +364,154 @@ export default function Tasks() {
         </div>
       </div>
       
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="pendentes">Tarefas Pendentes</TabsTrigger>
-          <TabsTrigger value="concluidas">Tarefas Concluídas</TabsTrigger>
+      {/* Visualização Tabs */}
+      <Tabs defaultValue="lista" className="mb-6">
+        <TabsList className="bg-muted/50 border border-gray-200">
+          <TabsTrigger value="lista" className="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            Lista
+          </TabsTrigger>
+          <TabsTrigger value="quadro" className="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Quadro
+          </TabsTrigger>
+          <TabsTrigger value="calendario" className="flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            Calendário
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="pendentes" className="mt-6">
-          {isLoadingTasks ? (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredTasks?.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Filter className="h-6 w-6 text-primary" />
+        <TabsContent value="lista" className="mt-6">
+          {/* Status Tabs */}
+          <div className="mb-6">
+            <div className="flex items-center gap-1 mb-4">
+              <div className={`flex items-center gap-2 cursor-pointer p-2 rounded-md 
+                ${activeTab === 'pendentes' ? 'bg-amber-50 text-amber-600' : ''}
+              `} onClick={() => setActiveTab('pendentes')}>
+                <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <span>!</span>
+                </div>
+                <span className="font-medium">Tarefas Pendentes</span>
+                {tasks && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-100 px-2 text-xs text-amber-600">
+                    {tasks.filter(t => !t.completed).length}
+                  </span>
+                )}
               </div>
-              <h3 className="text-lg font-medium mb-2">Nenhuma tarefa encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                Tente ajustar os filtros ou adicione uma nova tarefa.
-              </p>
-              <Button onClick={handleNewTask}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarefa
-              </Button>
+              
+              <div className={`flex items-center gap-2 cursor-pointer p-2 rounded-md 
+                ${activeTab === 'concluidas' ? 'bg-green-50 text-green-600' : ''}
+              `} onClick={() => setActiveTab('concluidas')}>
+                <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <span className="font-medium">Tarefas Concluídas</span>
+                {tasks && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-green-100 px-2 text-xs text-green-600">
+                    {tasks.filter(t => t.completed).length}
+                  </span>
+                )}
+              </div>
             </div>
-          ) : (
+            
+            {/* Sort/Filter header */}
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-sm text-gray-500">
+                {filteredTasks?.length || 0} {activeTab === 'pendentes' ? 'tarefas pendentes' : 'tarefas concluídas'}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs flex items-center gap-1"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Data
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs flex items-center gap-1"
+                >
+                  Prioridade
+                </Button>
+              </div>
+            </div>
+            
+            {/* Task list */}
             <div>
-              {filteredTasks?.map(task => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task} 
-                  onSelect={handleViewTaskDetails}
-                  onEdit={handleSelectTask}
-                />
-              ))}
+              {isLoadingTasks ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredTasks?.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Filter className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">
+                    {activeTab === 'pendentes' ? 'Nenhuma tarefa pendente' : 'Nenhuma tarefa concluída'}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {activeTab === 'pendentes' 
+                      ? 'Tente ajustar os filtros ou adicione uma nova tarefa.' 
+                      : 'As tarefas concluídas aparecerão aqui.'
+                    }
+                  </p>
+                  {activeTab === 'pendentes' && (
+                    <Button onClick={handleNewTask}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Tarefa
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {filteredTasks?.map(task => (
+                    <TaskItem 
+                      key={task.id} 
+                      task={task} 
+                      onSelect={handleViewTaskDetails}
+                      onEdit={handleSelectTask}
+                      isCompleted={activeTab === 'concluidas'}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </TabsContent>
         
-        <TabsContent value="concluidas" className="mt-6">
-          {isLoadingTasks ? (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredTasks?.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Filter className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Nenhuma tarefa concluída</h3>
-              <p className="text-muted-foreground mb-4">
-                As tarefas concluídas aparecerão aqui.
-              </p>
-            </div>
-          ) : (
-            <div>
-              {filteredTasks?.map(task => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task}
-                  onSelect={handleViewTaskDetails}
-                  onEdit={handleSelectTask}
-                />
-              ))}
-            </div>
-          )}
+        <TabsContent value="quadro" className="mt-6 min-h-[300px]">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-dashed border-gray-300 text-center">
+            <h3 className="text-lg font-medium mb-2">Visualização em Quadro</h3>
+            <p className="text-muted-foreground">
+              A visualização em quadro Kanban será implementada em breve, permitindo arrastar e soltar tarefas entre colunas de status.
+            </p>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="calendario" className="mt-6 min-h-[300px]">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-dashed border-gray-300 text-center">
+            <h3 className="text-lg font-medium mb-2">Visualização em Calendário</h3>
+            <p className="text-muted-foreground">
+              A visualização em calendário será implementada em breve, permitindo visualizar tarefas organizadas por dia/semana/mês.
+            </p>
+          </div>
         </TabsContent>
       </Tabs>
       
