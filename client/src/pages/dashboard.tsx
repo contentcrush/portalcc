@@ -115,18 +115,7 @@ export default function Dashboard() {
     queryKey: ['/api/expenses']
   });
   
-  // Escutar evento customizado para abrir o formulário de projeto
-  useEffect(() => {
-    const handleOpenProjectForm = () => {
-      openProjectForm();
-    };
-    
-    window.addEventListener('openProjectForm', handleOpenProjectForm);
-    
-    return () => {
-      window.removeEventListener('openProjectForm', handleOpenProjectForm);
-    };
-  }, [openProjectForm]);
+  // Removemos o listener de evento desnecessário que pode causar aberturas inadvertidas do formulário
 
   // Calculate dashboard metrics
   const activeProjects = projects?.filter(p => 

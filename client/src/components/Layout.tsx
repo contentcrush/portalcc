@@ -154,10 +154,7 @@ export default function Layout({ children }: LayoutProps) {
                   </h3>
                   <div className="space-y-2">
                     <Button 
-                      onClick={() => {
-                        // Usar o useProjectForm diretamente em vez de eventos personalizados
-                        openProjectForm();
-                      }}
+                      onClick={openProjectForm}
                       className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                     >
                       <Plus className="mr-2 h-4 w-4" /> Novo Projeto
