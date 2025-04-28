@@ -86,6 +86,7 @@ export const projects = pgTable("projects", {
   description: text("description"),
   client_id: integer("client_id").notNull(),
   status: text("status").notNull().default("draft"),
+  priority: text("priority").default("media"),
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
