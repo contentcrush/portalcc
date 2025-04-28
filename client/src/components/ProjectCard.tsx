@@ -120,25 +120,7 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           </div>
         )}
         <div className="absolute top-3 left-3">
-          <Badge variant="outline" className={`font-normal no-underline text-xs ${
-            project.status === 'em_andamento' ? 'bg-green-100 text-green-800 hover:bg-green-100 hover:text-green-800 border-green-300' : 
-            project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 hover:text-blue-800 border-blue-300' : 
-            project.status === 'em_producao' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100 hover:text-amber-800 border-amber-300' : 
-            project.status === 'concluido' ? 'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800 border-gray-300' : 
-            project.status === 'planejamento' ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-100 hover:text-indigo-800 border-indigo-300' : 
-            project.status === 'em_orcamento' ? 'bg-red-100 text-red-800 hover:bg-red-100 hover:text-red-800 border-red-300' : 
-            project.status === 'novo' ? 'bg-purple-100 text-purple-800 hover:bg-purple-100 hover:text-purple-800 border-purple-300' : 
-            'bg-gray-100 text-gray-800 hover:bg-gray-100 hover:text-gray-800 border-gray-300'
-          }`}>
-            {project.status === 'em_andamento' ? 'Em andamento' : 
-             project.status === 'pre_producao' ? 'Pré-produção' : 
-             project.status === 'em_producao' ? 'Em produção' : 
-             project.status === 'concluido' ? 'Concluído' : 
-             project.status === 'planejamento' ? 'Planejamento' : 
-             project.status === 'em_orcamento' ? 'Em orçamento' : 
-             project.status === 'novo' ? 'Novo' : 
-             project.status}
-          </Badge>
+          <StatusBadge status={project.status} small={true} />
         </div>
         
         <div className="absolute top-3 right-3 z-10">

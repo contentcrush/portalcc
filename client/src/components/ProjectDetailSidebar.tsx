@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
 import { Badge } from "@/components/ui/badge";
+import StatusBadge from "./StatusBadge";
 import { 
   Dialog,
   DialogContent,
@@ -204,24 +205,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Status:</div>
-            <Badge 
-              variant="outline"
-              className={`
-                ${project?.status === 'em_andamento' ? 'border-green-500 text-green-700 bg-green-50' : 
-                 project?.status === 'pre_producao' ? 'border-blue-500 text-blue-700 bg-blue-50' : 
-                 project?.status === 'em_producao' ? 'border-amber-500 text-amber-700 bg-amber-50' : 
-                 project?.status === 'concluido' ? 'border-gray-500 text-gray-700 bg-gray-100' : 
-                 project?.status === 'em_orcamento' ? 'border-purple-500 text-purple-700 bg-purple-50' : 
-                 'border-gray-500 text-gray-700 bg-gray-100'}
-              `}
-            >
-              {project?.status === 'em_andamento' ? 'Em andamento' : 
-               project?.status === 'pre_producao' ? 'Pré-produção' : 
-               project?.status === 'em_producao' ? 'Em produção' : 
-               project?.status === 'concluido' ? 'Concluído' : 
-               project?.status === 'em_orcamento' ? 'Em orçamento' : 
-               project?.status || 'Não definido'}
-            </Badge>
+            <StatusBadge status={project?.status} />
           </div>
           
           <div className="flex items-center justify-between">

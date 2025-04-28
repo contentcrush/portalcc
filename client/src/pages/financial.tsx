@@ -336,17 +336,7 @@ export default function Financial() {
                   <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell>{project.client}</TableCell>
                   <TableCell>
-                    <div className={`px-2 py-1 rounded-full text-xs inline-flex items-center justify-center font-medium ${
-                      project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
-                      project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
-                      project.status === 'concluido' ? 'bg-blue-100 text-blue-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {project.status === 'em_producao' ? 'Em produção' : 
-                       project.status === 'em_andamento' ? 'Em andamento' : 
-                       project.status === 'concluido' ? 'Concluído' : 
-                       project.status}
-                    </div>
+                    <StatusBadge status={project.status} small={true} />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
