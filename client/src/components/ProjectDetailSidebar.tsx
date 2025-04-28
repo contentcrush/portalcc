@@ -397,7 +397,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
 // Componente de formulário para adicionar membro
 function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess: () => void }) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>("membro");
+  const [selectedRole, setSelectedRole] = useState<string>(TEAM_ROLE_OPTIONS[0].value); // Use o primeiro valor disponível como padrão
   const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
   

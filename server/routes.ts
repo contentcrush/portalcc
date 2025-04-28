@@ -437,14 +437,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects/:id/members", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectMemberSchema), async (req, res) => {
+  app.post("/api/projects/:id/members", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      const member = await storage.addProjectMember({
-        ...req.body,
-        project_id: projectId
-      });
-      res.status(201).json(member);
+      
+      // Validação manual para contornar o problema de ordem de validação
+      try {
+        const validatedData = insertProjectMemberSchema.parse({
+          ...req.body,
+          project_id: projectId
+        });
+        
+        const member = await storage.addProjectMember(validatedData);
+        res.status(201).json(member);
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          res.status(400).json({ message: "Validation error", errors: validationError.errors });
+        } else {
+          throw validationError; // passa para o catch externo
+        }
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to add project member" });
     }
