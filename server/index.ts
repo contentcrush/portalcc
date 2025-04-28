@@ -4,8 +4,9 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Aumentar o limite de tamanho para permitir uploads maiores
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
