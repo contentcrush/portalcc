@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -575,10 +574,7 @@ export default function Clients() {
                           <FormControl>
                             <Button
                               variant="outline"
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
+                              className={`pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
                             >
                               {field.value ? (
                                 format(new Date(field.value), "PPP", { locale: ptBR })
