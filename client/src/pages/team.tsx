@@ -14,7 +14,7 @@ import {
   UserPlus 
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -349,7 +349,7 @@ export function UserEditDialog({
                             <>
                               <Select
                                 onValueChange={field.onChange}
-                                defaultValue={field.value}
+                                value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -373,7 +373,7 @@ export function UserEditDialog({
                             <>
                               <Select
                                 onValueChange={field.onChange}
-                                defaultValue={field.value}
+                                value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -416,7 +416,7 @@ export function UserEditDialog({
                         <FormLabel>Tipo</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value || undefined}
+                          value={field.value || undefined}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -631,7 +631,7 @@ export function UserEditDialog({
                         <FormLabel>Tipo de Conta</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
