@@ -79,14 +79,14 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
     mutationFn: async (data: { completed: boolean }) => {
       return apiRequest('PATCH', `/api/tasks/${task.id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task.id}`] });
       if (task.project_id) {
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
       }
       toast({
-        title: data.completed ? "Tarefa concluída" : "Tarefa reaberta",
+        title: variables.completed ? "Tarefa concluída" : "Tarefa reaberta",
         description: task.title,
       });
     },
