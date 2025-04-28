@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,7 +25,18 @@ import {
   FileText,
   Filter,
   MoreHorizontal,
+  X,
+  Globe,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,14 +45,93 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS, CLIENT_CATEGORY_OPTIONS } from "@/lib/constants";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
+import { insertClientSchema, type InsertClient } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+// Schema para validação do formulário
+const formSchema = insertClientSchema.extend({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  contactEmail: z.string().email("Email inválido").nullable().optional(),
+});
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
+  const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  // Formulário para novo cliente
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      shortName: "",
+      type: "",
+      category: "",
+      cnpj: "",
+      website: "",
+      contactName: "",
+      contactPosition: "",
+      contactEmail: "",
+      contactPhone: "",
+      address: "",
+      city: "",
+      notes: "",
+    },
+  });
+
+  // Mutation para criar novo cliente
+  const createClientMutation = useMutation({
+    mutationFn: async (data: InsertClient) => {
+      const response = await apiRequest("POST", "/api/clients", data);
+      return await response.json();
+    },
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setIsNewClientDialogOpen(false);
+      form.reset();
+      toast({
+        title: "Cliente criado com sucesso",
+        description: `${newClient.name} foi adicionado à sua base de clientes.`,
+      });
+      navigate(`/clients/${newClient.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao criar cliente",
+        description: error.message || "Ocorreu um erro ao criar o cliente. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Função para submeter o formulário
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // Convertendo valores para o formato esperado pela API
+    const clientData: InsertClient = {
+      ...data,
+      since: data.since ? new Date(data.since) : new Date(),
+    };
+    createClientMutation.mutate(clientData);
+  };
 
   // Fetch clients
   const { data: clients, isLoading } = useQuery({
@@ -79,6 +170,10 @@ export default function Clients() {
     return 0;
   });
 
+  const handleNewClientClick = () => {
+    setIsNewClientDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
@@ -88,7 +183,7 @@ export default function Clients() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button>
+          <Button onClick={handleNewClientClick}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Cliente
           </Button>
@@ -168,7 +263,7 @@ export default function Clients() {
           <p className="text-muted-foreground mb-4">
             Tente ajustar os filtros ou adicione um novo cliente.
           </p>
-          <Button>
+          <Button onClick={handleNewClientClick}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Cliente
           </Button>
@@ -179,7 +274,7 @@ export default function Clients() {
       {sortedClients && sortedClients.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedClients.map(client => (
-            <Card key={client.id} className="overflow-hidden">
+            <Card key={client.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-0">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -220,7 +315,7 @@ export default function Clients() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem asChild>
                           <Link href={`/clients/${client.id}`}>
                             Ver detalhes
                           </Link>
@@ -244,7 +339,7 @@ export default function Clients() {
                       <div className="flex items-center text-sm">
                         <Building className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span>
-                          {client.contactName}, {client.contactPosition || ''}
+                          {client.contactName}{client.contactPosition ? `, ${client.contactPosition}` : ''}
                         </span>
                       </div>
                     )}
@@ -266,7 +361,7 @@ export default function Clients() {
                     {client.address && (
                       <div className="flex items-center text-sm">
                         <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{client.address}</span>
+                        <span>{client.address}{client.city ? `, ${client.city}` : ''}</span>
                       </div>
                     )}
                   </div>
@@ -298,7 +393,10 @@ export default function Clients() {
           ))}
           
           {/* Add new client card */}
-          <Card className="border-2 border-dashed border-gray-300 hover:border-primary/40 transition-colors">
+          <Card 
+            className="border-2 border-dashed border-gray-300 hover:border-primary/40 transition-colors cursor-pointer"
+            onClick={handleNewClientClick}
+          >
             <CardContent className="flex flex-col items-center justify-center p-6 h-full min-h-[280px]">
               <div className="bg-primary/10 rounded-full p-3 mb-3">
                 <Plus className="h-8 w-8 text-primary" />
@@ -310,6 +408,298 @@ export default function Clients() {
           </Card>
         </div>
       )}
+
+      {/* Dialog para criação de novo cliente */}
+      <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Preencha as informações do novo cliente. Campos com * são obrigatórios.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Informações básicas */}
+                <div className="space-y-4 md:col-span-2">
+                  <h3 className="text-sm font-semibold uppercase text-gray-500">
+                    Informações Básicas
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Cliente *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Empresa XYZ" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="shortName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Curto / Sigla</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: XYZ" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Abreviação ou acrônimo da empresa
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Cliente</FormLabel>
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecionar tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CLIENT_TYPE_OPTIONS.map(option => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Categoria</FormLabel>
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecionar categoria" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CLIENT_CATEGORY_OPTIONS.map(option => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="cnpj"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CNPJ</FormLabel>
+                          <FormControl>
+                            <Input placeholder="00.000.000/0000-00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                {/* Informações de Contato */}
+                <div className="space-y-4 md:col-span-2">
+                  <h3 className="text-sm font-semibold uppercase text-gray-500">
+                    Informações de Contato
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome do responsável" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cargo do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Gerente de Marketing" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email de Contato</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="contato@empresa.com" {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone de Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(00) 00000-0000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                {/* Endereço e Detalhes */}
+                <div className="space-y-4 md:col-span-2">
+                  <h3 className="text-sm font-semibold uppercase text-gray-500">
+                    Endereço e Detalhes
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Endereço</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Rua, número, bairro" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cidade</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Cidade" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input placeholder="www.empresa.com.br" className="pl-10" {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notas</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Observações adicionais sobre o cliente" 
+                              className="min-h-[100px]" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsNewClientDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createClientMutation.isPending}
+                >
+                  {createClientMutation.isPending ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
+                      Salvando...
+                    </>
+                  ) : (
+                    'Criar Cliente'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
