@@ -11,13 +11,24 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   MessageSquare, 
   Paperclip, 
   Clock, 
   MoreVertical, 
   ChevronDown, 
-  ChevronUp 
+  ChevronUp,
+  Trash2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +53,7 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: [`/api/projects/${task.project_id}`],
@@ -87,8 +99,36 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
     }
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('DELETE', `/api/tasks/${task.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      if (task.project_id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
+      }
+      toast({
+        title: "Tarefa excluída",
+        description: `A tarefa "${task.title}" foi excluída com sucesso.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir tarefa",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleStatusChange = () => {
     updateTaskMutation.mutate({ completed: !task.completed });
+  };
+
+  const handleDeleteTask = () => {
+    deleteTaskMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   const isOverdue = isTaskOverdue(task);
@@ -158,10 +198,48 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
                       <DropdownMenuItem onClick={handleStatusChange}>
                         {task.completed ? "Marcar como pendente" : "Marcar como concluída"}
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Apagar Tarefa
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
+              
+              {/* Dialog de confirmação para excluir tarefa */}
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa
+                      "{task.title}" e todos os dados associados a ela.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDeleteTask}
+                      className="bg-destructive hover:bg-destructive/90"
+                      disabled={deleteTaskMutation.isPending}
+                    >
+                      {deleteTaskMutation.isPending ? (
+                        <span className="flex items-center">
+                          <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-r-transparent"></span>
+                          Excluindo...
+                        </span>
+                      ) : (
+                        "Excluir tarefa"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               
               <div className="flex flex-wrap items-center mt-3 text-xs text-muted-foreground">
                 {task.project_id && project && (
