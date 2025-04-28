@@ -457,34 +457,58 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
           )}
         </div>
         
-        {/* Comentários */}
+        {/* Comentários - Novo design minimalista */}
         <div className="mb-8">
-          <h4 className="font-medium text-sm mb-4">COMENTÁRIOS</h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-gray-500 text-base">Comentários</h4>
+            {comments && comments.length > 0 && (
+              <span className="text-gray-400 text-sm">{comments.length} comentário{comments.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          
           {isLoadingComments ? (
             <div className="flex justify-center items-center h-16">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
             </div>
           ) : (!comments || comments.length === 0) ? (
-            <div className="bg-muted p-4 rounded-md text-center text-muted-foreground text-sm">
+            <div className="text-center text-muted-foreground text-sm p-4">
               Nenhum comentário. Seja o primeiro a comentar.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-muted p-3 rounded-md">
-                  <div className="flex items-start gap-2">
+                <div key={comment.id} className="pb-4 last:pb-0 border-b last:border-0 border-gray-200">
+                  <div className="flex items-start gap-3">
                     <UserAvatar 
                       user={comment.user} 
-                      className="w-8 h-8 mt-0.5" 
+                      className="w-9 h-9" 
                     />
                     <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm">{comment.user?.name || `Usuário ${comment.user_id}`}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateTime(comment.creation_date)}
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium text-sm text-gray-700">
+                          {comment.user?.name || `Usuário ${comment.user_id}`}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(comment.creation_date).toLocaleString('pt-BR', {
+                            day: 'numeric',
+                            month: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }).replace(',', ' às')}
                         </span>
                       </div>
-                      <p className="text-sm mt-1">{comment.comment}</p>
+                      <p className="text-sm text-gray-600">{comment.comment}</p>
+                      
+                      {/* Botões de ação */}
+                      <div className="flex gap-3 mt-2">
+                        <button className="text-xs text-gray-500 hover:text-gray-700">
+                          Responder
+                        </button>
+                        <span className="text-gray-300">•</span>
+                        <button className="text-xs text-gray-500 hover:text-gray-700">
+                          Curtir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -492,28 +516,35 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
             </div>
           )}
           
-          {/* Form para adicionar comentário */}
-          <form onSubmit={handleSubmitComment} className="mt-4 flex items-center gap-2">
-            <Textarea 
-              placeholder="Adicione um comentário..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="min-h-[60px] resize-none"
-              disabled={isSubmittingComment}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={!newComment.trim() || isSubmittingComment}
-              className="h-10 w-10 shrink-0"
-            >
-              {isSubmittingComment ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
-              ) : (
-                <SendHorizontal className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
+          {/* Form para adicionar comentário - Novo design */}
+          <div className="mt-2 bg-gray-50 rounded-lg">
+            <form onSubmit={handleSubmitComment} className="p-3 flex flex-col">
+              <div className="relative">
+                <Textarea 
+                  placeholder="Adicionar um comentário..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="min-h-[44px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent px-1 py-2"
+                  disabled={isSubmittingComment}
+                />
+                {newComment.trim() && (
+                  <Button 
+                    type="submit" 
+                    size="sm" 
+                    variant="ghost"
+                    disabled={isSubmittingComment}
+                    className="absolute bottom-1 right-1 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                  >
+                    {isSubmittingComment ? (
+                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-background border-r-transparent" />
+                    ) : (
+                      <SendHorizontal className="h-3 w-3 text-white" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
         
         <div>
