@@ -1,16 +1,32 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Clock, Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
+// Define types for our columns
+type StatusColumn = {
+  id: string;
+  title: string;
+};
+
+type ColumnContent = {
+  id: string;
+  title: string;
+  items: any[];
+};
+
+type ColumnsState = {
+  [key: string]: ColumnContent;
+};
+
 // Status columns
-const statusColumns = [
+const statusColumns: StatusColumn[] = [
   { id: 'pre_producao', title: 'Pré-Produção' },
   { id: 'em_producao', title: 'Produção' },
   { id: 'pos_producao', title: 'Pós-Produção' },
@@ -26,7 +42,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
   const queryClient = useQueryClient();
   
   // Group projects by status
-  const initialColumns = statusColumns.reduce((acc, column) => {
+  const initialColumns = statusColumns.reduce<ColumnsState>((acc, column) => {
     acc[column.id] = {
       id: column.id,
       title: column.title,
@@ -41,7 +57,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     return acc;
   }, {});
   
-  const [columns, setColumns] = useState(initialColumns);
+  const [columns, setColumns] = useState<ColumnsState>(initialColumns);
   
   // Update project status mutation
   const updateProjectStatus = useMutation({
@@ -62,7 +78,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
         description: 'Status do projeto foi atualizado com sucesso',
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao atualizar projeto',
         description: error.message,
@@ -72,7 +88,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
   });
 
   // Handle drag end
-  const onDragEnd = (result) => {
+  const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
     
     // If no destination or dropped back to same position
@@ -85,6 +101,8 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     // Get source and destination columns
     const sourceColumn = columns[source.droppableId];
     const destColumn = columns[destination.droppableId];
+    
+    if (!sourceColumn || !destColumn) return;
     
     // Move within same column
     if (sourceColumn.id === destColumn.id) {

@@ -98,16 +98,31 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
   };
   
   // Handle bar dragging for project date adjustment
-  const [dragState, setDragState] = useState({
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    projectId: number | null;
+    startX: number;
+    initialStartDate: Date | null;
+    initialEndDate: Date | null;
+    mode: 'move' | 'resize-start' | 'resize-end' | null;
+    newStartDate?: Date;
+    newEndDate?: Date;
+  }>({
     isDragging: false,
     projectId: null,
     startX: 0,
     initialStartDate: null,
     initialEndDate: null,
-    mode: null, // 'move', 'resize-start', 'resize-end'
+    mode: null,
   });
   
-  const startDrag = (projectId, x, initialStartDate, initialEndDate, mode) => {
+  const startDrag = (
+    projectId: number, 
+    x: number, 
+    initialStartDate: Date, 
+    initialEndDate: Date, 
+    mode: 'move' | 'resize-start' | 'resize-end'
+  ) => {
     setDragState({
       isDragging: true,
       projectId,
@@ -118,10 +133,12 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
     });
   };
   
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     if (!dragState.isDragging || !scrollContainerRef.current) return;
     
-    const { isDragging, projectId, startX, initialStartDate, initialEndDate, mode } = dragState;
+    const { projectId, startX, initialStartDate, initialEndDate, mode } = dragState;
+    
+    if (!initialStartDate || !initialEndDate || !mode) return;
     
     // Calculate the day width
     const dayWidth = scrollContainerRef.current.scrollWidth / daysInView;
@@ -154,29 +171,21 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
       }
     }
     
-    // Update locally for visual feedback
-    const updatedProjects = sortedProjects.map(project => {
-      if (project.id === projectId) {
-        return {
-          ...project,
-          startDate: newStartDate,
-          endDate: newEndDate,
-        };
-      }
-      return project;
+    // Update drag state with the new dates for visual feedback
+    setDragState({
+      ...dragState,
+      newStartDate,
+      newEndDate
     });
     
-    // This would be handled better with proper state management
-    // For now, just focusing on the drag and drop implementation
+    // In a real implementation, we would update the visual state here
+    // This is a simplified version that doesn't update the visual during drag
   };
   
   const handleMouseUp = () => {
-    if (!dragState.isDragging) return;
+    if (!dragState.isDragging || !dragState.projectId) return;
     
-    const { projectId, initialStartDate, initialEndDate, mode } = dragState;
-    
-    // Calculate the day width
-    const dayWidth = scrollContainerRef.current.scrollWidth / daysInView;
+    const { projectId, newStartDate, newEndDate, mode } = dragState;
     
     // Reset drag state
     setDragState({
@@ -188,16 +197,19 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
       mode: null,
     });
     
-    // Update project dates in the backend
-    updateProjectDates.mutate({
-      projectId,
-      startDate: dragState.mode !== 'resize-end' ? dragState.newStartDate : undefined,
-      endDate: dragState.mode !== 'resize-start' ? dragState.newEndDate : undefined,
-    });
+    // Only update the backend if we have new dates
+    if ((mode === 'move' || mode === 'resize-start') && newStartDate &&
+        (mode === 'move' || mode === 'resize-end') && newEndDate) {
+      updateProjectDates.mutate({
+        projectId,
+        startDate: mode !== 'resize-end' ? newStartDate : undefined,
+        endDate: mode !== 'resize-start' ? newEndDate : undefined,
+      });
+    }
   };
   
   // Get bar position and width for a project
-  const getBarStyle = (project) => {
+  const getBarStyle = (project: any): React.CSSProperties => {
     if (!project.startDate || !project.endDate) {
       return { display: 'none' };
     }
@@ -226,12 +238,12 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
   };
   
   // Helper to format date for display
-  const formatDate = (date) => {
+  const formatDate = (date: Date): string => {
     return format(date, 'dd MMM', { locale: pt });
   };
   
   // Helper to determine if a date is a weekend
-  const isWeekend = (date) => {
+  const isWeekend = (date: Date): boolean => {
     const day = date.getDay();
     return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
   };

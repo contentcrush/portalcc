@@ -274,158 +274,161 @@ export default function Projects() {
         </div>
       )}
       
-      {/* Project grid */}
-      {view === "grid" && projectsWithClient && projectsWithClient.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projectsWithClient.map(project => (
-            <ProjectCard 
-              key={project.id} 
-              project={project}
-              onOpenDetails={handleOpenProjectDetails}
-            />
-          ))}
-          
-          {/* Add new project card */}
-          <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
-            <div className="bg-primary/10 rounded-full p-3 mb-3">
-              <Plus className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
-            <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
-            <Button onClick={openProjectForm}>Adicionar Projeto</Button>
-          </div>
-        </div>
-      )}
-      
-      {/* Project list view */}
-      {view === "list" && projectsWithClient && projectsWithClient.length > 0 && (
-        <div className="space-y-3">
-          {projectsWithClient.map(project => (
-            <div 
-              key={project.id}
-              className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-sm"
-            >
-              <div className="flex items-center">
-                {project.thumbnail ? (
-                  <img 
-                    src={project.thumbnail} 
-                    alt={project.name} 
-                    className="w-12 h-12 object-cover rounded mr-4" 
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mr-4">
-                    <span className="text-gray-500 font-medium">
-                      {project.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                
-                <div>
-                  <Link href={`/projects/${project.id}`}>
-                    <h3 className="font-medium hover:text-primary cursor-pointer">
-                      {project.name}
-                    </h3>
-                  </Link>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <span>{project.client?.name || 'Cliente não especificado'}</span>
-                    <span className="mx-2">•</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
-                      project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
-                      project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {project.status === 'em_andamento' ? 'Em andamento' : 
-                      project.status === 'pre_producao' ? 'Pré-produção' : 
-                      project.status === 'em_producao' ? 'Em produção' : 
-                      project.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
+      {/* Conteúdo da aba Projetos (grid e list) */}
+      {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
+        <>
+          {/* Project grid */}
+          {view === "grid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projectsWithClient.map(project => (
+                <ProjectCard 
+                  key={project.id} 
+                  project={project}
+                  onOpenDetails={handleOpenProjectDetails}
+                />
+              ))}
               
-              <div className="flex items-center">
-                <div className="text-right mr-6 hidden md:block">
-                  <div className="font-medium">{new Date(project.endDate).toLocaleDateString('pt-BR')}</div>
-                  <div className="text-sm text-muted-foreground">Prazo</div>
+              {/* Add new project card */}
+              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
+                <div className="bg-primary/10 rounded-full p-3 mb-3">
+                  <Plus className="h-8 w-8 text-primary" />
                 </div>
-                
-                <div className="text-right mr-6">
-                  <div className="font-medium">
-                    {new Intl.NumberFormat('pt-BR', { 
-                      style: 'currency', 
-                      currency: 'BRL' 
-                    }).format(project.budget || 0)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Orçamento</div>
-                </div>
-                
-                <div className="w-24 mr-6 hidden md:block">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span>Progresso</span>
-                    <span>{project.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div 
-                      className="bg-primary h-1.5 rounded-full" 
-                      style={{ width: `${project.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
-                        onClick={() => handleDuplicateProject(project.id)}
-                        className="cursor-pointer"
-                      >
-                        <Copy className="mr-2 h-4 w-4" /> 
-                        Duplicar Projeto
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleOpenProjectDetails(project.id)}
-                  >
-                    Detalhes
-                  </Button>
-                </div>
+                <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
+                <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
+                <Button onClick={openProjectForm}>Adicionar Projeto</Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-      
-      {/* Pagination */}
-      {projectsWithClient && projectsWithClient.length > 0 && (
-        <div className="mt-8 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Mostrando 1-{projectsWithClient.length} de {projectsWithClient.length} projetos
-          </p>
-          <div className="flex items-center">
-            <Button variant="outline" size="icon" className="rounded-r-none">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="default" size="icon" className="rounded-none w-8">
-              1
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-none w-8">
-              2
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-l-none">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          )}
+          
+          {/* Project list view */}
+          {view === "list" && (
+            <div className="space-y-3">
+              {projectsWithClient.map(project => (
+                <div 
+                  key={project.id}
+                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-sm"
+                >
+                  <div className="flex items-center">
+                    {project.thumbnail ? (
+                      <img 
+                        src={project.thumbnail} 
+                        alt={project.name} 
+                        className="w-12 h-12 object-cover rounded mr-4" 
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mr-4">
+                        <span className="text-gray-500 font-medium">
+                          {project.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Link href={`/projects/${project.id}`}>
+                        <h3 className="font-medium hover:text-primary cursor-pointer">
+                          {project.name}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <span>{project.client?.name || 'Cliente não especificado'}</span>
+                        <span className="mx-2">•</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
+                          project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
+                          project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {project.status === 'em_andamento' ? 'Em andamento' : 
+                          project.status === 'pre_producao' ? 'Pré-produção' : 
+                          project.status === 'em_producao' ? 'Em produção' : 
+                          project.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <div className="text-right mr-6 hidden md:block">
+                      <div className="font-medium">{new Date(project.endDate).toLocaleDateString('pt-BR')}</div>
+                      <div className="text-sm text-muted-foreground">Prazo</div>
+                    </div>
+                    
+                    <div className="text-right mr-6">
+                      <div className="font-medium">
+                        {new Intl.NumberFormat('pt-BR', { 
+                          style: 'currency', 
+                          currency: 'BRL' 
+                        }).format(project.budget || 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Orçamento</div>
+                    </div>
+                    
+                    <div className="w-24 mr-6 hidden md:block">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Progresso</span>
+                        <span>{project.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div 
+                          className="bg-primary h-1.5 rounded-full" 
+                          style={{ width: `${project.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => handleDuplicateProject(project.id)}
+                            className="cursor-pointer"
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> 
+                            Duplicar Projeto
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleOpenProjectDetails(project.id)}
+                      >
+                        Detalhes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Pagination */}
+          <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando 1-{projectsWithClient.length} de {projectsWithClient.length} projetos
+            </p>
+            <div className="flex items-center">
+              <Button variant="outline" size="icon" className="rounded-r-none">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="default" size="icon" className="rounded-none w-8">
+                1
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-none w-8">
+                2
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-l-none">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
+        </>
       )}
       
       {/* Project details sidebar */}
@@ -434,6 +437,15 @@ export default function Projects() {
           projectId={selectedProjectId}
           onClose={handleCloseProjectDetails}
         />
+      )}
+      
+      {/* Componentes de visualização Kanban e Gantt exibidos quando as abas apropriadas estão ativas */}
+      {activeTab === "kanban" && projectsWithClient && projectsWithClient.length > 0 && (
+        <ProjectKanban projects={projectsWithClient} />
+      )}
+      
+      {activeTab === "gantt" && projectsWithClient && projectsWithClient.length > 0 && (
+        <ProjectGantt projects={projectsWithClient} />
       )}
     </div>
   );
