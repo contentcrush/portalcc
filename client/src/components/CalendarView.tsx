@@ -766,7 +766,7 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
                   >
                     <div className="text-center mb-1">
                       <span className="text-sm font-medium text-gray-700">
-                        {WEEKDAYS[day.getDay()]}
+                        {WEEKDAYS[(day.getDay() + 6) % 7]}
                       </span>
                       <div className={`text-center ${isToday(day) ? 'bg-amber-500 text-white rounded-full w-7 h-7 mx-auto flex items-center justify-center' : ''}`}>
                         <span className="text-sm">
