@@ -104,7 +104,8 @@ export default function Tasks() {
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Os dados já foram convertidos no onSubmit
+      // Vamos ver quais dados estão sendo enviados
+      console.log("Enviando dados para o servidor:", JSON.stringify(data, null, 2));
       return apiRequest('POST', '/api/tasks', data);
     },
     onSuccess: () => {
@@ -152,17 +153,12 @@ export default function Tasks() {
 
   // Form submission handler
   const onSubmit = (data: z.infer<typeof taskFormSchema>) => {
-    // Converter as strings de data para objetos Date 
-    const formattedData = {
-      ...data,
-      due_date: data.due_date ? new Date(data.due_date) : undefined,
-      start_date: data.start_date ? new Date(data.start_date) : undefined,
-    };
-    
+    // Não precisamos converter as datas manualmente, o schema faz isso
+    // Apenas enviamos os dados como estão
     if (selectedTask) {
-      updateTaskMutation.mutate({ id: selectedTask.id, data: formattedData });
+      updateTaskMutation.mutate({ id: selectedTask.id, data });
     } else {
-      createTaskMutation.mutate(formattedData);
+      createTaskMutation.mutate(data);
     }
   };
 

@@ -556,11 +556,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", authenticateJWT, requirePermission('manage_tasks'), validateBody(insertTaskSchema), async (req, res) => {
+  app.post("/api/tasks", authenticateJWT, requirePermission('manage_tasks'), async (req, res) => {
     try {
-      const task = await storage.createTask(req.body);
-      res.status(201).json(task);
+      console.log("Recebendo dados do cliente:", JSON.stringify(req.body, null, 2));
+      
+      // Tentar validar manualmente para verificar onde está o erro
+      try {
+        const validatedData = insertTaskSchema.parse(req.body);
+        console.log("Dados validados com sucesso:", JSON.stringify(validatedData, null, 2));
+        
+        const task = await storage.createTask(validatedData);
+        res.status(201).json(task);
+      } catch (validationError) {
+        console.error("Erro de validação:", validationError);
+        res.status(400).json({ 
+          message: "Erro de validação na criação da tarefa", 
+          errors: validationError.errors || validationError.message 
+        });
+      }
     } catch (error) {
+      console.error("Erro ao criar tarefa:", error);
       res.status(500).json({ message: "Failed to create task" });
     }
   });
