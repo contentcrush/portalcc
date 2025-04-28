@@ -33,7 +33,7 @@ import { ptBR } from "date-fns/locale";
 import { getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { UserEditDialog } from "@/components/UserEditDialog";
+import { UserEditDialog } from "../pages/team";
 
 export default function UserProfile() {
   const { id } = useParams<{ id: string }>();
@@ -141,6 +141,7 @@ export default function UserProfile() {
             isOpen={editDialogOpen}
             onClose={() => setEditDialogOpen(false)}
             user={user}
+            isAdmin={currentUser?.role === "admin"}
           />
         )}
       </div>

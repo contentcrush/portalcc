@@ -3,13 +3,11 @@ import { User } from "@shared/schema";
 import { Building, User as UserIcon } from "lucide-react";
 
 interface UserAvatarProps {
-  user?: User | any; // Permitir que user seja opcional ou qualquer objeto
+  user: User;
   className?: string;
 }
 
-function getInitials(name?: string): string {
-  if (!name) return "US"; // User como fallback quando não há nome
-  
+function getInitials(name: string): string {
   return name
     .split(" ")
     .map((n) => n[0])
@@ -18,7 +16,7 @@ function getInitials(name?: string): string {
     .substring(0, 2);
 }
 
-function getAvatarFallbackColor(name?: string): string {
+function getAvatarFallbackColor(name: string): string {
   // Cores da nossa paleta para fallback (ajustar conforme paleta real do projeto)
   const colors = [
     "bg-blue-500",
@@ -31,8 +29,6 @@ function getAvatarFallbackColor(name?: string): string {
     "bg-indigo-500",
   ];
   
-  if (!name) return colors[0]; // Retornar a primeira cor se não houver nome
-  
   // Gerar um índice baseado no nome
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -43,28 +39,16 @@ function getAvatarFallbackColor(name?: string): string {
 }
 
 export function UserAvatar({ user, className = "" }: UserAvatarProps) {
-  // Se user não for fornecido, usar um objeto vazio para evitar erros
-  if (!user) {
-    return (
-      <Avatar className={className}>
-        <AvatarFallback className="bg-gray-500 text-white">
-          <UserIcon className="h-5 w-5" />
-        </AvatarFallback>
-      </Avatar>
-    );
-  }
-  
-  const userName = user.name || "Usuário";
-  const fallbackClass = getAvatarFallbackColor(userName);
+  const fallbackClass = getAvatarFallbackColor(user.name);
   
   return (
     <Avatar className={className}>
-      <AvatarImage src={user.avatar_url || user.avatar || ""} alt={userName} />
+      <AvatarImage src={user.avatar_url || user.avatar || ""} alt={user.name} />
       <AvatarFallback className={fallbackClass + " text-white"}>
         {user.user_type === 'pj' ? (
           <Building className="h-5 w-5" />
         ) : (
-          getInitials(userName)
+          getInitials(user.name)
         )}
       </AvatarFallback>
     </Avatar>
