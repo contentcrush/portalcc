@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { 
-  formatDate, 
-  getPriorityBadgeClasses,
+  formatDate,
   isTaskOverdue, 
   isTaskDueSoon
 } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import PriorityBadge from "@/components/PriorityBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -236,12 +235,10 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   )}
                   
                   {/* Priority badge */}
-                  <Badge className={`text-xs capitalize ${getPriorityBadgeClasses(task.priority)}`}>
-                    {task.priority === "baixa" ? "Baixa" : 
-                     task.priority === "media" ? "Média" : 
-                     task.priority === "alta" ? "Alta" : 
-                     task.priority === "critica" ? "Crítica" : task.priority}
-                  </Badge>
+                  <PriorityBadge
+                    priority={task.priority}
+                    size="sm"
+                  />
                 </div>
                 
                 <div className="flex items-center gap-2">

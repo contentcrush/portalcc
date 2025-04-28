@@ -92,11 +92,7 @@ export default function QuickActions() {
     }
   };
   
-  // Obter cores para prioridade a partir das constantes
-  const getPriorityColor = (priority: string) => {
-    const normalizedPriority = priority.toLowerCase().replace('é', 'e').replace('í', 'i');
-    return PRIORITY_COLOR_CLASSES[normalizedPriority] || PRIORITY_COLOR_CLASSES.default;
-  };
+  // Não precisamos mais dessa função pois estamos usando o componente PriorityBadge
   
   // Verificar se uma tarefa está atrasada
   const isTaskOverdue = (dueDate: string) => {
