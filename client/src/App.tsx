@@ -38,6 +38,7 @@ function App() {
                       <Route path="/dashboard" component={Dashboard} />
                       <Route path="/projects" component={Projects} />
                       <Route path="/tasks" component={Tasks} />
+                      <Route path="/tasks/:id" component={Tasks} />
                       <Route path="/clients" component={Clients} />
                       <Route path="/clients/:id" component={ClientDetail} />
                       <Route path="/financial" component={Financial} />

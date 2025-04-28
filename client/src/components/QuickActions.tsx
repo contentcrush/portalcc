@@ -10,17 +10,10 @@ import {
   AlertCircle,
   Check
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isAfter, isBefore, formatDistanceToNow } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { WEEKDAYS, MONTHS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -169,7 +162,7 @@ export default function QuickActions() {
           </div>
           
           {/* Grid do calendário */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1 text-center">
             {/* Espaços vazios para o início do mês */}
             {Array.from({ length: monthStart.getDay() }).map((_, index) => (
               <div key={`empty-start-${index}`} className="h-6"></div>
@@ -180,7 +173,7 @@ export default function QuickActions() {
               <div 
                 key={day.toISOString()} 
                 className={cn(
-                  "h-6 w-6 text-xs rounded-full flex items-center justify-center cursor-pointer",
+                  "h-6 w-6 mx-auto text-xs rounded-full flex items-center justify-center cursor-pointer",
                   isToday(day) ? "bg-blue-500 text-white" : "hover:bg-gray-200"
                 )}
                 onClick={() => handleDayClick(day)}
@@ -222,7 +215,7 @@ export default function QuickActions() {
           </div>
         )}
         
-        <div className="space-y-3">
+        <div>
           {tasks?.map(task => {
             const dueDate = new Date(task.due_date);
             const isOverdue = isTaskOverdue(task.due_date);
@@ -231,63 +224,39 @@ export default function QuickActions() {
             return (
               <div 
                 key={task.id} 
-                className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+                className="p-3 mb-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
                 onClick={() => navigate(`/tasks/${task.id}`)}
               >
-                <div className="flex justify-between items-start mb-1">
-                  <div className="font-medium truncate" style={{ maxWidth: '75%' }}>{task.title}</div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs px-2 ${statusClass.replace('bg-', 'bg-opacity-10 text-')}`}
-                        >
-                          {isOverdue ? 'Atrasado' : getStatusText(task.status)}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Status: {isOverdue ? 'Atrasado' : getStatusText(task.status)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-base truncate flex-1">{task.title}</h3>
+                  <Badge 
+                    className={`ml-2 text-xs px-3 py-0.5 rounded-full ${statusClass.replace('bg-', 'text-')}`}
+                    variant="outline"
+                  >
+                    {isOverdue ? 'Atrasado' : getStatusText(task.status)}
+                  </Badge>
                 </div>
                 
-                <div className="text-xs text-gray-500 flex items-center mb-1">
-                  <div className="truncate" style={{ maxWidth: '100%' }}>
-                    Projeto: <span className="font-medium">{task.projectName || 'Sem projeto'}</span>
-                  </div>
+                <div className="text-xs text-gray-500 mt-1.5">
+                  Projeto: <span className="text-gray-600">{task.projectName || 'Sem projeto'}</span>
                 </div>
                 
-                <div className="text-xs text-gray-500 flex items-center mb-1">
-                  <div className="truncate" style={{ maxWidth: '100%' }}>
-                    Responsável: <span className="font-medium">{task.assigneeName || 'Não atribuído'}</span>
-                  </div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  Responsável: <span className="text-gray-600">{task.assigneeName || 'Não atribuído'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center mt-2">
-                  <div className="flex items-center text-xs">
-                    <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                    <span className={`${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                      {format(dueDate, 'dd/MM/yyyy')}
-                    </span>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {format(dueDate, 'dd/MM/yyyy')}
                   </div>
                   
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs px-2 ${getPriorityColor(task.priority).replace('bg-', 'bg-opacity-10 text-')}`}
-                        >
-                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Prioridade: {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-3 py-0.5 rounded-full ${getPriorityColor(task.priority).replace('bg-', 'text-')}`}
+                  >
+                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                  </Badge>
                 </div>
               </div>
             );
