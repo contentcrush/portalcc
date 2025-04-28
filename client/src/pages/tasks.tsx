@@ -44,10 +44,12 @@ import {
   Clock,
   Calendar,
   MessageSquare,
-  Paperclip
+  Paperclip,
+  ArrowUpDown
 } from "lucide-react";
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
 import { TaskWithDetails } from "@/lib/types";
+import { getTaskSortFunction, sortTasksByPriority } from "@/lib/utils";
 
 // Form schema for task creation and editing
 const taskFormSchema = insertTaskSchema.extend({
@@ -196,7 +198,7 @@ export default function Tasks() {
   };
 
   // Filter tasks based on criteria
-  const filteredTasks = tasks?.filter(task => {
+  let filteredTasks = tasks?.filter(task => {
     // Search term filter
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
@@ -233,6 +235,13 @@ export default function Tasks() {
     
     return true;
   });
+  
+  // Sort tasks by the intelligent priority algorithm
+  // This will ensure the most important tasks appear at the top of the list
+  if (filteredTasks) {
+    // Use the smart sorting function that considers multiple factors
+    filteredTasks = [...filteredTasks].sort(getTaskSortFunction());
+  }
 
   return (
     <div className="space-y-6">
@@ -320,6 +329,17 @@ export default function Tasks() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+      
+      {/* Ordem Inteligente Info */}
+      <div className="bg-muted/30 p-3 rounded-lg border border-border flex items-center space-x-3">
+        <ArrowUpDown className="h-5 w-5 text-primary" />
+        <div>
+          <h3 className="text-sm font-medium">Ordenação Inteligente</h3>
+          <p className="text-xs text-muted-foreground">
+            As tarefas são ordenadas automaticamente por prioridade, vencimento e status para maximizar sua produtividade.
+          </p>
         </div>
       </div>
       
