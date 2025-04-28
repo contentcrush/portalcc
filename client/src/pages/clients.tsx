@@ -24,6 +24,15 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Plus,
   Search,
@@ -37,6 +46,12 @@ import {
   MoreHorizontal,
   X,
   Globe,
+  LayoutGrid,
+  List,
+  Download,
+  CircleDollarSign,
+  Folders,
+  Activity,
 } from "lucide-react";
 import {
   Dialog,
@@ -86,6 +101,8 @@ export default function Clients() {
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{ id: number; name: string } | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -190,6 +207,11 @@ export default function Clients() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ['/api/clients']
   });
+  
+  // Fetch projects para cada cliente (para contagem e badges)
+  const { data: projects } = useQuery({
+    queryKey: ['/api/projects']
+  });
 
   // Filter clients based on criteria
   const filteredClients = clients?.filter(client => {
@@ -214,6 +236,10 @@ export default function Clients() {
       return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
     } else if (sortBy === "name") {
       return a.name.localeCompare(b.name);
+    } else if (sortBy === "revenue") {
+      const revenueA = getClientRevenue(a.id);
+      const revenueB = getClientRevenue(b.id);
+      return revenueB - revenueA; // Ordem decrescente
     }
     return 0;
   });
@@ -245,6 +271,43 @@ export default function Clients() {
       client_id: selectedClient?.id as number,
     };
     createProjectMutation.mutate(projectData);
+  };
+  
+  // Função para verificar se um cliente tem projetos ativos
+  const isClientActive = (clientId: number) => {
+    // Verifica se há projetos ativos nos últimos 6 meses
+    if (!projects) return false;
+    
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    return projects.some((project: any) => 
+      project.client_id === clientId && new Date(project.updated_at || project.created_at) > sixMonthsAgo
+    );
+  };
+  
+  // Função para contar o número de projetos por cliente
+  const getClientProjectsCount = (clientId: number) => {
+    if (!projects) return 0;
+    return projects.filter((project: any) => project.client_id === clientId).length;
+  };
+  
+  // Função para calcular a receita total de projetos por cliente
+  const getClientRevenue = (clientId: number) => {
+    if (!projects) return 0;
+    return projects
+      .filter((project: any) => project.client_id === clientId)
+      .reduce((total: number, project: any) => total + (project.budget || 0), 0);
+  };
+  
+  // Função para exportar dados para Excel
+  const exportToExcel = () => {
+    toast({
+      title: "Exportando dados",
+      description: "Os dados serão exportados em um formato Excel.",
+    });
+    // Implementação real usando uma biblioteca como xlsx seria feita aqui
+    setIsExportDialogOpen(false);
   };
 
   return (
@@ -299,9 +362,35 @@ export default function Clients() {
             <SelectContent>
               <SelectItem value="recent">Mais recentes</SelectItem>
               <SelectItem value="name">Nome</SelectItem>
+              <SelectItem value="revenue">Faturamento</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-2"
+            onClick={() => setIsExportDialogOpen(true)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Excel
+          </Button>
         </div>
+      </div>
+      
+      {/* View mode toggle */}
+      <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+        <div className="text-sm text-muted-foreground">
+          {sortedClients?.length || 0} clientes encontrados
+        </div>
+        <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}>
+          <ToggleGroupItem value="grid" aria-label="Visualização em grade">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="Visualização em lista">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
       
       {/* Loading state */}
@@ -328,8 +417,8 @@ export default function Clients() {
         </div>
       )}
       
-      {/* Clients grid */}
-      {sortedClients && sortedClients.length > 0 && (
+      {/* Clients grid view */}
+      {sortedClients && sortedClients.length > 0 && viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedClients.map(client => (
             <Card key={client.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -353,10 +442,19 @@ export default function Clients() {
                             {client.name}
                           </h3>
                         </Link>
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
                           <span className="text-sm text-muted-foreground">
                             {client.type || 'Cliente'}
                           </span>
+                          
+                          {/* Status badge */}
+                          <div className="flex items-center">
+                            <Badge 
+                              className={`px-1 py-0 h-2 rounded-full ${isClientActive(client.id) 
+                                ? 'bg-emerald-500' 
+                                : 'bg-gray-300'}`}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -389,6 +487,18 @@ export default function Clients() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </div>
+                  
+                  <div className="flex space-x-3 mb-4">
+                    <Badge variant="outline" className="flex items-center gap-1.5 bg-gray-50">
+                      <Folders className="h-3.5 w-3.5 text-muted-foreground" />
+                      {getClientProjectsCount(client.id)} projetos
+                    </Badge>
+                    
+                    <Badge variant="outline" className="flex items-center gap-1.5 bg-gray-50">
+                      <CircleDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                      R$ {getClientRevenue(client.id).toLocaleString('pt-BR')}
+                    </Badge>
                   </div>
                   
                   <div className="space-y-2 mb-4">
@@ -472,6 +582,129 @@ export default function Clients() {
               <Button>Adicionar Cliente</Button>
             </CardContent>
           </Card>
+        </div>
+      )}
+      
+      {/* Clients list view */}
+      {sortedClients && sortedClients.length > 0 && viewMode === 'list' && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead className="hidden md:table-cell">Contato</TableHead>
+                <TableHead className="text-center">Projetos</TableHead>
+                <TableHead className="text-right">Faturamento</TableHead>
+                <TableHead className="hidden md:table-cell">Status</TableHead>
+                <TableHead className="hidden md:table-cell">Desde</TableHead>
+                <TableHead className="w-[100px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedClients.map(client => (
+                <TableRow key={client.id} className="hover:bg-muted/30">
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Avatar className="h-8 w-8 mr-3">
+                        <AvatarFallback 
+                          style={{ 
+                            backgroundColor: generateAvatarColor(client.name),
+                            color: 'white'
+                          }}
+                        >
+                          {getInitials(client.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Link href={`/clients/${client.id}`}>
+                          <div className="font-medium hover:text-primary cursor-pointer">
+                            {client.name}
+                          </div>
+                        </Link>
+                        {client.cnpj && (
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            CNPJ: {client.cnpj}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{client.type || 'Cliente'}</Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {client.contactName ? (
+                      <div>
+                        <div className="font-medium">{client.contactName}</div>
+                        {client.contactEmail && (
+                          <div className="text-sm text-muted-foreground">{client.contactEmail}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Sem contato</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary" className="bg-gray-100">
+                      {getClientProjectsCount(client.id)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-mono font-medium">
+                      R$ {getClientRevenue(client.id).toLocaleString('pt-BR')}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="flex items-center">
+                      <Badge 
+                        variant="outline" 
+                        className={`px-2 py-0.5 ${isClientActive(client.id) 
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          : 'bg-gray-50 text-gray-500 border-gray-200'}`}
+                      >
+                        {isClientActive(client.id) ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {formatDate(client.since)}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/clients/${client.id}`}>
+                            Ver detalhes
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/clients/${client.id}/edit`}>
+                            Editar cliente
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
+                          Novo projeto
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/clients/${client.id}?tab=interactions&new=true`}>
+                            Nova interação
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
