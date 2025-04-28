@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -25,6 +26,7 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { user, logoutMutation } = useAuth();
+  const { openProjectForm } = useProjectForm();
   
   // Se estivermos na rota de autenticação ou não houver usuário, renderize apenas o conteúdo sem layout
   const isAuthPage = location === "/auth";

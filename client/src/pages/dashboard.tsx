@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency, calculatePercentChange } from "@/lib/utils";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,6 @@ import {
 } from "lucide-react";
 import { MONTHS } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
-import { useProjectForm } from "@/contexts/ProjectFormContext";
 
 // Custom components for dashboard
 const StatCard = ({ 
