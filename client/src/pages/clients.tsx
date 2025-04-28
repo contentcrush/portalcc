@@ -128,7 +128,8 @@ export default function Clients() {
     // Convertendo valores para o formato esperado pela API
     const clientData: InsertClient = {
       ...data,
-      since: data.since ? new Date(data.since) : new Date(),
+      // Não enviar o campo since para deixar o servidor usar o defaultNow()
+      since: undefined,
     };
     createClientMutation.mutate(clientData);
   };
@@ -320,15 +321,21 @@ export default function Clients() {
                             Ver detalhes
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          Editar cliente
+                        <DropdownMenuItem asChild>
+                          <Link href={`/clients/${client.id}/edit`}>
+                            Editar cliente
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          Novo projeto
+                        <DropdownMenuItem asChild>
+                          <Link href={`/projects/new?client_id=${client.id}`}>
+                            Novo projeto
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          Nova interação
+                        <DropdownMenuItem asChild>
+                          <Link href={`/clients/${client.id}?tab=interactions&new=true`}>
+                            Nova interação
+                          </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -384,9 +391,11 @@ export default function Clients() {
                       Ver detalhes
                     </Button>
                   </Link>
-                  <Button variant="ghost" className="flex-1 rounded-none py-2">
-                    Novo projeto
-                  </Button>
+                  <Link href={`/projects/new?client_id=${client.id}`} className="flex-1">
+                    <Button variant="ghost" className="w-full rounded-none py-2">
+                      Novo projeto
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
