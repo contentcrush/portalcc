@@ -3,7 +3,7 @@ import { User } from "@shared/schema";
 import { Building, User as UserIcon } from "lucide-react";
 
 interface UserAvatarProps {
-  user: User;
+  user: User | null;
   className?: string;
 }
 
@@ -39,16 +39,27 @@ function getAvatarFallbackColor(name: string): string {
 }
 
 export function UserAvatar({ user, className = "" }: UserAvatarProps) {
-  const fallbackClass = getAvatarFallbackColor(user.name);
+  // Se o usuário for nulo, mostrar um avatar padrão
+  if (!user) {
+    return (
+      <Avatar className={className}>
+        <AvatarFallback className="bg-muted text-muted-foreground">
+          <UserIcon className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+  
+  const fallbackClass = getAvatarFallbackColor(user.name || "User");
   
   return (
     <Avatar className={className}>
-      <AvatarImage src={user.avatar_url || user.avatar || ""} alt={user.name} />
+      <AvatarImage src={user.avatar_url || user.avatar || ""} alt={user.name || "User"} />
       <AvatarFallback className={fallbackClass + " text-white"}>
         {user.user_type === 'pj' ? (
           <Building className="h-5 w-5" />
         ) : (
-          getInitials(user.name)
+          getInitials(user.name || "User")
         )}
       </AvatarFallback>
     </Avatar>
