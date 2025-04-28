@@ -22,6 +22,17 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
 import ProjectKanban from "@/components/ProjectKanban";
@@ -38,7 +49,8 @@ import {
   MoreVertical,
   Copy,
   KanbanSquare,
-  GanttChart
+  GanttChart,
+  Trash2
 } from "lucide-react";
 import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
@@ -88,6 +100,31 @@ export default function Projects() {
       });
     },
   });
+  
+  // Mutação para excluir projeto
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (projectId: number) => {
+      return apiRequest("DELETE", `/api/projects/${projectId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Projeto excluído com sucesso",
+        description: "O projeto foi removido permanentemente",
+        variant: "default",
+      });
+      // Fecha o sidebar de detalhes caso esteja aberto
+      setSelectedProjectId(null);
+      // Atualiza a lista de projetos
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir projeto",
+        description: error.message || "Não foi possível excluir o projeto",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Apply filters
   const filteredProjects = projects?.filter(project => {
@@ -132,6 +169,10 @@ export default function Projects() {
   
   const handleDuplicateProject = (projectId: number) => {
     duplicateProjectMutation.mutate(projectId);
+  };
+  
+  const handleDeleteProject = (projectId: number) => {
+    deleteProjectMutation.mutate(projectId);
   };
 
   // Estado para controlar a aba atual
@@ -398,6 +439,38 @@ export default function Projects() {
                             <Copy className="mr-2 h-4 w-4" /> 
                             Duplicar Projeto
                           </DropdownMenuItem>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                onClick={(e) => e.stopPropagation()}
+                                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir Projeto
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o projeto "{project.name}"? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteProject(project.id);
+                                  }}
+                                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       

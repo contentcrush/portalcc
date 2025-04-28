@@ -9,7 +9,13 @@ import {
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, CopyCheck, MoreVertical, Copy as CopyIcon } from "lucide-react";
+import { 
+  Copy, 
+  CopyCheck, 
+  MoreVertical, 
+  Copy as CopyIcon, 
+  Trash2 
+} from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ProjectWithClient } from "@/lib/types";
 import { StatusLabels } from "@/lib/types";
@@ -23,6 +29,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import StatusBadge from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
 
@@ -71,6 +88,29 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
       });
     },
   });
+  
+  // Mutação para excluir projeto
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/projects/${project.id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Projeto excluído com sucesso",
+        description: "O projeto foi removido permanentemente",
+        variant: "default",
+      });
+      // Atualiza a lista de projetos
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir projeto",
+        description: error.message || "Não foi possível excluir o projeto",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Get team members with their user details
   const teamMembers = projectMembers?.map(member => {
@@ -98,6 +138,11 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
   function handleDuplicateProject(e: React.MouseEvent) {
     e.stopPropagation();
     duplicateProjectMutation.mutate();
+  }
+  
+  function handleDeleteProject(e: React.MouseEvent) {
+    e.stopPropagation();
+    deleteProjectMutation.mutate();
   }
 
   return (
