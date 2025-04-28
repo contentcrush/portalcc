@@ -4,6 +4,7 @@ import { formatCurrency, calculatePercentChange } from "@/lib/utils";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { 
   AreaChart, 
@@ -356,12 +357,9 @@ export default function Dashboard() {
               {projects?.slice(0, 4).map((project) => (
                 <div key={project.id} className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full ${
-                      project.status === 'em_andamento' ? 'bg-green-500' : 
-                      project.status === 'pre_producao' ? 'bg-blue-500' : 
-                      project.status === 'em_producao' ? 'bg-yellow-500' : 
-                      'bg-gray-500'
-                    } mr-2`}></div>
+                    <div className="mr-2">
+                      <StatusBadge status={project.status} small={true} minimal={true} />
+                    </div>
                     <div>
                       <Link href={`/projects/${project.id}`}>
                         <p className="font-medium hover:text-primary cursor-pointer">{project.name}</p>

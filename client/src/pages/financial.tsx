@@ -29,6 +29,7 @@ import {
 import { formatCurrency, calculatePercentChange } from "@/lib/utils";
 import { CURRENT_QUARTER } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
+import StatusBadge from "@/components/StatusBadge";
 
 export default function Financial() {
   const [period, setPeriod] = useState(CURRENT_QUARTER);

@@ -21,6 +21,7 @@ import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import StatusBadge from "@/components/StatusBadge";
 import { getInteractionIcon } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -258,12 +259,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                       <TableRow key={project.id}>
                         <TableCell className="font-medium">{project.name}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={project.status === 'concluido' ? 'success' : 'secondary'}
-                            className="capitalize"
-                          >
-                            {project.status === 'concluido' ? 'Concluído' : project.status === 'em_andamento' ? 'Em andamento' : project.status}
-                          </Badge>
+                          <StatusBadge status={project.status} small={true} />
                         </TableCell>
                         <TableCell>{formatDate(project.endDate)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(project.budget)}</TableCell>
