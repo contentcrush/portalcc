@@ -412,3 +412,19 @@ export function formatTeamRole(role: string): string {
   
   return roleMap[role] || role;
 }
+
+/**
+ * Retorna a classe CSS para a cor da barra de progresso com base no valor do progresso
+ * Verde para progresso >= 80%
+ * Amarelo para progresso entre 50% e 80%
+ * Vermelho para progresso < 50%
+ */
+export function getProgressBarColor(progress: number): string {
+  if (progress >= 80) {
+    return 'bg-green-600'; // verde para alto progresso
+  } else if (progress >= 50) {
+    return 'bg-yellow-500'; // amarelo para progresso médio
+  } else {
+    return 'bg-red-500'; // vermelho para progresso baixo
+  }
+}

@@ -241,7 +241,7 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
               <div 
-                className="bg-indigo-600 h-1.5 rounded-full" 
+                className={`${getProgressBarColor(progress)} h-1.5 rounded-full`}
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
