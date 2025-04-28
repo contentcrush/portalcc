@@ -197,7 +197,9 @@ export function ProjectFormDialog() {
   const isLoading = isLoadingClients || isLoadingUsers;
 
   return (
-    <Dialog open={isFormOpen} onOpenChange={closeProjectForm}>
+    <Dialog open={isFormOpen} onOpenChange={(open) => {
+      if (!open) closeProjectForm();
+    }}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">

@@ -20,6 +20,7 @@ import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
 import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 
 function App() {
   return (
@@ -49,6 +50,8 @@ function App() {
                   </Layout>
                 </Route>
               </Switch>
+              {/* Renderizar o diálogo de formulário de projeto globalmente */}
+              <ProjectFormDialog />
               <Toaster />
             </TooltipProvider>
           </ProjectFormProvider>

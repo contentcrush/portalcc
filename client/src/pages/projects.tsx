@@ -415,9 +415,6 @@ export default function Projects() {
           onClose={handleCloseProjectDetails}
         />
       )}
-
-      {/* Diálogo de criação/edição de projeto */}
-      <ProjectFormDialog />
     </div>
   );
 }
