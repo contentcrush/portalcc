@@ -167,6 +167,10 @@ export default function UserProfile() {
                    user.role === "manager" ? "Gestor" : 
                    user.role === "editor" ? "Editor" : "Visualizador"}
                 </Badge>
+                {/* Debug info (remover após depuração) */}
+                {process.env.NODE_ENV === 'development' && (
+                  <span className="text-[8px] text-black/50 bg-gray-100 px-1 rounded">Role: {user.role}</span>
+                )}
                 {user.user_type && (
                   <Badge variant="success">
                     {user.user_type === "pj" ? "Pessoa Jurídica" : "Pessoa Física"}
