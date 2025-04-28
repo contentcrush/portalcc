@@ -95,7 +95,7 @@ export default function QuickActions() {
   const getPriorityColor = (priority: string) => {
     switch(priority) {
       case 'baixa': return 'bg-blue-500';
-      case 'média': return 'bg-amber-500';
+      case 'média': return 'bg-amber-400';
       case 'alta': return 'bg-orange-500';
       case 'crítica': return 'bg-red-500';
       default: return 'bg-gray-500';
@@ -224,17 +224,15 @@ export default function QuickActions() {
             return (
               <div 
                 key={task.id} 
-                className="p-3 mb-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+                className="p-4 mb-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100"
                 onClick={() => navigate(`/tasks/${task.id}`)}
               >
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium text-base truncate flex-1">{task.title}</h3>
-                  <Badge 
-                    className={`ml-2 text-xs px-3 py-0.5 rounded-full ${statusClass.replace('bg-', 'text-')}`}
-                    variant="outline"
-                  >
-                    {isOverdue ? 'Atrasado' : getStatusText(task.status)}
-                  </Badge>
+                  <div 
+                    className={`h-4 w-4 rounded-full ml-2 ${statusClass}`}
+                    title={isOverdue ? 'Atrasado' : getStatusText(task.status)}
+                  ></div>
                 </div>
                 
                 <div className="text-xs text-gray-500 mt-1.5">
@@ -252,8 +250,7 @@ export default function QuickActions() {
                   </div>
                   
                   <Badge 
-                    variant="outline" 
-                    className={`text-xs px-3 py-0.5 rounded-full ${getPriorityColor(task.priority).replace('bg-', 'text-')}`}
+                    className={`text-xs px-3 py-0.5 rounded-full text-white ${getPriorityColor(task.priority)}`}
                   >
                     {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                   </Badge>
