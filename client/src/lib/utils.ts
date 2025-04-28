@@ -6,6 +6,10 @@ import {
   Project, Client, Task, ProjectStatus, TaskStatus, 
   TaskPriority, InteractionType, DocumentType, StatusColors 
 } from "./types";
+import { 
+  TASK_PRIORITY_WEIGHTS, 
+  TASK_STATUS_WEIGHTS 
+} from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -87,8 +91,23 @@ export function generateAvatarColor(name: string): string {
 }
 
 export function getStatusColor(status: ProjectStatus | TaskStatus | TaskPriority | null | undefined): string {
-  if (!status) return "gray";
-  return StatusColors[status] || "gray";
+  if (!status) return "#6b7280"; // cinza padrão
+  
+  // Para status de tarefas
+  if (status === "pendente") return "#f97316"; // laranja
+  if (status === "em_andamento") return "#3b82f6"; // azul
+  if (status === "concluida") return "#10b981"; // verde
+  if (status === "bloqueada") return "#ef4444"; // vermelho
+  if (status === "cancelada") return "#6b7280"; // cinza
+  
+  // Para prioridades de tarefas
+  if (status === "baixa") return "#a3e635"; // verde claro
+  if (status === "media") return "#facc15"; // amarelo
+  if (status === "alta") return "#f43f5e"; // vermelho rosado
+  if (status === "critica") return "#7c3aed"; // roxo
+  
+  // Fallback para outras cores em StatusColors 
+  return StatusColors[status] || "#6b7280";
 }
 
 export function calculateProjectProgress(project: Project): number {
@@ -212,4 +231,113 @@ export function isTaskDueSoon(task: Task, days: number = 2): boolean {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   return diffDays <= days;
+}
+
+/**
+ * Calcula um score de prioridade para uma tarefa com base em múltiplos fatores
+ * - Prioridade explícita (alta, média, baixa)
+ * - Status (bloqueada > pendente > em andamento > concluída)
+ * - Data de vencimento (vencidas > prestes a vencer > futuras)
+ * - Data de início (tarefas que já deviam ter começado > futuras)
+ */
+export function calculateTaskPriorityScore(task: Task): number {
+  if (!task) return 0;
+  
+  // Começamos com pontuação base da prioridade explícita
+  let score = 0;
+  
+  // Peso da prioridade (0-40 pontos)
+  const priorityWeight = task.priority 
+    ? TASK_PRIORITY_WEIGHTS[task.priority] || 0 
+    : TASK_PRIORITY_WEIGHTS.media; // padrão para média
+  
+  // Peso do status (0-40 pontos)
+  const statusWeight = task.status
+    ? TASK_STATUS_WEIGHTS[task.status] || 0
+    : TASK_STATUS_WEIGHTS.pendente; // padrão para pendente
+  
+  score += priorityWeight + statusWeight;
+  
+  // Adicionar pontos para tarefas atrasadas (até 100 pontos extras)
+  const overdueWeight = Math.min(calculateTaskDaysOverdue(task) * 10, 100);
+  score += overdueWeight;
+  
+  // Adicionar pontos para tarefas prestes a vencer (até 50 pontos extras)
+  if (isTaskDueSoon(task, 3)) {
+    const daysUntilDue = calculateDaysRemaining(task.due_date);
+    // Quanto mais próximo do vencimento, mais pontos
+    const urgencyWeight = (3 - daysUntilDue) * 20; // 20, 40 ou 60 pontos
+    score += urgencyWeight;
+  }
+  
+  // Se for uma tarefa completada, reduzir muito a prioridade
+  if (task.completed) {
+    score = Math.floor(score * 0.1); // Apenas 10% do score original
+  }
+  
+  return score;
+}
+
+/**
+ * Compara duas tarefas para ordenação baseada em prioridade inteligente
+ */
+export function sortTasksByPriority(a: Task, b: Task): number {
+  const scoreA = calculateTaskPriorityScore(a);
+  const scoreB = calculateTaskPriorityScore(b);
+  
+  return scoreB - scoreA; // Ordem decrescente
+}
+
+/**
+ * Retorna uma função de ordenação que combina múltiplos critérios 
+ * para organizar tarefas de acordo com prioridade, vencimento e status
+ */
+export function getTaskSortFunction(): (a: Task, b: Task) => number {
+  return (a: Task, b: Task) => {
+    // Primeiro critério: tarefas concluídas vão para o fim (dividimos a lista em duas partes)
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    
+    // Segundo critério: ordenação por prioridade inteligente
+    return sortTasksByPriority(a, b);
+  };
+}
+
+/**
+ * Função para obter a classe CSS correta para o badge de prioridade
+ */
+export function getPriorityBadgeClasses(priority: TaskPriority): string {
+  switch (priority) {
+    case 'critica':
+      return 'bg-purple-100 text-purple-800 border-purple-300 font-medium';
+    case 'alta':
+      return 'bg-rose-100 text-rose-800 border-rose-300 font-medium';
+    case 'media': 
+      return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+    case 'baixa':
+      return 'bg-lime-100 text-lime-800 border-lime-300';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+  }
+}
+
+/**
+ * Função para obter a classe CSS correta para o badge de status
+ */
+export function getStatusBadgeClasses(status: TaskStatus): string {
+  switch (status) {
+    case 'bloqueada':
+      return 'bg-red-100 text-red-800 border-red-300 font-medium';
+    case 'pendente':
+      return 'bg-orange-100 text-orange-800 border-orange-300';
+    case 'em_andamento': 
+      return 'bg-blue-100 text-blue-800 border-blue-300';
+    case 'concluida':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    case 'cancelada':
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+  }
 }

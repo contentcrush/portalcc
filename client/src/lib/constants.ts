@@ -57,11 +57,44 @@ export const TASK_STATUS_OPTIONS = [
   { value: "cancelada", label: "Cancelada" }
 ];
 
+export const TASK_STATUS_COLORS = {
+  pendente: "#f97316", // amber-500 (laranja)
+  em_andamento: "#3b82f6", // blue-500 (azul)
+  concluida: "#10b981", // emerald-500 (verde)
+  bloqueada: "#ef4444", // red-500 (vermelho)
+  cancelada: "#6b7280" // gray-500 (cinza)
+};
+
 export const TASK_PRIORITY_OPTIONS = [
   { value: "baixa", label: "Baixa" },
   { value: "media", label: "Média" },
-  { value: "alta", label: "Alta" }
+  { value: "alta", label: "Alta" },
+  { value: "critica", label: "Crítica" }
 ];
+
+export const TASK_PRIORITY_COLORS = {
+  baixa: "#a3e635", // lime-500 (verde claro)
+  media: "#facc15", // yellow-500 (amarelo)
+  alta: "#f43f5e", // rose-500 (vermelho rosado)
+  critica: "#7c3aed" // purple-600 (roxo)
+};
+
+// Valores numéricos para ordenação de prioridades
+export const TASK_PRIORITY_WEIGHTS = {
+  critica: 40,
+  alta: 30,
+  media: 20,
+  baixa: 10
+};
+
+// Valores numéricos para ordenação de status
+export const TASK_STATUS_WEIGHTS = {
+  bloqueada: 40,
+  pendente: 30,
+  em_andamento: 20,
+  concluida: 10,
+  cancelada: 0
+};
 
 export const DOCUMENT_TYPE_OPTIONS = [
   { value: "invoice", label: "Fatura" },

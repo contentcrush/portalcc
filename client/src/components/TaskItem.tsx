@@ -1,7 +1,16 @@
 import { useState } from "react";
-import { formatDate, formatDateTime, getRelativeDate, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
+import { 
+  formatDate, 
+  formatDateTime, 
+  getRelativeDate, 
+  isTaskOverdue, 
+  isTaskDueSoon,
+  getPriorityBadgeClasses,
+  getStatusBadgeClasses
+} from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   MessageSquare, 
   Paperclip, 
@@ -22,7 +31,6 @@ import { TaskWithDetails } from "@/lib/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import StatusBadge from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
 
 interface TaskItemProps {
@@ -119,8 +127,21 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
                 </div>
                 
                 <div className="flex items-center space-x-2 ml-4">
-                  <StatusBadge status={task.priority} small className="capitalize" />
-                  {!task.completed && <StatusBadge status={task.status} small className="capitalize" />}
+                  <Badge className={`text-xs capitalize border ${getPriorityBadgeClasses(task.priority)}`}>
+                    {task.priority === "baixa" ? "Baixa" : 
+                     task.priority === "media" ? "Média" : 
+                     task.priority === "alta" ? "Alta" : 
+                     task.priority === "critica" ? "Crítica" : task.priority}
+                  </Badge>
+                  
+                  {!task.completed && (
+                    <Badge className={`text-xs capitalize border ${getStatusBadgeClasses(task.status)}`}>
+                      {task.status === "pendente" ? "Pendente" : 
+                       task.status === "em_andamento" ? "Em andamento" : 
+                       task.status === "bloqueada" ? "Bloqueada" : 
+                       task.status === "cancelada" ? "Cancelada" : task.status}
+                    </Badge>
+                  )}
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
