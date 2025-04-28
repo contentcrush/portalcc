@@ -326,7 +326,7 @@ export default function TaskItem({ task, onSelect, onEdit }: TaskItemProps) {
                     />
                     <div className="flex-1">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium">{comment.user?.name || "Usuário"}</span>
+                        <span className="text-sm font-medium">{comment.user?.name || `Usuário ${comment.user_id}`}</span>
                         <span className="text-xs text-muted-foreground ml-2">
                           {formatDateTime(comment.creation_date)}
                         </span>

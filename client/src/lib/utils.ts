@@ -15,6 +15,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Função getInitials foi movida para baixo no arquivo
+
 export function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return "R$ 0,00";
   return new Intl.NumberFormat("pt-BR", {
@@ -61,16 +63,25 @@ export function getRelativeDate(date: Date | string | null | undefined): string 
   return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
-export function getInitials(name: string): string {
-  if (!name) return "";
+/**
+ * Obtém as iniciais do nome de uma pessoa
+ * @param name Nome completo
+ * @param length Número de letras a retornar (padrão: 2)
+ * @returns Iniciais do nome (ex: "João Silva" => "JS")
+ */
+export function getInitials(name?: string | null, length: number = 2): string {
+  if (!name) return '??';
   
-  const parts = name.split(" ");
+  const nameParts = name.trim().split(/\s+/);
+  let initials = nameParts[0].charAt(0).toUpperCase();
   
-  if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
+  // Se tiver mais partes no nome e quisermos pelo menos 2 iniciais
+  if (nameParts.length > 1 && length >= 2) {
+    // Obter a inicial do último nome
+    initials += nameParts[nameParts.length - 1].charAt(0).toUpperCase();
   }
   
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return initials;
 }
 
 export function generateAvatarColor(name: string): string {

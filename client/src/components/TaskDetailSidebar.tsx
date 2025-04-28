@@ -388,7 +388,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
                     />
                     <div className="flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm">{comment.user?.name}</span>
+                        <span className="font-medium text-sm">{comment.user?.name || `Usuário ${comment.user_id}`}</span>
                         <span className="text-xs text-muted-foreground">
                           {formatDateTime(comment.creation_date)}
                         </span>
