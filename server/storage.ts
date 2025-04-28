@@ -67,6 +67,7 @@ export interface IStorage {
   
   // Task Attachments
   getTaskAttachments(taskId: number): Promise<TaskAttachment[]>;
+  getTaskAttachment(id: number): Promise<TaskAttachment | undefined>;
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
   

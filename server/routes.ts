@@ -607,7 +607,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id", authenticateJWT, requirePermission('manage_tasks'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedTask = await storage.updateTask(id, req.body);
+      
+      // Limpa campos de data quando são strings vazias
+      const cleanedData = { ...req.body };
+      if (cleanedData.start_date === '') cleanedData.start_date = null;
+      if (cleanedData.due_date === '') cleanedData.due_date = null;
+      if (cleanedData.estimated_hours === '') cleanedData.estimated_hours = null;
+      
+      // Conversão de datas de string para Date
+      if (cleanedData.start_date && typeof cleanedData.start_date === 'string') {
+        cleanedData.start_date = new Date(cleanedData.start_date);
+      }
+      
+      if (cleanedData.due_date && typeof cleanedData.due_date === 'string') {
+        cleanedData.due_date = new Date(cleanedData.due_date);
+      }
+      
+      // Verifica se o campo de conclusão foi marcado
+      if (cleanedData.completed === true && cleanedData.completion_date === undefined) {
+        cleanedData.completion_date = new Date();
+      } else if (cleanedData.completed === false) {
+        cleanedData.completion_date = null;
+      }
+      
+      console.log("Atualizando tarefa:", id, cleanedData);
+      
+      const updatedTask = await storage.updateTask(id, cleanedData);
       
       if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
@@ -615,7 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedTask);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update task" });
+      console.error("Erro ao atualizar tarefa:", error);
+      res.status(500).json({ message: "Failed to update task", error: String(error) });
     }
   });
 
@@ -645,20 +671,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:id/comments", authenticateJWT, validateBody(insertTaskCommentSchema), async (req, res) => {
+  app.post("/api/tasks/:id/comments", authenticateJWT, async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
       
+      if (!req.body.comment) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: [{ code: "invalid_type", expected: "string", received: "undefined", path: ["comment"], message: "Required" }] 
+        });
+      }
+      
       // Adiciona o ID do usuário autenticado como autor do comentário
       const comment = await storage.createTaskComment({
-        ...req.body,
+        comment: req.body.comment,
         task_id: taskId,
         user_id: req.user!.id
       });
       
       res.status(201).json(comment);
     } catch (error) {
+      console.error("Error creating task comment:", error);
       res.status(500).json({ message: "Failed to create task comment" });
+    }
+  });
+  
+  // Task Attachments - Rotas para gerenciar anexos de tarefas
+  app.get("/api/tasks/:id/attachments", authenticateJWT, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const attachments = await storage.getTaskAttachments(taskId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching task attachments:", error);
+      res.status(500).json({ message: "Failed to fetch task attachments" });
+    }
+  });
+  
+  app.post("/api/tasks/:id/attachments", authenticateJWT, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      
+      if (!req.body.file_name || !req.body.file_url) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: [{ code: "invalid_type", path: ["file_name", "file_url"], message: "Required fields missing" }] 
+        });
+      }
+      
+      // Adiciona o ID do usuário autenticado e a tarefa
+      const attachment = await storage.createTaskAttachment({
+        ...req.body,
+        task_id: taskId,
+        uploaded_by: req.user!.id
+      });
+      
+      res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Error creating task attachment:", error);
+      res.status(500).json({ message: "Failed to create task attachment" });
+    }
+  });
+  
+  app.delete("/api/tasks/attachments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o anexo existe e se o usuário tem permissão
+      const attachment = await storage.getTaskAttachment(id);
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+      
+      // Verificar se o usuário é o criador do anexo ou tem permissão de administrador/gerente
+      if (attachment.uploaded_by !== req.user!.id && 
+          req.user!.role !== 'admin' && 
+          req.user!.role !== 'manager') {
+        return res.status(403).json({ 
+          message: "Permission denied. You can only delete your own attachments." 
+        });
+      }
+      
+      const success = await storage.deleteTaskAttachment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting task attachment:", error);
+      res.status(500).json({ message: "Failed to delete task attachment" });
     }
   });
 
