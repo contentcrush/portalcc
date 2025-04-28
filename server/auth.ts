@@ -124,13 +124,22 @@ export async function verifyRefreshToken(token: string): Promise<User | null> {
  * Middleware para verificar autenticação via JWT
  */
 export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+  // Verificar primeiro no cookie
+  let token = req.cookies.accessToken;
   
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Token de acesso não fornecido' });
+  // Se não houver token no cookie, verificar no cabeçalho Authorization
+  if (!token && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    const parts = authHeader.split(' ');
+    
+    if (parts.length === 2 && parts[0] === 'Bearer') {
+      token = parts[1];
+    }
   }
   
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Token de acesso não fornecido' });
+  }
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
@@ -217,7 +226,18 @@ export function setupAuth(app: Express) {
   
   // Adicionar middleware para decodificar tokens JWT
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const token = req.cookies.accessToken;
+    // Verificar primeiro no cookie
+    let token = req.cookies.accessToken;
+    
+    // Se não houver token no cookie, verificar no cabeçalho Authorization
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      const parts = authHeader.split(' ');
+      
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        token = parts[1];
+      }
+    }
     
     if (!token) {
       return next();
@@ -484,7 +504,13 @@ export function setupAuth(app: Express) {
       // Retornar usuário sem a senha
       const { password, ...userWithoutPassword } = user;
       
-      return res.status(200).json(userWithoutPassword);
+      // Gerar um novo token para garantir que ele esteja atualizado
+      const accessToken = generateAccessToken(user);
+      
+      return res.status(200).json({
+        user: userWithoutPassword,
+        token: accessToken
+      });
     } catch (error) {
       console.error('Erro ao obter usuário atual:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });

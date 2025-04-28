@@ -60,9 +60,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  // Se recebemos um erro 401 (não autorizado), redirecionamos para login
+  // Se recebemos um erro 401 (não autorizado), verificamos se já estamos na página de autenticação
   if (res.status === 401) {
-    window.location.href = '/auth';
+    // Verifica se já estamos na página de autenticação para evitar ciclos de redirecionamento
+    if (!window.location.pathname.includes('/auth')) {
+      window.location.href = '/auth';
+    }
     throw new Error('Sessão expirada. Por favor, faça login novamente.');
   }
   
@@ -160,7 +163,10 @@ export const getQueryFn: <T>(options?: {
         return null;
       } else {
         // Redirecionar para a página de login quando não autorizado
-        window.location.href = '/auth';
+        // Verificar se já estamos na página de autenticação para evitar ciclos
+        if (!window.location.pathname.includes('/auth')) {
+          window.location.href = '/auth';
+        }
         throw new Error('Sessão expirada. Por favor, faça login novamente.');
       }
     }

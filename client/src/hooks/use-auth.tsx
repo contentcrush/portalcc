@@ -26,12 +26,14 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const {
-    data: user,
+    data: authData,
     error,
     isLoading,
-  } = useQuery<SelectUser | null, Error>({
+  } = useQuery<{ user: SelectUser, token: string } | null, Error>({
     queryKey: ["/api/auth/me"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const loginMutation = useMutation({
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
-      queryClient.setQueryData(["/api/auth/me"], data.user);
+      queryClient.setQueryData(["/api/auth/me"], data);
       // Armazenar o token no localStorage (ou você pode usar cookies via um pacote como js-cookie)
       localStorage.setItem("authToken", data.token);
       toast({
@@ -111,10 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Se tivermos dados de autenticação, armazenar o token
+  if (authData?.token) {
+    localStorage.setItem("authToken", authData.token);
+  }
+
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
+        user: authData?.user || null,
         isLoading,
         error,
         loginMutation,

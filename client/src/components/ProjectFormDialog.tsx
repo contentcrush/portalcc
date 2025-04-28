@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertProjectSchema } from "@shared/schema";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -182,6 +183,26 @@ export function ProjectFormDialog() {
       });
     }
   });
+
+  // Função para processar upload de imagem
+  const handleImageUpload = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          // Neste momento estamos apenas convertendo para base64
+          // Em uma implementação real, você enviaria para o servidor
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error("Falha ao processar a imagem"));
+        }
+      };
+      reader.onerror = () => {
+        reject(new Error("Falha ao ler o arquivo"));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Lidar com a submissão do formulário
   function onSubmit(data: ProjectFormValues) {
@@ -591,19 +612,16 @@ export function ProjectFormDialog() {
                     name="thumbnail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Imagem de Capa (URL)</FormLabel>
+                        <FormLabel>Imagem de Capa</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="https://exemplo.com/imagem.png" 
-                            value={field.value || ""}
+                          <ImageUpload
+                            value={field.value || null}
                             onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
+                            onUpload={handleImageUpload}
                           />
                         </FormControl>
                         <FormDescription>
-                          URL de uma imagem para representar o projeto
+                          Selecione uma imagem para representar o projeto
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
