@@ -18,7 +18,9 @@ import {
   Pencil,
   Edit,
   Paperclip,
-  MessageSquare
+  MessageSquare,
+  Upload,
+  File
 } from "lucide-react";
 import { 
   formatDate, 
@@ -88,6 +90,29 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
   const { data: attachments, isLoading: isLoadingAttachments } = useQuery({
     queryKey: [`/api/tasks/${taskId}/attachments`],
     enabled: !!taskId
+  });
+  
+  // Add attachment mutation
+  const addAttachmentMutation = useMutation({
+    mutationFn: async (data: { file_name: string; file_url: string; file_size?: number; file_type?: string }) => {
+      return apiRequest('POST', `/api/tasks/${taskId}/attachments`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
+      toast({
+        title: "Anexo adicionado",
+        description: "O arquivo foi anexado com sucesso.",
+      });
+      setIsUploading(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao adicionar anexo",
+        description: error.message,
+        variant: "destructive"
+      });
+      setIsUploading(false);
+    }
   });
 
   // Add comment mutation
@@ -196,6 +221,49 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
       title: "Download iniciado",
       description: `Baixando ${fileName}...`,
     });
+  };
+  
+  const handleAddAttachment = () => {
+    // Acionar o input de arquivo
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    
+    // Simular upload do arquivo - em produção usaria um serviço de armazenamento como S3, Firebase, etc.
+    // Como estamos apenas simulando, vamos fazer "upload" para uma URL de dados
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileUrl = event.target?.result as string;
+      const fileSize = Math.round(file.size / 1024); // Tamanho em KB
+      
+      addAttachmentMutation.mutate({
+        file_name: file.name,
+        file_url: fileUrl,
+        file_size: fileSize,
+        file_type: file.type
+      });
+    };
+    
+    reader.onerror = () => {
+      toast({
+        title: "Erro ao processar arquivo",
+        description: "Não foi possível ler o arquivo selecionado.",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Limpar o input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = "";
   };
 
   if (isLoadingTask) {
@@ -322,15 +390,31 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
         {/* Anexos */}
         <div className="mb-8">
           <h4 className="font-medium text-sm mb-4">ANEXOS</h4>
-          {isLoadingAttachments ? (
+          
+          {/* Input de arquivo escondido */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+            accept="*/*" // Aceitar qualquer tipo de arquivo
+          />
+          
+          {isLoadingAttachments || isUploading ? (
             <div className="flex justify-center items-center h-16">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
             </div>
           ) : (!attachments || attachments.length === 0) ? (
             <div className="bg-muted p-4 rounded-md text-center">
               <p className="text-muted-foreground text-sm">Nenhum anexo</p>
-              <Button variant="outline" size="sm" className="mt-2">
-                + Adicionar
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={handleAddAttachment}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Adicionar
               </Button>
             </div>
           ) : (
@@ -342,17 +426,17 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
                 >
                   <div className="flex items-center">
                     <div className="bg-primary/10 p-2 rounded-md mr-3">
-                      <FileSpreadsheet className="h-4 w-4 text-primary" />
+                      <File className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{attachment.filename}</p>
-                      <p className="text-xs text-muted-foreground">{attachment.size} KB</p>
+                      <p className="text-sm font-medium">{attachment.file_name}</p>
+                      <p className="text-xs text-muted-foreground">{attachment.file_size ? `${attachment.file_size} KB` : 'Tamanho desconhecido'}</p>
                     </div>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => handleDownloadAttachment(attachment.id, attachment.filename)}
+                    onClick={() => handleDownloadAttachment(attachment.id, attachment.file_name)}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -360,8 +444,13 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
               ))}
               
               <div className="text-center mt-2">
-                <Button variant="outline" size="sm">
-                  + Adicionar
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleAddAttachment}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Adicionar
                 </Button>
               </div>
             </div>
