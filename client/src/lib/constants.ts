@@ -208,7 +208,7 @@ export const MONTHS = [
 ];
 
 export const WEEKDAYS = [
-  "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"
+  "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"
 ];
 
 export const CURRENT_QUARTER = `Q${Math.floor((new Date().getMonth() + 3) / 3)} ${new Date().getFullYear()}`;
