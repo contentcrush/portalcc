@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -36,10 +37,10 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const { openProjectForm, setProjectToEdit } = useProjectForm();
   
   // Estados para controlar os diálogos
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-  const [showEditProjectDialog, setShowEditProjectDialog] = useState(false);
   
   // Funções para navegação
   const handleManageTasks = () => {
@@ -332,7 +333,12 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div>
           <Button 
             className="w-full bg-indigo-600 hover:bg-indigo-700 mb-3"
-            onClick={() => setShowEditProjectDialog(true)}
+            onClick={() => {
+              if (project) {
+                setProjectToEdit(project);
+                openProjectForm();
+              }
+            }}
           >
             <Edit className="h-4 w-4 mr-2" />
             Editar Projeto
@@ -392,21 +398,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         </DialogContent>
       </Dialog>
       
-      {/* Diálogo de editar projeto */}
-      <Dialog open={showEditProjectDialog} onOpenChange={setShowEditProjectDialog}>
-        <DialogContent className="sm:max-w-[900px] max-h-screen overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Projeto</DialogTitle>
-          </DialogHeader>
-          
-          <ProjectFormDialog 
-            isOpen={showEditProjectDialog} 
-            onClose={() => setShowEditProjectDialog(false)} 
-            editMode={true}
-            projectId={projectId}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* ProjectFormDialog é renderizado e gerenciado pelo contexto global */}
+      <ProjectFormDialog />
     </div>
   );
 }
