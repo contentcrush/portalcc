@@ -278,13 +278,7 @@ export default function Tasks() {
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            <span className="relative pr-5">
-              Nova Tarefa
-              {/* Avatar que aparece sobreposto ao texto do botão */}
-              <span className="absolute -right-4 -top-1 h-7 w-7 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-medium overflow-hidden">
-                ZP
-              </span>
-            </span>
+            Nova Tarefa
           </Button>
         </div>
       </div>
@@ -487,12 +481,7 @@ export default function Tasks() {
                       className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      <span className="relative pr-5">
-                        Nova Tarefa
-                        <span className="absolute -right-4 -top-1 h-7 w-7 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-medium overflow-hidden">
-                          ZP
-                        </span>
-                      </span>
+                      Nova Tarefa
                     </Button>
                   )}
                 </div>
