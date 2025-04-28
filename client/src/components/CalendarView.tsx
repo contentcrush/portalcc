@@ -660,11 +660,11 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
           <span>Projetos</span>
         </div>
         <div className="flex items-center gap-1 ml-auto">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+          <div className="w-3 h-3 rounded-full bg-red-600"></div>
           <span>Atrasados</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
           <span>Hoje</span>
         </div>
       </div>
@@ -690,14 +690,14 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
                   <div
                     key={day.toISOString()}
                     className={`min-h-[120px] p-2 relative ${
-                      isToday(day) ? 'bg-yellow-50' : 
+                      isToday(day) ? 'bg-amber-50' : 
                       !isCurrentMonth ? 'bg-gray-50' : ''
                     } hover:bg-gray-50 transition-colors border-t border-gray-200`}
                     onDoubleClick={() => onAddEvent && onAddEvent(day)}
                   >
                     <div className={`text-right ${
                       isToday(day) 
-                        ? 'bg-yellow-500 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto'
+                        ? 'bg-amber-500 text-white w-6 h-6 rounded-full flex items-center justify-center ml-auto'
                         : !isCurrentMonth ? 'text-gray-400' : ''
                       }`}
                     >
@@ -762,13 +762,13 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
                 {calendarDays.map((day, dayIndex) => (
                   <div 
                     key={day.toISOString()} 
-                    className={`p-2 ${isToday(day) ? 'bg-blue-50' : ''}`}
+                    className={`p-2 ${isToday(day) ? 'bg-amber-50' : ''}`}
                   >
                     <div className="text-center mb-1">
                       <span className="text-sm font-medium text-gray-700">
                         {WEEKDAYS[day.getDay()]}
                       </span>
-                      <div className={`text-center ${isToday(day) ? 'bg-blue-500 text-white rounded-full w-7 h-7 mx-auto flex items-center justify-center' : ''}`}>
+                      <div className={`text-center ${isToday(day) ? 'bg-amber-500 text-white rounded-full w-7 h-7 mx-auto flex items-center justify-center' : ''}`}>
                         <span className="text-sm">
                           {format(day, 'd')}
                         </span>
@@ -799,7 +799,7 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
                         return (
                           <div 
                             key={`${day.toISOString()}-${hour}`} 
-                            className={`h-16 relative ${isToday(day) ? 'bg-blue-50/30' : ''}`}
+                            className={`h-16 relative ${isToday(day) ? 'bg-amber-50/30' : ''}`}
                             onClick={() => onDateClick && onDateClick(dateCopy)}
                           >
                             {events[dayIndex] && Array.isArray(events[dayIndex]) ? 
@@ -1081,7 +1081,7 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
         <Button 
           onClick={goToToday} 
           size="lg" 
-          className="rounded-full shadow-lg h-14 w-14 flex items-center justify-center p-0"
+          className="rounded-full shadow-lg h-14 w-14 flex items-center justify-center p-0 bg-amber-500 hover:bg-amber-600 border-amber-500"
         >
           <CalendarIcon className="h-6 w-6" />
         </Button>

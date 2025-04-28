@@ -190,16 +190,16 @@ export const INTERACTION_TYPE_OPTIONS = [
 ];
 
 export const EVENT_COLORS = {
-  reuniao: "#3B82F6", // blue
-  gravacao: "#F59E0B", // amber
-  entrega: "#6366F1", // indigo
-  edicao: "#EF4444", // red
-  financeiro: "#10B981", // emerald
-  prazo: "#E11D48", // rose
-  externo: "#8B5CF6", // violet
-  planejamento: "#0EA5E9", // sky
-  capacitacao: "#14B8A6", // teal
-  projeto: "#8D8D8D" // slate
+  reuniao: "#2563EB",    // blue-600 (mais intenso para reuniões)
+  gravacao: "#D97706",   // amber-600 (laranja distinto)
+  entrega: "#7C3AED",    // violet-600 (roxo para entregas)
+  edicao: "#DC2626",     // red-600 (vermelho mais forte)
+  financeiro: "#059669", // emerald-600 (verde distinto)
+  prazo: "#DB2777",      // pink-600 (rosa para prazos)
+  externo: "#4F46E5",    // indigo-600 (azul-roxo)
+  planejamento: "#0284C7", // sky-600 (azul claro)
+  capacitacao: "#0D9488", // teal-600 (verde-azulado)
+  projeto: "#4B5563"     // gray-600 (cinza mais escuro)
 };
 
 export const MONTHS = [
