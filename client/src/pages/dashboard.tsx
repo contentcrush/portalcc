@@ -357,9 +357,7 @@ export default function Dashboard() {
               {projects?.slice(0, 4).map((project) => (
                 <div key={project.id} className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className="mr-2">
-                      <StatusBadge status={project.status} small={true} minimal={true} />
-                    </div>
+                    <StatusBadge status={project.status} small={true} minimal={true} />
                     <div>
                       <Link href={`/projects/${project.id}`}>
                         <p className="font-medium hover:text-primary cursor-pointer">{project.name}</p>
