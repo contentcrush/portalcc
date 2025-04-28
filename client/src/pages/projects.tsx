@@ -16,8 +16,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
+import ProjectKanban from "@/components/ProjectKanban";
+import ProjectGantt from "@/components/ProjectGantt";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { 
   Plus, 
@@ -28,7 +36,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   MoreVertical,
-  Copy
+  Copy,
+  KanbanSquare,
+  GanttChart
 } from "lucide-react";
 import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
@@ -124,6 +134,9 @@ export default function Projects() {
     duplicateProjectMutation.mutate(projectId);
   };
 
+  // Estado para controlar a aba atual
+  const [activeTab, setActiveTab] = useState<string>("projects");
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
@@ -133,19 +146,26 @@ export default function Projects() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Todos os projetos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os projetos</SelectItem>
-              {PROJECT_STATUS_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Tabs 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="mr-4"
+          >
+            <TabsList>
+              <TabsTrigger value="projects" className="flex items-center">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Lista
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center">
+                <KanbanSquare className="h-4 w-4 mr-2" />
+                Kanban
+              </TabsTrigger>
+              <TabsTrigger value="gantt" className="flex items-center">
+                <GanttChart className="h-4 w-4 mr-2" />
+                Timeline
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           
           <Button onClick={openProjectForm}>
             <Plus className="h-4 w-4 mr-2" />
