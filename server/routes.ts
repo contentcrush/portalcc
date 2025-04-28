@@ -87,6 +87,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Atualizar um usuário existente
+  app.put("/api/users/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Só admins podem atualizar outros usuários ou alterar funções
+      if (req.user!.id !== id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins podem atualizar outros usuários." });
+      }
+      
+      // Só admins podem alterar a função de um usuário
+      if (req.body.role && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Acesso negado. Apenas admins podem alterar funções de usuários." });
+      }
+      
+      // Verifica se o usuário existe
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Atualiza o usuário
+      const updatedUser = await storage.updateUser(id, req.body);
+      
+      // Remove a senha da resposta
+      const userWithoutPassword = { ...updatedUser };
+      delete (userWithoutPassword as any).password;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
   app.patch("/api/users/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
