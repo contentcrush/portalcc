@@ -56,6 +56,7 @@ import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getProgressBarColor } from "@/lib/utils";
 
 export default function Projects() {
   const { toast } = useToast();

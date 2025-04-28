@@ -6,7 +6,8 @@ import {
   formatDate, 
   formatCurrency, 
   getInitials, 
-  calculateDaysRemaining 
+  calculateDaysRemaining,
+  getProgressBarColor
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
