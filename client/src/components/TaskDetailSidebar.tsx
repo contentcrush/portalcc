@@ -459,32 +459,56 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
         
         {/* Comentários */}
         <div className="mb-8">
-          <h4 className="font-medium text-sm mb-4">COMENTÁRIOS</h4>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-medium text-gray-500">Comentários</h4>
+            {comments && comments.length > 0 && (
+              <div className="text-sm text-gray-500">{comments.length} comentário{comments.length > 1 ? 's' : ''}</div>
+            )}
+          </div>
+          
           {isLoadingComments ? (
             <div className="flex justify-center items-center h-16">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
             </div>
           ) : (!comments || comments.length === 0) ? (
-            <div className="bg-muted p-4 rounded-md text-center text-muted-foreground text-sm">
+            <div className="bg-gray-50 p-4 rounded-lg text-center text-gray-500 text-sm">
               Nenhum comentário. Seja o primeiro a comentar.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5 mb-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-muted p-3 rounded-md">
-                  <div className="flex items-start gap-2">
+                <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
                     <UserAvatar 
                       user={comment.user} 
-                      className="w-8 h-8 mt-0.5" 
+                      className="w-10 h-10" 
                     />
                     <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm">{comment.user?.name || `Usuário ${comment.user_id}`}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateTime(comment.creation_date)}
-                        </span>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium text-gray-700">{comment.user?.name || `Usuário ${comment.user_id}`}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {new Date(comment.creation_date).toLocaleString('pt-BR', {
+                              day: 'numeric',
+                              month: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false
+                            }).replace(',', ' às')}
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm mt-1">{comment.comment}</p>
+                      <p className="text-sm mt-2 text-gray-600">{comment.comment}</p>
+                      
+                      <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+                        <button type="button" className="hover:text-gray-700 transition-colors">
+                          Responder
+                        </button>
+                        <span className="text-gray-300">•</span>
+                        <button type="button" className="hover:text-gray-700 transition-colors">
+                          Curtir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -493,27 +517,30 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
           )}
           
           {/* Form para adicionar comentário */}
-          <form onSubmit={handleSubmitComment} className="mt-4 flex items-center gap-2">
-            <Textarea 
-              placeholder="Adicione um comentário..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="min-h-[60px] resize-none"
-              disabled={isSubmittingComment}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={!newComment.trim() || isSubmittingComment}
-              className="h-10 w-10 shrink-0"
-            >
-              {isSubmittingComment ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
-              ) : (
-                <SendHorizontal className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
+          <div className="mt-5 bg-gray-50 p-3 rounded-lg">
+            <form onSubmit={handleSubmitComment} className="flex items-start gap-2">
+              <Textarea 
+                placeholder="Adicionar um comentário..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="min-h-[50px] resize-none flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 p-2"
+                disabled={isSubmittingComment}
+              />
+              <Button 
+                type="submit" 
+                size="sm" 
+                variant="ghost"
+                disabled={!newComment.trim() || isSubmittingComment}
+                className="h-8 w-8 p-0 rounded-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+              >
+                {isSubmittingComment ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-r-transparent" />
+                ) : (
+                  <SendHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
         
         <div>
