@@ -2,6 +2,7 @@ import { useState, ReactNode } from "react";
 import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
+import QuickActions from "./QuickActions";
 import { Button } from "@/components/ui/button";
 import { Bell, Menu, UserCircle, Plus, List, User, LogOut, Settings } from "lucide-react";
 import {
@@ -146,113 +147,9 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Quick actions sidebar - hidden on mobile */}
           {!isMobile && (
-            <div className="w-64 border-l border-gray-200 overflow-y-auto bg-white p-4">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
-                    AÇÕES RÁPIDAS
-                  </h3>
-                  <div className="space-y-2">
-                    <Button 
-                      onClick={openProjectForm}
-                      className="w-full justify-start bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="mr-2 h-4 w-4" /> Novo Projeto
-                    </Button>
-                    <Button 
-                      onClick={() => navigate("/tasks/new")}
-                      variant="outline"
-                      className="w-full justify-start flex items-center"
-                    >
-                      <List className="mr-2 h-4 w-4" /> Nova Tarefa
-                    </Button>
-                    <Button 
-                      onClick={() => navigate("/clients/new")}
-                      variant="outline"
-                      className="w-full justify-start flex items-center"
-                    >
-                      <User className="mr-2 h-4 w-4" /> Novo Cliente
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
-                    CALENDÁRIO
-                  </h3>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    {/* Mini calendar would go here */}
-                    <div className="text-center text-sm">
-                      <div className="font-medium">Abril 2025</div>
-                      <div className="grid grid-cols-7 gap-1 mt-2 text-xs">
-                        <div>D</div>
-                        <div>S</div>
-                        <div>T</div>
-                        <div>Q</div>
-                        <div>Q</div>
-                        <div>S</div>
-                        <div>S</div>
-                        {/* Example calendar days */}
-                        {Array.from({ length: 30 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={cn(
-                              "w-6 h-6 rounded-full flex items-center justify-center", 
-                              i === 11 ? "bg-blue-600 text-white" : ""
-                            )}
-                          >
-                            {i + 1}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-sm uppercase tracking-wide text-gray-500 mb-3">
-                    EQUIPE
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
-                        BS
-                      </div>
-                      <div className="ml-2">
-                        <div className="text-sm font-medium">Bruno Silva</div>
-                        <div className="text-xs text-green-500">Online</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">
-                        AO
-                      </div>
-                      <div className="ml-2">
-                        <div className="text-sm font-medium">Ana Oliveira</div>
-                        <div className="text-xs text-green-500">Online</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-xs">
-                        CM
-                      </div>
-                      <div className="ml-2">
-                        <div className="text-sm font-medium">Carlos Mendes</div>
-                        <div className="text-xs text-gray-500">Offline</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs">
-                        JS
-                      </div>
-                      <div className="ml-2">
-                        <div className="text-sm font-medium">Julia Santos</div>
-                        <div className="text-xs text-green-500">Online</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="w-64 border-l border-gray-200 overflow-y-auto bg-white">
+              {/* Usando nosso novo componente QuickActions */}
+              <QuickActions />
             </div>
           )}
         </div>
