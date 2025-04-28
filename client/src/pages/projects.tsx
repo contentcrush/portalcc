@@ -306,7 +306,8 @@ export default function Projects() {
               {projectsWithClient.map(project => (
                 <div 
                   key={project.id}
-                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-sm"
+                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                  onClick={() => handleOpenProjectDetails(project.id)}
                 >
                   <div className="flex items-center">
                     {project.thumbnail ? (
@@ -324,11 +325,9 @@ export default function Projects() {
                     )}
                     
                     <div>
-                      <Link href={`/projects/${project.id}`}>
-                        <h3 className="font-medium hover:text-primary cursor-pointer">
-                          {project.name}
-                        </h3>
-                      </Link>
+                      <h3 className="font-medium hover:text-primary">
+                        {project.name}
+                      </h3>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <span>{project.client?.name || 'Cliente não especificado'}</span>
                         <span className="mx-2">•</span>
@@ -379,13 +378,21 @@ export default function Projects() {
                     <div className="flex space-x-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem 
-                            onClick={() => handleDuplicateProject(project.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDuplicateProject(project.id);
+                            }}
                             className="cursor-pointer"
                           >
                             <Copy className="mr-2 h-4 w-4" /> 
@@ -397,7 +404,10 @@ export default function Projects() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleOpenProjectDetails(project.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Previne o evento de propagar para o parent
+                          handleOpenProjectDetails(project.id);
+                        }}
                       >
                         Detalhes
                       </Button>
