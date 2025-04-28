@@ -440,17 +440,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects/:id/members", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
+      console.log('Tentando adicionar membro ao projeto:', projectId);
+      console.log('Dados recebidos:', req.body);
       
-      // Validação manual para contornar o problema de ordem de validação
+      // Garantir que project_id seja numérico explicitamente
+      const memberData = {
+        ...req.body,
+        project_id: projectId,
+        user_id: typeof req.body.user_id === 'string' ? parseInt(req.body.user_id, 10) : req.body.user_id
+      };
+      
+      console.log('Dados após transformação:', memberData);
+      
+      // Validação com o schema que agora trata conversões de string para número
       try {
-        const validatedData = insertProjectMemberSchema.parse({
-          ...req.body,
-          project_id: projectId
-        });
+        const validatedData = insertProjectMemberSchema.parse(memberData);
+        console.log('Dados validados:', validatedData);
         
         const member = await storage.addProjectMember(validatedData);
+        console.log('Membro adicionado com sucesso:', member);
         res.status(201).json(member);
       } catch (validationError) {
+        console.error('Erro de validação:', validationError);
         if (validationError instanceof z.ZodError) {
           res.status(400).json({ message: "Validation error", errors: validationError.errors });
         } else {
@@ -458,7 +469,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     } catch (error) {
-      res.status(500).json({ message: "Failed to add project member" });
+      console.error('Erro ao adicionar membro:', error);
+      res.status(500).json({ message: "Failed to add project member", error: error.message });
     }
   });
 

@@ -228,7 +228,16 @@ export const insertProjectSchema = projectBaseSchema.extend({
     val === null ? null : typeof val === 'string' ? new Date(val) : val
   ).nullable().optional()
 });
-export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true });
+// Criamos um schema base e depois estendemos para forçar a conversão do project_id para número
+const projectMemberBaseSchema = createInsertSchema(projectMembers).omit({ id: true });
+export const insertProjectMemberSchema = projectMemberBaseSchema.extend({
+  project_id: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+  user_id: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  )
+});
 export const insertProjectStageSchema = createInsertSchema(projectStages).omit({ id: true, completion_date: true });
 
 // Schema base para tarefas

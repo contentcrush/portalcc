@@ -428,9 +428,16 @@ function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess:
     setIsPending(true);
     
     try {
+      console.log('Enviando dados para adicionar membro:', {
+        user_id: selectedUserId,
+        role: selectedRole,
+        project_id: projectId // adiciona project_id explicitamente
+      });
+      
       await apiRequest('POST', `/api/projects/${projectId}/members`, {
         user_id: selectedUserId,
-        role: selectedRole
+        role: selectedRole,
+        project_id: projectId // adiciona project_id explicitamente para redundância
       });
       
       toast({
@@ -440,9 +447,10 @@ function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess:
       
       onSuccess();
     } catch (error) {
+      console.error('Erro ao adicionar membro:', error);
       toast({
         title: "Erro ao adicionar membro",
-        description: error.message,
+        description: error.message || "Falha ao adicionar membro à equipe",
         variant: "destructive"
       });
     } finally {
