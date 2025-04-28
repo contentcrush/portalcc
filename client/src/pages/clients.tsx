@@ -65,7 +65,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
-import { CLIENT_TYPE_OPTIONS, CLIENT_CATEGORY_OPTIONS } from "@/lib/constants";
+import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 
 // Schema para validação do formulário
@@ -96,7 +96,6 @@ export default function Clients() {
       name: "",
       shortName: "",
       type: "",
-      category: "",
       cnpj: "",
       website: "",
       contactName: "",
@@ -355,11 +354,6 @@ export default function Clients() {
                           </h3>
                         </Link>
                         <div className="flex items-center">
-                          {client.category && (
-                            <Badge variant="outline" className="mr-2">
-                              {client.category}
-                            </Badge>
-                          )}
                           <span className="text-sm text-muted-foreground">
                             {client.type || 'Cliente'}
                           </span>
@@ -735,31 +729,7 @@ export default function Clients() {
                       )}
                     />
                     
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Categoria</FormLabel>
-                          <Select value={field.value || ""} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecionar categoria" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {CLIENT_CATEGORY_OPTIONS.map(option => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
+
                     <FormField
                       control={form.control}
                       name="cnpj"
