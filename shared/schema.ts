@@ -230,7 +230,18 @@ export const insertProjectSchema = projectBaseSchema.extend({
 });
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true });
 export const insertProjectStageSchema = createInsertSchema(projectStages).omit({ id: true, completion_date: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });
+
+// Schema base para tarefas
+const taskBaseSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });
+// Schema personalizado com transformações para datas
+export const insertTaskSchema = taskBaseSchema.extend({
+  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null || val === undefined ? undefined : typeof val === 'string' ? new Date(val) : val
+  ).optional(),
+  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null || val === undefined ? undefined : typeof val === 'string' ? new Date(val) : val
+  ).optional()
+});
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, creation_date: true });
 export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).omit({ 
   id: true, 
