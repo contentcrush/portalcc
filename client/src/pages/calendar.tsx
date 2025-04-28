@@ -43,8 +43,7 @@ const eventFormSchema = insertEventSchema.extend({
   title: z.string().min(3, {
     message: "O título deve ter pelo menos 3 caracteres",
   }),
-  start_date: z.string(),
-  end_date: z.string(),
+  // Não precisamos mais fazer typecasting para strings já que o schema agora aceita string ou Date
   all_day: z.boolean().default(false),
   color: z.string().optional(),
 });
@@ -98,13 +97,8 @@ export default function CalendarPage() {
   // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: async (data: z.infer<typeof eventFormSchema>) => {
-      // Convert string dates to ISO strings
-      const formattedData = {
-        ...data,
-        start_date: new Date(data.start_date).toISOString(),
-        end_date: new Date(data.end_date).toISOString(),
-      };
-      return apiRequest('POST', '/api/events', formattedData);
+      // Não precisamos mais converter as datas - o schema Zod faz isso automaticamente
+      return apiRequest('POST', '/api/events', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });

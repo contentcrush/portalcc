@@ -262,7 +262,17 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
 export const insertFinancialDocumentSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
 export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
-export const insertEventSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
+// Schema base para eventos
+const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
+// Schema personalizado com transformações para datas
+export const insertEventSchema = eventBaseSchema.extend({
+  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  end_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  )
+});
 
 // Select types
 export type User = typeof users.$inferSelect;
