@@ -308,17 +308,36 @@ export function getTaskSortFunction(): (a: Task, b: Task) => number {
       return a.completed ? 1 : -1;
     }
     
-    // Verificamos diretamente a data de vencimento para tarefas críticas/alta prioridade
-    if (a.due_date && b.due_date && 
-        (a.priority === 'critica' || a.priority === 'alta') && 
-        (b.priority === 'critica' || b.priority === 'alta')) {
+    // Segundo critério: se ambas tarefas têm a mesma prioridade, ordenamos diretamente pela data
+    if (a.priority === b.priority && a.due_date && b.due_date) {
       const dateA = new Date(a.due_date);
       const dateB = new Date(b.due_date);
       if (dateA < dateB) return -1;
       if (dateA > dateB) return 1;
     }
     
-    // Aplicamos o cálculo de score para ordenar o restante
+    // Verificamos diretamente a data de vencimento para tarefas próximas do vencimento, 
+    // independente da prioridade, dando prioridade às tarefas vencidas ou prestes a vencer
+    if (a.due_date && b.due_date) {
+      const dateA = new Date(a.due_date);
+      const dateB = new Date(b.due_date);
+      const today = new Date();
+      
+      // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
+      const aIsOverdue = dateA < today;
+      const bIsOverdue = dateB < today;
+      
+      if (aIsOverdue && !bIsOverdue) return -1;
+      if (!aIsOverdue && bIsOverdue) return 1;
+      
+      // Se ambas estão vencidas, a que venceu primeiro tem prioridade
+      if (aIsOverdue && bIsOverdue) {
+        if (dateA < dateB) return -1;
+        if (dateA > dateB) return 1;
+      }
+    }
+    
+    // Terceiro critério: aplicamos o cálculo de score para ordenar o restante
     return sortTasksByPriority(a, b);
   };
 }

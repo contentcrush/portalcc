@@ -338,7 +338,7 @@ export default function Tasks() {
         <div>
           <h3 className="text-sm font-medium">Ordenação Inteligente</h3>
           <p className="text-xs text-muted-foreground">
-            As tarefas são ordenadas automaticamente por prioridade, vencimento e status para maximizar sua produtividade.
+            As tarefas são ordenadas automaticamente por data de vencimento, prioridade e status, priorizando tarefas que vencem antes.
           </p>
         </div>
       </div>
