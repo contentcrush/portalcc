@@ -379,3 +379,36 @@ export function getStatusBadgeClasses(status: TaskStatus): string {
       return 'bg-gray-100 text-gray-800 border-gray-300';
   }
 }
+
+/**
+ * Formata o nome da função da equipe (team role) para exibição
+ */
+export function formatTeamRole(role: string): string {
+  if (!role) return "";
+  
+  const roleMap: Record<string, string> = {
+    // Valores do backend
+    'coordenacao': 'Coordenação',
+    'producao': 'Produção',
+    'creator': 'Creator',
+    'editor_mobile': 'Editor Mobile',
+    'motion': 'Motion',
+    'direcao_arte': 'Direção de Arte',
+    'redacao': 'Redação',
+    'estrategista': 'Estrategista de Conteúdo',
+    'direcao_foto': 'Direção de Foto',
+    'assistente_foto': 'Assistente de Foto',
+    'culinarista': 'Culinarista',
+    'apresentadora': 'Apresentadora',
+    
+    // Valores legados (para compatibilidade)
+    'coordenador': 'Coordenação',
+    'designer': 'Direção de Arte',
+    'desenvolvedor': 'Creator',
+    'analista': 'Estrategista de Conteúdo',
+    'revisor': 'Redação',
+    'membro': 'Membro Regular'
+  };
+  
+  return roleMap[role] || role;
+}

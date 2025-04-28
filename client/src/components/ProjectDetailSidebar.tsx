@@ -5,7 +5,7 @@ import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign } from "lucide-react";
-import { formatDate, formatCurrency, getInitials } from "@/lib/utils";
+import { formatDate, formatCurrency, getInitials, formatTeamRole } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
@@ -247,7 +247,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                   )}
                   <div>
                     <p className="text-sm font-medium">{member.user?.name || 'Usuário'}</p>
-                    <p className="text-xs text-gray-500">{member.role || 'Membro'}</p>
+                    <p className="text-xs text-gray-500">{formatTeamRole(member.role) || 'Membro'}</p>
                   </div>
                 </div>
               ))
