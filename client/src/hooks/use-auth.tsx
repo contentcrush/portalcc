@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
-      queryClient.setQueryData(["/api/auth/me"], data.user);
+      queryClient.setQueryData(["/api/auth/me"], data);
       // Armazenar o token no localStorage
       localStorage.setItem("authToken", data.token);
       toast({
