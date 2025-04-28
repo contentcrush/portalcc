@@ -235,40 +235,49 @@ export function isTaskDueSoon(task: Task, days: number = 2): boolean {
 
 /**
  * Calcula um score de prioridade para uma tarefa com base em múltiplos fatores
+ * - Data de vencimento (vencidas > prestes a vencer > futuras) - MAIOR PESO
  * - Prioridade explícita (alta, média, baixa)
  * - Status (bloqueada > pendente > em andamento > concluída)
- * - Data de vencimento (vencidas > prestes a vencer > futuras)
  * - Data de início (tarefas que já deviam ter começado > futuras)
  */
 export function calculateTaskPriorityScore(task: Task): number {
   if (!task) return 0;
   
-  // Começamos com pontuação base da prioridade explícita
+  // Começamos com pontuação base
   let score = 0;
   
-  // Peso da prioridade (0-40 pontos)
+  // Peso da data de vencimento - MAIOR PESO AGORA (até 150 pontos)
+  // Tarefas atrasadas ganham pontos extras
+  const overdueWeight = Math.min(calculateTaskDaysOverdue(task) * 15, 150);
+  score += overdueWeight;
+  
+  // Adicionar pontos para tarefas prestes a vencer (até 100 pontos extras)
+  if (isTaskDueSoon(task, 5)) {
+    const daysUntilDue = calculateDaysRemaining(task.due_date);
+    // Quanto mais próximo do vencimento, mais pontos
+    const urgencyWeight = (5 - daysUntilDue) * 20; // 20, 40, 60, 80 ou 100 pontos
+    score += urgencyWeight;
+  } else if (task.due_date) {
+    // Para tarefas com data de vencimento no futuro, menor pontuação baseada na proximidade
+    const daysRemaining = calculateDaysRemaining(task.due_date);
+    if (daysRemaining > 0) {
+      // Quanto menor o número de dias restantes, maior a pontuação (inversa)
+      const daysScore = Math.max(100 - (daysRemaining * 2), 0);
+      score += daysScore;
+    }
+  }
+  
+  // Peso da prioridade (0-40 pontos) - Aumentado para equilibrar com data
   const priorityWeight = task.priority 
     ? TASK_PRIORITY_WEIGHTS[task.priority] || 0 
     : TASK_PRIORITY_WEIGHTS.media; // padrão para média
   
-  // Peso do status (0-40 pontos)
+  // Peso do status (0-40 pontos) - Reduzido de importância
   const statusWeight = task.status
-    ? TASK_STATUS_WEIGHTS[task.status] || 0
-    : TASK_STATUS_WEIGHTS.pendente; // padrão para pendente
+    ? Math.floor(TASK_STATUS_WEIGHTS[task.status] * 0.5) || 0 // 50% do original
+    : Math.floor(TASK_STATUS_WEIGHTS.pendente * 0.5); // 50% do original
   
   score += priorityWeight + statusWeight;
-  
-  // Adicionar pontos para tarefas atrasadas (até 100 pontos extras)
-  const overdueWeight = Math.min(calculateTaskDaysOverdue(task) * 10, 100);
-  score += overdueWeight;
-  
-  // Adicionar pontos para tarefas prestes a vencer (até 50 pontos extras)
-  if (isTaskDueSoon(task, 3)) {
-    const daysUntilDue = calculateDaysRemaining(task.due_date);
-    // Quanto mais próximo do vencimento, mais pontos
-    const urgencyWeight = (3 - daysUntilDue) * 20; // 20, 40 ou 60 pontos
-    score += urgencyWeight;
-  }
   
   // Se for uma tarefa completada, reduzir muito a prioridade
   if (task.completed) {
@@ -299,7 +308,17 @@ export function getTaskSortFunction(): (a: Task, b: Task) => number {
       return a.completed ? 1 : -1;
     }
     
-    // Segundo critério: ordenação por prioridade inteligente
+    // Verificamos diretamente a data de vencimento para tarefas críticas/alta prioridade
+    if (a.due_date && b.due_date && 
+        (a.priority === 'critica' || a.priority === 'alta') && 
+        (b.priority === 'critica' || b.priority === 'alta')) {
+      const dateA = new Date(a.due_date);
+      const dateB = new Date(b.due_date);
+      if (dateA < dateB) return -1;
+      if (dateA > dateB) return 1;
+    }
+    
+    // Aplicamos o cálculo de score para ordenar o restante
     return sortTasksByPriority(a, b);
   };
 }
