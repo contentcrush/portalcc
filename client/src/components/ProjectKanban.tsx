@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { getProgressBarColor } from '@/lib/utils';
 
 // Define types for our columns
 type StatusColumn = {
@@ -239,7 +240,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-1">
                                   <div 
-                                    className="bg-blue-600 h-1 rounded-full" 
+                                    className={`${getProgressBarColor(project.progress)} h-1 rounded-full`}
                                     style={{ width: `${project.progress}%` }}
                                   ></div>
                                 </div>
