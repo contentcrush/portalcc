@@ -273,11 +273,8 @@ export default function Tasks() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button 
-            onClick={handleNewTask} 
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center"
-          >
-            <Plus className="h-5 w-5 mr-2" />
+          <Button onClick={handleNewTask} className="shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />
             Nova Tarefa
           </Button>
         </div>
@@ -476,11 +473,8 @@ export default function Tasks() {
                     }
                   </p>
                   {activeTab === 'pendentes' && (
-                    <Button 
-                      onClick={handleNewTask}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
+                    <Button onClick={handleNewTask}>
+                      <Plus className="h-4 w-4 mr-2" />
                       Nova Tarefa
                     </Button>
                   )}
