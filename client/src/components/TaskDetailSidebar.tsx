@@ -15,24 +15,30 @@ import {
   Clock,
   Users,
   FileSpreadsheet,
-  Pencil
+  Pencil,
+  Edit,
+  Paperclip,
+  MessageSquare
 } from "lucide-react";
 import { 
   formatDate, 
   formatDateTime, 
   getPriorityBadgeClasses,
-  getStatusBadgeClasses
+  getStatusBadgeClasses,
+  getInitials
 } from "@/lib/utils";
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetFooter 
-} from "@/components/ui/sheet";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TaskDetailSidebarProps {
   taskId: number;
@@ -50,6 +56,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
   const [, navigate] = useLocation();
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Fetch task details
   const { data: task, isLoading: isLoadingTask } = useQuery({
@@ -130,6 +137,31 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
     }
   });
 
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('DELETE', `/api/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      if (task?.project_id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
+      }
+      toast({
+        title: "Tarefa excluída",
+        description: `A tarefa "${task?.title}" foi excluída com sucesso.`,
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir tarefa",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleToggleCompletion = () => {
     if (task) {
       updateTaskMutation.mutate({ completed: !task.completed });
@@ -139,8 +171,13 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
   const handleEditTask = () => {
     if (onEdit) {
       onEdit(taskId);
+      onClose();
     }
-    onClose();
+  };
+
+  const handleDeleteTask = () => {
+    deleteTaskMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -161,284 +198,278 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
 
   if (isLoadingTask) {
     return (
-      <Sheet open={!!taskId} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md md:max-w-lg">
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (!task) {
     return (
-      <Sheet open={!!taskId} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md md:max-w-lg">
-          <div className="flex flex-col justify-center items-center h-full">
-            <p className="text-lg font-medium text-destructive mb-4">Tarefa não encontrada</p>
-            <Button onClick={onClose}>Fechar</Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="font-semibold text-lg">Tarefa não encontrada</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Sheet open={!!taskId} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md md:max-w-lg p-0">
-        <div className="h-full flex flex-col">
-          <SheetHeader className="p-4 border-b">
-            <div className="flex justify-between items-start">
-              <SheetTitle>Detalhes da Tarefa</SheetTitle>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
+    <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-all duration-300 z-20 border-l border-gray-200 overflow-y-auto">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <h2 className="font-semibold text-lg">DETALHES DA TAREFA</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      <div className="p-6">
+        <div className="text-center mb-6">
+          <h3 className="font-medium text-lg">{task.title || 'Carregando...'}</h3>
+          <div className="flex justify-center items-center gap-2 mt-2">
+            <Badge className={`capitalize ${getStatusBadgeClasses(task.status)}`}>
+              {task.status === "pendente" ? "Pendente" : 
+               task.status === "em_andamento" ? "Em andamento" : 
+               task.status === "bloqueada" ? "Bloqueada" : 
+               task.status === "cancelada" ? "Cancelada" : task.status}
+            </Badge>
+            <Badge className={`capitalize ${getPriorityBadgeClasses(task.priority)}`}>
+              {task.priority === "baixa" ? "Baixa" : 
+               task.priority === "media" ? "Média" : 
+               task.priority === "alta" ? "Alta" : 
+               task.priority === "critica" ? "Crítica" : task.priority}
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-600">Status:</div>
+            <div className="flex items-center">
+              <Checkbox 
+                checked={task.completed} 
+                onCheckedChange={handleToggleCompletion}
+                className="mr-2"
+                disabled={updateTaskMutation.isPending}
+              />
+              <span>{task.completed ? "Concluída" : "Pendente"}</span>
+            </div>
+          </div>
+          
+          {project && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-600">Projeto:</div>
+              <div className="text-sm font-medium">{project.name || 'Não definido'}</div>
+            </div>
+          )}
+          
+          {assignedUser && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-600">Responsável:</div>
+              <div className="flex items-center">
+                <UserAvatar 
+                  user={assignedUser} 
+                  className="h-6 w-6 mr-2" 
+                />
+                <span className="text-sm font-medium">{assignedUser.name}</span>
+              </div>
+            </div>
+          )}
+          
+          {task.start_date && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-600">Data de Início:</div>
+              <div className="text-sm font-medium">{formatDate(task.start_date)}</div>
+            </div>
+          )}
+          
+          {task.due_date && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-600">Data de Entrega:</div>
+              <div className="text-sm font-medium">{formatDate(task.due_date)}</div>
+            </div>
+          )}
+          
+          {task.estimated_hours !== undefined && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-600">Estimativa:</div>
+              <div className="text-sm font-medium">{task.estimated_hours} horas</div>
+            </div>
+          )}
+        </div>
+        
+        {/* Descrição */}
+        <div className="mb-8">
+          <h4 className="font-medium text-sm mb-4">DESCRIÇÃO</h4>
+          <div className="bg-muted p-3 rounded-md">
+            {task.description ? (
+              <div className="prose prose-sm max-w-none">
+                {task.description.split('\n').map((line, i) => (
+                  <p key={i} className="mb-1">{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm italic">Sem descrição</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Anexos */}
+        <div className="mb-8">
+          <h4 className="font-medium text-sm mb-4">ANEXOS</h4>
+          {isLoadingAttachments ? (
+            <div className="flex justify-center items-center h-16">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            </div>
+          ) : (!attachments || attachments.length === 0) ? (
+            <div className="bg-muted p-4 rounded-md text-center">
+              <p className="text-muted-foreground text-sm">Nenhum anexo</p>
+              <Button variant="outline" size="sm" className="mt-2">
+                + Adicionar
               </Button>
             </div>
-          </SheetHeader>
-          
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-6">
-              {/* Cabeçalho da tarefa */}
-              <div className="space-y-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold">{task.title}</h2>
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <Badge className={`capitalize ${getStatusBadgeClasses(task.status)}`}>
-                        {task.status === "pendente" ? "Pendente" : 
-                         task.status === "em_andamento" ? "Em andamento" : 
-                         task.status === "bloqueada" ? "Bloqueada" : 
-                         task.status === "cancelada" ? "Cancelada" : task.status}
-                      </Badge>
-                      <Badge className={`capitalize ${getPriorityBadgeClasses(task.priority)}`}>
-                        {task.priority === "baixa" ? "Baixa" : 
-                         task.priority === "media" ? "Média" : 
-                         task.priority === "alta" ? "Alta" : 
-                         task.priority === "critica" ? "Crítica" : task.priority}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleEditTask}>
-                      <Pencil className="h-4 w-4 mr-1" /> Editar
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="flex items-center">
+          ) : (
+            <div className="space-y-2">
+              {attachments.map((attachment) => (
+                <div 
+                  key={attachment.id} 
+                  className="bg-muted p-3 rounded-md flex items-center justify-between"
+                >
                   <div className="flex items-center">
-                    <Checkbox 
-                      checked={task.completed} 
-                      onCheckedChange={handleToggleCompletion}
-                      className="mr-2"
-                      disabled={updateTaskMutation.isPending}
-                    />
-                    <span>Marcar como concluída</span>
+                    <div className="bg-primary/10 p-2 rounded-md mr-3">
+                      <FileSpreadsheet className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{attachment.filename}</p>
+                      <p className="text-xs text-muted-foreground">{attachment.size} KB</p>
+                    </div>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleDownloadAttachment(attachment.id, attachment.filename)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
+              ))}
               
-              {/* Informações da tarefa */}
-              <div className="grid grid-cols-2 gap-4">
-                {project && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Projeto</p>
-                    <div className="flex items-center">
-                      <FileSpreadsheet className="h-4 w-4 mr-2 text-primary" />
-                      <span>{project.name}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {assignedUser && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Responsável</p>
-                    <div className="flex items-center">
-                      <UserAvatar 
-                        user={assignedUser} 
-                        className="h-6 w-6 mr-2" 
-                      />
-                      <span>{assignedUser.name}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {task.start_date && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Data de Início</p>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-primary" />
-                      <span>{formatDate(task.start_date)}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {task.due_date && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Data de Entrega</p>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-primary" />
-                      <span>{formatDate(task.due_date)}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {task.estimated_hours !== undefined && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Estimativa</p>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-primary" />
-                      <span>{task.estimated_hours} horas</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Descrição */}
-              <div>
-                <h3 className="text-sm font-medium mb-2">Descrição</h3>
-                <div className="bg-muted p-3 rounded-md">
-                  {task.description ? (
-                    <div className="prose prose-sm max-w-none">
-                      {task.description.split('\n').map((line, i) => {
-                        // Verifica se a linha começa com - para transformar em lista
-                        if (line.trim().startsWith('- ')) {
-                          return <li key={i} className="ml-4">{line.trim().substring(2)}</li>;
-                        }
-                        return <p key={i} className="mb-1">{line}</p>;
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-sm italic">Sem descrição</p>
-                  )}
-                </div>
-              </div>
-              
-              {/* Anexos */}
-              <div>
-                <h3 className="text-sm font-medium mb-2">Anexos</h3>
-                {isLoadingAttachments ? (
-                  <div className="flex justify-center items-center h-16">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  </div>
-                ) : (!attachments || attachments.length === 0) ? (
-                  <div className="bg-muted p-4 rounded-md text-center">
-                    <p className="text-muted-foreground text-sm">Nenhum anexo</p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      + Adicionar
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {attachments.map((attachment) => (
-                      <div 
-                        key={attachment.id} 
-                        className="bg-muted p-3 rounded-md flex items-center justify-between"
-                      >
-                        <div className="flex items-center">
-                          <div className="bg-primary/10 p-2 rounded-md mr-3">
-                            <FileSpreadsheet className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{attachment.filename}</p>
-                            <p className="text-xs text-muted-foreground">{attachment.size} KB</p>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDownloadAttachment(attachment.id, attachment.filename)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    
-                    <div className="text-center mt-2">
-                      <Button variant="outline" size="sm">
-                        + Adicionar
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Comentários */}
-              <div>
-                <h3 className="text-sm font-medium mb-2">Comentários</h3>
-                {isLoadingComments ? (
-                  <div className="flex justify-center items-center h-16">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  </div>
-                ) : (!comments || comments.length === 0) ? (
-                  <div className="bg-muted p-4 rounded-md text-center text-muted-foreground text-sm">
-                    Nenhum comentário. Seja o primeiro a comentar.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="bg-muted p-3 rounded-md">
-                        <div className="flex items-start gap-2">
-                          <UserAvatar 
-                            user={comment.user} 
-                            className="w-8 h-8 mt-0.5" 
-                          />
-                          <div className="flex-1">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-sm">{comment.user?.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDateTime(comment.creation_date)}
-                              </span>
-                            </div>
-                            <p className="text-sm mt-1">{comment.comment}</p>
-                            <div className="flex items-center gap-4 mt-1">
-                              <button className="text-xs text-muted-foreground hover:text-foreground">
-                                Responder
-                              </button>
-                              <button className="text-xs text-muted-foreground hover:text-foreground">
-                                Curtir
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Form para adicionar comentário */}
-                <form onSubmit={handleSubmitComment} className="mt-4">
-                  <div className="flex items-start gap-2">
-                    <UserAvatar user={null} className="w-8 h-8 mt-0.5" />
-                    <div className="flex-1 relative">
-                      <Textarea
-                        placeholder="Adicionar um comentário..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        className="min-h-[80px] pr-10"
-                      />
-                      <Button 
-                        type="submit" 
-                        size="icon" 
-                        variant="ghost" 
-                        className="absolute bottom-2 right-2"
-                        disabled={!newComment.trim() || isSubmittingComment}
-                      >
-                        {isSubmittingComment ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        ) : (
-                          <SendHorizontal className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </form>
+              <div className="text-center mt-2">
+                <Button variant="outline" size="sm">
+                  + Adicionar
+                </Button>
               </div>
             </div>
-          </ScrollArea>
+          )}
         </div>
-      </SheetContent>
-    </Sheet>
+        
+        {/* Comentários */}
+        <div className="mb-8">
+          <h4 className="font-medium text-sm mb-4">COMENTÁRIOS</h4>
+          {isLoadingComments ? (
+            <div className="flex justify-center items-center h-16">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            </div>
+          ) : (!comments || comments.length === 0) ? (
+            <div className="bg-muted p-4 rounded-md text-center text-muted-foreground text-sm">
+              Nenhum comentário. Seja o primeiro a comentar.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <div key={comment.id} className="bg-muted p-3 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <UserAvatar 
+                      user={comment.user} 
+                      className="w-8 h-8 mt-0.5" 
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-sm">{comment.user?.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDateTime(comment.creation_date)}
+                        </span>
+                      </div>
+                      <p className="text-sm mt-1">{comment.comment}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Form para adicionar comentário */}
+          <form onSubmit={handleSubmitComment} className="mt-4 flex items-center gap-2">
+            <Textarea 
+              placeholder="Adicione um comentário..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="min-h-[60px] resize-none"
+              disabled={isSubmittingComment}
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={!newComment.trim() || isSubmittingComment}
+              className="h-10 w-10 shrink-0"
+            >
+              {isSubmittingComment ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent" />
+              ) : (
+                <SendHorizontal className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
+        
+        <div>
+          <Button 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 mb-3"
+            onClick={handleEditTask}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Editar Tarefa
+          </Button>
+          
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <Button 
+              className="w-full bg-destructive hover:bg-destructive/90"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              Excluir Tarefa
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa
+                  "{task.title}" e todos os dados associados a ela.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteTask}
+                  className="bg-destructive hover:bg-destructive/90"
+                  disabled={deleteTaskMutation.isPending}
+                >
+                  {deleteTaskMutation.isPending ? (
+                    <span className="flex items-center">
+                      <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-r-transparent"></span>
+                      Excluindo...
+                    </span>
+                  ) : (
+                    "Excluir tarefa"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    </div>
   );
 }
