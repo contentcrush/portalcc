@@ -50,9 +50,28 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
   // Mutation to update project dates
   const updateProjectDates = useMutation({
     mutationFn: async ({ projectId, startDate, endDate }: { projectId: number, startDate?: Date, endDate?: Date }) => {
-      const updateData: any = {};
-      if (startDate) updateData.startDate = startDate;
-      if (endDate) updateData.endDate = endDate;
+      // Encontra o projeto que está sendo atualizado
+      const projectToUpdate = projects.find(p => p.id === projectId);
+      
+      if (!projectToUpdate) {
+        throw new Error('Projeto não encontrado');
+      }
+      
+      // Mantém os campos obrigatórios
+      const updateData: any = {
+        name: projectToUpdate.name,
+        client_id: projectToUpdate.client_id || null,
+        status: projectToUpdate.status || 'em_andamento'
+      };
+      
+      // Adiciona os campos de data no formato correto (ISO string sem a parte de tempo)
+      if (startDate) {
+        updateData.startDate = startDate.toISOString().split('T')[0];
+      }
+      
+      if (endDate) {
+        updateData.endDate = endDate.toISOString().split('T')[0];
+      }
       
       return apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
     },
@@ -198,12 +217,14 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
     });
     
     // Only update the backend if we have new dates
-    if ((mode === 'move' || mode === 'resize-start') && newStartDate &&
-        (mode === 'move' || mode === 'resize-end') && newEndDate) {
+    if (newStartDate && newEndDate) {
+      // No modo 'move', atualizamos ambas as datas
+      // No modo 'resize-start', atualizamos apenas a data de início
+      // No modo 'resize-end', atualizamos apenas a data de fim
       updateProjectDates.mutate({
         projectId,
-        startDate: mode !== 'resize-end' ? newStartDate : undefined,
-        endDate: mode !== 'resize-start' ? newEndDate : undefined,
+        startDate: (mode === 'move' || mode === 'resize-start') ? newStartDate : undefined,
+        endDate: (mode === 'move' || mode === 'resize-end') ? newEndDate : undefined,
       });
     }
   };

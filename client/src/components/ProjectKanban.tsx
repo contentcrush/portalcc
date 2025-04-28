@@ -62,11 +62,24 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
   // Update project status mutation
   const updateProjectStatus = useMutation({
     mutationFn: async ({ projectId, status, completionDate }: { projectId: number, status: string, completionDate?: Date }) => {
-      const updateData: any = { status };
+      // Importante: Aqui precisamos preservar todos os campos obrigatórios do projeto
+      // Encontra o projeto que está sendo atualizado pela ID
+      const projectToUpdate = projects.find(p => p.id === projectId);
+      
+      if (!projectToUpdate) {
+        throw new Error('Projeto não encontrado');
+      }
+      
+      // Criamos um objeto com os campos obrigatórios, mantendo os valores originais
+      const updateData = {
+        name: projectToUpdate.name,
+        client_id: projectToUpdate.client_id || null,
+        status: status, // Atualizamos apenas o status
+      };
       
       // If project is being moved to "completed", set the completion date
       if (status === 'concluido') {
-        updateData.completion_date = completionDate || new Date();
+        updateData.completionDate = completionDate || new Date();
       }
       
       return apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
