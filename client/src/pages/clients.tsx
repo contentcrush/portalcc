@@ -538,10 +538,7 @@ export default function Clients() {
                           <FormControl>
                             <Button
                               variant="outline"
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
+                              className={`pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
                             >
                               {field.value ? (
                                 format(new Date(field.value), "PPP", { locale: ptBR })
