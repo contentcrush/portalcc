@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +12,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { insertProjectSchema, type InsertProject } from "@shared/schema";
+import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -62,12 +67,7 @@ import {
 } from "@/components/ui/form";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS, CLIENT_CATEGORY_OPTIONS } from "@/lib/constants";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { insertClientSchema, type InsertClient } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
@@ -150,6 +150,32 @@ export default function Clients() {
       });
     },
   });
+  
+  // Mutation para criar novo projeto
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: InsertProject) => {
+      const response = await apiRequest("POST", "/api/projects", data);
+      return await response.json();
+    },
+    onSuccess: (newProject) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', selectedClient?.id, 'projects'] });
+      setIsNewProjectDialogOpen(false);
+      projectForm.reset();
+      toast({
+        title: "Projeto criado com sucesso",
+        description: `${newProject.name} foi criado para o cliente ${selectedClient?.name}.`,
+      });
+      navigate(`/projects/${newProject.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao criar projeto",
+        description: error.message || "Ocorreu um erro ao criar o projeto. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Função para submeter o formulário
   const onSubmit = (data: z.infer<typeof formSchema>) => {
@@ -196,6 +222,31 @@ export default function Clients() {
 
   const handleNewClientClick = () => {
     setIsNewClientDialogOpen(true);
+  };
+  
+  const handleNewProjectClick = (client: { id: number; name: string }) => {
+    setSelectedClient(client);
+    projectForm.reset({
+      name: "",
+      description: "",
+      client_id: client.id,
+      status: "draft",
+      budget: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      progress: 0,
+      thumbnail: "",
+    });
+    setIsNewProjectDialogOpen(true);
+  };
+  
+  const onProjectSubmit = (data: z.infer<typeof projectFormSchema>) => {
+    // Converter valores para o formato esperado pela API
+    const projectData: InsertProject = {
+      ...data,
+      client_id: selectedClient?.id as number,
+    };
+    createProjectMutation.mutate(projectData);
   };
 
   return (
@@ -335,10 +386,8 @@ export default function Clients() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href={`/projects?client_id=${client.id}&action=new`}>
-                            Novo projeto
-                          </Link>
+                        <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
+                          Novo projeto
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/clients/${client.id}?tab=interactions&new=true`}>
@@ -399,11 +448,18 @@ export default function Clients() {
                       Ver detalhes
                     </Button>
                   </Link>
-                  <Link href={`/projects?client_id=${client.id}&action=new`} className="flex-1">
-                    <Button variant="ghost" className="w-full rounded-none py-2">
+                  <div className="flex-1">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full rounded-none py-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleNewProjectClick(client);
+                      }}
+                    >
                       Novo projeto
                     </Button>
-                  </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -426,6 +482,187 @@ export default function Clients() {
         </div>
       )}
 
+      {/* Dialog para criação de novo projeto */}
+      <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Novo Projeto</DialogTitle>
+            <DialogDescription>
+              {selectedClient ? `Criar novo projeto para ${selectedClient.name}` : 'Criar novo projeto'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...projectForm}>
+            <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-6">
+              <FormField
+                control={projectForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Projeto *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Landing Page" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={projectForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Descreva o projeto..." 
+                        className="min-h-[100px]" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={projectForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data de Início</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < new Date("1900-01-01")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={projectForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data de Entrega</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={field.onChange}
+                            disabled={(date) => 
+                              date < new Date("1900-01-01") || 
+                              (projectForm.getValues("startDate") && date < new Date(projectForm.getValues("startDate")))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={projectForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                      defaultValue="draft"
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="draft">Rascunho</SelectItem>
+                        <SelectItem value="in_progress">Em Progresso</SelectItem>
+                        <SelectItem value="review">Revisão</SelectItem>
+                        <SelectItem value="completed">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsNewProjectDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createProjectMutation.isPending}>
+                  {createProjectMutation.isPending ? (
+                    <>
+                      <span className="animate-spin mr-2">◌</span>
+                      Criando...
+                    </>
+                  ) : (
+                    'Criar Projeto'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
       {/* Dialog para criação de novo cliente */}
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <DialogContent className="max-w-2xl">
