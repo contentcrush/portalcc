@@ -1383,6 +1383,10 @@ export default function Team() {
                       user.role === "editor" ? "Editor" : 
                       "Visualizador"}
                     </Badge>
+                    {/* Debug info (remover após depuração) */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="mt-1 text-[8px] text-black/50">Role: {user.role}</div>
+                    )}
                   </div>
                 </div>
               </CardHeader>
