@@ -4,6 +4,12 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { insertProjectSchema, type InsertProject } from "@shared/schema";
 import {
   Select,
   SelectContent,
@@ -69,11 +75,18 @@ const formSchema = insertClientSchema.extend({
   contactEmail: z.string().email("Email inválido").nullable().optional(),
 });
 
+// Schema para validação do formulário de projeto
+const projectFormSchema = insertProjectSchema.extend({
+  name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
+});
+
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<{ id: number; name: string } | null>(null);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -94,6 +107,22 @@ export default function Clients() {
       address: "",
       city: "",
       notes: "",
+    },
+  });
+
+  // Formulário para novo projeto
+  const projectForm = useForm<z.infer<typeof projectFormSchema>>({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      client_id: 0,
+      status: "draft",
+      budget: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      progress: 0,
+      thumbnail: "",
     },
   });
 
