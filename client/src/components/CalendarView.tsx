@@ -90,6 +90,8 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
           : event.end_date;
           
         // Check if the event falls on this day
+        if (!startDate || !endDate) return false;
+        
         return (
           (isSameDay(day, startDate) || isSameDay(day, endDate)) || 
           (day > startDate && day < endDate)
@@ -134,6 +136,8 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
               : event.end_date;
             
             // Check if the event overlaps with this hour
+            if (!startDate || !endDate) return false;
+            
             return (
               (startDate.getHours() <= hour && endDate.getHours() >= hour) ||
               (startDate.getHours() === hour && startDate.getMinutes() < 60) ||
@@ -309,7 +313,9 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
                             {event.title}
                           </div>
                           <div className="text-xs truncate opacity-90">
-                            {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
+                            {event.start_date && format(new Date(event.start_date), 'HH:mm')} 
+                            {event.start_date && event.end_date && ' - '} 
+                            {event.end_date && format(new Date(event.end_date), 'HH:mm')}
                           </div>
                         </div>
                       ))}
