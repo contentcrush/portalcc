@@ -1,11 +1,31 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy } from "lucide-react";
+import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign } from "lucide-react";
 import { formatDate, formatCurrency, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ProjectFormDialog } from "./ProjectFormDialog";
 
 interface ProjectDetailSidebarProps {
   projectId: number;
@@ -15,6 +35,22 @@ interface ProjectDetailSidebarProps {
 export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDetailSidebarProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  
+  // Estados para controlar os diálogos
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [showEditProjectDialog, setShowEditProjectDialog] = useState(false);
+  
+  // Funções para navegação
+  const handleManageTasks = () => {
+    navigate(`/tasks?projectId=${projectId}`);
+    onClose();
+  };
+  
+  const handleProjectFinancial = () => {
+    navigate(`/financial?projectId=${projectId}`);
+    onClose();
+  };
 
   const { data: project, isLoading: isLoadingProject } = useQuery({
     queryKey: [`/api/projects/${projectId}`],
@@ -230,7 +266,12 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             )}
             
             <div className="flex justify-center">
-              <Button variant="ghost" size="sm" className="text-indigo-600">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-indigo-600"
+                onClick={() => setShowAddMemberDialog(true)}
+              >
                 + Adicionar membro
               </Button>
             </div>
@@ -289,13 +330,25 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         </div>
         
         <div>
-          <Button className="w-full bg-indigo-600 hover:bg-indigo-700 mb-3">
+          <Button 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 mb-3"
+            onClick={() => setShowEditProjectDialog(true)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
             Editar Projeto
           </Button>
-          <Button className="w-full" variant="outline">
+          <Button 
+            className="w-full" 
+            variant="outline"
+            onClick={handleManageTasks}
+          >
             Gerenciar Tarefas
           </Button>
-          <Button className="w-full mt-3" variant="outline">
+          <Button 
+            className="w-full mt-3" 
+            variant="outline"
+            onClick={handleProjectFinancial}
+          >
             Financeiro
           </Button>
           <Button 
@@ -318,6 +371,163 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           </Button>
         </div>
       </div>
+      
+      {/* Diálogo de adicionar membro */}
+      <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Membro à Equipe</DialogTitle>
+            <DialogDescription>
+              Selecione um usuário e defina seu papel no projeto.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <AddMemberForm 
+            projectId={projectId} 
+            onSuccess={() => {
+              setShowAddMemberDialog(false);
+              queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/members`] });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo de editar projeto */}
+      <Dialog open={showEditProjectDialog} onOpenChange={setShowEditProjectDialog}>
+        <DialogContent className="sm:max-w-[900px] max-h-screen overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Projeto</DialogTitle>
+          </DialogHeader>
+          
+          <ProjectFormDialog 
+            isOpen={showEditProjectDialog} 
+            onClose={() => setShowEditProjectDialog(false)} 
+            editMode={true}
+            projectId={projectId}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Componente de formulário para adicionar membro
+function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess: () => void }) {
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("membro");
+  const [isPending, setIsPending] = useState(false);
+  const { toast } = useToast();
+  
+  const { data: users } = useQuery({
+    queryKey: ['/api/users'],
+  });
+  
+  const { data: projectMembers } = useQuery({
+    queryKey: [`/api/projects/${projectId}/members`],
+    enabled: !!projectId
+  });
+  
+  // Filtra usuários que já são membros do projeto
+  const availableUsers = users?.filter(user => {
+    return !projectMembers?.some(member => member.user_id === user.id);
+  }) || [];
+  
+  async function handleAddMember() {
+    if (!selectedUserId) {
+      toast({
+        title: "Erro",
+        description: "Selecione um usuário para adicionar à equipe.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsPending(true);
+    
+    try {
+      await apiRequest('POST', `/api/projects/${projectId}/members`, {
+        user_id: selectedUserId,
+        role: selectedRole
+      });
+      
+      toast({
+        title: "Membro adicionado",
+        description: "O membro foi adicionado com sucesso à equipe do projeto."
+      });
+      
+      onSuccess();
+    } catch (error) {
+      toast({
+        title: "Erro ao adicionar membro",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsPending(false);
+    }
+  }
+  
+  return (
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <label htmlFor="user" className="text-right text-sm font-medium">
+          Usuário
+        </label>
+        <Select 
+          onValueChange={(value) => setSelectedUserId(Number(value))}
+        >
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Selecione um usuário" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableUsers.length > 0 ? (
+              availableUsers.map(user => (
+                <SelectItem key={user.id} value={user.id.toString()}>
+                  {user.name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>Não há usuários disponíveis</SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="grid grid-cols-4 items-center gap-4">
+        <label htmlFor="role" className="text-right text-sm font-medium">
+          Função
+        </label>
+        <Select 
+          value={selectedRole}
+          onValueChange={setSelectedRole}
+        >
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder="Selecione uma função" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="coordenador">Coordenador</SelectItem>
+            <SelectItem value="designer">Designer</SelectItem>
+            <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
+            <SelectItem value="analista">Analista</SelectItem>
+            <SelectItem value="revisor">Revisor</SelectItem>
+            <SelectItem value="membro">Membro Regular</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setShowAddMemberDialog(false)}>
+          Cancelar
+        </Button>
+        <Button onClick={handleAddMember} disabled={isPending}>
+          {isPending ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Adicionando...
+            </>
+          ) : "Adicionar Membro"}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }
