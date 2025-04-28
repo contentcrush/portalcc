@@ -961,13 +961,20 @@ export class MemStorage implements IStorage {
       (attachment) => attachment.task_id === taskId,
     );
   }
+  
+  async getTaskAttachment(id: number): Promise<TaskAttachment | undefined> {
+    return this.taskAttachmentsData.get(id);
+  }
 
   async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
     const id = this.taskAttachmentId++;
     const attachment: TaskAttachment = { 
       ...insertAttachment, 
       id, 
-      upload_date: new Date() 
+      upload_date: new Date(),
+      encrypted: false,
+      encryption_iv: null,
+      encryption_key_id: null
     };
     this.taskAttachmentsData.set(id, attachment);
     return attachment;
@@ -1448,6 +1455,11 @@ export class DatabaseStorage implements IStorage {
   // Task Attachments
   async getTaskAttachments(taskId: number): Promise<TaskAttachment[]> {
     return await db.select().from(taskAttachments).where(eq(taskAttachments.task_id, taskId));
+  }
+  
+  async getTaskAttachment(id: number): Promise<TaskAttachment | undefined> {
+    const [attachment] = await db.select().from(taskAttachments).where(eq(taskAttachments.id, id));
+    return attachment || undefined;
   }
 
   async createTaskAttachment(insertAttachment: InsertTaskAttachment): Promise<TaskAttachment> {
