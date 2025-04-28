@@ -104,14 +104,9 @@ export default function Tasks() {
 
   // Create task mutation
   const createTaskMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof taskFormSchema>) => {
-      // Convert string dates to ISO strings
-      const formattedData = {
-        ...data,
-        due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
-        start_date: data.start_date ? new Date(data.start_date).toISOString() : undefined,
-      };
-      return apiRequest('POST', '/api/tasks', formattedData);
+    mutationFn: async (data: any) => {
+      // Os dados já foram convertidos no onSubmit
+      return apiRequest('POST', '/api/tasks', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
@@ -133,14 +128,9 @@ export default function Tasks() {
 
   // Update task mutation
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<z.infer<typeof taskFormSchema>> }) => {
-      // Convert string dates to ISO strings
-      const formattedData = {
-        ...data,
-        due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
-        start_date: data.start_date ? new Date(data.start_date).toISOString() : undefined,
-      };
-      return apiRequest('PATCH', `/api/tasks/${id}`, formattedData);
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      // Os dados já foram convertidos no onSubmit
+      return apiRequest('PATCH', `/api/tasks/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
@@ -163,10 +153,17 @@ export default function Tasks() {
 
   // Form submission handler
   const onSubmit = (data: z.infer<typeof taskFormSchema>) => {
+    // Converter as strings de data para objetos Date 
+    const formattedData = {
+      ...data,
+      due_date: data.due_date ? new Date(data.due_date) : undefined,
+      start_date: data.start_date ? new Date(data.start_date) : undefined,
+    };
+    
     if (selectedTask) {
-      updateTaskMutation.mutate({ id: selectedTask.id, data });
+      updateTaskMutation.mutate({ id: selectedTask.id, data: formattedData });
     } else {
-      createTaskMutation.mutate(data);
+      createTaskMutation.mutate(formattedData);
     }
   };
 
