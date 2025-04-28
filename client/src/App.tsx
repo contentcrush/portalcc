@@ -11,7 +11,7 @@ import Clients from "@/pages/clients";
 import ClientDetail from "@/pages/client-detail";
 import Financial from "@/pages/financial";
 import Calendar from "@/pages/calendar";
-import Team from "@/pages/team";
+import Team from "@/pages/TeamPage";
 import UserProfile from "@/pages/user-profile";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";

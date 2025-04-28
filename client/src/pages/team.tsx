@@ -82,6 +82,7 @@ import {
 } from "@/components/ui/avatar";
 
 import { UserAvatar } from "@/components/UserAvatar";
+import { UserEditDialog } from "@/components/UserEditDialog";
 
 // Esquema de validação para formulário de usuário
 export const userFormSchema = z.object({
@@ -114,8 +115,8 @@ export const userFormSchema = z.object({
 // Tipo inferido do esquema
 export type UserFormValues = z.infer<typeof userFormSchema>;
 
-// Componente de diálogo para adicionar/editar usuário
-export function UserEditDialog({ 
+// Este componente foi movido para @/components/UserEditDialog.tsx
+function OldUserEditDialog({ 
   isOpen, 
   onClose, 
   user = null
