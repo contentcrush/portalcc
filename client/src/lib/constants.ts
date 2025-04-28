@@ -147,12 +147,24 @@ export const CLIENT_CATEGORY_OPTIONS = [
 
 export const USER_ROLE_OPTIONS = [
   { value: "admin", label: "Administrador" },
-  { value: "director", label: "Diretor" },
-  { value: "manager", label: "Gerente" },
-  { value: "producer", label: "Produtor" },
+  { value: "manager", label: "Gestor" },
   { value: "editor", label: "Editor" },
-  { value: "photographer", label: "Fotógrafo" },
-  { value: "designer", label: "Designer" }
+  { value: "viewer", label: "Visualizador" }
+];
+
+export const TEAM_ROLE_OPTIONS = [
+  { value: "coordenacao", label: "Coordenação" },
+  { value: "producao", label: "Produção" },
+  { value: "creator", label: "Creator" },
+  { value: "editor_mobile", label: "Editor Mobile" },
+  { value: "motion", label: "Motion" },
+  { value: "direcao_arte", label: "Direção de Arte" },
+  { value: "redacao", label: "Redação" },
+  { value: "estrategista", label: "Estrategista de Conteúdo" },
+  { value: "direcao_foto", label: "Direção de Foto" },
+  { value: "assistente_foto", label: "Assistente de Foto" },
+  { value: "culinarista", label: "Culinarista" },
+  { value: "apresentadora", label: "Apresentadora" }
 ];
 
 export const DEPARTMENT_OPTIONS = [

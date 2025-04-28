@@ -487,12 +487,18 @@ function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess:
             <SelectValue placeholder="Selecione uma função" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="coordenador">Coordenador</SelectItem>
-            <SelectItem value="designer">Designer</SelectItem>
-            <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
-            <SelectItem value="analista">Analista</SelectItem>
-            <SelectItem value="revisor">Revisor</SelectItem>
-            <SelectItem value="membro">Membro Regular</SelectItem>
+            <SelectItem value="coordenacao">Coordenação</SelectItem>
+            <SelectItem value="producao">Produção</SelectItem>
+            <SelectItem value="creator">Creator</SelectItem>
+            <SelectItem value="editor_mobile">Editor Mobile</SelectItem>
+            <SelectItem value="motion">Motion</SelectItem>
+            <SelectItem value="direcao_arte">Direção de Arte</SelectItem>
+            <SelectItem value="redacao">Redação</SelectItem>
+            <SelectItem value="estrategista">Estrategista de Conteúdo</SelectItem>
+            <SelectItem value="direcao_foto">Direção de Foto</SelectItem>
+            <SelectItem value="assistente_foto">Assistente de Foto</SelectItem>
+            <SelectItem value="culinarista">Culinarista</SelectItem>
+            <SelectItem value="apresentadora">Apresentadora</SelectItem>
           </SelectContent>
         </Select>
       </div>
