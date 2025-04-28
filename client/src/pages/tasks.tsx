@@ -456,7 +456,7 @@ export default function Tasks() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {projects?.map(project => (
                             <SelectItem key={project.id} value={project.id.toString()}>
                               {project.name}
@@ -485,7 +485,7 @@ export default function Tasks() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Ninguém</SelectItem>
+                          <SelectItem value="none">Ninguém</SelectItem>
                           {users?.map(user => (
                             <SelectItem key={user.id} value={user.id.toString()}>
                               {user.name}
