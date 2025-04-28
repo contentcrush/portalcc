@@ -24,11 +24,11 @@ import {
 } from "lucide-react";
 import { 
   formatDate, 
-  formatDateTime, 
-  getPriorityBadgeClasses,
+  formatDateTime,
   getStatusBadgeClasses,
   getInitials
 } from "@/lib/utils";
+import PriorityBadge from "@/components/PriorityBadge";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -306,12 +306,10 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
                task.status === "bloqueada" ? "Bloqueada" : 
                task.status === "cancelada" ? "Cancelada" : task.status}
             </Badge>
-            <Badge className={`capitalize ${getPriorityBadgeClasses(task.priority)}`}>
-              {task.priority === "baixa" ? "Baixa" : 
-               task.priority === "media" ? "Média" : 
-               task.priority === "alta" ? "Alta" : 
-               task.priority === "critica" ? "Crítica" : task.priority}
-            </Badge>
+            <PriorityBadge 
+              priority={task.priority} 
+              size="md"
+            />
           </div>
         </div>
         
@@ -327,6 +325,15 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
               />
               <span>{task.completed ? "Concluída" : "Pendente"}</span>
             </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-600">Prioridade:</div>
+            <PriorityBadge 
+              priority={task.priority}
+              size="sm"
+              showText={true}
+            />
           </div>
           
           {project && (
