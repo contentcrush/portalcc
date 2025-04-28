@@ -65,6 +65,7 @@ export default function Projects() {
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
   // Fetch projects
