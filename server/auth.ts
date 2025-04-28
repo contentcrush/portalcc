@@ -134,18 +134,24 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
     
     if (parts.length === 2 && parts[0] === 'Bearer') {
       token = parts[1];
+      console.log('[Auth] Token encontrado no cabeçalho Authorization');
     }
+  } else if (token) {
+    console.log('[Auth] Token encontrado nos cookies');
   }
   
   if (!token) {
+    console.log('[Auth] Token não encontrado');
     return res.status(401).json({ message: 'Token de acesso não fornecido' });
   }
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     req.user = { id: decoded.userId, role: decoded.role, permissions: decoded.permissions };
+    console.log(`[Auth] Token verificado para usuário ID: ${decoded.userId}, role: ${decoded.role}`);
     next();
   } catch (err) {
+    console.error('[Auth] Erro ao verificar token:', err);
     return res.status(403).json({ message: 'Token inválido ou expirado' });
   }
 }
