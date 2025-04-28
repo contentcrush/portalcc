@@ -204,19 +204,24 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Status:</div>
-            <div className={`px-2 py-1 rounded text-xs ${
-              project?.status === 'em_andamento' ? 'bg-green-100 text-green-700' : 
-              project?.status === 'pre_producao' ? 'bg-blue-100 text-blue-700' : 
-              project?.status === 'em_producao' ? 'bg-amber-100 text-amber-700' : 
-              project?.status === 'concluido' ? 'bg-gray-100 text-gray-700' : 
-              'bg-gray-100 text-gray-700'
-            }`}>
+            <Badge 
+              variant="outline"
+              className={`
+                ${project?.status === 'em_andamento' ? 'border-green-500 text-green-700 bg-green-50' : 
+                 project?.status === 'pre_producao' ? 'border-blue-500 text-blue-700 bg-blue-50' : 
+                 project?.status === 'em_producao' ? 'border-amber-500 text-amber-700 bg-amber-50' : 
+                 project?.status === 'concluido' ? 'border-gray-500 text-gray-700 bg-gray-100' : 
+                 project?.status === 'em_orcamento' ? 'border-purple-500 text-purple-700 bg-purple-50' : 
+                 'border-gray-500 text-gray-700 bg-gray-100'}
+              `}
+            >
               {project?.status === 'em_andamento' ? 'Em andamento' : 
                project?.status === 'pre_producao' ? 'Pré-produção' : 
                project?.status === 'em_producao' ? 'Em produção' : 
                project?.status === 'concluido' ? 'Concluído' : 
+               project?.status === 'em_orcamento' ? 'Em orçamento' : 
                project?.status || 'Não definido'}
-            </div>
+            </Badge>
           </div>
           
           <div className="flex items-center justify-between">
