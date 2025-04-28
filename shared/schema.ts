@@ -218,7 +218,16 @@ export const insertRefreshTokenSchema = createInsertSchema(refreshTokens).omit({
   created_at: true 
 });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
+// Define schema base e customiza para adicionar transformação de strings para dates
+const projectBaseSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
+export const insertProjectSchema = projectBaseSchema.extend({
+  startDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional(),
+  endDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional()
+});
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({ id: true });
 export const insertProjectStageSchema = createInsertSchema(projectStages).omit({ id: true, completion_date: true });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });

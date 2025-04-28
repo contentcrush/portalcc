@@ -334,14 +334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
-      // Converter as strings ISO para objetos Date
-      const projectData = {
-        ...req.body,
-        startDate: req.body.startDate ? new Date(req.body.startDate) : null,
-        endDate: req.body.endDate ? new Date(req.body.endDate) : null
-      };
-      
-      const project = await storage.createProject(projectData);
+      // O Zod já está fazendo a conversão de string para Date através do transform no schema
+      const project = await storage.createProject(req.body);
       res.status(201).json(project);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -349,18 +343,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:id", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
+  app.patch("/api/projects/:id", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      // Converter as strings ISO para objetos Date
-      const projectData = {
-        ...req.body,
-        startDate: req.body.startDate ? new Date(req.body.startDate) : null,
-        endDate: req.body.endDate ? new Date(req.body.endDate) : null
-      };
-      
-      const updatedProject = await storage.updateProject(id, projectData);
+      // O Zod já está fazendo a conversão de string para Date através do transform no schema
+      const updatedProject = await storage.updateProject(id, req.body);
       
       if (!updatedProject) {
         return res.status(404).json({ message: "Project not found" });

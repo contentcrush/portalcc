@@ -153,13 +153,8 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="space-y-2">
                     <Button 
                       onClick={() => {
-                        navigate("/projects");
-                        // Usando um timeout para garantir que a navegação termine antes de abrir o modal
-                        setTimeout(() => {
-                          // Disparando um evento customizado para abrir o modal de novo projeto
-                          const event = new CustomEvent('openProjectForm');
-                          window.dispatchEvent(event);
-                        }, 100);
+                        // Usar o useProjectForm diretamente em vez de eventos personalizados
+                        openProjectForm();
                       }}
                       className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                     >
