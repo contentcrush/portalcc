@@ -16,10 +16,13 @@ async function seedDatabase() {
       return;
     }
 
+    // Importar a função hashPassword
+    const { hashPassword } = await import('./auth');
+
     // Users
     const [user1] = await db.insert(users).values({
       username: "bruno.silva",
-      password: "password", // Em produção, usaríamos hashPassword() aqui
+      password: await hashPassword("password"), // Hashear a senha
       name: "Bruno Silva",
       email: "bruno.silva@contentcrush.com",
       role: "admin",
@@ -36,7 +39,7 @@ async function seedDatabase() {
 
     const [user2] = await db.insert(users).values({
       username: "ana.oliveira",
-      password: "password", // Em produção, usaríamos hashPassword() aqui
+      password: await hashPassword("password"), // Hashear a senha
       name: "Ana Oliveira",
       email: "ana.oliveira@contentcrush.com",
       role: "editor",
@@ -53,7 +56,7 @@ async function seedDatabase() {
 
     const [user3] = await db.insert(users).values({
       username: "carlos.mendes",
-      password: "password", // Em produção, usaríamos hashPassword() aqui
+      password: await hashPassword("password"), // Hashear a senha
       name: "Carlos Mendes",
       email: "carlos.mendes@contentcrush.com",
       role: "editor",
@@ -70,7 +73,7 @@ async function seedDatabase() {
 
     const [user4] = await db.insert(users).values({
       username: "julia.santos",
-      password: "password", // Em produção, usaríamos hashPassword() aqui
+      password: await hashPassword("password"), // Hashear a senha
       name: "Julia Santos",
       email: "julia.santos@contentcrush.com",
       role: "manager",
