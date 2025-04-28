@@ -390,7 +390,7 @@ export default function CalendarPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {projects?.map(project => (
                             <SelectItem key={project.id} value={project.id.toString()}>
                               {project.name}
@@ -419,7 +419,7 @@ export default function CalendarPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {clients?.map(client => (
                             <SelectItem key={client.id} value={client.id.toString()}>
                               {client.name}

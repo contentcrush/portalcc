@@ -29,8 +29,25 @@ interface CalendarViewProps {
   onAddEvent?: (date: Date) => void;
 }
 
+interface Event {
+  id: number;
+  title: string;
+  description?: string;
+  start_date: string | Date;
+  end_date: string | Date;
+  location?: string;
+  type: string;
+  project_id?: number;
+  client_id?: number;
+  all_day?: boolean;
+}
+
 interface EventWithColor extends Event {
   colorClass: string;
+  top?: string;
+  height?: string;
+  dayHour?: Date;
+  duration?: number;
 }
 
 export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: CalendarViewProps) {
@@ -80,7 +97,7 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
     if (!events) return [];
 
     return events
-      .filter((event: any) => {
+      .filter((event: Event) => {
         const startDate = typeof event.start_date === 'string' 
           ? parseISO(event.start_date) 
           : event.start_date;
@@ -97,7 +114,7 @@ export default function CalendarView({ onEventClick, onDateClick, onAddEvent }: 
           (day > startDate && day < endDate)
         );
       })
-      .map((event: any) => {
+      .map((event: Event) => {
         // Add a color class based on event type
         const colorClass = EVENT_COLORS[event.type as keyof typeof EVENT_COLORS] || '#3B82F6';
         return { ...event, colorClass };
