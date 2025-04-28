@@ -678,6 +678,15 @@ export default function Tasks() {
           </Form>
         </DialogContent>
       </Dialog>
+      
+      {/* Task Detail Sidebar */}
+      {taskDetailId && (
+        <TaskDetailSidebar
+          taskId={taskDetailId}
+          onClose={handleCloseTaskDetails}
+          onEdit={handleSelectTask}
+        />
+      )}
     </div>
   );
 }

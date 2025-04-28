@@ -47,9 +47,10 @@ import { UserAvatar } from "./UserAvatar";
 interface TaskItemProps {
   task: TaskWithDetails;
   onSelect?: (taskId: number) => void;
+  onEdit?: (taskId: number) => void;
 }
 
-export default function TaskItem({ task, onSelect }: TaskItemProps) {
+export default function TaskItem({ task, onSelect, onEdit }: TaskItemProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
@@ -193,6 +194,9 @@ export default function TaskItem({ task, onSelect }: TaskItemProps) {
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => onSelect && onSelect(task.id)}>
                         Ver detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit && onEdit(task.id)}>
+                        Editar tarefa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleStatusChange}>
