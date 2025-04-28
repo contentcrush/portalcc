@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TaskItem from "@/components/TaskItem";
+import TaskDetailSidebar from "@/components/TaskDetailSidebar";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,7 @@ export default function Tasks() {
   const [activeTab, setActiveTab] = useState("pendentes");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
+  const [taskDetailId, setTaskDetailId] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -181,7 +183,7 @@ export default function Tasks() {
     setIsDialogOpen(true);
   };
 
-  // Task selection handler for editing
+  // Task selection handler for editing via dialog
   const handleSelectTask = (taskId: number) => {
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
@@ -195,6 +197,16 @@ export default function Tasks() {
       form.reset(formattedTask);
       setIsDialogOpen(true);
     }
+  };
+  
+  // Task selection handler for viewing details
+  const handleViewTaskDetails = (taskId: number) => {
+    setTaskDetailId(taskId);
+  };
+  
+  // Close task details sidebar
+  const handleCloseTaskDetails = () => {
+    setTaskDetailId(null);
   };
 
   // Filter tasks based on criteria
@@ -375,7 +387,8 @@ export default function Tasks() {
                 <TaskItem 
                   key={task.id} 
                   task={task} 
-                  onSelect={handleSelectTask}
+                  onSelect={handleViewTaskDetails}
+                  onEdit={handleSelectTask}
                 />
               ))}
             </div>
@@ -403,7 +416,8 @@ export default function Tasks() {
                 <TaskItem 
                   key={task.id} 
                   task={task}
-                  onSelect={handleSelectTask} 
+                  onSelect={handleViewTaskDetails}
+                  onEdit={handleSelectTask}
                 />
               ))}
             </div>
