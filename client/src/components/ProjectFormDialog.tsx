@@ -60,6 +60,9 @@ const projectFormSchema = insertProjectSchema.extend({
     required_error: "Selecione um cliente",
     invalid_type_error: "Cliente inválido"
   }),
+  // Transforme as datas para o formato ISO string ao validar
+  startDate: z.date().nullable().optional(),
+  endDate: z.date().nullable().optional(),
   primary_area: z.string().optional(),
   priority: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   complexity: z.enum(["simples", "moderada", "complexa", "muito_complexa"]).default("moderada"),
@@ -244,7 +247,11 @@ export function ProjectFormDialog() {
                           <Textarea 
                             placeholder="Descreva o projeto" 
                             className="min-h-[120px]" 
-                            {...field} 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -559,7 +566,10 @@ export function ProjectFormDialog() {
                           <Input 
                             type="number" 
                             placeholder="0,00" 
-                            {...field} 
+                            value={field.value || ""}
+                            name={field.name}
+                            ref={field.ref}
+                            onBlur={field.onBlur}
                             onChange={(e) => {
                               const value = e.target.value ? parseFloat(e.target.value) : undefined;
                               field.onChange(value);
@@ -583,7 +593,11 @@ export function ProjectFormDialog() {
                         <FormControl>
                           <Input 
                             placeholder="https://exemplo.com/imagem.png" 
-                            {...field} 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormDescription>

@@ -334,9 +334,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
-      const project = await storage.createProject(req.body);
+      // Converter as strings ISO para objetos Date
+      const projectData = {
+        ...req.body,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : null,
+        endDate: req.body.endDate ? new Date(req.body.endDate) : null
+      };
+      
+      const project = await storage.createProject(projectData);
       res.status(201).json(project);
     } catch (error) {
+      console.error("Error creating project:", error);
       res.status(500).json({ message: "Failed to create project" });
     }
   });
@@ -344,7 +352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/projects/:id", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedProject = await storage.updateProject(id, req.body);
+      
+      // Converter as strings ISO para objetos Date
+      const projectData = {
+        ...req.body,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : null,
+        endDate: req.body.endDate ? new Date(req.body.endDate) : null
+      };
+      
+      const updatedProject = await storage.updateProject(id, projectData);
       
       if (!updatedProject) {
         return res.status(404).json({ message: "Project not found" });
@@ -352,6 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedProject);
     } catch (error) {
+      console.error("Error updating project:", error);
       res.status(500).json({ message: "Failed to update project" });
     }
   });
