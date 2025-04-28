@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -487,18 +488,11 @@ function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess:
             <SelectValue placeholder="Selecione uma função" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="coordenacao">Coordenação</SelectItem>
-            <SelectItem value="producao">Produção</SelectItem>
-            <SelectItem value="creator">Creator</SelectItem>
-            <SelectItem value="editor_mobile">Editor Mobile</SelectItem>
-            <SelectItem value="motion">Motion</SelectItem>
-            <SelectItem value="direcao_arte">Direção de Arte</SelectItem>
-            <SelectItem value="redacao">Redação</SelectItem>
-            <SelectItem value="estrategista">Estrategista de Conteúdo</SelectItem>
-            <SelectItem value="direcao_foto">Direção de Foto</SelectItem>
-            <SelectItem value="assistente_foto">Assistente de Foto</SelectItem>
-            <SelectItem value="culinarista">Culinarista</SelectItem>
-            <SelectItem value="apresentadora">Apresentadora</SelectItem>
+            {TEAM_ROLE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
