@@ -72,7 +72,6 @@ const formSchema = insertClientSchema.extend({
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -151,10 +150,7 @@ export default function Clients() {
       return false;
     }
     
-    // Category filter
-    if (categoryFilter !== "all" && client.category !== categoryFilter) {
-      return false;
-    }
+    // Removido filtro de categoria
     
     return true;
   });
@@ -165,8 +161,6 @@ export default function Clients() {
       return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
     } else if (sortBy === "name") {
       return a.name.localeCompare(b.name);
-    } else if (sortBy === "category") {
-      return (a.category || "").localeCompare(b.category || "");
     }
     return 0;
   });
@@ -220,20 +214,6 @@ export default function Clients() {
             </SelectContent>
           </Select>
           
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {CLIENT_CATEGORY_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="Ordenar por" />
@@ -241,7 +221,6 @@ export default function Clients() {
             <SelectContent>
               <SelectItem value="recent">Mais recentes</SelectItem>
               <SelectItem value="name">Nome</SelectItem>
-              <SelectItem value="category">Categoria</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -328,7 +307,7 @@ export default function Clients() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link href={`/projects/new?client_id=${client.id}`}>
+                          <Link href={`/projects?client_id=${client.id}&action=new`}>
                             Novo projeto
                           </Link>
                         </DropdownMenuItem>
@@ -391,7 +370,7 @@ export default function Clients() {
                       Ver detalhes
                     </Button>
                   </Link>
-                  <Link href={`/projects/new?client_id=${client.id}`} className="flex-1">
+                  <Link href={`/projects?client_id=${client.id}&action=new`} className="flex-1">
                     <Button variant="ghost" className="w-full rounded-none py-2">
                       Novo projeto
                     </Button>
