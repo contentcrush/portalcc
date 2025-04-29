@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getInitials, generateAvatarColor } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -96,7 +97,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 
@@ -267,17 +268,18 @@ export default function Clients() {
       return;
     }
     
-    // Criar uma URL temporária para visualização
+    // Criar uma URL temporária para visualização usando FileReader
     const reader = new FileReader();
-    reader.onload = () => {
-      setAvatarPreview(reader.result as string);
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        const dataUrl = e.target.result as string;
+        setAvatarPreview(dataUrl);
+        
+        // Também armazenamos a dataUrl para enviar ao servidor
+        form.setValue('avatar', dataUrl);
+      }
     };
     reader.readAsDataURL(file);
-    
-    // Em uma implementação real, aqui você faria upload para o servidor
-    // e armazenaria a URL retornada
-    // Por enquanto, vamos apenas simular isso
-    form.setValue('avatar', URL.createObjectURL(file));
   };
   
   // Função para buscar dados do CNPJ
