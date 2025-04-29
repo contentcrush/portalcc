@@ -29,7 +29,14 @@ export interface IStorage {
   getClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined>;
-  deleteClient(id: number): Promise<boolean>;
+  deleteClient(id: number): Promise<{ 
+    success: boolean; 
+    deletedItems: { 
+      projects: number; 
+      interactions: number; 
+      financialDocuments: number; 
+    } 
+  }>;
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
@@ -726,8 +733,56 @@ export class MemStorage implements IStorage {
     return updatedClient;
   }
 
-  async deleteClient(id: number): Promise<boolean> {
-    return this.clientsData.delete(id);
+  async deleteClient(id: number): Promise<{ 
+    success: boolean; 
+    deletedItems: { 
+      projects: number; 
+      interactions: number; 
+      financialDocuments: number; 
+    } 
+  }> {
+    const projects = await this.getProjectsByClient(id);
+    const projectsCount = projects.length;
+    
+    // Contar interações
+    const interactions = Array.from(this.clientInteractionsData.values())
+      .filter(interaction => interaction.client_id === id);
+    const interactionsCount = interactions.length;
+    
+    // Contar documentos financeiros
+    const financialDocs = Array.from(this.financialDocumentsData.values())
+      .filter(doc => doc.client_id === id);
+    const financialDocumentsCount = financialDocs.length;
+    
+    // Excluir projetos em cascata
+    if (projectsCount > 0) {
+      console.log(`Cliente #${id} possui ${projectsCount} projetos associados`);
+      for (const project of projects) {
+        await this.deleteProject(project.id);
+      }
+    }
+    
+    // Excluir interações do cliente
+    for (const interaction of interactions) {
+      this.clientInteractionsData.delete(interaction.id);
+    }
+    
+    // Excluir documentos financeiros do cliente
+    for (const doc of financialDocs) {
+      this.financialDocumentsData.delete(doc.id);
+    }
+    
+    // Finalmente, excluir o cliente
+    const success = this.clientsData.delete(id);
+    
+    return { 
+      success,
+      deletedItems: {
+        projects: projectsCount,
+        interactions: interactionsCount,
+        financialDocuments: financialDocumentsCount
+      }
+    };
   }
 
   // Projects
