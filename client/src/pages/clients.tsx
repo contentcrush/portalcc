@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getInitials, generateAvatarColor } from "@/lib/utils";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
   SelectContent,
@@ -663,26 +664,12 @@ export default function Clients() {
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
-                      <Avatar className="h-12 w-12 mr-4">
-                        {client.logo && client.logo.trim() ? (
-                          <AvatarImage 
-                            src={client.logo.trim()} 
-                            alt={client.name}
-                            onError={(e) => {
-                              console.log("Erro ao carregar logo do cliente:", client.logo);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : null}
-                        <AvatarFallback 
-                          style={{ 
-                            backgroundColor: generateAvatarColor(client.name),
-                            color: 'white'
-                          }}
-                        >
-                          {getInitials(client.name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ClientAvatar 
+                        name={client.name}
+                        logoUrl={client.logo}
+                        size="md"
+                        className="mr-4"
+                      />
                       <div>
                         <Link href={`/clients/${client.id}`}>
                           <h3 className="font-semibold text-lg hover:text-primary cursor-pointer">
@@ -860,26 +847,12 @@ export default function Clients() {
                 <TableRow key={client.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex items-center">
-                      <Avatar className="h-8 w-8 mr-3">
-                        {client.logo && client.logo.trim() ? (
-                          <AvatarImage 
-                            src={client.logo.trim()} 
-                            alt={client.name}
-                            onError={(e) => {
-                              console.log("Erro ao carregar logo do cliente (lista):", client.logo);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : null}
-                        <AvatarFallback 
-                          style={{ 
-                            backgroundColor: generateAvatarColor(client.name),
-                            color: 'white'
-                          }}
-                        >
-                          {getInitials(client.name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ClientAvatar 
+                        name={client.name}
+                        logoUrl={client.logo}
+                        size="sm"
+                        className="mr-3"
+                      />
                       <div>
                         <Link href={`/clients/${client.id}`}>
                           <div className="font-medium hover:text-primary cursor-pointer">

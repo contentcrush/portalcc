@@ -17,6 +17,9 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Log para diagnóstico
+    console.log("Upload iniciado - Tipo de arquivo:", file.type, "Tamanho:", Math.round(file.size/1024), "KB");
+
     // Validar o tipo de arquivo
     const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'];
     if (!validImageTypes.includes(file.type)) {
@@ -32,6 +35,8 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
       // Se uma função de upload foi fornecida, use-a
       if (onUpload) {
         const uploadedUrl = await onUpload(file);
+        console.log("Upload externo completo, URL recebida:", 
+          uploadedUrl.length > 50 ? uploadedUrl.substring(0, 50) + "..." : uploadedUrl);
         onChange(uploadedUrl);
         setImagePreview(uploadedUrl);
       } else {
@@ -39,16 +44,25 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const dataUrl = event.target?.result as string;
+          console.log("Arquivo lido como data URL, tamanho:", 
+            Math.round(dataUrl.length / 1024), "KB, Tipo:", 
+            dataUrl.substring(0, dataUrl.indexOf(';', 10)));
+          
           // Garantir que temos uma string limpa sem espaços extras
           const trimmedDataUrl = dataUrl.trim();
           
           // Verificar se a string base64 é válida
           if (trimmedDataUrl.startsWith('data:image/')) {
-            const compressedDataUrl = trimmedDataUrl; // Mantenha a URL original por enquanto
-            onChange(compressedDataUrl);
-            setImagePreview(compressedDataUrl);
-            console.log("Logo processado com sucesso, tamanho:", 
-              Math.round(compressedDataUrl.length / 1024), "KB");
+            // Armazenar o data URL original
+            const processedDataUrl = trimmedDataUrl;
+            console.log("Logo processado com sucesso, tamanho final:", 
+              Math.round(processedDataUrl.length / 1024), "KB");
+              
+            // Importante: atualizar estado e chamar onChange com o valor correto
+            setImagePreview(processedDataUrl);
+            onChange(processedDataUrl);
+            
+            console.log("Preview atualizado e função onChange chamada com sucesso");
           } else {
             console.error("Formato de imagem inválido:", trimmedDataUrl.substring(0, 50));
             alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
@@ -58,6 +72,9 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
           console.error("Erro ao ler o arquivo");
           alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
         };
+        
+        // Iniciar a leitura do arquivo
+        console.log("Iniciando leitura do arquivo como dataURL");
         reader.readAsDataURL(file);
       }
     } catch (error) {
