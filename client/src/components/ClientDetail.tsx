@@ -333,6 +333,10 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
+          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir
+          </Button>
         </div>
       </div>
 
@@ -1297,6 +1301,36 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmação para exclusão do cliente */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <strong>{client?.name}</strong> 
+              e todos os dados relacionados a ele, incluindo projetos, interações e documentos financeiros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteClientMutation.mutate()}
+              disabled={deleteClientMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteClientMutation.isPending ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
+                  Excluindo...
+                </>
+              ) : (
+                "Sim, excluir cliente"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
