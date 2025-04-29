@@ -3,13 +3,14 @@ import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
-  expenses, events, refreshTokens,
+  expenses, events, refreshTokens, clientResponsibles,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
-  type FinancialDocument, type Expense, type Event, 
+  type FinancialDocument, type Expense, type Event, type ClientResponsible,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
-  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent
+  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
+  type InsertClientResponsible
 } from "../shared/schema";
 
 export interface IStorage {
@@ -30,6 +31,11 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: number): Promise<boolean>;
+  
+  // Client Responsibles (Responsáveis)
+  getClientResponsibles(clientId: number): Promise<ClientResponsible[]>;
+  createClientResponsible(responsible: InsertClientResponsible): Promise<ClientResponsible>;
+  deleteClientResponsible(id: number): Promise<boolean>;
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
@@ -117,6 +123,7 @@ export class MemStorage implements IStorage {
   private financialDocumentsData: Map<number, FinancialDocument>;
   private expensesData: Map<number, Expense>;
   private eventsData: Map<number, Event>;
+  private clientResponsiblesData: Map<number, ClientResponsible>;
   
   private userId: number = 1;
   private clientId: number = 1;
@@ -130,6 +137,7 @@ export class MemStorage implements IStorage {
   private financialDocumentId: number = 1;
   private expenseId: number = 1;
   private eventId: number = 1;
+  private clientResponsibleId: number = 1;
 
   constructor() {
     this.usersData = new Map();
@@ -144,6 +152,7 @@ export class MemStorage implements IStorage {
     this.financialDocumentsData = new Map();
     this.expensesData = new Map();
     this.eventsData = new Map();
+    this.clientResponsiblesData = new Map();
 
     // Add some initial data
     this.seedData();

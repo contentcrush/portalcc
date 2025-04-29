@@ -5,7 +5,8 @@ import {
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
   insertProjectMemberSchema, insertProjectStageSchema, insertTaskCommentSchema, 
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
-  insertExpenseSchema, insertEventSchema, insertUserSchema
+  insertExpenseSchema, insertEventSchema, insertUserSchema,
+  insertClientResponsibleSchema, clientResponsibles
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
@@ -338,6 +339,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(interaction);
     } catch (error) {
       res.status(500).json({ message: "Failed to create client interaction" });
+    }
+  });
+
+  // Client Responsibles (Responsáveis por Cliente)
+  app.get("/api/clients/:id/responsibles", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verifica se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Obtém todos os responsáveis pelo cliente
+      const responsibles = await storage.getClientResponsibles(clientId);
+      res.json(responsibles);
+    } catch (error) {
+      console.error("Error fetching client responsibles:", error);
+      res.status(500).json({ message: "Failed to fetch client responsibles" });
+    }
+  });
+  
+  app.post("/api/clients/:id/responsibles", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientResponsibleSchema), async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verifica se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Verifica se o usuário existe
+      const user = await storage.getUser(req.body.user_id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Cria o vínculo de responsável
+      const responsible = await storage.createClientResponsible({
+        ...req.body,
+        client_id: clientId
+      });
+      
+      res.status(201).json(responsible);
+    } catch (error) {
+      console.error("Error creating client responsible:", error);
+      res.status(500).json({ message: "Failed to create client responsible" });
+    }
+  });
+  
+  app.delete("/api/clients/:clientId/responsibles/:responsibleId", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const responsibleId = parseInt(req.params.responsibleId);
+      
+      // Verifica se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Remove o vínculo de responsável
+      const success = await storage.deleteClientResponsible(responsibleId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Client responsible relationship not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error removing client responsible:", error);
+      res.status(500).json({ message: "Failed to remove client responsible" });
     }
   });
 
