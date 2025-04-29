@@ -280,9 +280,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/clients", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientSchema), async (req, res) => {
     try {
+      // Verificar se o logo está presente e é uma string (URL ou base64)
+      if (req.body.logo) {
+        // Se é base64, garantir que começa com o formato correto
+        if (typeof req.body.logo === 'string' && req.body.logo.length > 0) {
+          console.log(`Recebendo logo com ${req.body.logo.length} caracteres`);
+          // Garantir que é válido
+          if (!req.body.logo.startsWith('data:image/')) {
+            console.warn("Formato de logo inválido, deve começar com data:image/");
+            // Não salvar um logo inválido
+            req.body.logo = null;
+          }
+        }
+      }
+
       const client = await storage.createClient(req.body);
       res.status(201).json(client);
     } catch (error) {
+      console.error("Erro ao criar cliente:", error);
       res.status(500).json({ message: "Failed to create client" });
     }
   });
@@ -290,6 +305,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/clients/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Verificar se o logo está presente e é uma string (URL ou base64)
+      if (req.body.logo) {
+        // Se é base64, garantir que começa com o formato correto
+        if (typeof req.body.logo === 'string' && req.body.logo.length > 0) {
+          console.log(`Atualizando: Recebendo logo com ${req.body.logo.length} caracteres`);
+          // Garantir que é válido
+          if (!req.body.logo.startsWith('data:image/')) {
+            console.warn("Atualizando: Formato de logo inválido, deve começar com data:image/");
+            // Não salvar um logo inválido
+            req.body.logo = null;
+          }
+        }
+      }
+      
       const updatedClient = await storage.updateClient(id, req.body);
       
       if (!updatedClient) {
@@ -298,6 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedClient);
     } catch (error) {
+      console.error("Erro ao atualizar cliente:", error);
       res.status(500).json({ message: "Failed to update client" });
     }
   });

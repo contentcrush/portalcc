@@ -24,21 +24,47 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, ...props }, ref) => {
-  // Sanitize src, garantindo que temos uma string válida sem espaços extras
-  const sanitizedSrc = typeof src === 'string' 
-    ? src.trim() 
-    : src;
+  // Verificar se temos um src válido antes de tentar renderizar
+  const [validSrc, setValidSrc] = React.useState<string | undefined>(
+    typeof src === 'string' && src.trim().length > 0 ? src.trim() : undefined
+  );
+  
+  // Validar o src quando ele mudar
+  React.useEffect(() => {
+    if (typeof src === 'string' && src.trim().length > 0) {
+      // Sanitize src, garantindo que temos uma string válida sem espaços extras
+      const sanitizedSrc = src.trim();
+      
+      // Apenas aceitar URLs que começam com http://, https:// ou data:image/
+      if (sanitizedSrc.startsWith('http://') || 
+          sanitizedSrc.startsWith('https://') || 
+          sanitizedSrc.startsWith('data:image/')) {
+        setValidSrc(sanitizedSrc);
+      } else {
+        console.warn("URL de imagem inválida:", sanitizedSrc.substring(0, 50));
+        setValidSrc(undefined);
+      }
+    } else {
+      setValidSrc(undefined);
+    }
+  }, [src]);
   
   // Adicione um manipulador de erro padrão se não for fornecido
   const defaultOnError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.warn("Erro ao carregar imagem de avatar:", sanitizedSrc);
+    console.warn("Erro ao carregar imagem de avatar:", validSrc?.substring(0, 100));
+    // Esconder a imagem com erro, o que mostrará o fallback automaticamente
     e.currentTarget.style.display = 'none';
   };
+
+  // Se não temos um src válido, nem renderize o componente de imagem
+  if (!validSrc) {
+    return null;
+  }
 
   return (
     <AvatarPrimitive.Image
       ref={ref}
-      src={sanitizedSrc}
+      src={validSrc}
       className={cn("aspect-square h-full w-full object-cover", className)}
       onError={props.onError || defaultOnError}
       {...props}

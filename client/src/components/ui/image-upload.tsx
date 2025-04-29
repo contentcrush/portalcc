@@ -17,6 +17,15 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validar o tipo de arquivo
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      console.error("Tipo de arquivo inválido:", file.type);
+      alert("Por favor, selecione um formato de imagem válido (JPEG, PNG, GIF, SVG, WebP).");
+      e.target.value = "";
+      return;
+    }
+
     try {
       setIsUploading(true);
       
@@ -35,18 +44,25 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
           
           // Verificar se a string base64 é válida
           if (trimmedDataUrl.startsWith('data:image/')) {
-            onChange(trimmedDataUrl);
-            setImagePreview(trimmedDataUrl);
-            console.log("Logo salvo com sucesso:", trimmedDataUrl.substring(0, 50) + "...");
+            const compressedDataUrl = trimmedDataUrl; // Mantenha a URL original por enquanto
+            onChange(compressedDataUrl);
+            setImagePreview(compressedDataUrl);
+            console.log("Logo processado com sucesso, tamanho:", 
+              Math.round(compressedDataUrl.length / 1024), "KB");
           } else {
             console.error("Formato de imagem inválido:", trimmedDataUrl.substring(0, 50));
-            throw new Error("Formato de imagem inválido");
+            alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
           }
+        };
+        reader.onerror = () => {
+          console.error("Erro ao ler o arquivo");
+          alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
         };
         reader.readAsDataURL(file);
       }
     } catch (error) {
       console.error("Erro ao fazer upload da imagem:", error);
+      alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
     } finally {
       setIsUploading(false);
       // Limpar o input para permitir selecionar o mesmo arquivo novamente
