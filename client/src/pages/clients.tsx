@@ -664,9 +664,9 @@ export default function Clients() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
-                        {client.logo ? (
+                        {client.logo && client.logo.trim() ? (
                           <AvatarImage 
-                            src={client.logo} 
+                            src={client.logo.trim()} 
                             alt={client.name}
                             onError={(e) => {
                               console.log("Erro ao carregar logo do cliente:", client.logo);
@@ -861,9 +861,9 @@ export default function Clients() {
                   <TableCell>
                     <div className="flex items-center">
                       <Avatar className="h-8 w-8 mr-3">
-                        {client.logo ? (
+                        {client.logo && client.logo.trim() ? (
                           <AvatarImage 
-                            src={client.logo} 
+                            src={client.logo.trim()} 
                             alt={client.name}
                             onError={(e) => {
                               console.log("Erro ao carregar logo do cliente (lista):", client.logo);
