@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { formatDate, formatCurrency, getInitials, calculatePercentChange } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,43 @@ import { getInteractionIcon } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserAvatar } from "./UserAvatar";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
+import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 
 interface ClientDetailProps {
   clientId: number;
@@ -33,6 +70,10 @@ interface ClientDetailProps {
 
 export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const { data: client, isLoading: isLoadingClient } = useQuery({
     queryKey: [`/api/clients/${clientId}`],
@@ -57,6 +98,144 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const { data: users } = useQuery({
     queryKey: ['/api/users']
   });
+  
+  // Schema para validação do formulário de cliente
+  const formSchema = insertClientSchema.extend({
+    name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+    contactEmail: z.string().email("Email inválido").nullable().optional(),
+  });
+
+  // Schema para validação do formulário de projeto
+  const projectFormSchema = insertProjectSchema.extend({
+    name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
+  });
+  
+  // Formulário para edição de cliente
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: client?.name || "",
+      shortName: client?.shortName || "",
+      type: client?.type || "",
+      cnpj: client?.cnpj || "",
+      website: client?.website || "",
+      contactName: client?.contactName || "",
+      contactPosition: client?.contactPosition || "",
+      contactEmail: client?.contactEmail || "",
+      contactPhone: client?.contactPhone || "",
+      address: client?.address || "",
+      city: client?.city || "",
+      notes: client?.notes || "",
+    }
+  });
+  
+  // Formulário para novo projeto
+  const projectForm = useForm<z.infer<typeof projectFormSchema>>({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      client_id: clientId,
+      status: "draft",
+      budget: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      progress: 0,
+      thumbnail: "",
+    },
+  });
+  
+  // Mutation para atualizar cliente
+  const updateClientMutation = useMutation({
+    mutationFn: async (data: InsertClient) => {
+      const response = await apiRequest("PATCH", `/api/clients/${clientId}`, data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Cliente atualizado com sucesso",
+        description: "As informações do cliente foram atualizadas."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar cliente",
+        description: error.message || "Ocorreu um erro ao atualizar o cliente.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Mutation para criar novo projeto
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: InsertProject) => {
+      const response = await apiRequest("POST", "/api/projects", data);
+      return await response.json();
+    },
+    onSuccess: (newProject) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/projects`] });
+      setIsNewProjectDialogOpen(false);
+      projectForm.reset();
+      toast({
+        title: "Projeto criado com sucesso",
+        description: `${newProject.name} foi criado para o cliente ${client?.name}.`,
+      });
+      navigate(`/projects/${newProject.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao criar projeto",
+        description: error.message || "Ocorreu um erro ao criar o projeto. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Função para submeter o formulário de edição de cliente
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // Converter valores para o formato esperado pela API
+    const clientData: InsertClient = {
+      ...data,
+      // Não enviar o campo since para manter o valor original
+      since: undefined,
+    };
+    updateClientMutation.mutate(clientData);
+  };
+  
+  // Função para submeter o formulário de criação de projeto
+  const onProjectSubmit = (data: z.infer<typeof projectFormSchema>) => {
+    // Converter valores para o formato esperado pela API
+    const projectData: InsertProject = {
+      ...data,
+      client_id: clientId,
+    };
+    createProjectMutation.mutate(projectData);
+  };
+  
+  // Função para abrir o dialog de edição preenchendo os valores do formulário
+  const handleEditClick = () => {
+    if (client) {
+      form.reset({
+        name: client.name || "",
+        shortName: client.shortName || "",
+        type: client.type || "",
+        cnpj: client.cnpj || "",
+        website: client.website || "",
+        contactName: client.contactName || "",
+        contactPosition: client.contactPosition || "",
+        contactEmail: client.contactEmail || "",
+        contactPhone: client.contactPhone || "",
+        address: client.address || "",
+        city: client.city || "",
+        notes: client.notes || "",
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
 
   if (isLoadingClient) {
     return (
@@ -94,11 +273,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleEditClick}>
             <FileText className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button className="bg-primary">
+          <Button className="bg-primary" onClick={() => setIsNewProjectDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -649,6 +828,414 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Edição de Cliente */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do cliente {client.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome curto</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Abreviação ou sigla" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Cliente</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {CLIENT_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cnpj"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CNPJ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="00.000.000/0000-00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contato Principal</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do contato" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactPosition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cargo do Contato</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Gerente de Marketing" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email do Contato</FormLabel>
+                      <FormControl>
+                        <Input placeholder="email@exemplo.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone do Contato</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(00) 00000-0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Endereço</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Endereço completo" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Cidade" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="exemplo.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notas</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Informações adicionais sobre o cliente" 
+                        className="resize-none h-20" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={updateClientMutation.isPending}>
+                  {updateClientMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Salvando...
+                    </>
+                  ) : "Salvar Alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Novo Projeto */}
+      <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Novo Projeto</DialogTitle>
+            <DialogDescription>
+              Crie um novo projeto para o cliente {client.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...projectForm}>
+            <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={projectForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Nome do Projeto</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Digite o nome do projeto" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={projectForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Descrição</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Descreva o projeto brevemente" 
+                          className="resize-none h-20" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={projectForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Rascunho</SelectItem>
+                          <SelectItem value="planning">Planejamento</SelectItem>
+                          <SelectItem value="in_progress">Em Andamento</SelectItem>
+                          <SelectItem value="review">Revisão</SelectItem>
+                          <SelectItem value="completed">Concluído</SelectItem>
+                          <SelectItem value="canceled">Cancelado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={projectForm.control}
+                  name="budget"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Orçamento (R$)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                          value={field.value !== undefined ? field.value : ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={projectForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data de Início</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "dd/MM/yyyy")
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date?.toISOString())}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={projectForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Prazo de Entrega</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "dd/MM/yyyy")
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date?.toISOString())}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => setIsNewProjectDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createProjectMutation.isPending}>
+                  {createProjectMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Criando...
+                    </>
+                  ) : "Criar Projeto"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
