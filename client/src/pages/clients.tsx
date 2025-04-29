@@ -175,11 +175,37 @@ export default function Clients() {
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       setIsNewClientDialogOpen(false);
+      setFormStep(0); // Reset para o primeiro passo para próxima vez
+      setAvatarPreview(null); // Limpar preview
+      setSegmentTags([]); // Limpar tags
+      setIsCollapseOpen(false); // Resetar collapse
       form.reset();
+      
+      // Toast com CTA para criar novo projeto
       toast({
         title: "Cliente criado com sucesso",
-        description: `${newClient.name} foi adicionado à sua base de clientes.`,
+        description: (
+          <div className="flex flex-col gap-2">
+            <p>{newClient.name} foi adicionado à sua base de clientes.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2 w-full justify-center"
+              onClick={() => {
+                handleNewProjectClick({
+                  id: newClient.id,
+                  name: newClient.name
+                });
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar novo projeto para este cliente
+            </Button>
+          </div>
+        ),
+        duration: 5000,
       });
+      
       navigate(`/clients/${newClient.id}`);
     },
     onError: (error) => {
@@ -320,11 +346,10 @@ export default function Clients() {
       ...data,
       // Não enviar o campo since para deixar o servidor usar o defaultNow()
       since: undefined,
+      // Adicionar os segmentos aos dados do cliente
+      segments: segmentTags.join(', '),
     };
     createClientMutation.mutate(clientData);
-    
-    // Mostrar toast com CTA para criar novo projeto após sucesso
-    // Isso vai ser chamado após o sucesso da mutation
   };
 
   // Fetch clients
