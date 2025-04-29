@@ -94,11 +94,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
-            <img src={client.avatar || ''} alt="" className="w-4 h-4 mr-2 rounded-full" />
+          <Button variant="outline">
+            <FileText className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button size="sm" className="bg-primary">
+          <Button className="bg-primary">
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
