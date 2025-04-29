@@ -314,13 +314,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Excluir o cliente
-      const success = await storage.deleteClient(id);
+      const result = await storage.deleteClient(id);
       
-      if (!success) {
+      if (!result.success) {
         return res.status(500).json({ message: "Não foi possível excluir o cliente" });
       }
       
-      res.status(200).json({ message: "Cliente excluído com sucesso" });
+      res.status(200).json({ 
+        message: "Cliente excluído com sucesso",
+        deletedItems: result.deletedItems
+      });
     } catch (error) {
       console.error("Erro ao excluir cliente:", error);
       res.status(500).json({ message: "Falha ao excluir cliente" });

@@ -221,13 +221,22 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         throw new Error(errorData.message || "Erro ao excluir cliente");
       }
       
-      return true;
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const { deletedItems } = data;
+      
       toast({
         title: "Cliente excluído com sucesso",
-        description: "O cliente foi removido permanentemente.",
+        description: `Foram excluídos: ${deletedItems.projects} projeto(s), ${deletedItems.interactions} interação(ões) e ${deletedItems.financialDocuments} documento(s) financeiro(s) relacionados a este cliente.`,
+        duration: 5000,
       });
+      
+      // Invalidar queries
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      // Redirecionar para a lista de clientes
       navigate('/clients');
     },
     onError: (error) => {
@@ -1307,9 +1316,20 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <strong>{client?.name}</strong> 
-              e todos os dados relacionados a ele, incluindo projetos, interações e documentos financeiros.
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <strong>{client?.name}</strong> 
+                e todos os dados relacionados a ele.
+              </p>
+              <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm mt-3">
+                <p className="font-medium mb-2">Os seguintes itens serão excluídos:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>1 cliente</li>
+                  <li>{projects?.length || 0} projeto(s)</li>
+                  <li>{interactions?.length || 0} interação(ões) com o cliente</li>
+                  <li>{financialDocuments?.length || 0} documento(s) financeiro(s)</li>
+                </ul>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1260,14 +1260,34 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async deleteClient(id: number): Promise<boolean> {
+  async deleteClient(id: number): Promise<{ 
+    success: boolean; 
+    deletedItems: { 
+      projects: number; 
+      interactions: number; 
+      financialDocuments: number; 
+    } 
+  }> {
     try {
       // Verificar projetos associados a este cliente
       const clientProjects = await this.getProjectsByClient(id);
+      const projectsCount = clientProjects.length;
       
-      // Remover relações com projetos
-      if (clientProjects.length > 0) {
-        console.log(`Cliente #${id} possui ${clientProjects.length} projetos associados`);
+      // Contar interações
+      const clientInteractionsResult = await db.select({ count: count() })
+        .from(clientInteractions)
+        .where(eq(clientInteractions.client_id, id));
+      const interactionsCount = clientInteractionsResult[0]?.count || 0;
+      
+      // Contar documentos financeiros
+      const financialDocumentsResult = await db.select({ count: count() })
+        .from(financialDocuments)
+        .where(eq(financialDocuments.client_id, id));
+      const financialDocumentsCount = financialDocumentsResult[0]?.count || 0;
+      
+      // Excluir projetos em cascata
+      if (projectsCount > 0) {
+        console.log(`Cliente #${id} possui ${projectsCount} projetos associados`);
         // Opção: excluir projetos associados em cascata
         for (const project of clientProjects) {
           await this.deleteProject(project.id);
@@ -1283,10 +1303,24 @@ export class DatabaseStorage implements IStorage {
       // Finalmente, excluir o cliente
       await db.delete(clients).where(eq(clients.id, id));
       
-      return true;
+      return { 
+        success: true,
+        deletedItems: {
+          projects: projectsCount,
+          interactions: interactionsCount,
+          financialDocuments: financialDocumentsCount
+        }
+      };
     } catch (error) {
       console.error("Erro ao excluir cliente:", error);
-      return false;
+      return { 
+        success: false,
+        deletedItems: {
+          projects: 0,
+          interactions: 0,
+          financialDocuments: 0
+        }
+      };
     }
   }
   
