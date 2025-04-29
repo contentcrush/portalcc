@@ -221,14 +221,24 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         throw new Error(errorData.message || "Erro ao excluir cliente");
       }
       
-      return await response.json();
+      try {
+        return await response.json();
+      } catch (error) {
+        console.log('Resposta não contém JSON válido:', error);
+        return { deletedItems: { projects: 0, interactions: 0, financialDocuments: 0 } };
+      }
     },
     onSuccess: (data) => {
       const { deletedItems } = data;
       
+      // Garantir que deletedItems existe, caso contrário, usar valores padrão
+      const projects = deletedItems?.projects || 0;
+      const interactions = deletedItems?.interactions || 0;
+      const financialDocuments = deletedItems?.financialDocuments || 0;
+      
       toast({
         title: "Cliente excluído com sucesso",
-        description: `Foram excluídos: ${deletedItems.projects} projeto(s), ${deletedItems.interactions} interação(ões) e ${deletedItems.financialDocuments} documento(s) financeiro(s) relacionados a este cliente.`,
+        description: `Foram excluídos: ${projects} projeto(s), ${interactions} interação(ões) e ${financialDocuments} documento(s) financeiro(s) relacionados a este cliente.`,
         duration: 5000,
       });
       
@@ -1316,22 +1326,22 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <strong>{client?.name}</strong> 
-                e todos os dados relacionados a ele.
-              </p>
-              <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm mt-3">
-                <p className="font-medium mb-2">Os seguintes itens serão excluídos:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>1 cliente</li>
-                  <li>{projects?.length || 0} projeto(s)</li>
-                  <li>{interactions?.length || 0} interação(ões) com o cliente</li>
-                  <li>{financialDocuments?.length || 0} documento(s) financeiro(s)</li>
-                </ul>
-              </div>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente <strong>{client?.name}</strong> 
+              e todos os dados relacionados a ele.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm my-4">
+            <p className="font-medium mb-2">Os seguintes itens serão excluídos:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>1 cliente</li>
+              <li>{projects?.length || 0} projeto(s)</li>
+              <li>{interactions?.length || 0} interação(ões) com o cliente</li>
+              <li>{financialDocuments?.length || 0} documento(s) financeiro(s)</li>
+            </ul>
+          </div>
+          
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
