@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { 
   Building, 
   Mail, 
@@ -269,6 +270,8 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       ...data,
       // Não enviar o campo since para manter o valor original
       since: undefined,
+      // Incluir o logo
+      logo: logoPreview
     };
     updateClientMutation.mutate(clientData);
   };
@@ -299,7 +302,9 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         address: client.address || "",
         city: client.city || "",
         notes: client.notes || "",
+        logo: client.logo || "",
       });
+      setLogoPreview(client.logo || null);
       setIsEditDialogOpen(true);
     }
   };
@@ -929,7 +934,27 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                  control={form.control}
+                  name="logo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo</FormLabel>
+                      <FormControl>
+                        <ImageUpload 
+                          value={logoPreview}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            setLogoPreview(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <FormField
                   control={form.control}
                   name="name"
