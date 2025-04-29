@@ -492,42 +492,42 @@ export default function Clients() {
     },
   });
 
+  // Esta mutation não é mais utilizada, pois estamos usando fetch diretamente no handler
+  // Foi substituída pela chamada direta na função handleDeleteClientClick
+
   // Função para abrir o diálogo de confirmação de exclusão
-  const handleDeleteClientClick = async (client: { id: number; name: string }) => {
+  const handleDeleteClientClick = (client: { id: number; name: string }) => {
     setSelectedClient(client);
     
-    try {
-      // Buscar contagem de itens relacionados
-      const projectsResponse = await fetch(`/api/clients/${client.id}/projects`);
-      const projectsData = await projectsResponse.json();
-      
-      const interactionsResponse = await fetch(`/api/clients/${client.id}/interactions`);
-      const interactionsData = await interactionsResponse.json();
-      
-      const financialDocsResponse = await fetch(`/api/clients/${client.id}/financial-documents`);
-      const financialDocsData = await financialDocsResponse.json();
-      
-      setDeleteItemsCount({
-        projects: projectsData.length || 0,
-        interactions: interactionsData.length || 0,
-        financialDocuments: financialDocsData.length || 0
+    // Usar a nova rota OPTIONS para obter informações relacionadas eficientemente
+    fetch(`/api/clients/${client.id}`, { method: 'OPTIONS' })
+      .then(response => response.json())
+      .then(data => {
+        setDeleteItemsCount({
+          projects: data.relatedItems.projects || 0,
+          interactions: data.relatedItems.interactions || 0,
+          financialDocuments: data.relatedItems.financialDocuments || 0
+        });
+        setIsDeleteClientDialogOpen(true);
+      })
+      .catch(error => {
+        console.error("Erro ao buscar informações de exclusão:", error);
+        
+        // Em caso de erro, mostrar contagem zero
+        setDeleteItemsCount({
+          projects: 0,
+          interactions: 0,
+          financialDocuments: 0
+        });
+        
+        toast({
+          title: "Aviso",
+          description: "Não foi possível obter a contagem precisa de itens relacionados.",
+          variant: "warning"
+        });
+        
+        setIsDeleteClientDialogOpen(true);
       });
-    } catch (error) {
-      // Em caso de erro, mostrar contagem zero
-      setDeleteItemsCount({
-        projects: 0,
-        interactions: 0,
-        financialDocuments: 0
-      });
-      
-      toast({
-        title: "Aviso",
-        description: "Não foi possível obter a contagem de itens relacionados a este cliente.",
-        variant: "warning"
-      });
-    }
-    
-    setIsDeleteClientDialogOpen(true);
   };
 
   // Função para excluir o cliente após confirmação

@@ -302,6 +302,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota OPTIONS para obter informações sobre itens relacionados sem excluir o cliente
+  app.options("/api/clients/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      // Contar itens relacionados
+      const projects = await storage.getProjectsByClient(id);
+      const interactions = await storage.getClientInteractions(id);
+      const financialDocuments = await storage.getFinancialDocumentsByClient(id);
+      
+      res.json({
+        client,
+        relatedItems: {
+          projects: projects.length,
+          interactions: interactions.length,
+          financialDocuments: financialDocuments.length
+        }
+      });
+    } catch (error) {
+      console.error("Erro ao obter informações relacionadas ao cliente:", error);
+      res.status(500).json({ message: "Falha ao obter informações relacionadas ao cliente" });
+    }
+  });
+
   // Excluir cliente
   app.delete("/api/clients/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
     try {
