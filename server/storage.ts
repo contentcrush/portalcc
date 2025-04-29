@@ -1261,8 +1261,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: number): Promise<boolean> {
-    const result = await db.delete(clients).where(eq(clients.id, id));
-    return true; // Drizzle doesn't return affected rows, so we assume success
+    try {
+      // Verificar projetos associados a este cliente
+      const clientProjects = await this.getProjectsByClient(id);
+      
+      // Remover relações com projetos
+      if (clientProjects.length > 0) {
+        console.log(`Cliente #${id} possui ${clientProjects.length} projetos associados`);
+        // Opção: excluir projetos associados em cascata
+        for (const project of clientProjects) {
+          await this.deleteProject(project.id);
+        }
+      }
+      
+      // Excluir interações do cliente
+      await db.delete(clientInteractions).where(eq(clientInteractions.client_id, id));
+      
+      // Excluir documentos financeiros do cliente
+      await db.delete(financialDocuments).where(eq(financialDocuments.client_id, id));
+      
+      // Finalmente, excluir o cliente
+      await db.delete(clients).where(eq(clients.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir cliente:", error);
+      return false;
+    }
   }
   
   // Projects
@@ -1352,8 +1377,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProject(id: number): Promise<boolean> {
-    const result = await db.delete(projects).where(eq(projects.id, id));
-    return true;
+    try {
+      // Excluir membros do projeto
+      await db.delete(projectMembers).where(eq(projectMembers.project_id, id));
+      
+      // Excluir estágios do projeto
+      await db.delete(projectStages).where(eq(projectStages.project_id, id));
+      
+      // Excluir tarefas do projeto 
+      // Primeiro, pegar todas as tarefas para excluir comentários e anexos
+      const projectTasks = await this.getTasksByProject(id);
+      for (const task of projectTasks) {
+        // Excluir comentários da tarefa
+        await db.delete(taskComments).where(eq(taskComments.task_id, task.id));
+        
+        // Excluir anexos da tarefa
+        await db.delete(taskAttachments).where(eq(taskAttachments.task_id, task.id));
+      }
+      
+      // Agora excluir todas as tarefas
+      await db.delete(tasks).where(eq(tasks.project_id, id));
+      
+      // Excluir documentos financeiros do projeto
+      await db.delete(financialDocuments).where(eq(financialDocuments.project_id, id));
+      
+      // Excluir despesas do projeto
+      await db.delete(expenses).where(eq(expenses.project_id, id));
+      
+      // Excluir eventos do projeto
+      await db.delete(events).where(eq(events.project_id, id));
+      
+      // Finalmente, excluir o projeto
+      await db.delete(projects).where(eq(projects.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir projeto:", error);
+      return false;
+    }
   }
   
   // Project Members

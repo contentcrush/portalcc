@@ -18,7 +18,8 @@ import {
   Eye,
   Filter,
   ChevronLeft,
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -66,6 +67,17 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ClientDetailProps {
   clientId: number;
@@ -75,6 +87,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -193,6 +206,34 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       toast({
         title: "Erro ao criar projeto",
         description: error.message || "Ocorreu um erro ao criar o projeto. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation para excluir cliente
+  const deleteClientMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/clients/${clientId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao excluir cliente");
+      }
+      
+      return true;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cliente excluído com sucesso",
+        description: "O cliente foi removido permanentemente.",
+      });
+      navigate('/clients');
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir cliente",
+        description: error.message || "Ocorreu um erro ao excluir o cliente. Tente novamente.",
         variant: "destructive",
       });
     },
