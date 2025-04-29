@@ -130,6 +130,9 @@ export default function Clients() {
   const [isCollapseOpen, setIsCollapseOpen] = useState(false);
   const [segmentTags, setSegmentTags] = useState<string[]>([]);
   const [isLookupCnpj, setIsLookupCnpj] = useState(false);
+  const [newSegmentName, setNewSegmentName] = useState("");
+  const [isAddingSegment, setIsAddingSegment] = useState(false);
+  const [isNewSegmentDialogOpen, setIsNewSegmentDialogOpen] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -404,6 +407,39 @@ export default function Clients() {
   // Fetch projects para cada cliente (para contagem e badges)
   const { data: projects } = useQuery({
     queryKey: ['/api/projects']
+  });
+  
+  // Fetch segments
+  const { data: segments } = useQuery({
+    queryKey: ['/api/segments']
+  });
+  
+  // Mutation for adding new segment
+  const addSegmentMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", "/api/segments", { name });
+      return await response.json();
+    },
+    onSuccess: (newSegment) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
+      setSegmentTags([...segmentTags, newSegment.name]);
+      setNewSegmentName("");
+      setIsAddingSegment(false);
+      setIsNewSegmentDialogOpen(false);
+      
+      toast({
+        title: "Segmento adicionado",
+        description: `${newSegment.name} foi adicionado à lista de segmentos.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao adicionar segmento",
+        description: error.message || "Ocorreu um erro ao adicionar o segmento. Tente novamente.",
+        variant: "destructive",
+      });
+      setIsAddingSegment(false);
+    },
   });
 
   // Filter clients based on criteria
