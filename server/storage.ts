@@ -1157,6 +1157,24 @@ export class MemStorage implements IStorage {
   async deleteEvent(id: number): Promise<boolean> {
     return this.eventsData.delete(id);
   }
+  
+  // Client Responsibles
+  async getClientResponsibles(clientId: number): Promise<ClientResponsible[]> {
+    return Array.from(this.clientResponsiblesData.values()).filter(
+      (responsible) => responsible.client_id === clientId
+    );
+  }
+
+  async createClientResponsible(responsible: InsertClientResponsible): Promise<ClientResponsible> {
+    const id = this.clientResponsibleId++;
+    const newResponsible: ClientResponsible = { ...responsible, id };
+    this.clientResponsiblesData.set(id, newResponsible);
+    return newResponsible;
+  }
+
+  async deleteClientResponsible(id: number): Promise<boolean> {
+    return this.clientResponsiblesData.delete(id);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1493,6 +1511,21 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClientInteraction(id: number): Promise<boolean> {
     const result = await db.delete(clientInteractions).where(eq(clientInteractions.id, id));
+    return true;
+  }
+  
+  // Client Responsibles
+  async getClientResponsibles(clientId: number): Promise<ClientResponsible[]> {
+    return await db.select().from(clientResponsibles).where(eq(clientResponsibles.client_id, clientId));
+  }
+
+  async createClientResponsible(insertResponsible: InsertClientResponsible): Promise<ClientResponsible> {
+    const [responsible] = await db.insert(clientResponsibles).values(insertResponsible).returning();
+    return responsible;
+  }
+
+  async deleteClientResponsible(id: number): Promise<boolean> {
+    const result = await db.delete(clientResponsibles).where(eq(clientResponsibles.id, id));
     return true;
   }
   
