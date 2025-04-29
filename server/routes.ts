@@ -331,6 +331,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Interactions
+  // Obter projetos de um cliente específico
+  app.get("/api/clients/:id/projects", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const projects = await storage.getProjectsByClient(clientId);
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch client projects" });
+    }
+  });
+  
+  // Obter documentos financeiros de um cliente específico
+  app.get("/api/clients/:id/financial-documents", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const documents = await storage.getFinancialDocumentsByClient(clientId);
+      res.json(documents);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch client financial documents" });
+    }
+  });
+  
   app.get("/api/clients/:id/interactions", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
