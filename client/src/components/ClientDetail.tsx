@@ -620,7 +620,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           {/* KPIs */}
           <Card className="bg-white">
             <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-gray-500">Projetos Totais</p>
                   <div className="mt-1 flex items-center">
@@ -643,9 +643,9 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   </div>
                 </div>
                 
-                <div>
+                <div className="col-span-2">
                   <p className="text-sm text-gray-500">Tempo de Retenção</p>
-                  <div className="mt-1 flex items-center">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="text-2xl font-bold">
                       {client.since ? (
                         `${Math.max(1, Math.floor(
@@ -654,7 +654,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                       ) : 'N/A'}
                     </span>
                     {client.since && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-600">
+                      <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
                         Cliente desde {format(new Date(client.since), 'MMM yyyy', { locale: ptBR })}
                       </span>
                     )}
