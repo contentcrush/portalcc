@@ -483,8 +483,40 @@ export default function Clients() {
   });
 
   // Função para abrir o diálogo de confirmação de exclusão
-  const handleDeleteClientClick = (client: { id: number; name: string }) => {
+  const handleDeleteClientClick = async (client: { id: number; name: string }) => {
     setSelectedClient(client);
+    
+    try {
+      // Buscar contagem de itens relacionados
+      const projectsResponse = await fetch(`/api/clients/${client.id}/projects`);
+      const projectsData = await projectsResponse.json();
+      
+      const interactionsResponse = await fetch(`/api/clients/${client.id}/interactions`);
+      const interactionsData = await interactionsResponse.json();
+      
+      const financialDocsResponse = await fetch(`/api/clients/${client.id}/financial-documents`);
+      const financialDocsData = await financialDocsResponse.json();
+      
+      setDeleteItemsCount({
+        projects: projectsData.length || 0,
+        interactions: interactionsData.length || 0,
+        financialDocuments: financialDocsData.length || 0
+      });
+    } catch (error) {
+      // Em caso de erro, mostrar contagem zero
+      setDeleteItemsCount({
+        projects: 0,
+        interactions: 0,
+        financialDocuments: 0
+      });
+      
+      toast({
+        title: "Aviso",
+        description: "Não foi possível obter a contagem de itens relacionados a este cliente.",
+        variant: "warning"
+      });
+    }
+    
     setIsDeleteClientDialogOpen(true);
   };
 
@@ -679,6 +711,13 @@ export default function Clients() {
                           <Link href={`/clients/${client.id}?tab=interactions&new=true`}>
                             Nova interação
                           </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                          onClick={() => handleDeleteClientClick({id: client.id, name: client.name})}
+                        >
+                          Excluir cliente
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -892,6 +931,13 @@ export default function Clients() {
                           <Link href={`/clients/${client.id}?tab=interactions&new=true`}>
                             Nova interação
                           </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                          onClick={() => handleDeleteClientClick({id: client.id, name: client.name})}
+                        >
+                          Excluir cliente
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1139,6 +1185,47 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
       
+      {/* Dialog de confirmação para excluir cliente */}
+      <AlertDialog open={isDeleteClientDialogOpen} onOpenChange={setIsDeleteClientDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o cliente <span className="font-semibold">{selectedClient?.name}</span>?
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="text-sm font-medium text-amber-800 mb-2">
+                  Atenção: Essa ação não pode ser desfeita.
+                </div>
+                <div className="text-sm text-amber-700">
+                  <p>Os seguintes itens também serão excluídos:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>{deleteItemsCount.projects} projetos</li>
+                    <li>{deleteItemsCount.interactions} interações com cliente</li>
+                    <li>{deleteItemsCount.financialDocuments} documentos financeiros</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteClient}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deleteClientMutation.isPending ? (
+                <>
+                  <span className="animate-spin mr-2">◌</span>
+                  Excluindo...
+                </>
+              ) : (
+                'Excluir Cliente'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Dialog para criação de novo cliente */}
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <DialogContent className="max-w-2xl">
