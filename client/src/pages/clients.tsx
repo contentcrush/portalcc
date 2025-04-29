@@ -134,6 +134,42 @@ export default function Clients() {
   const [isAddingSegment, setIsAddingSegment] = useState(false);
   const [isNewSegmentDialogOpen, setIsNewSegmentDialogOpen] = useState(false);
   
+  // Query para buscar segmentos
+  const { data: segments = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['/api/segments'],
+    queryFn: getQueryFn(),
+  });
+  
+  // Mutation para adicionar novo segmento
+  const addSegmentMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", "/api/segments", { name });
+      return await response.json();
+    },
+    onSuccess: (newSegment) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
+      setIsNewSegmentDialogOpen(false);
+      setNewSegmentName('');
+      setIsAddingSegment(false);
+      
+      // Adicionar o novo segmento à lista de segmentos selecionados
+      setSegmentTags([...segmentTags, newSegment.name]);
+      
+      toast({
+        title: "Segmento adicionado",
+        description: `O segmento "${newSegment.name}" foi adicionado com sucesso.`,
+      });
+    },
+    onError: (error) => {
+      setIsAddingSegment(false);
+      toast({
+        title: "Erro ao adicionar segmento",
+        description: error.message || "Ocorreu um erro ao adicionar o segmento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -409,38 +445,7 @@ export default function Clients() {
     queryKey: ['/api/projects']
   });
   
-  // Fetch segments
-  const { data: segments } = useQuery({
-    queryKey: ['/api/segments']
-  });
-  
-  // Mutation for adding new segment
-  const addSegmentMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", "/api/segments", { name });
-      return await response.json();
-    },
-    onSuccess: (newSegment) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
-      setSegmentTags([...segmentTags, newSegment.name]);
-      setNewSegmentName("");
-      setIsAddingSegment(false);
-      setIsNewSegmentDialogOpen(false);
-      
-      toast({
-        title: "Segmento adicionado",
-        description: `${newSegment.name} foi adicionado à lista de segmentos.`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao adicionar segmento",
-        description: error.message || "Ocorreu um erro ao adicionar o segmento. Tente novamente.",
-        variant: "destructive",
-      });
-      setIsAddingSegment(false);
-    },
-  });
+  // Já temos a consulta segments mais acima no arquivo e não precisamos de uma segunda
 
   // Filter clients based on criteria
   const filteredClients = clients?.filter(client => {
