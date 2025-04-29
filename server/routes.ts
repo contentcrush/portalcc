@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/clients/:id/responsibles", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientResponsibleSchema), async (req, res) => {
+  app.post("/api/clients/:id/responsibles", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       
@@ -372,17 +372,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
+      // Adiciona client_id ao body antes da validação
+      const requestData = {
+        ...req.body,
+        client_id: clientId
+      };
+      
+      // Valida manualmente o body com o schema
+      try {
+        insertClientResponsibleSchema.parse(requestData);
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          return res.status(400).json({ message: "Validation error", errors: validationError.errors });
+        }
+        throw validationError;
+      }
+      
       // Verifica se o usuário existe
-      const user = await storage.getUser(req.body.user_id);
+      const user = await storage.getUser(requestData.user_id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
       // Cria o vínculo de responsável
-      const responsible = await storage.createClientResponsible({
-        ...req.body,
-        client_id: clientId
-      });
+      const responsible = await storage.createClientResponsible(requestData);
       
       res.status(201).json(responsible);
     } catch (error) {
