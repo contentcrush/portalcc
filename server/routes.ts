@@ -301,19 +301,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update client" });
     }
   });
-
-  app.delete("/api/clients/:id", authenticateJWT, requireRole(['admin']), async (req, res) => {
+  
+  // Excluir cliente
+  app.delete("/api/clients/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      // Excluir o cliente
       const success = await storage.deleteClient(id);
       
       if (!success) {
-        return res.status(404).json({ message: "Client not found" });
+        return res.status(500).json({ message: "Não foi possível excluir o cliente" });
       }
       
-      res.status(204).end();
+      res.status(200).json({ message: "Cliente excluído com sucesso" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete client" });
+      console.error("Erro ao excluir cliente:", error);
+      res.status(500).json({ message: "Falha ao excluir cliente" });
     }
   });
 
