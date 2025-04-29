@@ -1132,32 +1132,34 @@ export default function Clients() {
                         >
                           Foto / Logo
                         </label>
-                        <div className="relative group cursor-pointer">
-                          <div className="h-24 w-24 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 hover:border-primary transition-colors">
-                            {avatarPreview ? (
-                              <Avatar className="h-full w-full">
-                                <AvatarImage src={avatarPreview} alt="Preview" />
-                                <AvatarFallback className="text-lg">
-                                  {form.watch('name') ? getInitials(form.watch('name')) : 'CL'}
-                                </AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center p-2">
-                                <Image className="h-8 w-8 text-gray-400" />
-                                <span className="text-xs text-gray-500 mt-1 text-center">Adicionar imagem</span>
+                        <div className="relative">
+                          <label htmlFor="avatar-upload" className="group cursor-pointer block">
+                            <div className="h-24 w-24 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 hover:border-primary transition-colors">
+                              {avatarPreview ? (
+                                <Avatar className="h-full w-full">
+                                  <AvatarImage src={avatarPreview} alt="Preview" />
+                                  <AvatarFallback className="text-lg">
+                                    {form.watch('name') ? getInitials(form.watch('name')) : 'CL'}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center p-2">
+                                  <Image className="h-8 w-8 text-gray-400" />
+                                  <span className="text-xs text-gray-500 mt-1 text-center">Adicionar imagem</span>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Upload className="h-6 w-6 text-white" />
                               </div>
-                            )}
-                            <input
-                              id="avatar-upload"
-                              type="file"
-                              className="sr-only"
-                              accept="image/*"
-                              onChange={handleAvatarUpload}
-                            />
-                            <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Upload className="h-6 w-6 text-white" />
                             </div>
-                          </div>
+                          </label>
+                          <input
+                            id="avatar-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                          />
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
                           JPG, PNG ou GIF
