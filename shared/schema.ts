@@ -210,7 +210,8 @@ export const clientResponsibles = pgTable("client_responsibles", {
   id: serial("id").primaryKey(),
   client_id: integer("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
   user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text("role"), // Cargo ou função do responsável com relação ao cliente
+  role: text("role").notNull(), // Cargo ou função do responsável com relação ao cliente
+  since: timestamp("since").notNull(), // Data de início da responsabilidade
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -291,6 +292,9 @@ export const insertClientResponsibleSchema = clientResponsibleBaseSchema.extend(
   ),
   user_id: z.union([z.string(), z.number()]).transform(val => 
     typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+  since: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
   )
 });
 
