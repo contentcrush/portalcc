@@ -9,10 +9,147 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import util from "util";
+import multer from "multer";
+
+// Cria diretório de uploads se não existir
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configuração do Multer para upload de arquivos
+const storage_config = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    // Gerar nome único para o arquivo
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const extension = path.extname(file.originalname);
+    cb(null, `${uniqueSuffix}${extension}`);
+  }
+});
+
+const upload = multer({ 
+  storage: storage_config,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo não suportado. Use JPG, PNG ou GIF.'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
+  
+  // Rota para consulta de CNPJ
+  app.get("/api/cnpj/:cnpj", authenticateJWT, async (req, res) => {
+    try {
+      const cnpj = req.params.cnpj.replace(/[^\d]/g, '');
+      
+      if (cnpj.length !== 14) {
+        return res.status(400).json({ message: "CNPJ inválido" });
+      }
+      
+      // Simular uma consulta a serviço de CNPJ
+      // Em um ambiente real, isso seria uma chamada à API Brasil.io ou Receita WS
+      
+      // Finja diferentes respostas baseado no CNPJ para fins de teste
+      let empresaData;
+      
+      if (cnpj === '12345678000123') {
+        empresaData = {
+          name: "Empresa ABC Ltda",
+          address: "Av Principal, 1000",
+          city: "São Paulo",
+          state: "SP",
+          website: "www.empresaabc.com.br"
+        };
+      } else if (cnpj === '98765432000198') {
+        empresaData = {
+          name: "Comércio XYZ S.A.",
+          address: "Rua do Comércio, 500",
+          city: "Rio de Janeiro",
+          state: "RJ",
+          website: "www.comercioxyz.com.br"
+        };
+      } else {
+        // Para qualquer outro CNPJ, gerar dados simulados
+        const nomeFantasia = `Empresa ${cnpj.substring(0, 4)}-${cnpj.substring(4, 8)}`;
+        empresaData = {
+          name: nomeFantasia,
+          address: `Av. Brasil, ${Math.floor(Math.random() * 2000) + 1}`,
+          city: "São Paulo",
+          state: "SP",
+          website: `www.${nomeFantasia.toLowerCase().replace(/\s/g, '')}.com.br`
+        };
+      }
+      
+      // Em uma implementação real, você conectaria a uma API como
+      // Receita WS ou Brasil.io para obter dados reais
+      
+      res.json(empresaData);
+    } catch (error) {
+      console.error("Erro ao consultar CNPJ:", error);
+      res.status(500).json({ message: "Falha ao consultar dados do CNPJ" });
+    }
+  });
+  
+  // Rota para obter segmentos disponíveis
+  app.get("/api/segments", authenticateJWT, async (_req, res) => {
+    try {
+      // Lista de segmentos padrão
+      const defaultSegments = [
+        "Agro", 
+        "Educação", 
+        "B2B SaaS", 
+        "Varejo", 
+        "Saúde", 
+        "Finanças", 
+        "Tecnologia",
+        "Mídia",
+        "Serviços"
+      ];
+      
+      // Em implementação real, buscar segmentos do banco de dados
+      // Aqui estamos usando a lista fixa para simplificar
+      
+      res.json(defaultSegments);
+    } catch (error) {
+      console.error("Erro ao obter segmentos:", error);
+      res.status(500).json({ message: "Falha ao obter lista de segmentos" });
+    }
+  });
+  
+  // Rota para salvar novos segmentos
+  app.post("/api/segments", authenticateJWT, async (req, res) => {
+    try {
+      const { segment } = req.body;
+      
+      if (!segment || typeof segment !== 'string') {
+        return res.status(400).json({ message: "Nome do segmento é obrigatório" });
+      }
+      
+      // Em implementação real, salvar o segmento no banco de dados
+      // Aqui apenas simulamos sucesso
+      
+      res.status(201).json({ message: "Segmento adicionado com sucesso", segment });
+    } catch (error) {
+      console.error("Erro ao adicionar segmento:", error);
+      res.status(500).json({ message: "Falha ao adicionar novo segmento" });
+    }
+  });
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
