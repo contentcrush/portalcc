@@ -3,14 +3,13 @@ import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
-  expenses, events, refreshTokens, clientResponsibles,
+  expenses, events, refreshTokens,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
-  type FinancialDocument, type Expense, type Event, type ClientResponsible,
+  type FinancialDocument, type Expense, type Event, 
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
-  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
-  type InsertClientResponsible
+  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent
 } from "../shared/schema";
 
 export interface IStorage {
@@ -31,11 +30,6 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: number): Promise<boolean>;
-  
-  // Client Responsibles (Responsáveis)
-  getClientResponsibles(clientId: number): Promise<ClientResponsible[]>;
-  createClientResponsible(responsible: InsertClientResponsible): Promise<ClientResponsible>;
-  deleteClientResponsible(id: number): Promise<boolean>;
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
@@ -123,7 +117,6 @@ export class MemStorage implements IStorage {
   private financialDocumentsData: Map<number, FinancialDocument>;
   private expensesData: Map<number, Expense>;
   private eventsData: Map<number, Event>;
-  private clientResponsiblesData: Map<number, ClientResponsible>;
   
   private userId: number = 1;
   private clientId: number = 1;
@@ -137,7 +130,6 @@ export class MemStorage implements IStorage {
   private financialDocumentId: number = 1;
   private expenseId: number = 1;
   private eventId: number = 1;
-  private clientResponsibleId: number = 1;
 
   constructor() {
     this.usersData = new Map();
@@ -152,7 +144,6 @@ export class MemStorage implements IStorage {
     this.financialDocumentsData = new Map();
     this.expensesData = new Map();
     this.eventsData = new Map();
-    this.clientResponsiblesData = new Map();
 
     // Add some initial data
     this.seedData();
@@ -1157,24 +1148,6 @@ export class MemStorage implements IStorage {
   async deleteEvent(id: number): Promise<boolean> {
     return this.eventsData.delete(id);
   }
-  
-  // Client Responsibles
-  async getClientResponsibles(clientId: number): Promise<ClientResponsible[]> {
-    return Array.from(this.clientResponsiblesData.values()).filter(
-      (responsible) => responsible.client_id === clientId
-    );
-  }
-
-  async createClientResponsible(responsible: InsertClientResponsible): Promise<ClientResponsible> {
-    const id = this.clientResponsibleId++;
-    const newResponsible: ClientResponsible = { ...responsible, id };
-    this.clientResponsiblesData.set(id, newResponsible);
-    return newResponsible;
-  }
-
-  async deleteClientResponsible(id: number): Promise<boolean> {
-    return this.clientResponsiblesData.delete(id);
-  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1511,21 +1484,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClientInteraction(id: number): Promise<boolean> {
     const result = await db.delete(clientInteractions).where(eq(clientInteractions.id, id));
-    return true;
-  }
-  
-  // Client Responsibles
-  async getClientResponsibles(clientId: number): Promise<ClientResponsible[]> {
-    return await db.select().from(clientResponsibles).where(eq(clientResponsibles.client_id, clientId));
-  }
-
-  async createClientResponsible(insertResponsible: InsertClientResponsible): Promise<ClientResponsible> {
-    const [responsible] = await db.insert(clientResponsibles).values(insertResponsible).returning();
-    return responsible;
-  }
-
-  async deleteClientResponsible(id: number): Promise<boolean> {
-    const result = await db.delete(clientResponsibles).where(eq(clientResponsibles.id, id));
     return true;
   }
   

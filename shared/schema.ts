@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, json, pgEnum, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, json, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -205,16 +205,6 @@ export const events = pgTable("events", {
   creation_date: timestamp("creation_date").defaultNow(),
 });
 
-// Tabela para armazenar os responsáveis internos de cada cliente
-export const clientResponsibles = pgTable("client_responsibles", {
-  id: serial("id").primaryKey(),
-  client_id: integer("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
-  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text("role").notNull(), // Cargo ou função do responsável com relação ao cliente
-  since: date("since").notNull(), // Data de início da responsabilidade
-  created_at: timestamp("created_at").defaultNow(),
-});
-
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ 
   id: true, 
@@ -284,23 +274,6 @@ export const insertEventSchema = eventBaseSchema.extend({
   )
 });
 
-// Schema para responsáveis de clientes 
-const clientResponsibleBaseSchema = createInsertSchema(clientResponsibles).omit({ id: true, created_at: true });
-export const insertClientResponsibleSchema = clientResponsibleBaseSchema.extend({
-  client_id: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-  user_id: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-  since: z.union([z.string(), z.date()]).transform(val => {
-    if (typeof val === 'string') {
-      return new Date(val);
-    }
-    return val;
-  })
-});
-
 // Select types
 export type User = typeof users.$inferSelect;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -315,7 +288,6 @@ export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Event = typeof events.$inferSelect;
-export type ClientResponsible = typeof clientResponsibles.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -331,7 +303,6 @@ export type InsertClientInteraction = z.infer<typeof insertClientInteractionSche
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
-export type InsertClientResponsible = z.infer<typeof insertClientResponsibleSchema>;
 
 // Definição de relações
 export const usersRelations = relations(users, ({ many }) => ({
@@ -342,8 +313,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   clientInteractions: many(clientInteractions),
   expenses: many(expenses),
   events: many(events),
-  refreshTokens: many(refreshTokens),
-  clientResponsibilities: many(clientResponsibles)
+  refreshTokens: many(refreshTokens)
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -357,19 +327,7 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   projects: many(projects),
   clientInteractions: many(clientInteractions),
   financialDocuments: many(financialDocuments),
-  events: many(events),
-  responsibles: many(clientResponsibles)
-}));
-
-export const clientResponsiblesRelations = relations(clientResponsibles, ({ one }) => ({
-  client: one(clients, {
-    fields: [clientResponsibles.client_id],
-    references: [clients.id]
-  }),
-  user: one(users, {
-    fields: [clientResponsibles.user_id],
-    references: [users.id]
-  })
+  events: many(events)
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
