@@ -664,6 +664,16 @@ export default function Clients() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
+                        {client.logo ? (
+                          <AvatarImage 
+                            src={client.logo} 
+                            alt={client.name}
+                            onError={(e) => {
+                              console.log("Erro ao carregar logo do cliente:", client.logo);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
                         <AvatarFallback 
                           style={{ 
                             backgroundColor: generateAvatarColor(client.name),
@@ -851,6 +861,16 @@ export default function Clients() {
                   <TableCell>
                     <div className="flex items-center">
                       <Avatar className="h-8 w-8 mr-3">
+                        {client.logo ? (
+                          <AvatarImage 
+                            src={client.logo} 
+                            alt={client.name}
+                            onError={(e) => {
+                              console.log("Erro ao carregar logo do cliente (lista):", client.logo);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
                         <AvatarFallback 
                           style={{ 
                             backgroundColor: generateAvatarColor(client.name),

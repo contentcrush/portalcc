@@ -30,8 +30,18 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const dataUrl = event.target?.result as string;
-          onChange(dataUrl);
-          setImagePreview(dataUrl);
+          // Garantir que temos uma string limpa sem espaços extras
+          const trimmedDataUrl = dataUrl.trim();
+          
+          // Verificar se a string base64 é válida
+          if (trimmedDataUrl.startsWith('data:image/')) {
+            onChange(trimmedDataUrl);
+            setImagePreview(trimmedDataUrl);
+            console.log("Logo salvo com sucesso:", trimmedDataUrl.substring(0, 50) + "...");
+          } else {
+            console.error("Formato de imagem inválido:", trimmedDataUrl.substring(0, 50));
+            throw new Error("Formato de imagem inválido");
+          }
         };
         reader.readAsDataURL(file);
       }
