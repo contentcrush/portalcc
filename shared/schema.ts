@@ -78,8 +78,6 @@ export const clients = pgTable("clients", {
   city: text("city"),
   since: timestamp("since"),
   notes: text("notes"),
-  avatar: text("avatar"),  // Campo para armazenar URL da imagem
-  segments: text("segments"),  // Campo para armazenar segmentos como string separada por vírgulas
 });
 
 export const projects = pgTable("projects", {

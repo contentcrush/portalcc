@@ -99,7 +99,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import { getQueryFn } from "@/lib/queryClient";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
@@ -131,45 +130,6 @@ export default function Clients() {
   const [isCollapseOpen, setIsCollapseOpen] = useState(false);
   const [segmentTags, setSegmentTags] = useState<string[]>([]);
   const [isLookupCnpj, setIsLookupCnpj] = useState(false);
-  const [newSegmentName, setNewSegmentName] = useState("");
-  const [isAddingSegment, setIsAddingSegment] = useState(false);
-  const [isNewSegmentDialogOpen, setIsNewSegmentDialogOpen] = useState(false);
-  
-  // Query para buscar segmentos
-  const { data: segments = [] } = useQuery<{ id: number; name: string }[]>({
-    queryKey: ['/api/segments'],
-    queryFn: getQueryFn(),
-  });
-  
-  // Mutation para adicionar novo segmento
-  const addSegmentMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", "/api/segments", { name });
-      return await response.json();
-    },
-    onSuccess: (newSegment) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/segments'] });
-      setIsNewSegmentDialogOpen(false);
-      setNewSegmentName('');
-      setIsAddingSegment(false);
-      
-      // Adicionar o novo segmento à lista de segmentos selecionados
-      setSegmentTags([...segmentTags, newSegment.name]);
-      
-      toast({
-        title: "Segmento adicionado",
-        description: `O segmento "${newSegment.name}" foi adicionado com sucesso.`,
-      });
-    },
-    onError: (error) => {
-      setIsAddingSegment(false);
-      toast({
-        title: "Erro ao adicionar segmento",
-        description: error.message || "Ocorreu um erro ao adicionar o segmento. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -284,7 +244,7 @@ export default function Clients() {
   });
 
   // Função para lidar com upload de avatar
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -314,41 +274,10 @@ export default function Clients() {
     };
     reader.readAsDataURL(file);
     
-    // Criar FormData para envio do arquivo
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-      // Enviar arquivo para o servidor
-      const response = await fetch('/api/upload/avatar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao fazer upload da imagem');
-      }
-      
-      const result = await response.json();
-      
-      // Definir a URL retornada pelo servidor no formulário
-      form.setValue('avatar', result.fileUrl);
-      
-      toast({
-        title: "Upload realizado com sucesso",
-        description: "A imagem foi carregada com sucesso."
-      });
-    } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-      toast({
-        title: "Erro no upload",
-        description: "Não foi possível enviar a imagem. Tente novamente.",
-        variant: "destructive"
-      });
-    }
+    // Em uma implementação real, aqui você faria upload para o servidor
+    // e armazenaria a URL retornada
+    // Por enquanto, vamos apenas simular isso
+    form.setValue('avatar', URL.createObjectURL(file));
   };
   
   // Função para buscar dados do CNPJ
@@ -367,39 +296,26 @@ export default function Clients() {
     setIsLookupCnpj(true);
     
     try {
-      // Consulta à API
-      const response = await fetch(`/api/cnpj/${cnpj}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao consultar CNPJ');
-      }
-      
-      const data = await response.json();
-      
-      // Preencher o formulário com os dados retornados
-      form.setValue('name', data.name || '');
-      form.setValue('address', data.address || '');
-      form.setValue('city', data.city || '');
-      form.setValue('website', data.website || '');
-      
-      toast({
-        title: "CNPJ encontrado",
-        description: "Dados da empresa preenchidos automaticamente.",
-      });
+      // Simulação de consulta à API
+      // Em um ambiente real, isso seria uma chamada à API Receita WS / Brasil.io
+      setTimeout(() => {
+        // Simular dados retornados
+        form.setValue('name', 'Empresa Simulada Ltda.');
+        form.setValue('address', 'Av. Brasil, 1500');
+        form.setValue('city', 'São Paulo');
+        
+        toast({
+          title: "CNPJ encontrado",
+          description: "Dados da empresa preenchidos automaticamente.",
+        });
+        setIsLookupCnpj(false);
+      }, 1500);
     } catch (error) {
-      console.error("Erro ao consultar CNPJ:", error);
       toast({
         title: "Erro na consulta",
         description: "Não foi possível consultar os dados do CNPJ.",
         variant: "destructive",
       });
-    } finally {
       setIsLookupCnpj(false);
     }
   };
@@ -445,8 +361,6 @@ export default function Clients() {
   const { data: projects } = useQuery({
     queryKey: ['/api/projects']
   });
-  
-  // Já temos a consulta segments mais acima no arquivo e não precisamos de uma segunda
 
   // Filter clients based on criteria
   const filteredClients = clients?.filter(client => {
@@ -1467,11 +1381,13 @@ export default function Clients() {
                           <SelectValue placeholder="Selecionar segmento" />
                         </SelectTrigger>
                         <SelectContent>
-                          {segments?.map((segment: any) => (
-                            <SelectItem key={segment.id || segment.name} value={segment.name}>
-                              {segment.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="Agro">Agro</SelectItem>
+                          <SelectItem value="Educação">Educação</SelectItem>
+                          <SelectItem value="B2B SaaS">B2B SaaS</SelectItem>
+                          <SelectItem value="Varejo">Varejo</SelectItem>
+                          <SelectItem value="Saúde">Saúde</SelectItem>
+                          <SelectItem value="Finanças">Finanças</SelectItem>
+                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
                         </SelectContent>
                       </Select>
                       
@@ -1479,7 +1395,13 @@ export default function Clients() {
                         type="button" 
                         variant="outline" 
                         size="icon"
-                        onClick={() => setIsNewSegmentDialogOpen(true)}
+                        onClick={() => {
+                          // Em uma implementação real, isso abriria um dialog para adicionar novo segmento
+                          const newSegment = prompt("Adicionar novo segmento:");
+                          if (newSegment && !segmentTags.includes(newSegment)) {
+                            setSegmentTags([...segmentTags, newSegment]);
+                          }
+                        }}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -1613,58 +1535,6 @@ export default function Clients() {
               </Tabs>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog para criação de novo segmento */}
-      <Dialog open={isNewSegmentDialogOpen} onOpenChange={setIsNewSegmentDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Novo Segmento</DialogTitle>
-            <DialogDescription>
-              Adicione um novo segmento para classificar seus clientes.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="segmentName">Nome do Segmento</Label>
-              <Input 
-                id="segmentName" 
-                placeholder="Ex: Tecnologia, Educação, Saúde" 
-                value={newSegmentName}
-                onChange={(e) => setNewSegmentName(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsNewSegmentDialogOpen(false)}
-              disabled={isAddingSegment}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => {
-                if (newSegmentName.trim()) {
-                  setIsAddingSegment(true);
-                  addSegmentMutation.mutate(newSegmentName.trim());
-                }
-              }}
-              disabled={!newSegmentName.trim() || isAddingSegment}
-            >
-              {isAddingSegment ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
-                  Salvando...
-                </>
-              ) : (
-                'Adicionar Segmento'
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
