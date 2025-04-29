@@ -60,24 +60,28 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
   return (
     <Avatar className={`${sizeClasses[size]} ${className}`}>
       {!error && validLogo ? (
-        <img 
-          src={validLogo} 
-          alt={`Logo de ${name}`}
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            console.error(`ClientAvatar: Erro ao carregar logo para "${name}"`, e);
-            // Log do elemento que falhou
-            console.error("Elemento que falhou:", e.currentTarget.outerHTML);
-            // Log da URL que falhou
-            console.error("URL que falhou:", e.currentTarget.src);
-            setError(true);
-          }}
-        />
+        <>
+          <img 
+            key={`logo-${name}-${Math.random()}`}
+            src={validLogo} 
+            alt={`Logo de ${name}`}
+            className="h-full w-full object-cover relative z-10"
+            style={{ position: 'absolute', top: 0, left: 0 }}
+            onError={(e) => {
+              console.error(`ClientAvatar: Erro ao carregar logo para "${name}"`, e);
+              console.error("Elemento que falhou:", e.currentTarget.outerHTML);
+              console.error("URL que falhou:", e.currentTarget.src);
+              setError(true);
+            }}
+          />
+        </>
       ) : null}
       <AvatarFallback 
         style={{ 
           backgroundColor, 
-          color: 'white' 
+          color: 'white',
+          position: !error && validLogo ? 'relative' : 'static',
+          zIndex: !error && validLogo ? 5 : 10
         }}
       >
         {initials}

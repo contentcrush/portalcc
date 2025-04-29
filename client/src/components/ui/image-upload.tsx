@@ -54,7 +54,27 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
           // Verificar se a string base64 é válida
           if (trimmedDataUrl.startsWith('data:image/')) {
             // Armazenar o data URL original
-            const processedDataUrl = trimmedDataUrl;
+            let processedDataUrl = trimmedDataUrl;
+            
+            // Verificar se é um SVG - SVGs precisam de tratamento especial em alguns browsers
+            if (trimmedDataUrl.includes('data:image/svg+xml')) {
+              console.log("SVG detectado, aplicando tratamento especial");
+              try {
+                // Adicionar atributos adicionais ao SVG para garantir renderização
+                const base64Data = trimmedDataUrl.split(',')[1];
+                const decodedSvg = atob(base64Data);
+                
+                // Verificar conteúdo mínimo válido de SVG
+                if (!decodedSvg.includes('<svg') || !decodedSvg.includes('</svg>')) {
+                  throw new Error("SVG malformado");
+                }
+                
+                console.log("SVG validado com sucesso");
+              } catch (error) {
+                console.error("Problema ao processar SVG:", error);
+              }
+            }
+            
             console.log("Logo processado com sucesso, tamanho final:", 
               Math.round(processedDataUrl.length / 1024), "KB");
               

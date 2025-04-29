@@ -164,7 +164,7 @@ export default function Clients() {
       address: "",
       city: "",
       notes: "",
-      avatar: "", // Campo para armazenar a URL da imagem de avatar
+      logo: "", // Campo para armazenar a URL da imagem de logo do cliente
     },
   });
 
@@ -293,7 +293,7 @@ export default function Clients() {
         setAvatarPreview(dataUrl);
         
         // Também armazenamos a dataUrl para enviar ao servidor
-        form.setValue('avatar', dataUrl);
+        form.setValue('logo', dataUrl);
       }
     };
     reader.readAsDataURL(file);
