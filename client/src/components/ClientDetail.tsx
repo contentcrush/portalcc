@@ -4,6 +4,7 @@ import { formatDate, formatCurrency, getInitials, calculatePercentChange } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Building, 
   Mail, 
@@ -300,9 +301,18 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           <Card>
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-                <div className="bg-blue-100 text-blue-600 rounded-full w-16 h-16 flex items-center justify-center font-semibold text-2xl">
-                  {getInitials(client.name)}
-                </div>
+                {client.logo ? (
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={client.logo} alt={client.name} />
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
+                      {getInitials(client.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="bg-blue-100 text-blue-600 rounded-full w-16 h-16 flex items-center justify-center font-semibold text-2xl">
+                    {getInitials(client.name)}
+                  </div>
+                )}
                 <div>
                   <h2 className="text-xl font-semibold">{client.name}</h2>
                   <div className="flex items-center text-sm text-gray-500">
