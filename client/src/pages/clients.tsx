@@ -1461,13 +1461,11 @@ export default function Clients() {
                           <SelectValue placeholder="Selecionar segmento" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Agro">Agro</SelectItem>
-                          <SelectItem value="Educação">Educação</SelectItem>
-                          <SelectItem value="B2B SaaS">B2B SaaS</SelectItem>
-                          <SelectItem value="Varejo">Varejo</SelectItem>
-                          <SelectItem value="Saúde">Saúde</SelectItem>
-                          <SelectItem value="Finanças">Finanças</SelectItem>
-                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
+                          {segments?.map((segment: any) => (
+                            <SelectItem key={segment.id || segment.name} value={segment.name}>
+                              {segment.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       
@@ -1475,13 +1473,7 @@ export default function Clients() {
                         type="button" 
                         variant="outline" 
                         size="icon"
-                        onClick={() => {
-                          // Em uma implementação real, isso abriria um dialog para adicionar novo segmento
-                          const newSegment = prompt("Adicionar novo segmento:");
-                          if (newSegment && !segmentTags.includes(newSegment)) {
-                            setSegmentTags([...segmentTags, newSegment]);
-                          }
-                        }}
+                        onClick={() => setIsNewSegmentDialogOpen(true)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -1615,6 +1607,58 @@ export default function Clients() {
               </Tabs>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para criação de novo segmento */}
+      <Dialog open={isNewSegmentDialogOpen} onOpenChange={setIsNewSegmentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Novo Segmento</DialogTitle>
+            <DialogDescription>
+              Adicione um novo segmento para classificar seus clientes.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="segmentName">Nome do Segmento</Label>
+              <Input 
+                id="segmentName" 
+                placeholder="Ex: Tecnologia, Educação, Saúde" 
+                value={newSegmentName}
+                onChange={(e) => setNewSegmentName(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsNewSegmentDialogOpen(false)}
+              disabled={isAddingSegment}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => {
+                if (newSegmentName.trim()) {
+                  setIsAddingSegment(true);
+                  addSegmentMutation.mutate(newSegmentName.trim());
+                }
+              }}
+              disabled={!newSegmentName.trim() || isAddingSegment}
+            >
+              {isAddingSegment ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
+                  Salvando...
+                </>
+              ) : (
+                'Adicionar Segmento'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

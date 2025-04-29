@@ -1135,6 +1135,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete event" });
     }
   });
+  
+  // Lista de segmentos (mock estático para demonstração)
+  // Em uma implementação real, esses dados seriam armazenados no banco de dados
+  let segments = [
+    { id: 1, name: 'Agro' },
+    { id: 2, name: 'Educação' },
+    { id: 3, name: 'B2B SaaS' },
+    { id: 4, name: 'Varejo' },
+    { id: 5, name: 'Saúde' },
+    { id: 6, name: 'Finanças' },
+    { id: 7, name: 'Tecnologia' }
+  ];
+  
+  // Endpoints para segmentos
+  app.get("/api/segments", authenticateJWT, (_req, res) => {
+    try {
+      res.json(segments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch segments" });
+    }
+  });
+  
+  app.post("/api/segments", authenticateJWT, async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ message: "Nome de segmento inválido" });
+      }
+      
+      // Verifica se o segmento já existe
+      if (segments.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+        return res.status(400).json({ message: "Segmento já existe" });
+      }
+      
+      // Gera um novo ID (em um sistema real, isso seria feito pelo banco de dados)
+      const newId = segments.length > 0 ? Math.max(...segments.map(s => s.id)) + 1 : 1;
+      
+      const newSegment = {
+        id: newId,
+        name: name.trim()
+      };
+      
+      segments.push(newSegment);
+      
+      res.status(201).json(newSegment);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create segment" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
