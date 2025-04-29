@@ -372,30 +372,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
+      console.log("Original request body:", req.body);
+      
       // Adiciona client_id ao body antes da validação
       const requestData = {
         ...req.body,
         client_id: clientId
       };
       
+      console.log("Request data before validation:", requestData);
+      
       // Valida manualmente o body com o schema
+      let validatedData;
       try {
-        insertClientResponsibleSchema.parse(requestData);
+        validatedData = insertClientResponsibleSchema.parse(requestData);
+        console.log("Validated data after schema parsing:", validatedData);
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
+          console.error("Validation error:", validationError.errors);
           return res.status(400).json({ message: "Validation error", errors: validationError.errors });
         }
         throw validationError;
       }
       
       // Verifica se o usuário existe
-      const user = await storage.getUser(requestData.user_id);
+      const user = await storage.getUser(validatedData.user_id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Ensure since is a valid Date object
+      if (validatedData.since && !(validatedData.since instanceof Date)) {
+        console.error("Since is not a Date object:", validatedData.since);
+        if (typeof validatedData.since === 'string') {
+          validatedData.since = new Date(validatedData.since);
+          console.log("Converted since to Date:", validatedData.since);
+        }
+      }
+      
+      console.log("Final data before creating responsible:", validatedData);
+      
       // Cria o vínculo de responsável
-      const responsible = await storage.createClientResponsible(requestData);
+      const responsible = await storage.createClientResponsible(validatedData);
       
       res.status(201).json(responsible);
     } catch (error) {

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, json, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, json, pgEnum, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -211,7 +211,7 @@ export const clientResponsibles = pgTable("client_responsibles", {
   client_id: integer("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
   user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text("role").notNull(), // Cargo ou função do responsável com relação ao cliente
-  since: timestamp("since").notNull(), // Data de início da responsabilidade
+  since: date("since").notNull(), // Data de início da responsabilidade
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -293,9 +293,12 @@ export const insertClientResponsibleSchema = clientResponsibleBaseSchema.extend(
   user_id: z.union([z.string(), z.number()]).transform(val => 
     typeof val === 'string' ? parseInt(val, 10) : val
   ),
-  since: z.union([z.string(), z.date()]).transform(val => 
-    typeof val === 'string' ? new Date(val) : val
-  )
+  since: z.union([z.string(), z.date()]).transform(val => {
+    if (typeof val === 'string') {
+      return new Date(val);
+    }
+    return val;
+  })
 });
 
 // Select types
