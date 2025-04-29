@@ -78,6 +78,7 @@ export const clients = pgTable("clients", {
   city: text("city"),
   since: timestamp("since"),
   notes: text("notes"),
+  logo: text("logo"),
 });
 
 export const projects = pgTable("projects", {

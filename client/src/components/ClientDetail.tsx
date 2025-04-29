@@ -126,6 +126,9 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
   });
   
+  // Estado para preview de imagem
+  const [logoPreview, setLogoPreview] = useState<string | null>(client?.logo || null);
+  
   // Formulário para edição de cliente
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -142,6 +145,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       address: client?.address || "",
       city: client?.city || "",
       notes: client?.notes || "",
+      logo: client?.logo || "",
     }
   });
   
