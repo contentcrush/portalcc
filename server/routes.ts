@@ -14,6 +14,7 @@ import fs from "fs";
 import path from "path";
 import util from "util";
 import multer from "multer";
+import express from "express";
 
 // Cria diretório de uploads se não existir
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -52,6 +53,41 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
+
+  // Rota para upload de arquivo (avatar do cliente)
+  app.post("/api/upload/avatar", authenticateJWT, upload.single('file'), async (req, res) => {
+    try {
+      // Verificar se o arquivo foi enviado
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+      }
+
+      // Formate a URL para acesso ao arquivo
+      const fileUrl = `/uploads/${req.file.filename}`;
+      
+      // Retorne a URL para o frontend
+      res.json({
+        message: "Arquivo enviado com sucesso",
+        fileUrl,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+    } catch (error) {
+      console.error("Erro ao fazer upload de arquivo:", error);
+      res.status(500).json({ message: "Falha ao processar upload de arquivo" });
+    }
+  });
+
+  // Servir arquivos estáticos da pasta uploads
+  app.use('/uploads', (req, res, next) => {
+    // Apenas usuários autenticados podem acessar os arquivos
+    if (req.isAuthenticated()) {
+      return express.static(uploadsDir)(req, res, next);
+    } else {
+      res.status(401).json({ message: "Acesso não autorizado" });
+    }
+  });
   
   // Rota para consulta de CNPJ
   app.get("/api/cnpj/:cnpj", authenticateJWT, async (req, res) => {

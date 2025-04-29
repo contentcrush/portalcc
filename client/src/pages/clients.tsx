@@ -244,7 +244,7 @@ export default function Clients() {
   });
 
   // Função para lidar com upload de avatar
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -274,10 +274,41 @@ export default function Clients() {
     };
     reader.readAsDataURL(file);
     
-    // Em uma implementação real, aqui você faria upload para o servidor
-    // e armazenaria a URL retornada
-    // Por enquanto, vamos apenas simular isso
-    form.setValue('avatar', URL.createObjectURL(file));
+    // Criar FormData para envio do arquivo
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      // Enviar arquivo para o servidor
+      const response = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload da imagem');
+      }
+      
+      const result = await response.json();
+      
+      // Definir a URL retornada pelo servidor no formulário
+      form.setValue('avatar', result.fileUrl);
+      
+      toast({
+        title: "Upload realizado com sucesso",
+        description: "A imagem foi carregada com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível enviar a imagem. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Função para buscar dados do CNPJ
@@ -296,26 +327,39 @@ export default function Clients() {
     setIsLookupCnpj(true);
     
     try {
-      // Simulação de consulta à API
-      // Em um ambiente real, isso seria uma chamada à API Receita WS / Brasil.io
-      setTimeout(() => {
-        // Simular dados retornados
-        form.setValue('name', 'Empresa Simulada Ltda.');
-        form.setValue('address', 'Av. Brasil, 1500');
-        form.setValue('city', 'São Paulo');
-        
-        toast({
-          title: "CNPJ encontrado",
-          description: "Dados da empresa preenchidos automaticamente.",
-        });
-        setIsLookupCnpj(false);
-      }, 1500);
+      // Consulta à API
+      const response = await fetch(`/api/cnpj/${cnpj}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao consultar CNPJ');
+      }
+      
+      const data = await response.json();
+      
+      // Preencher o formulário com os dados retornados
+      form.setValue('name', data.name || '');
+      form.setValue('address', data.address || '');
+      form.setValue('city', data.city || '');
+      form.setValue('website', data.website || '');
+      
+      toast({
+        title: "CNPJ encontrado",
+        description: "Dados da empresa preenchidos automaticamente.",
+      });
     } catch (error) {
+      console.error("Erro ao consultar CNPJ:", error);
       toast({
         title: "Erro na consulta",
         description: "Não foi possível consultar os dados do CNPJ.",
         variant: "destructive",
       });
+    } finally {
       setIsLookupCnpj(false);
     }
   };
