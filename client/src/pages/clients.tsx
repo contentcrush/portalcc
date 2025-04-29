@@ -118,9 +118,15 @@ export default function Clients() {
   const [sortBy, setSortBy] = useState("recent");
   const [isNewClientDialogOpen, setIsNewClientDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [isDeleteClientDialogOpen, setIsDeleteClientDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{ id: number; name: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [deleteItemsCount, setDeleteItemsCount] = useState<{
+    projects: number;
+    interactions: number;
+    financialDocuments: number;
+  }>({ projects: 0, interactions: 0, financialDocuments: 0 });
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -451,6 +457,44 @@ export default function Clients() {
       .reduce((total: number, project: any) => total + (project.budget || 0), 0);
   };
   
+  // Mutation para excluir cliente
+  const deleteClientMutation = useMutation({
+    mutationFn: async (clientId: number) => {
+      const response = await apiRequest("DELETE", `/api/clients/${clientId}`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setIsDeleteClientDialogOpen(false);
+      setSelectedClient(null);
+      
+      toast({
+        title: "Cliente excluído com sucesso",
+        description: `O cliente foi excluído junto com ${data.deletedItems.projects} projeto(s), ${data.deletedItems.interactions} interação(ões) e ${data.deletedItems.financialDocuments} documento(s) financeiro(s).`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir cliente",
+        description: error.message || "Ocorreu um erro ao excluir o cliente. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Função para abrir o diálogo de confirmação de exclusão
+  const handleDeleteClientClick = (client: { id: number; name: string }) => {
+    setSelectedClient(client);
+    setIsDeleteClientDialogOpen(true);
+  };
+
+  // Função para excluir o cliente após confirmação
+  const confirmDeleteClient = () => {
+    if (selectedClient) {
+      deleteClientMutation.mutate(selectedClient.id);
+    }
+  };
+
   // Função para exportar dados para Excel
   const exportToExcel = () => {
     toast({
