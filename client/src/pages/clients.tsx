@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -55,6 +55,13 @@ import {
   CircleDollarSign,
   Folders,
   Activity,
+  Upload,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  Image,
+  Tag,
+  ArrowRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -82,6 +89,13 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -110,6 +124,13 @@ export default function Clients() {
   const [, navigate] = useLocation();
 
   // Formulário para novo cliente
+  // Estado para controlar etapas do formulário e outros estados do novo cliente
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [formStep, setFormStep] = useState<number>(0);
+  const [isCollapseOpen, setIsCollapseOpen] = useState(false);
+  const [segmentTags, setSegmentTags] = useState<string[]>([]);
+  const [isLookupCnpj, setIsLookupCnpj] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -125,6 +146,7 @@ export default function Clients() {
       address: "",
       city: "",
       notes: "",
+      avatar: "", // Campo para armazenar a URL da imagem de avatar
     },
   });
 
@@ -195,6 +217,102 @@ export default function Clients() {
     },
   });
 
+  // Função para lidar com upload de avatar
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Verificar tipo e tamanho
+    if (!file.type.includes('image/')) {
+      toast({
+        title: "Formato inválido",
+        description: "Por favor, selecione uma imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      toast({
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo permitido é 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Criar uma URL temporária para visualização
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Em uma implementação real, aqui você faria upload para o servidor
+    // e armazenaria a URL retornada
+    // Por enquanto, vamos apenas simular isso
+    form.setValue('avatar', URL.createObjectURL(file));
+  };
+  
+  // Função para buscar dados do CNPJ
+  const handleCnpjLookup = async () => {
+    const cnpj = form.getValues('cnpj')?.replace(/[^\d]/g, '');
+    
+    if (!cnpj || cnpj.length !== 14) {
+      toast({
+        title: "CNPJ inválido",
+        description: "Digite um CNPJ válido para realizar a consulta.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLookupCnpj(true);
+    
+    try {
+      // Simulação de consulta à API
+      // Em um ambiente real, isso seria uma chamada à API Receita WS / Brasil.io
+      setTimeout(() => {
+        // Simular dados retornados
+        form.setValue('name', 'Empresa Simulada Ltda.');
+        form.setValue('address', 'Av. Brasil, 1500');
+        form.setValue('city', 'São Paulo');
+        
+        toast({
+          title: "CNPJ encontrado",
+          description: "Dados da empresa preenchidos automaticamente.",
+        });
+        setIsLookupCnpj(false);
+      }, 1500);
+    } catch (error) {
+      toast({
+        title: "Erro na consulta",
+        description: "Não foi possível consultar os dados do CNPJ.",
+        variant: "destructive",
+      });
+      setIsLookupCnpj(false);
+    }
+  };
+  
+  // Função para navegar entre etapas do formulário
+  const handleNextStep = () => {
+    const currentValues = form.getValues();
+    
+    // Validar campos da etapa 1
+    if (formStep === 0) {
+      if (!currentValues.name || !currentValues.type) {
+        form.trigger(['name', 'type']);
+        return;
+      }
+    }
+    
+    setFormStep(formStep + 1);
+  };
+  
+  const handlePrevStep = () => {
+    setFormStep(formStep - 1);
+  };
+  
   // Função para submeter o formulário
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     // Convertendo valores para o formato esperado pela API
@@ -204,6 +322,9 @@ export default function Clients() {
       since: undefined,
     };
     createClientMutation.mutate(clientData);
+    
+    // Mostrar toast com CTA para criar novo projeto após sucesso
+    // Isso vai ser chamado após o sucesso da mutation
   };
 
   // Fetch clients
@@ -959,257 +1080,434 @@ export default function Clients() {
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Informações básicas */}
-                <div className="space-y-4 md:col-span-2">
-                  <h3 className="text-sm font-semibold uppercase text-gray-500">
-                    Informações Básicas
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome do Cliente *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Empresa XYZ" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="shortName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome Curto / Sigla</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: XYZ" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Abreviação ou acrônimo da empresa
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Cliente</FormLabel>
-                          <Select value={field.value || ""} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecionar tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {CLIENT_TYPE_OPTIONS.map(option => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-
-                    <FormField
-                      control={form.control}
-                      name="cnpj"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CNPJ</FormLabel>
-                          <FormControl>
-                            <Input placeholder="00.000.000/0000-00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+              <Tabs 
+                defaultValue="step1" 
+                value={formStep === 0 ? "step1" : "step2"}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="step1" onClick={() => setFormStep(0)}>
+                    Passo 1 — Dados básicos
+                  </TabsTrigger>
+                  <TabsTrigger value="step2" onClick={() => setFormStep(1)}>
+                    Passo 2 — Endereço & extras
+                  </TabsTrigger>
+                </TabsList>
                 
-                {/* Informações de Contato */}
-                <div className="space-y-4 md:col-span-2">
-                  <h3 className="text-sm font-semibold uppercase text-gray-500">
-                    Informações de Contato
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="contactName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome do Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome do responsável" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                {/* Passo 1: Dados básicos */}
+                <TabsContent value="step1" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="col-span-1 flex flex-col items-center justify-start space-y-3">
+                      <div className="text-center">
+                        <label 
+                          htmlFor="avatar-upload" 
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Foto / Logo
+                        </label>
+                        <div className="relative group cursor-pointer">
+                          <div className="h-24 w-24 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 hover:border-primary transition-colors">
+                            {avatarPreview ? (
+                              <Avatar className="h-full w-full">
+                                <AvatarImage src={avatarPreview} alt="Preview" />
+                                <AvatarFallback className="text-lg">
+                                  {form.watch('name') ? getInitials(form.watch('name')) : 'CL'}
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center p-2">
+                                <Image className="h-8 w-8 text-gray-400" />
+                                <span className="text-xs text-gray-500 mt-1 text-center">Adicionar imagem</span>
+                              </div>
+                            )}
+                            <input
+                              id="avatar-upload"
+                              type="file"
+                              className="sr-only"
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                            />
+                            <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Upload className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          JPG, PNG ou GIF
+                          <br />Máx. 5MB
+                        </p>
+                      </div>
+                    </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="contactPosition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cargo do Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Gerente de Marketing" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="md:col-span-3 space-y-6">
+                      {/* Informações básicas */}
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-sm font-semibold uppercase text-gray-500">
+                            Informações Básicas
+                          </h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome do Cliente *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Ex: Empresa XYZ" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="shortName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome Curto / Sigla</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Ex: XYZ" {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  Abreviação ou acrônimo da empresa
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="type"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tipo de Cliente *</FormLabel>
+                                <Select value={field.value || ""} onValueChange={field.onChange}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecionar tipo" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {CLIENT_TYPE_OPTIONS.map(option => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="cnpj"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  CNPJ
+                                  <Button 
+                                    type="button" 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-6 px-2 text-xs"
+                                    onClick={handleCnpjLookup}
+                                    disabled={isLookupCnpj}
+                                  >
+                                    {isLookupCnpj ? (
+                                      <div className="h-3 w-3 animate-spin rounded-full border border-background border-r-transparent mr-1"></div>
+                                    ) : null}
+                                    Consultar
+                                  </Button>
+                                </FormLabel>
+                                <FormControl>
+                                  <Input placeholder="00.000.000/0000-00" {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  {isLookupCnpj ? 'Buscando dados...' : 'Digite o CNPJ e clique em consultar para preencher dados automaticamente'}
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Informações de Contato */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-semibold uppercase text-gray-500">
+                          Contato Principal
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="contactName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome do Contato</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Nome do responsável" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="contactPosition"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Cargo do Contato</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Ex: Gerente de Marketing" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="contactEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email de Contato</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="contato@empresa.com" {...field} value={field.value || ''} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="contactPhone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Telefone de Contato</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="(00) 00000-0000" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="contactEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email de Contato</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="contato@empresa.com" {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone de Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(00) 00000-0000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="flex justify-end">
+                    <Button type="button" onClick={handleNextStep}>
+                      Próximo
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                </TabsContent>
                 
-                {/* Endereço e Detalhes */}
-                <div className="space-y-4 md:col-span-2">
-                  <h3 className="text-sm font-semibold uppercase text-gray-500">
-                    Endereço e Detalhes
-                  </h3>
+                {/* Passo 2: Endereço & extras */}
+                <TabsContent value="step2" className="space-y-6">
+                  {/* Produtos/Segmentos */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold uppercase text-gray-500">
+                      Produtos/Segmentos (opcional)
+                    </h3>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {segmentTags.map(tag => (
+                        <Badge key={tag} variant="outline" className="px-3 py-1.5">
+                          {tag}
+                          <X 
+                            className="ml-2 h-3 w-3 cursor-pointer" 
+                            onClick={() => setSegmentTags(segmentTags.filter(t => t !== tag))}
+                          />
+                        </Badge>
+                      ))}
+                      
+                      {segmentTags.length === 0 && (
+                        <div className="text-sm text-muted-foreground italic">
+                          Nenhum segmento selecionado
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Select 
+                        onValueChange={(value) => {
+                          if (value && !segmentTags.includes(value)) {
+                            setSegmentTags([...segmentTags, value]);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[240px]">
+                          <SelectValue placeholder="Selecionar segmento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Agro">Agro</SelectItem>
+                          <SelectItem value="Educação">Educação</SelectItem>
+                          <SelectItem value="B2B SaaS">B2B SaaS</SelectItem>
+                          <SelectItem value="Varejo">Varejo</SelectItem>
+                          <SelectItem value="Saúde">Saúde</SelectItem>
+                          <SelectItem value="Finanças">Finanças</SelectItem>
+                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => {
+                          // Em uma implementação real, isso abriria um dialog para adicionar novo segmento
+                          const newSegment = prompt("Adicionar novo segmento:");
+                          if (newSegment && !segmentTags.includes(newSegment)) {
+                            setSegmentTags([...segmentTags, newSegment]);
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
+                  {/* Endereço e Detalhes */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold uppercase text-gray-500">
+                      Endereço
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Endereço</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Rua, número, bairro" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
                       <FormField
                         control={form.control}
-                        name="address"
+                        name="city"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Endereço</FormLabel>
+                            <FormLabel>Cidade</FormLabel>
                             <FormControl>
-                              <Input placeholder="Rua, número, bairro" {...field} />
+                              <Input placeholder="Cidade" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
+                  </div>
+                  
+                  {/* Campos colapsáveis */}
+                  <Collapsible
+                    open={isCollapseOpen}
+                    onOpenChange={setIsCollapseOpen}
+                    className="border rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold">
+                        Informações Adicionais
+                      </h3>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          {isCollapseOpen ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <>
+                              <ChevronRight className="h-4 w-4 mr-1" />
+                              <span className="text-xs">Mostrar mais</span>
+                            </>
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Cidade" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                    <CollapsibleContent className="mt-4 space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="website"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Website</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input placeholder="www.empresa.com.br" className="pl-10" {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notas</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Observações adicionais sobre o cliente" 
+                                  className="min-h-[100px]" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                   
-                  <div className="grid grid-cols-1 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input placeholder="www.empresa.com.br" className="pl-10" {...field} />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                  <div className="flex justify-between">
+                    <Button type="button" variant="outline" onClick={handlePrevStep}>
+                      Voltar
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={createClientMutation.isPending}
+                    >
+                      {createClientMutation.isPending ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
+                          Salvando...
+                        </>
+                      ) : (
+                        'Criar Cliente'
                       )}
-                    />
+                    </Button>
                   </div>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notas</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Observações adicionais sobre o cliente" 
-                              className="min-h-[100px]" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsNewClientDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createClientMutation.isPending}
-                >
-                  {createClientMutation.isPending ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
-                      Salvando...
-                    </>
-                  ) : (
-                    'Criar Cliente'
-                  )}
-                </Button>
-              </DialogFooter>
+                </TabsContent>
+              </Tabs>
             </form>
           </Form>
         </DialogContent>
