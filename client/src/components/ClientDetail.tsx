@@ -15,7 +15,9 @@ import {
   FileText,
   Download,
   Eye,
-  Filter
+  Filter,
+  ChevronLeft,
+  ArrowLeft
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -267,9 +269,19 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
-          <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
+        <div className="flex items-start gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/clients')}
+            className="flex items-center"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
+            <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
+          </div>
         </div>
         
         <div className="flex items-center space-x-3">
