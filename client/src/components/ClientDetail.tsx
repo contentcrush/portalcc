@@ -374,18 +374,21 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           <Card>
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-                {client.logo ? (
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={client.logo} alt={client.name} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
-                      {getInitials(client.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="bg-blue-100 text-blue-600 rounded-full w-16 h-16 flex items-center justify-center font-semibold text-2xl">
+                <Avatar className="w-16 h-16">
+                  {client.logo ? (
+                    <AvatarImage 
+                      src={client.logo} 
+                      alt={client.name}
+                      onError={(e) => {
+                        console.log("Erro ao carregar logo:", client.logo);
+                        e.currentTarget.style.display = 'none';
+                      }} 
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
                     {getInitials(client.name)}
-                  </div>
-                )}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <h2 className="text-xl font-semibold">{client.name}</h2>
                   <div className="flex items-center text-sm text-gray-500">
