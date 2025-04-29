@@ -99,6 +99,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate, getInitials, generateAvatarColor } from "@/lib/utils";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { getQueryFn } from "@/lib/queryClient";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
