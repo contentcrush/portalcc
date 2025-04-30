@@ -482,6 +482,7 @@ export default function Tasks() {
                         task={task}
                         onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
                         onView={() => handleViewTaskDetails(task.id)}
+                        onDelete={() => handleDeleteTask(task.id)}
                         onEdit={() => handleEditTask(task.id)}
                       />
                     ))
@@ -529,6 +530,7 @@ export default function Tasks() {
                           key={task.id}
                           task={task}
                           onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
+                          onDelete={() => handleDeleteTask(task.id)}
                           onView={() => handleViewTaskDetails(task.id)}
                           onEdit={() => handleEditTask(task.id)}
                         />
@@ -552,6 +554,7 @@ export default function Tasks() {
                       <TaskCard
                         key={task.id}
                         task={task}
+                        onDelete={() => handleDeleteTask(task.id)}
                         onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
                         onView={() => handleViewTaskDetails(task.id)}
                         onEdit={() => handleEditTask(task.id)}
