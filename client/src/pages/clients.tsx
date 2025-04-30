@@ -116,6 +116,7 @@ import { useToast } from "@/hooks/use-toast";
 const formSchema = insertClientSchema.extend({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   contactEmail: z.string().email("Email inválido").nullable().optional(),
+  since: z.date().nullable().optional(),
 });
 
 // Schema para validação do formulário de projeto
@@ -1550,7 +1551,7 @@ export default function Clients() {
                   {/* Endereço e Detalhes */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold uppercase text-gray-500">
-                      Endereço
+                      Endereço e Informações Adicionais
                     </h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1584,6 +1585,51 @@ export default function Clients() {
                         )}
                       />
                     </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="since"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Cliente desde</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    formatDate(field.value)
+                                  ) : (
+                                    <span>Selecione uma data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value ? new Date(field.value) : undefined}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date > new Date() || date < new Date("2000-01-01")
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            Data de início do relacionamento com o cliente
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   
                   {/* Campos colapsáveis */}
