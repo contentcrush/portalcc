@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2 } from "lucide-react";
+import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
@@ -366,32 +366,187 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="mb-8">
           <h4 className="font-medium text-sm mb-4">ETAPAS DO PROJETO</h4>
           <div className="space-y-3">
-            {stages && stages.length > 0 ? (
-              stages.map((stage) => (
-                <div key={stage.id} className="flex items-center">
+            {/* Exibir etapas padrão baseadas no fluxo de trabalho */}
+            {project ? (
+              <>
+                {/* Etapas de fluxo padrão */}
+                <div className="flex items-center">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
-                    stage.completed 
-                      ? 'bg-green-500' 
+                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? 'bg-slate-500' 
                       : 'bg-gray-100'
                   }`}>
-                    {stage.completed && <CheckCircle2 className="h-3 w-3 text-white" />}
+                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{stage.name}</p>
+                    <p className="text-sm font-medium">Proposta</p>
                     <p className={`text-xs ${
-                      stage.completed 
-                        ? 'text-green-600' 
+                      ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'text-slate-600' 
                         : 'text-gray-500'
                     }`}>
-                      {stage.completed 
-                        ? `Concluída em ${formatDate(stage.completion_date || new Date())}` 
+                      {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'Concluída' 
                         : 'Pendente'}
                     </p>
                   </div>
                 </div>
-              ))
+                
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? 'bg-indigo-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Pré-produção</p>
+                    <p className={`text-xs ${
+                      ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'text-indigo-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'Concluída' 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? 'bg-yellow-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Produção</p>
+                    <p className={`text-xs ${
+                      ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'text-yellow-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'Concluída' 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? 'bg-purple-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {['pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Pós / Revisão</p>
+                    <p className={`text-xs ${
+                      ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'text-purple-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'Concluída' 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    ['entregue', 'concluido'].includes(project.status)
+                      ? 'bg-green-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {['entregue', 'concluido'].includes(project.status) && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Entregue / Aprovado</p>
+                    <p className={`text-xs ${
+                      ['entregue', 'concluido'].includes(project.status)
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {['entregue', 'concluido'].includes(project.status)
+                        ? 'Concluída' 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                    project.status === 'concluido'
+                      ? 'bg-emerald-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    {project.status === 'concluido' && 
+                      <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Concluído (Pago)</p>
+                    <p className={`text-xs ${
+                      project.status === 'concluido'
+                        ? 'text-emerald-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {project.status === 'concluido'
+                        ? 'Concluída' 
+                        : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Status especiais */}
+                {project.status === 'atrasado' && (
+                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-rose-500">
+                      <Clock className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Atrasado</p>
+                      <p className="text-xs text-rose-600">Projeto está atrasado</p>
+                    </div>
+                  </div>
+                )}
+                
+                {project.status === 'pausado' && (
+                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-amber-500">
+                      <Pause className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Pausado</p>
+                      <p className="text-xs text-amber-600">Projeto temporariamente pausado</p>
+                    </div>
+                  </div>
+                )}
+                
+                {project.status === 'cancelado' && (
+                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-gray-500">
+                      <X className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Cancelado</p>
+                      <p className="text-xs text-gray-600">Projeto foi cancelado</p>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
-              <p className="text-sm text-gray-500">Nenhuma etapa definida</p>
+              <p className="text-sm text-gray-500">Carregando etapas...</p>
             )}
           </div>
         </div>
