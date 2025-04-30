@@ -830,14 +830,17 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
   const isCompleted = task.completed;
   
   return (
-    <Card className={cn(
-      "transition-all duration-200",
-      isCompleted ? "bg-gray-50" : "bg-white",
-      isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
-      "hover:border-gray-300",
-      "border-l-4",
-      isOverdue ? "border-l-red-500" : isDueSoon ? "border-l-amber-500" : "border-l-blue-500"
-    )}>
+    <Card 
+      className={cn(
+        "transition-all duration-200 cursor-pointer hover:shadow-md",
+        isCompleted ? "bg-gray-50" : "bg-white",
+        isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
+        "hover:border-gray-300",
+        "border-l-4",
+        isOverdue ? "border-l-red-500" : isDueSoon ? "border-l-amber-500" : "border-l-blue-500"
+      )}
+      onClick={onView}  /* Adicionando evento de clique no card inteiro */
+    >
       <CardContent className="p-3">
         <div className="flex flex-col gap-1">
           {/* Task Title Row */}
@@ -845,7 +848,10 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
             <div className="flex items-start">
               <Checkbox 
                 checked={isCompleted}
-                onCheckedChange={onToggleComplete}
+                onCheckedChange={(e) => {
+                  e?.stopPropagation(); // Previne propagação do evento para o card
+                  onToggleComplete();
+                }}
                 className="mt-1 mr-2"
               />
               <div>
@@ -890,20 +896,29 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                 <PriorityBadge priority={task.priority} size="sm" />
                 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
                       <MoreHorizontal className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={onView}>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onView();
+                    }}>
                       Ver detalhes
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onEdit}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}>
                       Editar tarefa
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onToggleComplete}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleComplete();
+                    }}>
                       {isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
