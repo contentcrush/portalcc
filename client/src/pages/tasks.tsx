@@ -89,7 +89,8 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("pendentes");
+  // Removendo o activeTab para separar os controles de exibição entre tarefas pendentes e concluídas
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
   const [viewMode, setViewMode] = useState("lista");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
@@ -289,14 +290,8 @@ export default function Tasks() {
       return false;
     }
     
-    // Tab filter - for main tabs (pendentes/concluidas)
-    if (activeTab === "pendentes" && task.completed) {
-      return false;
-    }
-    
-    if (activeTab === "concluidas" && !task.completed) {
-      return false;
-    }
+    // Removemos os filtros baseados no activeTab para permitir
+    // que ambas as seções (pendentes e concluídas) sejam exibidas simultaneamente
     
     return true;
   });
