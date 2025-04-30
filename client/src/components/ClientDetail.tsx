@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { formatDate, formatCurrency, getInitials, calculatePercentChange } from "@/lib/utils";
+import { formatDate, formatCurrency, getInitials, calculatePercentChange, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -303,6 +303,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         city: client.city || "",
         notes: client.notes || "",
         logo: client.logo || "",
+        since: client.since || null,
       });
       setLogoPreview(client.logo || null);
       setIsEditDialogOpen(true);
@@ -1127,6 +1128,51 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="since"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Cliente desde</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              formatDate(field.value)
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("2000-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                      Data de início do relacionamento com o cliente
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
