@@ -567,26 +567,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Após atualizar um projeto, verificar se ele deve ser marcado como atrasado
-      // Isso é especialmente importante quando a data de entrega é atualizada para uma data no passado
-      if (updatedProject.status && 
-          ['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status)) {
-        
+      // Verificar se precisamos atualizar o status baseado na data de entrega
+      if (updatedProject) {
         const endDate = new Date(updatedProject.endDate);
         const today = new Date();
         
-        // Se a data de entrega já passou e o projeto está em fase de desenvolvimento
-        if (endDate < today) {
+        // Caso 1: Projeto está marcado como atrasado mas a data foi atualizada para o futuro
+        if (updatedProject.status === 'atrasado' && endDate > today) {
+          console.log(`[Automação] Projeto ${id} está marcado como 'atrasado' mas a data de entrega (${endDate.toISOString()}) foi atualizada para o futuro.`);
+          await checkProjectsWithUpdatedDates();
+        } 
+        // Caso 2: Projeto tem status de desenvolvimento mas a data está no passado
+        else if (['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status) && endDate < today) {
           console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
-          
-          // Verificar se o projeto está atrasado
           await checkOverdueProjects();
-          
-          // Recarregar o projeto para retornar o status mais atualizado
-          const refreshedProject = await storage.getProject(id);
-          if (refreshedProject) {
-            return res.json(refreshedProject);
-          }
+        }
+        
+        // Recarregar o projeto para retornar o status mais atualizado
+        const refreshedProject = await storage.getProject(id);
+        if (refreshedProject) {
+          return res.json(refreshedProject);
         }
       }
       
