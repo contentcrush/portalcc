@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -1611,16 +1611,14 @@ export default function Clients() {
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value ? new Date(field.value) : undefined}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1980-01-01")
-                                }
+                              <DatePickerWithYearNavigation
+                                date={field.value ? new Date(field.value) : undefined}
+                                setDate={(date) => {
+                                  // Converter para string ISO somente se a data existir
+                                  field.onChange(date);
+                                }}
                                 fromYear={1980}
                                 toYear={new Date().getFullYear()}
-                                captionLayout="dropdown-buttons"
                                 initialFocus
                               />
                             </PopoverContent>
