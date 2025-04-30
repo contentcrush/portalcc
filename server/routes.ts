@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
+import { runAutomations, checkOverdueProjects } from "./automation";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -1186,6 +1187,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para verificação manual de projetos atrasados (apenas admin)
+  app.post("/api/automation/check-overdue", authenticateJWT, requireRole(['admin']), async (_req, res) => {
+    try {
+      const result = await checkOverdueProjects();
+      res.json(result);
+    } catch (error) {
+      console.error("Erro ao executar verificação de projetos atrasados:", error);
+      res.status(500).json({ 
+        message: "Falha ao executar verificação de projetos atrasados",
+        error: String(error)
+      });
+    }
+  });
+  
+  // Endpoint para executar todas as automações (apenas admin)
+  app.post("/api/automation/run-all", authenticateJWT, requireRole(['admin']), async (_req, res) => {
+    try {
+      const result = await runAutomations();
+      res.json(result);
+    } catch (error) {
+      console.error("Erro ao executar automações:", error);
+      res.status(500).json({ 
+        message: "Falha ao executar automações",
+        error: String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Executar automações ao iniciar o servidor
+  console.log("🤖 Iniciando verificação automática de projetos atrasados...");
+  checkOverdueProjects()
+    .then(result => {
+      console.log(`🤖 Verificação de projetos atrasados concluída, ${result.updatedCount || 0} projetos atualizados`);
+    })
+    .catch(error => {
+      console.error("🤖 Erro na verificação automática de projetos atrasados:", error);
+    });
+  
+  // Configurar execução diária das automações (00:01)
+  setInterval(() => {
+    const now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 1) {
+      console.log("🤖 Executando verificação automática diária...");
+      runAutomations()
+        .then(result => {
+          console.log("🤖 Verificação automática diária concluída:", result);
+        })
+        .catch(error => {
+          console.error("🤖 Erro na verificação automática diária:", error);
+        });
+    }
+  }, 60000); // Verifica a cada minuto
+  
   return httpServer;
 }
