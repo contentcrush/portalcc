@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import StatusBadge from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
+import { ClientAvatar } from "./ClientAvatar";
 
 interface ProjectCardProps {
   project: ProjectWithClient;
@@ -280,9 +281,12 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           <div className="flex items-center justify-between text-xs mt-2">
             {project.client && (
               <div className="flex items-center">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-700 mr-1.5 text-[10px] font-medium">
-                  {getInitials(project.client.name)}
-                </div>
+                <ClientAvatar 
+                  name={project.client.name} 
+                  logoUrl={project.client.logo} 
+                  size="sm"
+                  className="mr-1.5"
+                />
                 <span className="text-gray-700 font-medium">{project.client.name}</span>
               </div>
             )}
