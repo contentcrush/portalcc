@@ -16,7 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getInitials, generateAvatarColor, cn, formatDate } from "@/lib/utils";
-import { ClientAvatar } from "@/components/ClientAvatar";
+import ClientAvatar from "@/components/ClientAvatar";
 import {
   Select,
   SelectContent,

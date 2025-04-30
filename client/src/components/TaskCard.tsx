@@ -13,7 +13,7 @@ import {
 import { formatDate, isTaskOverdue, truncateText } from "@/lib/utils";
 import { Clock, MoreVertical, Edit, Eye, Trash2, CalendarDays } from "lucide-react";
 import { Task } from "@/lib/types";
-import { ClientAvatar } from "./ClientAvatar";
+import ClientAvatar from "./ClientAvatar";
 import StatusBadge from "./StatusBadge";
 import PriorityBadge from "./PriorityBadge";
 import { Button } from "@/components/ui/button";
