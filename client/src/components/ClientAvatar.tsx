@@ -6,7 +6,7 @@ interface ClientAvatarProps {
   name: string;
   logoUrl: string | null | undefined;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: ClientAvatarProps) {
@@ -15,8 +15,9 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
   
   // Tamanhos pré-definidos
   const sizeClasses = {
-    sm: "h-8 w-8",
-    md: "h-12 w-12",
+    xs: "h-5 w-5",
+    sm: "h-6 w-6",
+    md: "h-10 w-10",
     lg: "h-16 w-16",
   };
   
@@ -48,17 +49,9 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
   
   // Cor de fundo do avatar baseada no nome
   const backgroundColor = generateAvatarColor(name);
-  
-  // Log para diagnóstico
-  console.log(`ClientAvatar (${name}):`, { 
-    logoUrl, 
-    validLogo, 
-    error, 
-    hasLogo: !!validLogo && !error 
-  });
 
   return (
-    <Avatar className={`${sizeClasses[size]} ${className}`}>
+    <Avatar className={`${sizeClasses[size]} ${className} border border-gray-200`}>
       {!error && validLogo ? (
         <>
           <img 
@@ -69,8 +62,6 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
             style={{ position: 'absolute', top: 0, left: 0 }}
             onError={(e) => {
               console.error(`ClientAvatar: Erro ao carregar logo para "${name}"`, e);
-              console.error("Elemento que falhou:", e.currentTarget.outerHTML);
-              console.error("URL que falhou:", e.currentTarget.src);
               setError(true);
             }}
           />
@@ -81,7 +72,8 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
           backgroundColor, 
           color: 'white',
           position: !error && validLogo ? 'relative' : 'static',
-          zIndex: !error && validLogo ? 5 : 10
+          zIndex: !error && validLogo ? 5 : 10,
+          fontSize: size === "xs" || size === "sm" ? "0.625rem" : undefined
         }}
       >
         {initials}

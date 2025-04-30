@@ -23,7 +23,8 @@ import {
   CalendarDays,
   MoreVertical, 
   Link as LinkIcon,
-  Trash2
+  Trash2,
+  Timer
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,6 +38,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
+import { ClientAvatar } from "./ClientAvatar";
 
 interface TaskItemProps {
   task: TaskWithDetails;
@@ -167,8 +169,18 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
+  const getPriorityClass = () => {
+    switch(task.priority) {
+      case 'baixa': return 'bg-emerald-500';
+      case 'media': return 'bg-amber-500';
+      case 'alta': return 'bg-orange-500';
+      case 'critica': return 'bg-red-600';
+      default: return 'bg-slate-500';
+    }
+  };
+
   return (
-    <div className="mb-3">
+    <div className="mb-2">
       <div 
         className={`
           bg-white rounded-lg border border-gray-200 overflow-hidden
@@ -176,21 +188,20 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
           ${isCompleted ? 'bg-muted/10' : ''}
         `}
       >
-        <div className="p-4">
-          <div className="flex items-start gap-3">
-            <Checkbox 
-              checked={task.completed} 
-              onCheckedChange={handleStatusChange}
-              className="mt-1"
-              disabled={updateTaskMutation.isPending}
-            />
-            
-            <div className="flex-1">
-              {/* Task title and description */}
-              <div 
-                className="cursor-pointer" 
-                onClick={() => onSelect && onSelect(task.id)}
-              >
+        <div className="p-3">
+          <div className="flex flex-col gap-2">
+            {/* Task Title Row */}
+            <div 
+              className="cursor-pointer w-full flex items-start" 
+              onClick={() => onSelect && onSelect(task.id)}
+            >
+              <Checkbox 
+                checked={task.completed} 
+                onCheckedChange={handleStatusChange}
+                className="mt-1 mr-3"
+                disabled={updateTaskMutation.isPending}
+              />
+              <div className="flex-1">
                 <h3 className={`font-medium ${isCompleted ? 'text-muted-foreground line-through' : ''}`}>
                   {task.title}
                 </h3>
@@ -202,123 +213,110 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                 )}
               </div>
               
-              {/* Task metadata */}
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
-                {task.due_date && (
-                  <div className={`flex items-center gap-1 
-                    ${isOverdue ? 'text-red-500 font-medium' : 
-                    isDueSoon ? 'text-orange-500' : ''}`}
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    <span title={getFullDate(task.due_date)}>
-                      Vence {getFormattedDueDate()}
-                      {task.due_date && isCompleted && ` (${getFullDate(task.due_date)})`}
-                    </span>
-                  </div>
-                )}
-                
-                {task.estimated_hours && (
-                  <div className="flex items-center gap-1">
-                    <span>Estimativa: {task.estimated_hours}h</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Task footer */}
-              <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  {/* Project badge */}
-                  {project && (
-                    <div className="flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                      {project.name}
-                    </div>
-                  )}
-                  
-                  {/* Priority badge */}
-                  <PriorityBadge
-                    priority={task.priority}
-                    size="sm"
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {/* Comments & attachments indicators */}
-                  <div className="flex items-center gap-3 text-gray-500">
-                    {(comments && comments.length > 0) && (
-                      <div className="flex items-center text-xs">
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                        <span>{comments.length}</span>
-                      </div>
-                    )}
-                    
-                    {(attachments && attachments.length > 0) && (
-                      <div className="flex items-center text-xs">
-                        <Paperclip className="h-3.5 w-3.5 mr-1" />
-                        <span>{attachments.length}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7"
-                      onClick={() => onSelect && onSelect(task.id)}
-                    >
-                      <LinkIcon className="h-3.5 w-3.5" />
+              {/* Action buttons */}
+              <div className="flex items-center gap-1 ml-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7"
-                      onClick={() => onSelect && onSelect(task.id)}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onSelect && onSelect(task.id)}>
+                      Ver detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit && onEdit(task.id)}>
+                      Editar tarefa
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleStatusChange}>
+                      {task.completed ? "Marcar como pendente" : "Marcar como concluída"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-destructive focus:text-destructive"
                     >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    </Button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onSelect && onSelect(task.id)}>
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit && onEdit(task.id)}>
-                          Editar tarefa
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleStatusChange}>
-                          {task.completed ? "Marcar como pendente" : "Marcar como concluída"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => setIsDeleteDialogOpen(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Apagar Tarefa
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Apagar Tarefa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              
-              {/* User avatar - positioned at the top right */}
-              {assignedUser && (
-                <div className="absolute top-4 right-4">
-                  <UserAvatar 
-                    user={assignedUser} 
-                    className="h-6 w-6" 
-                  />
+            </div>
+
+            {/* Task Metadata */}
+            <div className="flex items-center text-xs text-gray-500 mt-1 mb-1">
+              {task.due_date && (
+                <div className={`flex items-center gap-1 mr-4
+                  ${isOverdue ? 'text-red-500 font-medium' : 
+                  isDueSoon ? 'text-orange-500' : ''}`}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  <span title={getFullDate(task.due_date)}>
+                    Vence {getFormattedDueDate()}
+                  </span>
                 </div>
               )}
+              
+              {task.estimated_hours && (
+                <div className="flex items-center gap-1 mr-4">
+                  <Timer className="h-3.5 w-3.5" />
+                  <span>Estimativa: {task.estimated_hours}h</span>
+                </div>
+              )}
+              
+              {/* Comments & attachments indicators */}
+              {(comments && comments.length > 0) && (
+                <div className="flex items-center text-xs mr-3">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                  <span>{comments.length}</span>
+                </div>
+              )}
+              
+              {(attachments && attachments.length > 0) && (
+                <div className="flex items-center text-xs">
+                  <Paperclip className="h-3.5 w-3.5 mr-1" />
+                  <span>{attachments.length}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Task footer with client and priority */}
+            <div className="flex items-center justify-between">
+              {/* Client and Project Badge */}
+              <div className="flex items-center gap-2">
+                {project?.client_id && project?.name && (
+                  <div className="flex items-center gap-1">
+                    {task.project?.client && (
+                      <div className="flex items-center">
+                        <ClientAvatar 
+                          name={task.project.client.name} 
+                          logoUrl={task.project.client.logo} 
+                          size="sm"
+                          className="mr-1"
+                        />
+                        <span className="text-xs font-medium">{task.project.client.shortName || task.project.client.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Priority & assigned user */}
+              <div className="flex items-center gap-2">
+                <PriorityBadge
+                  priority={task.priority}
+                  size="sm"
+                />
+                
+                {assignedUser && (
+                  <UserAvatar 
+                    user={assignedUser} 
+                    className="h-6 w-6 ml-1" 
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
