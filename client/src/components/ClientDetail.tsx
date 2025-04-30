@@ -1155,7 +1155,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
+                        <DatePickerWithYearNavigation
                           mode="single"
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={field.onChange}
