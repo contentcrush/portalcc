@@ -5,7 +5,7 @@ import {
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
   insertProjectMemberSchema, insertProjectStageSchema, insertTaskCommentSchema, 
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
-  insertExpenseSchema, insertEventSchema, insertUserSchema
+  insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
@@ -1096,6 +1096,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+  
+  // User Preferences - Rotas para gerenciar preferências do usuário
+  app.get("/api/user-preferences", authenticateJWT, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await storage.getUserPreferences(userId);
+      res.json(preferences || { theme: 'light', accent_color: 'blue', clients_view_mode: 'grid' });
+    } catch (error) {
+      console.error("Error fetching user preferences:", error);
+      res.status(500).json({ message: "Failed to fetch user preferences" });
+    }
+  });
+
+  app.post("/api/user-preferences", authenticateJWT, validateBody(insertUserPreferenceSchema), async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      // Verifica se já existem preferências para este usuário
+      const existingPrefs = await storage.getUserPreferences(userId);
+      
+      if (existingPrefs) {
+        // Atualiza as preferências existentes
+        const updatedPrefs = await storage.updateUserPreferences(userId, req.body);
+        return res.json(updatedPrefs);
+      } else {
+        // Cria novas preferências
+        const prefData = {
+          ...req.body,
+          user_id: userId
+        };
+        const newPrefs = await storage.createUserPreferences(prefData);
+        return res.status(201).json(newPrefs);
+      }
+    } catch (error) {
+      console.error("Error saving user preferences:", error);
+      res.status(500).json({ message: "Failed to save user preferences" });
+    }
+  });
+
+  app.patch("/api/user-preferences", authenticateJWT, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      // Verifica se existem preferências para este usuário
+      const existingPrefs = await storage.getUserPreferences(userId);
+      
+      if (!existingPrefs) {
+        // Se não existir, cria um novo
+        const prefData = {
+          ...req.body,
+          user_id: userId,
+          theme: req.body.theme || 'light',
+          accent_color: req.body.accent_color || 'blue',
+          clients_view_mode: req.body.clients_view_mode || 'grid',
+          sidebar_collapsed: req.body.sidebar_collapsed !== undefined ? req.body.sidebar_collapsed : false,
+          dashboard_widgets: req.body.dashboard_widgets || ['tasks', 'projects', 'clients'],
+          quick_actions: req.body.quick_actions || ['new-task', 'new-project', 'new-client']
+        };
+        const newPrefs = await storage.createUserPreferences(prefData);
+        return res.status(201).json(newPrefs);
+      }
+      
+      // Atualiza apenas os campos fornecidos
+      const updatedPrefs = await storage.updateUserPreferences(userId, req.body);
+      return res.json(updatedPrefs);
+    } catch (error) {
+      console.error("Error updating user preferences:", error);
+      res.status(500).json({ message: "Failed to update user preferences" });
     }
   });
 

@@ -3,13 +3,14 @@ import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
-  expenses, events, refreshTokens,
+  expenses, events, refreshTokens, userPreferences,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
-  type FinancialDocument, type Expense, type Event, 
+  type FinancialDocument, type Expense, type Event, type UserPreference,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
-  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent
+  type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
+  type InsertUserPreference
 } from "../shared/schema";
 
 export interface IStorage {
