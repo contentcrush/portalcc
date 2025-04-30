@@ -19,12 +19,15 @@ import {
   ZoomInIcon, 
   MonitorSmartphoneIcon, 
   MousePointerSquareDashedIcon, 
-  RotateCcw 
+  RotateCcw,
+  PaintBucket,
+  Palette
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAccessibility } from "@/hooks/use-accessibility";
+import { WorkspaceCustomizationWizard } from "@/components/WorkspaceCustomizationWizard";
 
 // Definição dos tipos de usuário e suas permissões
 interface Permission {
@@ -944,6 +947,92 @@ function LocalizationSettings() {
   );
 }
 
+// Componente para a aba de Personalização
+function PersonalizationSettings() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Palette className="h-5 w-5 text-blue-500" />
+            <CardTitle>Personalização da Interface</CardTitle>
+          </div>
+          <CardDescription>
+            Customize cores, temas e layout de acordo com suas preferências.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col space-y-4">
+            <h3 className="text-lg font-medium">Assistente de Personalização</h3>
+            <p className="text-sm text-muted-foreground">
+              Use nosso assistente para personalizar sua experiência com o Content Crush. Você pode escolher temas, cores, 
+              e configurar a visualização de elementos da interface.
+            </p>
+            
+            <div className="mt-4">
+              <WorkspaceCustomizationWizard 
+                trigger={
+                  <Button size="lg" className="w-full sm:w-auto">
+                    <Palette className="mr-2 h-4 w-4" />
+                    Abrir Assistente de Personalização
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+          
+          <Separator className="my-6" />
+          
+          <div>
+            <h3 className="text-lg font-medium mb-4">Preferências Atuais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center p-4 rounded-lg border">
+                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <Palette className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Tema</h4>
+                  <p className="text-sm text-muted-foreground">Claro, Escuro ou Automático (baseado no sistema)</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-4 rounded-lg border">
+                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <PaintBucket className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Cor de Destaque</h4>
+                  <p className="text-sm text-muted-foreground">Cor principal para botões e elementos interativos</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-4 rounded-lg border">
+                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <Layout className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Layout</h4>
+                  <p className="text-sm text-muted-foreground">Configurações de visualização e organização</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-4 rounded-lg border">
+                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <PanelLeft className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium">Barra Lateral</h4>
+                  <p className="text-sm text-muted-foreground">Configuração da barra lateral de navegação</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("rbac");
@@ -970,10 +1059,14 @@ export default function Settings() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full border-b grid grid-cols-1 md:grid-cols-5 mb-8">
+        <TabsList className="w-full border-b grid grid-cols-1 md:grid-cols-6 mb-8">
           <TabsTrigger value="profile" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
             <UserIcon className="h-4 w-4 mr-2" />
             Perfil
+          </TabsTrigger>
+          <TabsTrigger value="personalization" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+            <Palette className="h-4 w-4 mr-2" />
+            Personalização
           </TabsTrigger>
           <TabsTrigger value="notifications" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
             <BellIcon className="h-4 w-4 mr-2" />
@@ -996,6 +1089,10 @@ export default function Settings() {
         
         <TabsContent value="profile">
           <ProfileSettings />
+        </TabsContent>
+        
+        <TabsContent value="personalization">
+          <PersonalizationSettings />
         </TabsContent>
         
         <TabsContent value="notifications">
