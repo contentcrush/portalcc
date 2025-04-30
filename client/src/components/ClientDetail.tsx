@@ -932,7 +932,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
       {/* Modal de Edição de Cliente */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
             <DialogDescription>
@@ -942,27 +942,34 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <FormField
-                  control={form.control}
-                  name="logo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Logo</FormLabel>
-                      <FormControl>
-                        <ImageUpload 
-                          value={logoPreview}
-                          onChange={(value) => {
-                            field.onChange(value);
-                            setLogoPreview(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Tabs defaultValue="info" className="mt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="info">Informações</TabsTrigger>
+                  <TabsTrigger value="contact">Contato</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info" className="space-y-5 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="logo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Logo</FormLabel>
+                        <FormControl>
+                          <ImageUpload 
+                            value={logoPreview}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              setLogoPreview(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -1177,24 +1184,129 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Informações adicionais sobre o cliente" 
-                        className="resize-none h-20" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+                </TabsContent>
+                
+                <TabsContent value="contact" className="space-y-5 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contato Principal</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome do contato" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cargo do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Gerente de Marketing" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="email@exemplo.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone do Contato</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(00) 00000-0000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Endereço</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Endereço completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cidade</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Cidade" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input placeholder="exemplo.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Notas</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Informações adicionais sobre o cliente" 
+                              className="resize-none h-20" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+              
               <DialogFooter>
                 <Button 
                   variant="outline" 
