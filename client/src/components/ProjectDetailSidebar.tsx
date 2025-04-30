@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
+import { ProjectStageStatus, ProjectSpecialStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
 import { 
   Dialog,
   DialogContent,
@@ -318,7 +319,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Status:</div>
-            <StatusBadge status={project?.status} />
+            <StatusBadge 
+              status={project?.status}
+              stageStatus={isProjectStage(project?.status || '') ? project?.status as ProjectStageStatus : null}
+              specialStatus={isProjectSpecialStatus(project?.status || '') ? project?.status as ProjectSpecialStatus : null}
+            />
           </div>
           
           <div className="flex items-center justify-between">
