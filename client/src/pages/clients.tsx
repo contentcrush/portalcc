@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getInitials, generateAvatarColor } from "@/lib/utils";
+import { getInitials, generateAvatarColor, cn, formatDate } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
@@ -98,7 +98,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDate } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
