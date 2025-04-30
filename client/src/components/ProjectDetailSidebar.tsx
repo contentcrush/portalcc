@@ -424,13 +424,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('proposta')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-slate-600'
+                    ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
-                  <Check className={`h-5 w-5 ${
+                  <Check className={`h-3.5 w-3.5 ${
                     ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
                       ? 'text-white'
                       : 'text-slate-300'
@@ -454,13 +454,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('pre_producao')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
-                  <Check className={`h-5 w-5 ${
+                  <Check className={`h-3.5 w-3.5 ${
                     ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
                       ? 'text-white'
                       : 'text-slate-300'
@@ -474,9 +474,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? project.stage_dates?.pre_producao 
-                        ? `Concluído em ${formatDate(project.stage_dates.pre_producao)}`
-                        : 'Concluído'
+                      ? 'Concluído'
                       : 'Pendente'}
                   </p>
                 </div>
@@ -486,13 +484,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('producao')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-yellow-500'
-                    : 'bg-slate-100'
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${project.status === 'producao' 
+                    ? 'bg-yellow-500' 
+                    : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? 'bg-green-500'
+                      : 'bg-slate-100'
                   }`}
                 >
-                  <Check className={`h-5 w-5 ${
+                  <Check className={`h-3.5 w-3.5 ${
                     ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
                       ? 'text-white'
                       : 'text-slate-300'
@@ -501,13 +501,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Produção</p>
                   <p className={`text-xs ${
-                    ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    project.status === 'producao'
                       ? 'text-yellow-600'
-                      : 'text-gray-500'
+                      : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'text-slate-600'
+                        : 'text-gray-500'
                   }`}>
-                    {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    {project.status === 'producao'
                       ? 'Em andamento'
-                      : 'Pendente'}
+                      : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                        ? 'Concluído'
+                        : 'Pendente'}
                   </p>
                 </div>
               </div>
@@ -516,26 +520,30 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('pos_revisao')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors 
-                  ${['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors 
+                  ${project.status === 'pos_revisao'
                     ? 'bg-purple-500'
-                    : 'bg-slate-100'
+                    : ['entregue', 'concluido'].includes(project.status)
+                      ? 'bg-green-500'
+                      : 'bg-slate-100'
                   }`}
                 >
-                  {project.status === 'pos_revisao' && <div className="text-white text-sm font-semibold">3</div>}
+                  {project.status === 'pos_revisao' && <div className="text-white text-xs font-semibold">3</div>}
                   {(project.status !== 'pos_revisao' && ['entregue', 'concluido'].includes(project.status)) && 
-                    <Check className="h-5 w-5 text-white" />
+                    <Check className="h-3.5 w-3.5 text-white" />
                   }
                   {!['pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                    <div className="text-slate-300 text-sm font-semibold">3</div>
+                    <div className="text-slate-300 text-xs font-semibold">3</div>
                   }
                 </div>
                 <div>
                   <p className="text-sm font-medium">Pós-produção</p>
                   <p className={`text-xs ${
-                    ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    project.status === 'pos_revisao'
                       ? 'text-purple-600'
-                      : 'text-gray-500'
+                      : ['entregue', 'concluido'].includes(project.status)
+                        ? 'text-slate-600'
+                        : 'text-gray-500'
                   }`}>
                     {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
                       ? 'Concluído'
@@ -548,13 +556,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('entregue')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${['entregue', 'concluido'].includes(project.status)
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${project.status === 'entregue'
                     ? 'bg-green-500'
-                    : 'bg-slate-100'
+                    : project.status === 'concluido'
+                      ? 'bg-green-500'
+                      : 'bg-slate-100'
                   }`}
                 >
-                  <Check className={`h-5 w-5 ${
+                  <Check className={`h-3.5 w-3.5 ${
                     ['entregue', 'concluido'].includes(project.status) 
                       ? 'text-white'
                       : 'text-slate-300'
@@ -564,7 +574,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                   <p className="text-sm font-medium">Entregue / Aprovado</p>
                   <p className={`text-xs ${
                     ['entregue', 'concluido'].includes(project.status)
-                      ? 'text-green-600'
+                      ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
                     {['entregue', 'concluido'].includes(project.status)
@@ -578,13 +588,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('concluido')}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${project.status === 'concluido'
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
-                  <Check className={`h-5 w-5 ${
+                  <Check className={`h-3.5 w-3.5 ${
                     project.status === 'concluido' 
                       ? 'text-white'
                       : 'text-slate-300'
@@ -594,7 +604,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                   <p className="text-sm font-medium">Concluído (Pago)</p>
                   <p className={`text-xs ${
                     project.status === 'concluido'
-                      ? 'text-emerald-600'
+                      ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
                     {project.status === 'concluido'
