@@ -54,6 +54,7 @@ interface ProjectCardProps {
 
 export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps) {
   const { toast } = useToast();
+  const { openProjectForm, setProjectToEdit } = useProjectForm();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { data: projectMembers } = useQuery({
     queryKey: [`/api/projects/${project.id}/members`],
@@ -188,7 +189,6 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
-                    const { openProjectForm, setProjectToEdit } = useProjectForm();
                     setProjectToEdit(project);
                     openProjectForm();
                   }} 
