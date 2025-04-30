@@ -218,7 +218,15 @@ export const insertRefreshTokenSchema = createInsertSchema(refreshTokens).omit({
   id: true, 
   created_at: true 
 });
-export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
+// Schema base para clientes
+const clientBaseSchema = createInsertSchema(clients).omit({ id: true });
+// Schema personalizado com transformações para data 'since'
+export const insertClientSchema = clientBaseSchema.extend({
+  since: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null || val === undefined ? null : 
+    typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional()
+});
 // Define schema base e customiza para adicionar transformação de strings para dates
 const projectBaseSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
 export const insertProjectSchema = projectBaseSchema.extend({

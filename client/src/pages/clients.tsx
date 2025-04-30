@@ -364,8 +364,8 @@ export default function Clients() {
     // Convertendo valores para o formato esperado pela API
     const clientData: InsertClient = {
       ...data,
-      // Converter a data para string ISO se existir
-      since: data.since ? new Date(data.since).toISOString() : null,
+      // A data já será tratada pelo schema Zod, não precisamos converter aqui
+      since: data.since,
       // Adicionar os segmentos aos dados do cliente
       segments: segmentTags.join(', '),
     };
