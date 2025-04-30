@@ -183,8 +183,6 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           <div className="absolute top-3 left-3">
             <StatusBadge 
               status={project.status}
-              stageStatus={isProjectStage(project.status || '') ? project.status as ProjectStageStatus : 'producao'}
-              specialStatus={isProjectSpecialStatus(project.status || '') ? project.status as ProjectSpecialStatus : null}
               small={true} 
             />
           </div>
