@@ -65,7 +65,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
+import { DatePickerWithYearNavigation } from "@/components/ui/date-picker-with-navigation";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import {
