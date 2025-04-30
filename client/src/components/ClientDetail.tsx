@@ -1160,8 +1160,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                           selected={field.value ? new Date(field.value) : undefined}
                           onSelect={field.onChange}
                           disabled={(date) =>
-                            date > new Date() || date < new Date("2000-01-01")
+                            date > new Date() || date < new Date("1980-01-01")
                           }
+                          fromYear={1980}
+                          toYear={new Date().getFullYear()}
+                          captionLayout="dropdown-buttons"
                           initialFocus
                         />
                       </PopoverContent>
