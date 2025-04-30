@@ -189,7 +189,7 @@ export function TaskCard({
                 </Badge>
               )}
               
-              {assignedUser && (
+              {assignedUser && assignedUser.name && (
                 <Badge variant="secondary" className="flex items-center">
                   <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] mr-1">
                     {assignedUser.name.substring(0, 2)}
