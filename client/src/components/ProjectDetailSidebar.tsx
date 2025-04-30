@@ -320,7 +320,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Status:</div>
             <StatusBadge 
-              status={project?.status}
+              project={project}
             />
           </div>
           

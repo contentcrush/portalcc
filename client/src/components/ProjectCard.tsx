@@ -182,7 +182,7 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           )}
           <div className="absolute top-3 left-3">
             <StatusBadge 
-              status={project.status}
+              project={project}
               small={true} 
             />
           </div>

@@ -3,9 +3,13 @@ import { twMerge } from "tailwind-merge";
 import { format, parseISO, isValid, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  Project, Client, Task, ProjectStatus, TaskStatus, 
-  TaskPriority, InteractionType, DocumentType, StatusColors 
+  ProjectStatus, ProjectStageStatus, ProjectSpecialStatus,
+  TaskStatus, TaskPriority, InteractionType, DocumentType, 
+  StatusColors, isProjectStage, isProjectSpecialStatus 
 } from "./types";
+import { 
+  Project, Client, Task 
+} from "@shared/schema";
 import { 
   TASK_PRIORITY_WEIGHTS, 
   TASK_STATUS_WEIGHTS 
@@ -208,6 +212,46 @@ export function getMonthName(monthNumber: number): string {
   const date = new Date();
   date.setMonth(monthNumber - 1);
   return format(date, "MMM", { locale: ptBR });
+}
+
+/**
+ * Função global para processar o status de um projeto.
+ * Verifica se o projeto possui data de entrega no futuro, mesmo que o status esteja "atrasado"
+ * e retorna o status apropriado para exibição.
+ * 
+ * @param project O objeto do projeto
+ * @returns Um objeto contendo o status de etapa e status especial (se houver)
+ */
+export function getNormalizedProjectStatus(project: Project | undefined | null): {
+  stageStatus: ProjectStageStatus;
+  specialStatus: ProjectSpecialStatus | null;
+} {
+  if (!project) {
+    // Valor padrão caso não exista projeto
+    return { stageStatus: 'producao', specialStatus: null };
+  }
+  
+  const today = new Date();
+  const endDate = project.endDate ? new Date(project.endDate) : null;
+  const status = project.status || 'producao';
+  
+  // Caso especial: projeto marcado como "atrasado" mas com data futura
+  if (status === 'atrasado' && endDate && endDate > today) {
+    // Se a data de entrega foi atualizada para uma data futura, 
+    // devemos ignorar o status "atrasado" e mostrar o status padrão (producao)
+    return { stageStatus: 'producao', specialStatus: null };
+  }
+  
+  // Verificamos se o status atual é uma etapa ou especial
+  if (isProjectStage(status)) {
+    return { stageStatus: status, specialStatus: null };
+  } else if (isProjectSpecialStatus(status)) {
+    // Para status especiais, precisamos retornar uma etapa padrão
+    return { stageStatus: 'producao', specialStatus: status };
+  }
+  
+  // Caso não seja reconhecido, volta para o status padrão
+  return { stageStatus: 'producao', specialStatus: null };
 }
 
 export function calculateTaskDaysOverdue(task: Task): number {

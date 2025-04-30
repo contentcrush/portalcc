@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { getStatusColor } from "@/lib/utils";
+import { getStatusColor, getNormalizedProjectStatus } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { 
   ProjectStatus,
@@ -9,7 +9,8 @@ import {
   TaskPriority, 
   StatusLabels,
   isProjectStage,
-  isProjectSpecialStatus
+  isProjectSpecialStatus,
+  Project
 } from "@/lib/types";
 
 interface StatusBadgeProps {
@@ -19,6 +20,7 @@ interface StatusBadgeProps {
   className?: string;
   stageStatus?: ProjectStageStatus | null; // Status de etapa para quando precisamos exibir ambos
   specialStatus?: ProjectSpecialStatus | null; // Status especial para quando precisamos exibir ambos
+  project?: Project | null; // Projeto completo para verificação inteligente de status
 }
 
 export default function StatusBadge({ 
@@ -27,15 +29,25 @@ export default function StatusBadge({
   minimal = false,
   className = "",
   stageStatus = null,
-  specialStatus = null
+  specialStatus = null,
+  project = null
 }: StatusBadgeProps) {
-  // Se temos tanto stageStatus quanto specialStatus, usaremos esses valores prioritariamente
-  // Se não, verificamos se o status único deve ser dividido em dois badges
+  // Se temos um projeto, usamos getNormalizedProjectStatus para obter o status real
   let activeStageStatus = stageStatus;
   let activeSpecialStatus = specialStatus;
   
-  // Se não temos stageStatus e specialStatus definidos mas temos um status único
-  if (!activeStageStatus && !activeSpecialStatus && status) {
+  // Prioridade 1: Se temos projeto completo, usamos a função global para normalizar o status
+  if (project) {
+    const normalizedStatus = getNormalizedProjectStatus(project);
+    activeStageStatus = normalizedStatus.stageStatus;
+    activeSpecialStatus = normalizedStatus.specialStatus;
+  }
+  // Prioridade 2: Se já temos stage e special status definidos, usamos eles
+  else if (activeStageStatus || activeSpecialStatus) {
+    // Manter os valores existentes
+  }
+  // Prioridade 3: Se só temos um status único, analisamos
+  else if (status) {
     // Verificamos se esse status é uma etapa ou status especial
     const normalizedStatus = status === "novo" ? "Novo" : status;
     
