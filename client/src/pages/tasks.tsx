@@ -11,7 +11,9 @@ import {
   isTaskOverdue, 
   isTaskDueSoon, 
   getTaskSortFunction,
-  truncateText
+  truncateText,
+  getInitials,
+  generateAvatarColor
 } from "@/lib/utils";
 import {
   Select,
@@ -889,9 +891,30 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
               </p>
             )}
             
-            {/* Project Badge */}
+            {/* Project Badge with client */}
             {hasProject && (
-              <div className="mb-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {task.project?.client && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+                      {task.project.client.logo ? (
+                        <img 
+                          src={task.project.client.logo} 
+                          alt={task.project.client.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div 
+                          className="w-full h-full flex items-center justify-center text-xs font-medium text-white"
+                          style={{ backgroundColor: generateAvatarColor(task.project.client.name) }}
+                        >
+                          {getInitials(task.project.client.name)}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600">{task.project.client.name}</span>
+                  </div>
+                )}
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-normal">
                   {task.project?.name}
                 </Badge>
