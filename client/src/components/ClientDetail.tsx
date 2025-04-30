@@ -205,7 +205,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         title: "Projeto criado com sucesso",
         description: `${newProject.name} foi criado para o cliente ${client?.name}.`,
       });
-      navigate(`/projects/${newProject.id}`);
+      // Permanecer na página atual para ver o projeto na lista
     },
     onError: (error) => {
       toast({
@@ -517,9 +517,25 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Projetos</CardTitle>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  Ver todos os projetos
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={() => navigate('/projects')}
+                  >
+                    Ver todos os projetos
+                  </Button>
+                  <Button 
+                    variant="default"
+                    size="sm" 
+                    className="text-xs flex items-center"
+                    onClick={() => setIsNewProjectDialogOpen(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Novo Projeto
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -535,7 +551,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                 <TableBody>
                   {projects?.length > 0 ? (
                     projects.map(project => (
-                      <TableRow key={project.id}>
+                      <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/projects/${project.id}`)}>
                         <TableCell className="font-medium">{project.name}</TableCell>
                         <TableCell>
                           <StatusBadge status={project.status} small={true} />
