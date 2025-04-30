@@ -142,6 +142,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
   // Toggle task completion mutation
   const updateTaskMutation = useMutation({
     mutationFn: async (data: { completed: boolean }) => {
+      // Apenas enviamos o flag completed, sem data - a data será gerenciada pelo servidor
       return apiRequest('PATCH', `/api/tasks/${taskId}`, data);
     },
     onSuccess: (_, variables) => {

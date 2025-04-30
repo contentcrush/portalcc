@@ -168,10 +168,10 @@ export default function Tasks() {
   // Toggle task completion mutation
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
-      // Correção do erro toISOString - enviando string ISO já formatada ou null
-      const completionData = completed 
-        ? { completed: true, completion_date: new Date().toISOString() }
-        : { completed: false, completion_date: null };
+      // Enviando apenas o campo completed - a data será definida no servidor
+      const completionData = { 
+        completed: completed 
+      };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
     },
