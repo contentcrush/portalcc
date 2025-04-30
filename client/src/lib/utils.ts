@@ -246,12 +246,44 @@ export function getNormalizedProjectStatus(project: Project | undefined | null):
   if (isProjectStage(status)) {
     return { stageStatus: status, specialStatus: null };
   } else if (isProjectSpecialStatus(status)) {
-    // Para status especiais, precisamos retornar uma etapa padrão
-    return { stageStatus: 'producao', specialStatus: status };
+    // Para status especiais, usamos a variável stage_history para determinar a última etapa
+    if (project.stage_history) {
+      try {
+        const history = JSON.parse(project.stage_history);
+        // Procurar a última etapa válida no histórico
+        const stages: ProjectStageStatus[] = ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'];
+        for (let i = stages.length - 1; i >= 0; i--) {
+          const stage = stages[i];
+          if (history[stage]) {
+            return { stageStatus: stage, specialStatus: status as ProjectSpecialStatus };
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao processar histórico de estágios:', e);
+      }
+    }
+    
+    // Se não encontrar histórico ou ocorrer erro, retorna etapa padrão
+    return { stageStatus: 'producao', specialStatus: status as ProjectSpecialStatus };
   }
   
   // Caso não seja reconhecido, volta para o status padrão
   return { stageStatus: 'producao', specialStatus: null };
+}
+
+/**
+ * Verifica se um projeto tem um status especial (atrasado, pausado, cancelado)
+ * mas deve ter suas etapas de produção interativas.
+ * 
+ * @param project O objeto do projeto
+ * @returns Se o projeto tem status especial mas etapas interativas
+ */
+export function hasInteractiveStages(project: Project | undefined | null): boolean {
+  if (!project) return false;
+  
+  const { specialStatus } = getNormalizedProjectStatus(project);
+  // Se tiver um status especial, as etapas devem estar interativas
+  return specialStatus !== null;
 }
 
 export function calculateTaskDaysOverdue(task: Task): number {
