@@ -101,7 +101,9 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   client_id: integer("client_id").notNull(),
-  status: text("status").notNull().default("draft"),
+  status: text("status").notNull().default("draft"), // Mantido para compatibilidade
+  stage_status: text("stage_status"), // Novo campo para o status de etapa (proposta, pre_producao, etc)
+  special_status: text("special_status"), // Novo campo para status especial (atrasado, pausado, cancelado)
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
