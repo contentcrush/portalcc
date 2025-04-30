@@ -2,6 +2,7 @@ import { db } from './db';
 import { projects } from '@shared/schema';
 import { eq, and, lt, inArray, gte } from 'drizzle-orm';
 import { format, addDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { storage } from './storage';
 
 /**
  * Verifica projetos atrasados e atualiza o status automaticamente
