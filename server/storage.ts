@@ -1223,6 +1223,35 @@ export class MemStorage implements IStorage {
   async deleteEvent(id: number): Promise<boolean> {
     return this.eventsData.delete(id);
   }
+  
+  // User Preferences - MemStorage
+  async getUserPreferences(userId: number): Promise<UserPreference | undefined> {
+    return Array.from(this.userPreferencesData.values())
+      .find(pref => pref.user_id === userId);
+  }
+  
+  async createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference> {
+    const newPreferences: UserPreference = {
+      ...preferences,
+      id: this.userPreferenceId++,
+      updated_at: new Date()
+    };
+    this.userPreferencesData.set(newPreferences.id, newPreferences);
+    return newPreferences;
+  }
+  
+  async updateUserPreferences(userId: number, prefData: Partial<InsertUserPreference>): Promise<UserPreference | undefined> {
+    const preferences = await this.getUserPreferences(userId);
+    if (!preferences) return undefined;
+    
+    const updatedPreferences = {
+      ...preferences,
+      ...prefData,
+      updated_at: new Date()
+    };
+    this.userPreferencesData.set(preferences.id, updatedPreferences);
+    return updatedPreferences;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
