@@ -35,33 +35,57 @@ export default function StatusBadge({
   // Determine background and text colors based on status
   const getBadgeStyles = () => {
     switch (normalizedStatus) {
+      // Status de projetos
+      case "proposta":
+        return "bg-slate-100 text-slate-800";
+      case "pre_producao":
+        return "bg-indigo-100 text-indigo-800";
+      case "producao":
+        return "bg-yellow-100 text-yellow-800";
+      case "pos_revisao":
+        return "bg-purple-100 text-purple-800";
+      case "entregue":
+        return "bg-green-100 text-green-800";
+      case "concluido":
+        return "bg-emerald-100 text-emerald-800";
+      case "atrasado":
+        return "bg-rose-100 text-rose-800";
+      case "pausado":
+        return "bg-amber-100 text-amber-800";
+      case "cancelado":
+        return "bg-gray-100 text-gray-800";
+      
+      // Status legados de projetos
       case "novo":
       case "Novo":
         return "bg-slate-100 text-slate-800";
       case "em_orcamento":
         return "bg-orange-100 text-orange-800";
-      case "pre_producao":
-        return "bg-indigo-100 text-indigo-800";
       case "em_producao":
         return "bg-yellow-100 text-yellow-800";
       case "em_andamento":
         return "bg-green-100 text-green-800";
       case "revisao_cliente":
         return "bg-purple-100 text-purple-800";
-      case "concluido":
-        return "bg-blue-100 text-blue-800";
+      
+      // Status de tarefas
       case "pendente":
         return "bg-amber-100 text-amber-800";
       case "cancelada":
         return "bg-red-100 text-red-800";
       case "bloqueada":
         return "bg-red-100 text-red-800";
+      
+      // Prioridades
       case "alta":
         return "bg-red-100 text-red-800";
       case "media":
         return "bg-amber-100 text-amber-800";
       case "baixa":
         return "bg-green-100 text-green-800";
+      case "critica":
+        return "bg-red-200 text-red-900";
+      
       default:
         return "bg-slate-100 text-slate-800";
     }

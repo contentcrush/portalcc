@@ -28,10 +28,15 @@ type ColumnsState = {
 
 // Status columns
 const statusColumns: StatusColumn[] = [
-  { id: 'pre_producao', title: 'Pré-Produção' },
-  { id: 'em_producao', title: 'Produção' },
-  { id: 'pos_producao', title: 'Pós-Produção' },
-  { id: 'concluido', title: 'Concluído' }
+  { id: 'proposta', title: 'Proposta' },
+  { id: 'pre_producao', title: 'Pré-produção' },
+  { id: 'producao', title: 'Produção' },
+  { id: 'pos_revisao', title: 'Pós / Revisão' },
+  { id: 'entregue', title: 'Entregue' },
+  { id: 'concluido', title: 'Concluído' },
+  { id: 'atrasado', title: 'Atrasado' },
+  { id: 'pausado', title: 'Pausado' },
+  { id: 'cancelado', title: 'Cancelado' }
 ];
 
 interface ProjectKanbanProps {
@@ -48,11 +53,14 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
       id: column.id,
       title: column.title,
       items: projects.filter(project => 
+        // Status exato
         (project.status === column.id) ||
-        // Map similar statuses to our simplified kanban columns
-        (column.id === 'pre_producao' && ['em_orcamento', 'draft'].includes(project.status)) ||
-        (column.id === 'em_producao' && ['em_andamento'].includes(project.status)) ||
-        (column.id === 'pos_producao' && ['revisao_cliente'].includes(project.status))
+        
+        // Mapeamento de status legados/antigos para as novas categorias
+        (column.id === 'proposta' && ['novo', 'em_orcamento', 'draft'].includes(project.status)) ||
+        (column.id === 'pre_producao' && ['pre-producao'].includes(project.status)) ||
+        (column.id === 'producao' && ['em_andamento', 'em_producao'].includes(project.status)) ||
+        (column.id === 'pos_revisao' && ['revisao_cliente', 'pos_producao'].includes(project.status))
       )
     };
     return acc;
@@ -72,7 +80,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
       }
       
       // Criamos um objeto com os campos obrigatórios, mantendo os valores originais
-      const updateData = {
+      const updateData: any = {
         name: projectToUpdate.name,
         client_id: projectToUpdate.client_id || null,
         status: status, // Atualizamos apenas o status
@@ -167,96 +175,213 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     });
   };
   
+  // Agrupar colunas em categorias para organização
+  const mainColumns = ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'];
+  const secondaryColumns = ['atrasado', 'pausado', 'cancelado'];
+  
   return (
     <div className="my-8">
       <h2 className="text-xl font-semibold mb-6">Quadro de Projetos</h2>
-      <div className="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 overflow-auto">
+      
+      {/* Contêiner principal com scroll horizontal */}
+      <div className="overflow-x-auto pb-4">
         <DragDropContext onDragEnd={onDragEnd}>
-          {statusColumns.map(column => (
-            <div key={column.id} className="w-full lg:w-1/4 min-w-[250px]">
-              <div className="bg-gray-50 rounded-lg p-4 mb-2">
-                <h3 className="font-medium text-gray-700 flex items-center gap-2">
-                  {column.title}
-                  <Badge variant="outline" className="ml-2">
-                    {columns[column.id]?.items.length || 0}
-                  </Badge>
-                </h3>
-              </div>
-              
-              <Droppable droppableId={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[500px] rounded-lg p-2 transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'
-                    }`}
-                  >
-                    {columns[column.id]?.items.map((project, index) => (
-                      <Draggable
-                        key={project.id.toString()}
-                        draggableId={project.id.toString()}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <Card
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`mb-3 ${
-                              snapshot.isDragging ? 'shadow-lg' : 'shadow-sm'
-                            }`}
-                          >
-                            <CardContent className="p-3">
-                              <div className="mb-2">
-                                <div className="flex justify-between items-center mb-1">
-                                  <h4 className="font-medium text-gray-900 truncate">
-                                    {project.name}
-                                  </h4>
-                                  <StatusBadge status={project.status} minimal />
-                                </div>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {project.client?.name || 'Cliente não especificado'}
-                                </p>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-2 mt-3">
-                                <div className="flex items-center text-xs text-gray-500">
-                                  <Calendar className="h-3 w-3 mr-1" />
-                                  {project.endDate ? format(new Date(project.endDate), 'dd/MM/yyyy') : 'Sem prazo'}
-                                </div>
-                                <div className="flex items-center text-xs text-gray-500">
-                                  <DollarSign className="h-3 w-3 mr-1" />
-                                  {project.budget 
-                                    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(project.budget)
-                                    : '-'}
-                                </div>
-                              </div>
-                              
-                              <div className="mt-2">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span>Progresso</span>
-                                  <span>{project.progress}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-1">
-                                  <div 
-                                    className={`${getProgressBarColor(project.progress)} h-1 rounded-full`}
-                                    style={{ width: `${project.progress}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+          <div className="flex flex-nowrap min-w-full space-x-4">
+            {/* Colunas principais do fluxo de trabalho */}
+            {statusColumns
+              .filter(column => mainColumns.includes(column.id))
+              .map(column => (
+                <div key={column.id} className="flex-shrink-0 w-[280px]">
+                  <div className={`bg-gray-50 rounded-lg p-3 mb-2 ${
+                    column.id === 'proposta' ? 'border-l-4 border-slate-400' :
+                    column.id === 'pre_producao' ? 'border-l-4 border-indigo-400' :
+                    column.id === 'producao' ? 'border-l-4 border-yellow-400' :
+                    column.id === 'pos_revisao' ? 'border-l-4 border-purple-400' :
+                    column.id === 'entregue' ? 'border-l-4 border-green-400' :
+                    column.id === 'concluido' ? 'border-l-4 border-emerald-400' : ''
+                  }`}>
+                    <h3 className="font-medium text-gray-700 flex items-center gap-2">
+                      {column.title}
+                      <Badge variant="outline" className="ml-2">
+                        {columns[column.id]?.items.length || 0}
+                      </Badge>
+                    </h3>
                   </div>
-                )}
-              </Droppable>
-            </div>
-          ))}
+                  
+                  <Droppable droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[500px] rounded-lg p-2 transition-colors ${
+                          snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'
+                        }`}
+                      >
+                        {columns[column.id]?.items.map((project, index) => (
+                          <Draggable
+                            key={project.id.toString()}
+                            draggableId={project.id.toString()}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <Card
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`mb-3 ${
+                                  snapshot.isDragging ? 'shadow-lg' : 'shadow-sm'
+                                }`}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="mb-2">
+                                    <div className="flex justify-between items-center mb-1">
+                                      <h4 className="font-medium text-gray-900 truncate">
+                                        {project.name}
+                                      </h4>
+                                      <StatusBadge status={project.status} minimal />
+                                    </div>
+                                    <p className="text-xs text-gray-500 truncate">
+                                      {project.client?.name || 'Cliente não especificado'}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 mt-3">
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      {project.endDate ? format(new Date(project.endDate), 'dd/MM/yyyy') : 'Sem prazo'}
+                                    </div>
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <DollarSign className="h-3 w-3 mr-1" />
+                                      {project.budget 
+                                        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(project.budget)
+                                        : '-'}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="mt-2">
+                                    <div className="flex justify-between text-xs mb-1">
+                                      <span>Progresso</span>
+                                      <span>{project.progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-1">
+                                      <div 
+                                        className={`${getProgressBarColor(project.progress)} h-1 rounded-full`}
+                                        style={{ width: `${project.progress}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              ))}
+            
+            {/* Separador visual */}
+            <div className="flex-shrink-0 w-px h-full bg-gray-200 mx-4"></div>
+            
+            {/* Colunas secundárias (status excepcionais) */}
+            {statusColumns
+              .filter(column => secondaryColumns.includes(column.id))
+              .map(column => (
+                <div key={column.id} className="flex-shrink-0 w-[280px]">
+                  <div className={`bg-gray-50 rounded-lg p-3 mb-2 ${
+                    column.id === 'atrasado' ? 'border-l-4 border-rose-400' :
+                    column.id === 'pausado' ? 'border-l-4 border-amber-400' :
+                    column.id === 'cancelado' ? 'border-l-4 border-gray-400' : ''
+                  }`}>
+                    <h3 className="font-medium text-gray-700 flex items-center gap-2">
+                      {column.title}
+                      <Badge variant="outline" className="ml-2">
+                        {columns[column.id]?.items.length || 0}
+                      </Badge>
+                    </h3>
+                  </div>
+                  
+                  <Droppable droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[500px] rounded-lg p-2 transition-colors ${
+                          snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-gray-100'
+                        }`}
+                      >
+                        {columns[column.id]?.items.map((project, index) => (
+                          <Draggable
+                            key={project.id.toString()}
+                            draggableId={project.id.toString()}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <Card
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`mb-3 ${
+                                  snapshot.isDragging ? 'shadow-lg' : 'shadow-sm'
+                                }`}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="mb-2">
+                                    <div className="flex justify-between items-center mb-1">
+                                      <h4 className="font-medium text-gray-900 truncate">
+                                        {project.name}
+                                      </h4>
+                                      <StatusBadge status={project.status} minimal />
+                                    </div>
+                                    <p className="text-xs text-gray-500 truncate">
+                                      {project.client?.name || 'Cliente não especificado'}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 mt-3">
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      {project.endDate ? format(new Date(project.endDate), 'dd/MM/yyyy') : 'Sem prazo'}
+                                    </div>
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <DollarSign className="h-3 w-3 mr-1" />
+                                      {project.budget 
+                                        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(project.budget)
+                                        : '-'}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="mt-2">
+                                    <div className="flex justify-between text-xs mb-1">
+                                      <span>Progresso</span>
+                                      <span>{project.progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-1">
+                                      <div 
+                                        className={`${getProgressBarColor(project.progress)} h-1 rounded-full`}
+                                        style={{ width: `${project.progress}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              ))}
+          </div>
         </DragDropContext>
+      </div>
+      
+      <div className="mt-4 text-sm text-gray-500">
+        <span>Arraste os cartões para atualizar o status dos projetos.</span>
       </div>
     </div>
   );
