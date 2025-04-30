@@ -7,6 +7,9 @@ import { relations } from "drizzle-orm";
 export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'editor', 'viewer']);
 export const userTypeEnum = pgEnum('user_type', ['pf', 'pj']); // Pessoa Física ou Pessoa Jurídica
 export const accountTypeEnum = pgEnum('account_type', ['corrente', 'poupanca', 'investimento', 'pagamento']);
+export const themeEnum = pgEnum('theme_type', ['light', 'dark', 'system']);
+export const accentColorEnum = pgEnum('accent_color', ['blue', 'green', 'purple', 'orange', 'red', 'pink']);
+export const viewModeEnum = pgEnum('view_mode', ['grid', 'list', 'table']);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -60,6 +63,18 @@ export const refreshTokens = pgTable("refresh_tokens", {
   revoked: boolean("revoked").default(false),
   ip_address: text("ip_address"),
   user_agent: text("user_agent"),
+});
+
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  theme: themeEnum("theme").default('light'),
+  accent_color: accentColorEnum("accent_color").default('blue'),
+  clients_view_mode: viewModeEnum("clients_view_mode").default('grid'),
+  sidebar_collapsed: boolean("sidebar_collapsed").default(false),
+  dashboard_widgets: json("dashboard_widgets").$type<string[]>().default(['tasks', 'projects', 'clients']),
+  quick_actions: json("quick_actions").$type<string[]>().default(['new-task', 'new-project', 'new-client']),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
 export const clients = pgTable("clients", {
@@ -218,6 +233,9 @@ export const insertRefreshTokenSchema = createInsertSchema(refreshTokens).omit({
   id: true, 
   created_at: true 
 });
+// Schema para preferências do usuário
+export const insertUserPreferenceSchema = createInsertSchema(userPreferences).omit({ id: true, updated_at: true });
+
 // Schema base para clientes
 const clientBaseSchema = createInsertSchema(clients).omit({ id: true });
 // Schema personalizado com transformações para data 'since'
@@ -286,6 +304,7 @@ export const insertEventSchema = eventBaseSchema.extend({
 // Select types
 export type User = typeof users.$inferSelect;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type UserPreference = typeof userPreferences.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectMember = typeof projectMembers.$inferSelect;
@@ -301,6 +320,7 @@ export type Event = typeof events.$inferSelect;
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertRefreshToken = z.infer<typeof insertRefreshTokenSchema>;
+export type InsertUserPreference = z.infer<typeof insertUserPreferenceSchema>;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
@@ -314,7 +334,7 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 // Definição de relações
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   tasks: many(tasks, { relationName: "user_tasks" }),
   projectMembers: many(projectMembers),
   taskComments: many(taskComments),
@@ -322,12 +342,23 @@ export const usersRelations = relations(users, ({ many }) => ({
   clientInteractions: many(clientInteractions),
   expenses: many(expenses),
   events: many(events),
-  refreshTokens: many(refreshTokens)
+  refreshTokens: many(refreshTokens),
+  preferences: one(userPreferences, {
+    fields: [users.id],
+    references: [userPreferences.user_id]
+  })
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, {
     fields: [refreshTokens.user_id],
+    references: [users.id]
+  })
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.user_id],
     references: [users.id]
   })
 }));
