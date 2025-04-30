@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { ClientAvatar } from './ClientAvatar';
 import { getProgressBarColor } from '@/lib/utils';
 
 // Define types for our columns
@@ -251,9 +252,20 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                       </h4>
                                       <StatusBadge project={project} minimal />
                                     </div>
-                                    <p className="text-xs text-gray-500 truncate">
-                                      {project.client?.name || 'Cliente não especificado'}
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-1 mb-1">
+                                      {project.client && (
+                                        <div className="flex-shrink-0">
+                                          <ClientAvatar 
+                                            name={project.client.name} 
+                                            logoUrl={project.client.logo} 
+                                            size="sm"
+                                          />
+                                        </div>
+                                      )}
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {project.client?.name || 'Cliente não especificado'}
+                                      </p>
+                                    </div>
                                   </div>
                                   
                                   <div className="grid grid-cols-2 gap-2 mt-3">
