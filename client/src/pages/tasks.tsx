@@ -846,14 +846,13 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
           {/* Task Title Row */}
           <div className="flex items-start justify-between">
             <div className="flex items-start">
-              <Checkbox 
-                checked={isCompleted}
-                onCheckedChange={(e) => {
-                  e?.stopPropagation(); // Previne propagação do evento para o card
-                  onToggleComplete();
-                }}
-                className="mt-1 mr-2"
-              />
+              <div onClick={(e) => e.stopPropagation()}>
+                <Checkbox 
+                  checked={isCompleted}
+                  onCheckedChange={() => onToggleComplete()}
+                  className="mt-1 mr-2"
+                />
+              </div>
               <div>
                 <h3 className={cn(
                   "font-medium leading-tight",
