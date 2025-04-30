@@ -59,8 +59,20 @@ import {
   MoreHorizontal,
   Clock,
   CheckCircle,
-  AlarmClock
+  AlarmClock,
+  Trash2
 } from "lucide-react";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
 // Já importado anteriormente
 import { TaskWithDetails } from "@/lib/types";
@@ -95,6 +107,10 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [taskDetailId, setTaskDetailId] = useState<number | null>(null);
+  
+  // Estados para o diálogo de confirmação de exclusão
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -177,6 +193,36 @@ export default function Tasks() {
     },
   });
 
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest('DELETE', `/api/tasks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      toast({
+        title: "Tarefa excluída",
+        description: "Tarefa excluída com sucesso",
+      });
+      
+      // Se a tarefa que está sendo excluída é a que está sendo visualizada no detalhe
+      if (taskDetailId === taskToDelete) {
+        setTaskDetailId(null);
+      }
+      
+      setTaskToDelete(null);
+      setShowDeleteConfirmation(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir tarefa",
+        description: error.message,
+        variant: "destructive",
+      });
+      setShowDeleteConfirmation(false);
+    },
+  });
+
   // Toggle task completion mutation
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
@@ -255,6 +301,19 @@ export default function Tasks() {
     setTaskDetailId(null);
   };
 
+  // Handler para abrir o diálogo de confirmação de exclusão
+  const handleDeleteTask = (taskId: number) => {
+    setTaskToDelete(taskId);
+    setShowDeleteConfirmation(true);
+  };
+  
+  // Handler para confirmar a exclusão da tarefa
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      deleteTaskMutation.mutate(taskToDelete);
+    }
+  };
+  
   // Handle task checkbox toggle
   const handleToggleTaskCompletion = (taskId: number, currentStatus: boolean) => {
     toggleTaskCompletionMutation.mutate({
@@ -310,6 +369,27 @@ export default function Tasks() {
           onClose={handleCloseTaskDetails}
         />
       )}
+      
+      {/* Diálogo de confirmação para exclusão de tarefa */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteTask}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {/* Cabeçalho com título e botão de Nova Tarefa */}
       <div className="flex justify-between items-center mb-2">
@@ -889,11 +969,11 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                     <DropdownMenuItem 
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Aqui chamaríamos uma função para excluir a tarefa
-                        alert(`Função para apagar a tarefa ${task.id} ainda será implementada`);
+                        handleDeleteTask(task.id);
                       }}
                       className="text-red-600"
                     >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
                       Apagar tarefa
                     </DropdownMenuItem>
                   </DropdownMenuContent>
