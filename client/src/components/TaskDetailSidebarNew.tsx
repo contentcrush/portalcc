@@ -106,7 +106,16 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
 
   const handleToggleCompletion = () => {
     if (task) {
-      updateTaskMutation.mutate({ completed: !task.completed });
+      if (!task.completed) {
+        // Se está marcando como concluída, também alterar o status para "concluido"
+        updateTaskMutation.mutate({ 
+          completed: true,
+          status: "concluido"
+        });
+      } else {
+        // Se está desmarcando, apenas remove o completed
+        updateTaskMutation.mutate({ completed: false });
+      }
     }
   };
 
