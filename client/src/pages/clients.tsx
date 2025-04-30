@@ -364,8 +364,8 @@ export default function Clients() {
     // Convertendo valores para o formato esperado pela API
     const clientData: InsertClient = {
       ...data,
-      // Incluir o campo since com a data selecionada
-      since: data.since,
+      // Converter a data para string ISO se existir
+      since: data.since ? new Date(data.since).toISOString() : null,
       // Adicionar os segmentos aos dados do cliente
       segments: segmentTags.join(', '),
     };
