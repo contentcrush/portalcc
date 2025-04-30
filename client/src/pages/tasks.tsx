@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TaskDetailSidebar from "@/components/TaskDetailSidebar";
 import {
   Dialog,
@@ -101,9 +100,8 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
-  // Removendo o activeTab para separar os controles de exibição entre tarefas pendentes e concluídas
+  // Estado para controlar a exibição das tarefas concluídas
   const [showAllCompleted, setShowAllCompleted] = useState(false);
-  const [viewMode, setViewMode] = useState("lista");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null);
   const [taskDetailId, setTaskDetailId] = useState<number | null>(null);
@@ -371,7 +369,7 @@ export default function Tasks() {
       )}
       
       {/* Diálogo de confirmação para exclusão de tarefa */}
-      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={(open) => setShowDeleteConfirmation(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
@@ -391,199 +389,175 @@ export default function Tasks() {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Cabeçalho com título e botão de Nova Tarefa */}
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <h1 className="text-2xl font-bold">Tarefas</h1>
-          <p className="text-sm text-gray-500">Gerenciamento de tarefas da equipe</p>
+      <div>
+        {/* Cabeçalho com título e botão de Nova Tarefa */}
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-2xl font-bold">Tarefas</h1>
+            <p className="text-sm text-gray-500">Gerenciamento de tarefas da equipe</p>
+          </div>
+          <Button onClick={handleNewTask} className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Tarefa
+          </Button>
         </div>
-        <Button onClick={handleNewTask} className="bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Tarefa
-        </Button>
-      </div>
-      
-      {/* View Mode Tabs - Lista/Quadro/Calendário */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <Tabs value={viewMode} onValueChange={setViewMode}>
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="lista" className="flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-              Lista
-            </TabsTrigger>
-            {/* Visualização em Quadro removida conforme solicitado */}
-            <TabsTrigger value="calendario" className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              Calendário
-            </TabsTrigger>
-          </TabsList>
         
+        {/* Lista de tarefas */}
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-2 mb-4 px-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            <h2 className="text-sm font-medium text-gray-700">Lista</h2>
+          </div>
+          
           {/* Main Content */}
-          <TabsContent value="lista" className="mt-4">
-            {/* Task Status Tabs - Pendentes/Concluídas */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              {/* Pendentes Tab */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <AlarmClock className="h-5 w-5 text-amber-500" />
-                    <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
-                    {tasks && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                        {tasks.filter(t => !t.completed).length}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Buscar tarefas..."
-                        className="pl-9 bg-gray-50 border-gray-200"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            {/* Pendentes Tab */}
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                      <AlarmClock className="h-5 w-5 text-amber-500" />
+                      <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
+                      {tasks && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          {tasks.filter(t => !t.completed).length}
+                        </Badge>
+                      )}
                     </div>
                     
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger className="w-40 bg-gray-50 border-gray-200">
-                        <SelectValue placeholder="Prioridade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        {TASK_PRIORITY_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                {/* Tasks List */}
-                <div className="space-y-3">
-                  {isLoadingTasks ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                    </div>
-                  ) : filteredTasks && filteredTasks.filter(task => !task.completed).length > 0 ? (
-                    filteredTasks.filter(task => !task.completed).map(task => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
-                        onView={() => handleViewTaskDetails(task.id)}
-                        onDelete={() => handleDeleteTask(task.id)}
-                        onEdit={() => handleEditTask(task.id)}
-                      />
-                    ))
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-8 text-center">
-                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle className="h-6 w-6 text-gray-400" />
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Buscar tarefas..."
+                          className="pl-9 bg-gray-50 border-gray-200"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma tarefa pendente</h3>
-                      <p className="text-gray-500 text-sm mb-4">
-                        Todas as tarefas foram concluídas ou não correspondem aos filtros aplicados.
-                      </p>
-                      <Button onClick={handleNewTask}>Criar nova tarefa</Button>
+                      
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-40 bg-gray-50 border-gray-200">
+                          <SelectValue placeholder="Prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {TASK_PRIORITY_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Concluídas Section */}
-              <div className="border-t border-gray-200 bg-gray-50 p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <h2 className="text-lg font-semibold">Tarefas Concluídas</h2>
-                    {tasks && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {tasks.filter(t => t.completed).length}
-                      </Badge>
-                    )}
                   </div>
                   
-                  {/* Botão de Ver todas removido conforme solicitado */}
-                </div>
-                
-                {/* Completed Tasks (Limited or Full View) */}
-                {showAllCompleted ? (
+                  {/* Tasks List */}
                   <div className="space-y-3">
                     {isLoadingTasks ? (
                       <div className="flex justify-center items-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                       </div>
-                    ) : filteredTasks && filteredTasks.filter(task => task.completed).length > 0 ? (
-                      filteredTasks.filter(task => task.completed).map(task => (
+                    ) : filteredTasks && filteredTasks.filter(task => !task.completed).length > 0 ? (
+                      filteredTasks.filter(task => !task.completed).map(task => (
                         <TaskCard
                           key={task.id}
                           task={task}
                           onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
-                          onDelete={() => handleDeleteTask(task.id)}
                           onView={() => handleViewTaskDetails(task.id)}
+                          onDelete={() => handleDeleteTask(task.id)}
                           onEdit={() => handleEditTask(task.id)}
                         />
                       ))
                     ) : (
-                      <div className="bg-white rounded-lg p-8 text-center">
+                      <div className="bg-gray-50 rounded-lg p-8 text-center">
                         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                          <AlarmClock className="h-6 w-6 text-gray-400" />
+                          <CheckCircle className="h-6 w-6 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma tarefa concluída</h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma tarefa pendente</h3>
                         <p className="text-gray-500 text-sm mb-4">
-                          Você ainda não concluiu nenhuma tarefa ou elas não correspondem aos filtros aplicados.
+                          Todas as tarefas foram concluídas ou não correspondem aos filtros aplicados.
                         </p>
+                        <Button onClick={handleNewTask}>Criar nova tarefa</Button>
                       </div>
                     )}
                   </div>
-                ) : (
-                  // Preview of Completed Tasks (3 max)
-                  <div className="space-y-3">
-                    {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 3).map(task => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onDelete={() => handleDeleteTask(task.id)}
-                        onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
-                        onView={() => handleViewTaskDetails(task.id)}
-                        onEdit={() => handleEditTask(task.id)}
-                      />
-                    ))}
+                </div>
+                
+                {/* Concluídas Section */}
+                <div className="border-t border-gray-200 bg-gray-50 p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <h2 className="text-lg font-semibold">Tarefas Concluídas</h2>
+                      {tasks && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          {tasks.filter(t => t.completed).length}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Botão de Ver todas removido conforme solicitado */}
                   </div>
-                )}
+                  
+                  {/* Completed Tasks (Limited or Full View) */}
+                  {showAllCompleted ? (
+                    <div className="space-y-3">
+                      {isLoadingTasks ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                        </div>
+                      ) : filteredTasks && filteredTasks.filter(task => task.completed).length > 0 ? (
+                        filteredTasks.filter(task => task.completed).map(task => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
+                            onDelete={() => handleDeleteTask(task.id)}
+                            onView={() => handleViewTaskDetails(task.id)}
+                            onEdit={() => handleEditTask(task.id)}
+                          />
+                        ))
+                      ) : (
+                        <div className="bg-white rounded-lg p-8 text-center">
+                          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                            <AlarmClock className="h-6 w-6 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma tarefa concluída</h3>
+                          <p className="text-gray-500 text-sm mb-4">
+                            Você ainda não concluiu nenhuma tarefa ou elas não correspondem aos filtros aplicados.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Preview of Completed Tasks (3 max)
+                    <div className="space-y-3">
+                      {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 3).map(task => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onDelete={() => handleDeleteTask(task.id)}
+                          onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
+                          onView={() => handleViewTaskDetails(task.id)}
+                          onEdit={() => handleEditTask(task.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </TabsContent>
-          
-          {/* Aba de Quadro removida conforme solicitado */}
-          
-          <TabsContent value="calendario" className="mt-4">
-            <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <Calendar className="h-6 w-6 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Visualização em Calendário</h3>
-              <p className="text-gray-500 text-sm mb-4">
-                A visualização em calendário será implementada em breve.
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
       
       {/* Task Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => setIsDialogOpen(open)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{selectedTask ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
