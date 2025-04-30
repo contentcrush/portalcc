@@ -166,6 +166,50 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
+  // Mutation para atualizar o status do projeto
+  const updateProjectStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      return apiRequest('PATCH', `/api/projects/${projectId}`, {
+        status: status,
+        // Adiciona data de conclusão da etapa atual
+        stage_dates: {
+          ...(project?.stage_dates || {}),
+          [status]: new Date().toISOString()
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({
+        title: "Status atualizado",
+        description: "O status do projeto foi atualizado com sucesso."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleUpdateProjectStatus = (status: string) => {
+    // Verifica se o status é diferente do atual para evitar chamadas desnecessárias
+    if (project && project.status !== status) {
+      // Confirmação para status especiais
+      if (['cancelado', 'pausado'].includes(status)) {
+        const statusLabel = status === 'cancelado' ? 'cancelar' : 'pausar';
+        if (!window.confirm(`Tem certeza que deseja ${statusLabel} este projeto?`)) {
+          return;
+        }
+      }
+      
+      updateProjectStatusMutation.mutate(status);
+    }
+  };
+  
   const handleDuplicateProject = () => {
     if (window.confirm("Deseja duplicar este projeto? Uma cópia será criada com todos os membros da equipe e etapas.")) {
       duplicateProjectMutation.mutate();
@@ -365,190 +409,242 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         
         <div className="mb-8">
           <h4 className="font-medium text-sm mb-4">ETAPAS DO PROJETO</h4>
-          <div className="space-y-3">
-            {/* Exibir etapas padrão baseadas no fluxo de trabalho */}
-            {project ? (
-              <>
-                {/* Etapas de fluxo padrão */}
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+          
+          {/* Mutation para atualizar o status do projeto */}
+          {project ? (
+            <div className="space-y-4">
+              {/* Etapas de fluxo padrão */}
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('proposta')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ? 'bg-slate-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Proposta</p>
+                  <p className={`text-xs ${
                     ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? 'bg-slate-500' 
-                      : 'bg-gray-100'
+                      ? 'text-slate-600'
+                      : 'text-gray-500'
                   }`}>
-                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Proposta</p>
-                    <p className={`text-xs ${
-                      ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'text-slate-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? project.stage_dates?.proposta 
+                        ? `Concluído em ${formatDate(project.stage_dates.proposta)}`
+                        : 'Concluído'
+                      : 'Pendente'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+              </div>
+              
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('pre_producao')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ? 'bg-indigo-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Pré-produção</p>
+                  <p className={`text-xs ${
                     ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? 'bg-indigo-500' 
-                      : 'bg-gray-100'
+                      ? 'text-indigo-600'
+                      : 'text-gray-500'
                   }`}>
-                    {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Pré-produção</p>
-                    <p className={`text-xs ${
-                      ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'text-indigo-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? project.stage_dates?.pre_producao 
+                        ? `Concluído em ${formatDate(project.stage_dates.pre_producao)}`
+                        : 'Concluído'
+                      : 'Pendente'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+              </div>
+              
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('producao')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Produção</p>
+                  <p className={`text-xs ${
                     ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? 'bg-yellow-500' 
-                      : 'bg-gray-100'
+                      ? 'text-yellow-600'
+                      : 'text-gray-500'
                   }`}>
-                    {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Produção</p>
-                    <p className={`text-xs ${
-                      ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'text-yellow-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? project.stage_dates?.producao 
+                        ? `Concluído em ${formatDate(project.stage_dates.producao)}`
+                        : 'Em andamento'
+                      : 'Pendente'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+              </div>
+              
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('pos_revisao')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {['pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Pós-produção</p>
+                  <p className={`text-xs ${
                     ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? 'bg-purple-500' 
-                      : 'bg-gray-100'
+                      ? 'text-purple-600'
+                      : 'text-gray-500'
                   }`}>
-                    {['pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Pós / Revisão</p>
-                    <p className={`text-xs ${
-                      ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'text-purple-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      ? project.stage_dates?.pos_revisao 
+                        ? `Concluído em ${formatDate(project.stage_dates.pos_revisao)}`
+                        : 'Concluído'
+                      : 'Pendente'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+              </div>
+              
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('entregue')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['entregue', 'concluido'].includes(project.status)
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {['entregue', 'concluido'].includes(project.status) 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Entregue / Aprovado</p>
+                  <p className={`text-xs ${
                     ['entregue', 'concluido'].includes(project.status)
-                      ? 'bg-green-500' 
-                      : 'bg-gray-100'
+                      ? 'text-green-600'
+                      : 'text-gray-500'
                   }`}>
-                    {['entregue', 'concluido'].includes(project.status) && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Entregue / Aprovado</p>
-                    <p className={`text-xs ${
-                      ['entregue', 'concluido'].includes(project.status)
-                        ? 'text-green-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {['entregue', 'concluido'].includes(project.status)
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {['entregue', 'concluido'].includes(project.status)
+                      ? project.stage_dates?.entregue 
+                        ? `Concluído em ${formatDate(project.stage_dates.entregue)}`
+                        : 'Concluído'
+                      : 'Pendente'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+              </div>
+              
+              <div 
+                className="flex items-start cursor-pointer group"
+                onClick={() => handleUpdateProjectStatus('concluido')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${project.status === 'concluido'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                  }`}
+                >
+                  {project.status === 'concluido' 
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <Circle className="h-4 w-4 opacity-30" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Concluído (Pago)</p>
+                  <p className={`text-xs ${
                     project.status === 'concluido'
-                      ? 'bg-emerald-500' 
-                      : 'bg-gray-100'
+                      ? 'text-emerald-600'
+                      : 'text-gray-500'
                   }`}>
-                    {project.status === 'concluido' && 
-                      <CheckCircle2 className="h-3 w-3 text-white" />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Concluído (Pago)</p>
-                    <p className={`text-xs ${
-                      project.status === 'concluido'
-                        ? 'text-emerald-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {project.status === 'concluido'
-                        ? 'Concluída' 
-                        : 'Pendente'}
-                    </p>
-                  </div>
+                    {project.status === 'concluido'
+                      ? project.stage_dates?.concluido 
+                        ? `Concluído em ${formatDate(project.stage_dates.concluido)}`
+                        : 'Concluído'
+                      : 'Pendente'}
+                  </p>
                 </div>
+              </div>
+              
+              {/* Linha separadora */}
+              <div className="border-t border-gray-200 my-4"></div>
+              
+              {/* Status especiais */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className={`flex items-center px-3 py-1.5 rounded text-sm
+                    ${project.status === 'atrasado'
+                      ? 'bg-rose-100 text-rose-600 border border-rose-300'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  onClick={() => handleUpdateProjectStatus('atrasado')}
+                >
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  Atrasado
+                </button>
                 
-                {/* Status especiais */}
-                {project.status === 'atrasado' && (
-                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-rose-500">
-                      <Clock className="h-3 w-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Atrasado</p>
-                      <p className="text-xs text-rose-600">Projeto está atrasado</p>
-                    </div>
-                  </div>
-                )}
+                <button
+                  className={`flex items-center px-3 py-1.5 rounded text-sm
+                    ${project.status === 'pausado'
+                      ? 'bg-amber-100 text-amber-600 border border-amber-300'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  onClick={() => handleUpdateProjectStatus('pausado')}
+                >
+                  <Pause className="h-3.5 w-3.5 mr-1.5" />
+                  Pausado
+                </button>
                 
-                {project.status === 'pausado' && (
-                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-amber-500">
-                      <Pause className="h-3 w-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Pausado</p>
-                      <p className="text-xs text-amber-600">Projeto temporariamente pausado</p>
-                    </div>
-                  </div>
-                )}
-                
-                {project.status === 'cancelado' && (
-                  <div className="flex items-center mt-6 pt-4 border-t border-gray-100">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center mr-3 bg-gray-500">
-                      <X className="h-3 w-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Cancelado</p>
-                      <p className="text-xs text-gray-600">Projeto foi cancelado</p>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-gray-500">Carregando etapas...</p>
-            )}
-          </div>
+                <button
+                  className={`flex items-center px-3 py-1.5 rounded text-sm
+                    ${project.status === 'cancelado'
+                      ? 'bg-gray-100 text-gray-600 border border-gray-300'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  onClick={() => handleUpdateProjectStatus('cancelado')}
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  Cancelado
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Carregando etapas...</p>
+          )}
         </div>
         
         <div className="mb-8">
