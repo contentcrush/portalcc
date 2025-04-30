@@ -528,13 +528,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'bg-slate-100'
                   }`}
                 >
-                  {project.status === 'pos_revisao' && <div className="text-white text-xs font-semibold">3</div>}
-                  {(project.status !== 'pos_revisao' && ['entregue', 'concluido'].includes(project.status)) && 
-                    <Check className="h-3.5 w-3.5 text-white" />
-                  }
-                  {!['pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
-                    <div className="text-slate-300 text-xs font-semibold">3</div>
-                  }
+                  <Check className={`h-3.5 w-3.5 ${
+                    ['pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Pós-produção</p>
