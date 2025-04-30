@@ -596,6 +596,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update project" });
     }
   });
+  
+  // Rota para forçar a verificação de projetos com datas atualizadas
+  app.post("/api/projects/check-dates", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
+    try {
+      // Verificação manual de projetos atrasados com datas atualizadas
+      const result = await checkProjectsWithUpdatedDates();
+      
+      // Verificar projetos específicos se fornecidos
+      if (req.body.projectIds && Array.isArray(req.body.projectIds) && req.body.projectIds.length > 0) {
+        for (const projectId of req.body.projectIds) {
+          const project = await storage.getProject(projectId);
+          if (project && project.status === 'atrasado') {
+            const endDate = new Date(project.endDate);
+            const today = new Date();
+            
+            if (endDate > today) {
+              console.log(`[Verificação Manual] Atualizando status do projeto ${projectId} - ${project.name} de 'atrasado' para 'producao'`);
+              await storage.updateProjectStatus(projectId, 'producao');
+            }
+          }
+        }
+      }
+      
+      res.json({
+        message: "Verificação manual executada com sucesso",
+        result
+      });
+    } catch (error) {
+      console.error("Erro ao verificar datas atualizadas:", error);
+      res.status(500).json({ message: "Falha ao verificar datas atualizadas" });
+    }
+  });
 
   app.post("/api/projects/:id/duplicate", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {

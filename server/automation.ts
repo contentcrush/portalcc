@@ -193,10 +193,17 @@ export async function checkProjectsWithUpdatedDates() {
     const updatePromises = updatedProjects.map(async (project) => {
       console.log(`[Automação] Atualizando projeto ${project.id} - ${project.name} para status 'producao' (data futura)`);
       
-      return db
-        .update(projects)
-        .set({ status: 'producao' })
-        .where(eq(projects.id, project.id));
+      // Atualiza o status do projeto diretamente no banco de dados, mas também
+      // chama a implementação de updateProjectStatus para garantir consistência
+      if (storage && typeof storage.updateProjectStatus === 'function') {
+        return storage.updateProjectStatus(project.id, 'producao');
+      } else {
+        // Fallback caso storage não esteja disponível
+        return db
+          .update(projects)
+          .set({ status: 'producao' })
+          .where(eq(projects.id, project.id));
+      }
     });
     
     await Promise.all(updatePromises);
