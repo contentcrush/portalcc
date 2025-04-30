@@ -964,6 +964,43 @@ export class MemStorage implements IStorage {
   async getTasks(): Promise<Task[]> {
     return Array.from(this.tasksData.values());
   }
+  
+  async getTasksWithDetails(): Promise<Task[]> {
+    // Obter todas as tarefas
+    const tasks = Array.from(this.tasksData.values());
+    
+    // Para cada tarefa, adicionar detalhes do projeto e cliente
+    const tasksWithDetails = tasks.map(task => {
+      // Criar uma cópia da tarefa para não modificar o objeto original
+      const taskWithDetails = { ...task };
+      
+      // Adicionar informações do projeto
+      const project = this.projectsData.get(task.project_id);
+      if (project) {
+        // Adicionar o projeto como propriedade adicional
+        (taskWithDetails as any).project = project;
+        
+        // Adicionar informações do cliente
+        const client = this.clientsData.get(project.client_id);
+        if (client) {
+          // Adicionar o cliente como propriedade adicional
+          (taskWithDetails as any).client = client;
+        }
+      }
+      
+      // Adicionar informações do usuário assignado
+      if (task.assigned_to) {
+        const user = this.usersData.get(task.assigned_to);
+        if (user) {
+          (taskWithDetails as any).assignedUser = user;
+        }
+      }
+      
+      return taskWithDetails;
+    });
+    
+    return tasksWithDetails;
+  }
 
   async getTasksByProject(projectId: number): Promise<Task[]> {
     return Array.from(this.tasksData.values()).filter(
@@ -1609,6 +1646,77 @@ export class DatabaseStorage implements IStorage {
 
   async getTasks(): Promise<Task[]> {
     return await db.select().from(tasks);
+  }
+  
+  async getTasksWithDetails(): Promise<Task[]> {
+    // Primeiro, obtemos todas as tarefas
+    const allTasks = await db.select().from(tasks);
+    
+    // Se não houver tarefas, retorna array vazio
+    if (allTasks.length === 0) {
+      return [];
+    }
+    
+    // Obter todos os projetos relacionados às tarefas
+    const projectIds = [...new Set(allTasks.map(task => task.project_id))];
+    const projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
+    
+    // Transformar projetos em um map para consulta rápida
+    const projectsMap = new Map<number, typeof projects.$inferSelect>();
+    projectsData.forEach(project => {
+      projectsMap.set(project.id, project);
+    });
+    
+    // Obter todos os clientes relacionados aos projetos
+    const clientIds = [...new Set(projectsData.map(project => project.client_id))];
+    const clientsData = await db.select().from(clients).where(inArray(clients.id, clientIds));
+    
+    // Transformar clientes em um map para consulta rápida
+    const clientsMap = new Map<number, typeof clients.$inferSelect>();
+    clientsData.forEach(client => {
+      clientsMap.set(client.id, client);
+    });
+    
+    // Obter todos os usuários assignados às tarefas
+    const userIds = [...new Set(allTasks.map(task => task.assigned_to).filter(id => id !== null) as number[])];
+    const usersData = userIds.length > 0 
+      ? await db.select().from(users).where(inArray(users.id, userIds))
+      : [];
+    
+    // Transformar usuários em um map para consulta rápida
+    const usersMap = new Map<number, typeof users.$inferSelect>();
+    usersData.forEach(user => {
+      usersMap.set(user.id, user);
+    });
+    
+    // Para cada tarefa, adicionar detalhes do projeto, cliente e usuário assignado
+    const tasksWithDetails = allTasks.map(task => {
+      const taskWithDetails = { ...task } as any;
+      
+      // Adicionar projeto
+      const project = projectsMap.get(task.project_id);
+      if (project) {
+        taskWithDetails.project = project;
+        
+        // Adicionar cliente
+        const client = clientsMap.get(project.client_id);
+        if (client) {
+          taskWithDetails.client = client;
+        }
+      }
+      
+      // Adicionar usuário assignado
+      if (task.assigned_to) {
+        const user = usersMap.get(task.assigned_to);
+        if (user) {
+          taskWithDetails.assignedUser = user;
+        }
+      }
+      
+      return taskWithDetails;
+    });
+    
+    return tasksWithDetails;
   }
 
   async getTasksByProject(projectId: number): Promise<Task[]> {
