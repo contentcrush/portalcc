@@ -67,8 +67,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (fetchedPreferences) {
       setPreferences(fetchedPreferences);
+    } else if (user && !isLoading) {
+      // Create default preferences if none exist
+      const defaultPrefs: UserPreference = {
+        ...defaultPreferences,
+        user_id: user.id
+      };
+      setPreferences(defaultPrefs);
     }
-  }, [fetchedPreferences]);
+  }, [fetchedPreferences, user, isLoading]);
 
   // Mutation para atualizar preferências
   const updatePreferencesMutation = useMutation({
