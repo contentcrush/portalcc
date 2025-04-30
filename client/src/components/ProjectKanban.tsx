@@ -238,7 +238,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                       <h4 className="font-medium text-gray-900 truncate">
                                         {project.name}
                                       </h4>
-                                      <StatusBadge status={project.status} minimal />
+                                      <StatusBadge project={project} minimal />
                                     </div>
                                     <p className="text-xs text-gray-500 truncate">
                                       {project.client?.name || 'Cliente não especificado'}
@@ -333,7 +333,7 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                       <h4 className="font-medium text-gray-900 truncate">
                                         {project.name}
                                       </h4>
-                                      <StatusBadge status={project.status} minimal />
+                                      <StatusBadge project={project} minimal />
                                     </div>
                                     <p className="text-xs text-gray-500 truncate">
                                       {project.client?.name || 'Cliente não especificado'}
