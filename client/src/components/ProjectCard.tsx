@@ -2,12 +2,10 @@ import React, { useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
-  calculateProjectProgress, 
   formatDate, 
   formatCurrency, 
   getInitials, 
-  calculateDaysRemaining,
-  getProgressBarColor
+  calculateDaysRemaining
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,7 @@ import {
   Trash2,
   Edit
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { ProjectProgress } from "./ProjectProgress";
 import { 
   ProjectWithClient, 
   StatusLabels, 
@@ -135,7 +133,6 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
 
   const completedStages = projectStages?.filter(stage => stage.completed)?.length || 0;
   const totalStages = projectStages?.length || 0;
-  const progress = calculateProjectProgress(project);
   const daysRemaining = calculateDaysRemaining(project.endDate);
 
   function handleOpenDetails(e?: React.MouseEvent) {
@@ -260,16 +257,11 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           </p>
 
           <div className="mt-2 mb-4">
-            <div className="flex justify-between text-xs mb-1.5">
-              <span>Progresso</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-1.5">
-              <div 
-                className={`${getProgressBarColor(progress)} h-1.5 rounded-full`}
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
+            <ProjectProgress 
+              project={project} 
+              showLabel={true}
+              size="sm"
+            />
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">

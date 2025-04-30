@@ -1,11 +1,8 @@
-import { calculateProjectProgress } from "@/lib/utils";
-import { Progress } from "@/components/ui/progress";
-import { Pause, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Project } from "@/lib/types";
 
 interface ProjectProgressProps {
-  project: any;
+  project: Project;
   showLabel?: boolean;
   showStages?: boolean;
   className?: string;
@@ -18,86 +15,88 @@ interface ProjectProgressProps {
  */
 export function ProjectProgress({ 
   project, 
-  showLabel = true, 
+  showLabel = false, 
   showStages = false, 
   className = "",
   size = 'md'
 }: ProjectProgressProps) {
-  if (!project) return null;
+  // Cálculo de progresso baseado em várias regras de negócio
+  let progressValue = project.progress || 0;
   
-  // Calcular o progresso e obter informações visuais
-  const { 
-    percent, 
-    color, 
-    label, 
-    stagesCompleted, 
-    totalStages, 
-    visualState 
-  } = calculateProjectProgress(project);
+  // Calcular progresso baseado no status se não tiver valor explícito
+  if (!project.progress) {
+    switch(project.status) {
+      case 'proposta':
+        progressValue = 10;
+        break;
+      case 'pre_producao':
+        progressValue = 30;
+        break;
+      case 'producao':
+        progressValue = 50;
+        break;
+      case 'pos_revisao':
+        progressValue = 75;
+        break;
+      case 'entregue':
+        progressValue = 90;
+        break;
+      case 'concluido':
+        progressValue = 100;
+        break;
+      // Status especiais mantém o valor do estágio atual
+      case 'atrasado':
+      case 'pausado':
+      case 'cancelado':
+        // Manter o progresso já calculado
+        break;
+      default:
+        progressValue = 0;
+    }
+  }
   
-  // Tamanho da barra baseado na prop size
-  const heightClass = {
-    'sm': 'h-1.5',
-    'md': 'h-2.5',
-    'lg': 'h-4'
-  }[size];
+  // Determinar as classes de estilo com base no valor e status
+  const getProgressBarColor = (value: number) => {
+    if (value >= 80) return "bg-green-500";
+    if (value >= 50) return "bg-amber-500";
+    return "bg-orange-500";
+  };
+  
+  const isPaused = project.status === 'pausado';
+  
+  // Classes para o tamanho da barra
+  const heightClass = size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2.5';
+  const textSizeClass = size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm';
   
   return (
-    <div className={cn("w-full space-y-1.5", className)}>
-      {/* Barra de progresso com visual baseado no status */}
-      <div className="relative">
-        <Progress 
-          value={percent} 
+    <div className={cn("w-full", className)}>
+      {showLabel && (
+        <div className={cn("flex justify-between mb-1.5", textSizeClass)}>
+          <span>Progresso</span>
+          <span className="font-medium">{progressValue}%</span>
+        </div>
+      )}
+      
+      <div className={cn("w-full bg-gray-100 rounded-full overflow-hidden", heightClass)}>
+        <div 
           className={cn(
-            heightClass,
-            "bg-gray-100 rounded-full overflow-hidden",
-            visualState === 'paused' && "bg-stripes" // Adiciona listras para projetos pausados
-          )} 
-          // A cor vem do cálculo baseado no status ou percentual
-          indicatorClassName={cn(
-            color,
-            "transition-all rounded-full"
+            getProgressBarColor(progressValue), 
+            heightClass, 
+            "rounded-full",
+            { "bg-stripes": isPaused }
           )}
+          style={{ width: `${progressValue}%` }}
         />
-        
-        {/* Indicadores visuais de status especial */}
-        {visualState !== 'normal' && (
-          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className={cn(
-                    "flex items-center justify-center rounded-full p-0.5",
-                    size === 'sm' ? 'h-3 w-3' : 'h-4 w-4',
-                    visualState === 'delayed' && "bg-rose-500",
-                    visualState === 'paused' && "bg-gray-400",
-                    visualState === 'cancelled' && "bg-gray-300",
-                  )}>
-                    {visualState === 'delayed' && <AlertTriangle className="h-2 w-2 text-white" />}
-                    {visualState === 'paused' && <Pause className="h-2 w-2 text-white" />}
-                    {visualState === 'cancelled' && <X className="h-2 w-2 text-white" />}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {visualState === 'delayed' && "Projeto atrasado"}
-                  {visualState === 'paused' && "Projeto pausado"}
-                  {visualState === 'cancelled' && "Projeto cancelado"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
       </div>
       
-      {/* Label de progresso e etapas */}
-      {(showLabel || showStages) && (
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          {showLabel && <span>{label}</span>}
-          {showStages && (
-            <span>
-              {stagesCompleted} de {totalStages} etapas concluídas
-            </span>
-          )}
+      {showStages && (
+        <div className="flex justify-between mt-1">
+          <span className="w-1/6 text-center text-xs">Proposta</span>
+          <span className="w-1/6 text-center text-xs">Pré-prod.</span>
+          <span className="w-1/6 text-center text-xs">Produção</span>
+          <span className="w-1/6 text-center text-xs">Revisão</span>
+          <span className="w-1/6 text-center text-xs">Entregue</span>
+          <span className="w-1/6 text-center text-xs">Concluído</span>
         </div>
       )}
     </div>
