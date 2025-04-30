@@ -42,7 +42,9 @@ export default function StatusBadge({
     if (isProjectStage(normalizedStatus)) {
       activeStageStatus = normalizedStatus;
     } else if (isProjectSpecialStatus(normalizedStatus)) {
+      // Se o status é especial, precisamos definir um status de etapa padrão
       activeSpecialStatus = normalizedStatus;
+      activeStageStatus = 'producao'; // etapa padrão
     }
   }
   
@@ -145,17 +147,11 @@ export default function StatusBadge({
     );
   };
   
-  // Se não passamos nem stageStatus nem specialStatus, apenas mostramos o badge do status
-  if (!activeStageStatus && !activeSpecialStatus && status) {
-    return renderBadge(status);
-  }
-  
-  // Se temos tanto stageStatus e/ou specialStatus, exibimos um ou ambos os badges
+  // Exibimos os dois badges, mas apenas mostramos o badge de status especial se ele existir
   return (
     <div className="inline-flex gap-1">
       {activeStageStatus && renderBadge(activeStageStatus)}
       {activeSpecialStatus && renderBadge(activeSpecialStatus)}
-      {!activeStageStatus && !activeSpecialStatus && status && renderBadge(status)}
     </div>
   );
 }

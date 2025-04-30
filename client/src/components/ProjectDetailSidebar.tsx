@@ -321,7 +321,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             <div className="text-sm font-medium text-gray-600">Status:</div>
             <StatusBadge 
               status={project?.status}
-              stageStatus={isProjectStage(project?.status || '') ? project?.status as ProjectStageStatus : null}
+              stageStatus={isProjectStage(project?.status || '') ? project?.status as ProjectStageStatus : 'producao'}
               specialStatus={isProjectSpecialStatus(project?.status || '') ? project?.status as ProjectSpecialStatus : null}
             />
           </div>
