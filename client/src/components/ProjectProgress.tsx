@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
-import { ProjectWithClient } from "@/lib/types";
+import { cn, getNormalizedProjectStatus } from "@/lib/utils";
+import { ProjectWithClient, ProjectStageStatus, ProjectSpecialStatus } from "@/lib/types";
 
 interface ProjectProgressProps {
   project: ProjectWithClient;
@@ -23,9 +23,14 @@ export function ProjectProgress({
   // Cálculo de progresso baseado em várias regras de negócio
   let progressValue = project.progress || 0;
   
+  // Primeiro obtém o status do projeto (normalizado)
+  const { stageStatus, specialStatus } = getNormalizedProjectStatus(project);
+  let baseStatus = stageStatus;
+  
   // Calcular progresso baseado no status se não tiver valor explícito
   if (!project.progress) {
-    switch(project.status) {
+    // Para status especiais, usamos o status de etapa subjacente
+    switch(baseStatus) {
       case 'proposta':
         progressValue = 10;
         break;
@@ -43,12 +48,6 @@ export function ProjectProgress({
         break;
       case 'concluido':
         progressValue = 100;
-        break;
-      // Status especiais mantém o valor do estágio atual
-      case 'atrasado':
-      case 'pausado':
-      case 'cancelado':
-        // Manter o progresso já calculado
         break;
       default:
         progressValue = 0;

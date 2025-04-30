@@ -705,11 +705,6 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             showStages={true}
             size="md"
           />
-          {stages && (
-            <div className="text-xs text-gray-500 mt-1">
-              {completedStages} de {totalStages} etapas concluídas
-            </div>
-          )}
         </div>
         
         <div>
