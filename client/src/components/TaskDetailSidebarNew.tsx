@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Download, Plus, Send } from "lucide-react";
+import { X, Download, Plus, Send, ChevronDown } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
+import { TASK_STATUS_OPTIONS } from "@/lib/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TaskDetailSidebarProps {
   taskId: number;
@@ -61,12 +69,23 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
 
   // Toggle task completion mutation
   const updateTaskMutation = useMutation({
-    mutationFn: async (data: { completed: boolean }) => {
+    mutationFn: async (data: { completed?: boolean, status?: string }) => {
       return apiRequest('PATCH', `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      toast({
+        title: "Tarefa atualizada",
+        description: "Tarefa atualizada com sucesso",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar tarefa",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   });
 
@@ -102,6 +121,12 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const handleAddAttachment = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+  
+  const handleStatusChange = (newStatus: string) => {
+    if (task && newStatus !== task.status) {
+      updateTaskMutation.mutate({ status: newStatus });
     }
   };
 
@@ -282,7 +307,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
             <p className="text-xs text-gray-500 mb-1">Status</p>
             <div className="flex items-center">
               <svg 
-                className="h-4 w-4 text-gray-400 mr-1.5" 
+                className="h-4 w-4 text-gray-400 mr-1.5 flex-shrink-0" 
                 xmlns="http://www.w3.org/2000/svg" 
                 viewBox="0 0 24 24" 
                 fill="none" 
@@ -294,12 +319,22 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
                 <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                 <path d="m9 12 2 2 4-4" />
               </svg>
-              <span className="text-sm font-medium capitalize">
-                {task.status === "pendente" ? "Pendente" : 
-                 task.status === "em_andamento" ? "Em andamento" : 
-                 task.status === "bloqueada" ? "Bloqueada" : 
-                 task.status === "cancelada" ? "Cancelada" : task.status}
-              </span>
+              <Select
+                value={task.status || "pendente"}
+                onValueChange={handleStatusChange}
+                disabled={updateTaskMutation.isPending}
+              >
+                <SelectTrigger className="h-7 w-[160px] border-none px-0 font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
