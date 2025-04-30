@@ -86,6 +86,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import PriorityBadge from "@/components/PriorityBadge";
+import TaskCalendar from "@/components/TaskCalendar";
 
 // Form schema for task creation and editing
 const taskFormSchema = insertTaskSchema.extend({
@@ -569,15 +570,13 @@ export default function Tasks() {
           {/* Aba de Quadro removida conforme solicitado */}
           
           <TabsContent value="calendario" className="mt-4">
-            <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <Calendar className="h-6 w-6 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Visualização em Calendário</h3>
-              <p className="text-gray-500 text-sm mb-4">
-                A visualização em calendário será implementada em breve.
-              </p>
-            </div>
+            <TaskCalendar 
+              tasks={filteredTasks}
+              onViewTask={handleViewTaskDetails}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onToggleTaskCompletion={handleToggleTaskCompletion}
+            />
           </TabsContent>
         </Tabs>
       </div>
