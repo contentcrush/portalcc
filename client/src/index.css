@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Fundo listrado para barras de progresso de projetos pausados */
+  .bg-stripes {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.5) 5px,
+      transparent 5px,
+      transparent 10px
+    );
+  }
+}
+
 /* Estilos para o modo de alto contraste */
 .high-contrast {
   /* Cores de fundo e texto para melhor contraste */

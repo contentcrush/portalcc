@@ -125,9 +125,126 @@ export function getStatusColor(status: ProjectStatus | TaskStatus | TaskPriority
   return StatusColors[status] || "#6b7280";
 }
 
-export function calculateProjectProgress(project: Project): number {
-  if (!project) return 0;
-  return project.progress || 0;
+/**
+ * Calcula o percentual de progresso de um projeto com base no status
+ * Segue as regras específicas para cada etapa e status especial
+ * 
+ * @param project - Objeto do projeto contendo status, budget e outras informações
+ * @returns Objeto contendo percentual e informações visuais para a barra de progresso
+ */
+export function calculateProjectProgress(project: Project): {
+  percent: number;
+  color: string;
+  label: string;
+  stagesCompleted: number;
+  totalStages: number;
+  visualState: 'normal' | 'paused' | 'delayed' | 'cancelled';
+} {
+  if (!project) {
+    return {
+      percent: 0,
+      color: 'bg-gray-200',
+      label: '0%',
+      stagesCompleted: 0,
+      totalStages: 6,
+      visualState: 'normal'
+    };
+  }
+  
+  // Status normalizado
+  const { stageStatus, specialStatus } = getNormalizedProjectStatus(project);
+  
+  // Variáveis de retorno
+  let percent = 0;
+  let color = 'bg-gray-200';
+  let visualState: 'normal' | 'paused' | 'delayed' | 'cancelled' = 'normal';
+  
+  // Total de etapas
+  const totalStages = 6; // Proposta, Pré-Produção, Produção, Pós-Revisão, Entregue/Aprovado, Concluído
+  
+  // Contar etapas concluídas com base no status
+  let stagesCompleted = 0;
+  
+  // Determinar o percentual base com base no status do projeto
+  switch (stageStatus) {
+    case 'proposta':
+      // 0% ao criar o job; vira 10% quando o orçamento é enviado ao cliente
+      percent = project.budget ? 10 : 0;
+      stagesCompleted = project.budget ? 1 : 0;
+      break;
+    case 'pre_producao':
+      // Avança a 30% quando roteiro, cronograma e equipe são fechados
+      percent = 30;
+      stagesCompleted = 2;
+      break;
+    case 'producao':
+      // Início da captação = 50%; fim da filmagem = 70%
+      percent = project.stage_dates?.production_end ? 70 : 50;
+      stagesCompleted = 2;
+      break;
+    case 'pos_revisao':
+      // Rough-cut aprovado = 80%; aprovação final = 90%
+      percent = project.stage_dates?.final_approval ? 90 : 80;
+      stagesCompleted = 3;
+      break;
+    case 'entregue':
+      // Arquivos finais enviados / publicações concluídas
+      percent = 95;
+      stagesCompleted = 4;
+      break;
+    case 'concluido':
+      // Pagamento compensado e job arquivado
+      percent = 100;
+      stagesCompleted = 6;
+      break;
+    default:
+      percent = 0;
+      stagesCompleted = 0;
+  }
+  
+  // Aplicar regras visuais para status especiais
+  if (specialStatus) {
+    switch (specialStatus) {
+      case 'atrasado':
+        color = 'bg-rose-500';
+        visualState = 'delayed';
+        // Mantém o percentual, mas altera visual
+        break;
+      case 'pausado':
+        color = 'bg-gray-400';
+        visualState = 'paused';
+        // Mantém o percentual, mas altera visual
+        break;
+      case 'cancelado':
+        color = 'bg-gray-300';
+        visualState = 'cancelled';
+        // Mantém o percentual, mas altera visual
+        break;
+    }
+  } else {
+    // Coloração baseada no percentual para projetos normais
+    if (percent === 100) {
+      color = 'bg-green-500';
+    } else if (percent >= 70) {
+      color = 'bg-blue-500';
+    } else if (percent >= 30) {
+      color = 'bg-yellow-500';
+    } else if (percent > 0) {
+      color = 'bg-indigo-500';
+    }
+  }
+  
+  // Formatação da label
+  const label = `${percent}%`;
+  
+  return {
+    percent,
+    color,
+    label,
+    stagesCompleted,
+    totalStages,
+    visualState
+  };
 }
 
 export function calculateDaysRemaining(endDate: Date | string | null | undefined): number {
