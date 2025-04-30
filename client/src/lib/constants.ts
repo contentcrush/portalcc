@@ -55,7 +55,7 @@ export const PROJECT_STATUS_OPTIONS = [
 export const TASK_STATUS_OPTIONS = [
   { value: "pendente", label: "Pendente" },
   { value: "em_andamento", label: "Em Andamento" },
-  { value: "concluida", label: "Concluída" },
+  { value: "concluido", label: "Concluído" },
   { value: "bloqueada", label: "Bloqueada" },
   { value: "cancelada", label: "Cancelada" }
 ];
@@ -63,7 +63,7 @@ export const TASK_STATUS_OPTIONS = [
 export const TASK_STATUS_COLORS = {
   pendente: "#f97316", // amber-500 (laranja)
   em_andamento: "#3b82f6", // blue-500 (azul)
-  concluida: "#10b981", // emerald-500 (verde)
+  concluido: "#10b981", // emerald-500 (verde)
   bloqueada: "#ef4444", // red-500 (vermelho)
   cancelada: "#6b7280" // gray-500 (cinza)
 };
@@ -104,7 +104,7 @@ export const TASK_STATUS_WEIGHTS = {
   bloqueada: 40,
   pendente: 30,
   em_andamento: 20,
-  concluida: 10,
+  concluido: 10,
   cancelada: 0
 };
 
