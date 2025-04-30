@@ -828,145 +828,151 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
   const isOverdue = isTaskOverdue(task);
   const isDueSoon = isTaskDueSoon(task);
   const isCompleted = task.completed;
-
-  // Simplify task card to match the design exactly
+  
   return (
-    <div className={cn(
-      "border rounded-md mb-3 bg-white transition-all duration-200",
-      isCompleted ? "border-gray-200" : 
-      isOverdue ? "border-red-200" : 
-      isDueSoon ? "border-amber-200" : 
-      "border-gray-200"
+    <Card className={cn(
+      "transition-all duration-200",
+      isCompleted ? "bg-gray-50" : "bg-white",
+      isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
+      "hover:border-gray-300"
     )}>
-      <div className="p-4 pb-3">
-        <div className="flex items-start gap-2">
-          {/* Checkbox */}
-          <Checkbox 
-            checked={isCompleted}
-            onCheckedChange={onToggleComplete}
-            className="mt-0.5"
-          />
-          
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            <h3 className={cn(
-              "font-medium text-base",
-              isCompleted ? "text-gray-500 line-through" : "text-gray-900"
-            )}>
-              {task.title}
-            </h3>
-            {task.description && (
-              <p className="text-sm text-gray-500 mt-1 line-clamp-1">
-                {task.description}
-              </p>
-            )}
-          </div>
-          
-          {/* Actions */}
-          <div>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4 text-gray-500" />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Project/Client badge below description */}
-        {hasProject && task.project?.client && (
-          <div className="mt-2 pl-6">
-            {task.project.client.logo ? (
-              <div className="flex items-center">
-                <ClientAvatar 
-                  name={task.project.client.name} 
-                  logoUrl={task.project.client.logo} 
-                  size="xs"
-                  className="mr-1.5 h-4 w-4"
-                />
-                <span className="text-xs text-gray-600">
-                  {task.project.client.shortName || task.project.client.name}
-                </span>
-                {task.project.name && (
-                  <>
-                    <span className="mx-1.5 text-gray-400">•</span>
-                    <span className="text-xs text-gray-600">
-                      {task.project.name}
-                    </span>
-                  </>
+      <CardContent className="p-3">
+        <div className="flex flex-col gap-1">
+          {/* Task Title Row */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <Checkbox 
+                checked={isCompleted}
+                onCheckedChange={onToggleComplete}
+                className="mt-1 mr-2"
+              />
+              <div>
+                <h3 className={cn(
+                  "font-medium leading-tight",
+                  isCompleted ? "text-gray-500 line-through" : "text-gray-900"
+                )}>
+                  {task.title}
+                </h3>
+                
+                {task.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    {task.description}
+                  </p>
+                )}
+                
+                {/* Project and Client */}
+                {task.project?.client && (
+                  <div className="flex items-center mt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <ClientAvatar 
+                        name={task.project.client.name} 
+                        logoUrl={task.project.client.logo} 
+                        size="xs"
+                        className="mr-0.5"
+                      />
+                      <span>{task.project.client.shortName || task.project.client.name}</span>
+                      {task.project?.name && (
+                        <>
+                          <span className="mx-1 text-gray-400">•</span>
+                          <Badge variant="outline" className="py-0 px-1.5 h-5 text-[10px] font-normal bg-blue-50 text-blue-700 border-blue-200">
+                            {task.project.name}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            ) : (
-              <Badge variant="outline" className="text-xs font-normal h-5 bg-blue-50 text-blue-700 border-blue-200">
-                {task.project.name}
-              </Badge>
+            </div>
+            
+            {/* Right side with priority badge and actions */}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1">
+                <PriorityBadge priority={task.priority} size="sm" />
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onView}>
+                      Ver detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onEdit}>
+                      Editar tarefa
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onToggleComplete}>
+                      {isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* User Avatar */}
+              {hasAssignee && (
+                <UserAvatar 
+                  name={task.assignedUser?.name || ""} 
+                  avatarUrl={task.assignedUser?.avatar} 
+                  size="xs"
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Task Metadata */}
+          <div className="flex items-center flex-wrap text-xs text-gray-500 mt-0.5 pl-6">
+            {/* Due date */}
+            {task.due_date && (
+              <div className={cn(
+                "flex items-center gap-1 mr-3",
+                isOverdue && !isCompleted ? "text-red-600 font-medium" : "",
+                isDueSoon && !isCompleted && !isOverdue ? "text-amber-600 font-medium" : ""
+              )}>
+                <Clock className="h-3 w-3" />
+                <span>
+                  {formatDueDateWithDaysRemaining(task.due_date)}
+                </span>
+              </div>
+            )}
+            
+            {/* Estimated hours */}
+            {task.estimated_hours && (
+              <div className="flex items-center gap-1 mr-3">
+                <AlarmClock className="h-3 w-3" />
+                <span>{task.estimated_hours}h</span>
+              </div>
+            )}
+            
+            {/* Comments */}
+            {hasComments && (
+              <div className="flex items-center text-xs mr-2">
+                <MessageSquare className="h-3 w-3 mr-0.5" />
+                <span>{task.comments?.length}</span>
+              </div>
+            )}
+            
+            {/* Attachments */}
+            {hasAttachments && (
+              <div className="flex items-center text-xs">
+                <Paperclip className="h-3 w-3 mr-0.5" />
+                <span>{task.attachments?.length}</span>
+              </div>
+            )}
+            
+            {/* Completion date for completed tasks (condensed) */}
+            {isCompleted && task.completed_at && (
+              <div className="flex items-center gap-1 text-green-600 ml-auto">
+                <CheckCircle className="h-3 w-3" />
+                <span>{formatDate(task.completed_at)}</span>
+              </div>
             )}
           </div>
-        )}
-      </div>
-      
-      {/* Bottom metadata section with colored border on top */}
-      <div className={cn(
-        "flex items-center justify-between px-4 py-2 text-xs border-t border-gray-100",
-        isCompleted ? "" : 
-        isOverdue ? "bg-red-50" : 
-        isDueSoon ? "bg-amber-50" : 
-        ""
-      )}>
-        {/* Date info */}
-        <div className="flex items-center gap-3">
-          {task.due_date && (
-            <div className={cn(
-              "flex items-center gap-1",
-              isOverdue && !isCompleted ? "text-red-600 font-medium" : 
-              isDueSoon && !isCompleted ? "text-amber-600" : 
-              "text-gray-500"
-            )}>
-              <Clock className="h-3.5 w-3.5" />
-              <span>
-                {formatDueDateWithDaysRemaining(task.due_date)}
-              </span>
-            </div>
-          )}
-          
-          {task.estimated_hours && (
-            <div className="flex items-center gap-1 text-gray-500">
-              <AlarmClock className="h-3.5 w-3.5" />
-              <span>{task.estimated_hours}h</span>
-            </div>
-          )}
         </div>
-        
-        {/* Right side with priority and assignee */}
-        <div className="flex items-center gap-2">
-          {(hasComments || hasAttachments) && (
-            <div className="flex items-center gap-2 text-gray-500">
-              {hasComments && (
-                <div className="flex items-center gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  <span>{task.comments?.length}</span>
-                </div>
-              )}
-              
-              {hasAttachments && (
-                <div className="flex items-center gap-1">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span>{task.attachments?.length}</span>
-                </div>
-              )}
-            </div>
-          )}
-          
-          <PriorityBadge priority={task.priority} size="sm" />
-          
-          {hasAssignee && (
-            <UserAvatar 
-              name={task.assignedUser?.name || ""} 
-              avatarUrl={task.assignedUser?.avatar} 
-              size="xs"
-              className="h-5 w-5 ml-1"
-            />
-          )}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
