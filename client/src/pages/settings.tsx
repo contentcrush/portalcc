@@ -952,6 +952,30 @@ function LocalizationSettings() {
 
 // Componente para a aba de Personalização
 function PersonalizationSettings() {
+  const { preferences } = usePreferences();
+  
+  // Mapeia os valores para nomes legíveis
+  const themeLabels = {
+    light: "Claro",
+    dark: "Escuro",
+    system: "Automático (Sistema)"
+  };
+  
+  const colorLabels = {
+    blue: "Azul",
+    green: "Verde",
+    purple: "Roxo",
+    orange: "Laranja",
+    red: "Vermelho",
+    pink: "Rosa"
+  };
+  
+  const viewModeLabels = {
+    grid: "Grade",
+    list: "Lista",
+    table: "Tabela"
+  };
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -988,47 +1012,86 @@ function PersonalizationSettings() {
           
           <div>
             <h3 className="text-lg font-medium mb-4">Preferências Atuais</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center p-4 rounded-lg border">
-                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                  <Palette className="h-5 w-5 text-blue-500" />
+            {!preferences ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center p-4 rounded-lg border">
+                  <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <Palette className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Tema</h4>
+                    <p className="text-sm font-medium">{themeLabels[preferences.theme || 'light']}</p>
+                    <p className="text-xs text-muted-foreground">Aparência global da interface</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-medium">Tema</h4>
-                  <p className="text-sm text-muted-foreground">Claro, Escuro ou Automático (baseado no sistema)</p>
+                
+                <div className="flex items-center p-4 rounded-lg border">
+                  <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <PaintBucket className="h-5 w-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Cor de Destaque</h4>
+                    <p className="text-sm font-medium">{colorLabels[preferences.accent_color || 'blue']}</p>
+                    <p className="text-xs text-muted-foreground">Cor principal para botões e elementos interativos</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center p-4 rounded-lg border">
+                  <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <Layout className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Visualização de Clientes</h4>
+                    <p className="text-sm font-medium">{viewModeLabels[preferences.clients_view_mode || 'grid']}</p>
+                    <p className="text-xs text-muted-foreground">Como os clientes são exibidos na lista</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center p-4 rounded-lg border">
+                  <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <PanelLeft className="h-5 w-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Barra Lateral</h4>
+                    <p className="text-sm font-medium">{preferences.sidebar_collapsed ? 'Recolhida' : 'Expandida'}</p>
+                    <p className="text-xs text-muted-foreground">Estado padrão da barra lateral de navegação</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center p-4 rounded-lg border md:col-span-2">
+                  <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <Layout className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium">Widgets do Dashboard</h4>
+                    <p className="text-sm font-medium">
+                      {preferences.dashboard_widgets && preferences.dashboard_widgets.length > 0 
+                        ? preferences.dashboard_widgets.length + ' widgets ativos'
+                        : 'Nenhum widget configurado'
+                      }
+                    </p>
+                    {preferences.dashboard_widgets && preferences.dashboard_widgets.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {preferences.dashboard_widgets.map(widget => (
+                          <span key={widget} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {widget === 'tasks' && 'Tarefas'}
+                            {widget === 'projects' && 'Projetos'}
+                            {widget === 'clients' && 'Clientes'}
+                            {widget === 'calendar' && 'Calendário'}
+                            {widget === 'financial' && 'Financeiro'}
+                            {widget === 'activity' && 'Atividades'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center p-4 rounded-lg border">
-                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                  <PaintBucket className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Cor de Destaque</h4>
-                  <p className="text-sm text-muted-foreground">Cor principal para botões e elementos interativos</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center p-4 rounded-lg border">
-                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                  <Layout className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Layout</h4>
-                  <p className="text-sm text-muted-foreground">Configurações de visualização e organização</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center p-4 rounded-lg border">
-                <div className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                  <PanelLeft className="h-5 w-5 text-orange-500" />
-                </div>
-                <div>
-                  <h4 className="font-medium">Barra Lateral</h4>
-                  <p className="text-sm text-muted-foreground">Configuração da barra lateral de navegação</p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
