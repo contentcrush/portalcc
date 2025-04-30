@@ -26,12 +26,11 @@ type ColumnsState = {
   [key: string]: ColumnContent;
 };
 
-// Status columns
+// Status columns para o Kanban
 const statusColumns: StatusColumn[] = [
   { id: 'pre_producao', title: 'Pré-Produção' },
-  { id: 'em_producao', title: 'Produção' },
-  { id: 'pos_producao', title: 'Pós-Produção' },
-  { id: 'concluido', title: 'Concluído' }
+  { id: 'producao', title: 'Produção' },
+  { id: 'pos_producao', title: 'Pós-Produção' }
 ];
 
 interface ProjectKanbanProps {
@@ -47,13 +46,22 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     acc[column.id] = {
       id: column.id,
       title: column.title,
-      items: projects.filter(project => 
-        (project.status === column.id) ||
-        // Map similar statuses to our simplified kanban columns
-        (column.id === 'pre_producao' && ['em_orcamento', 'draft'].includes(project.status)) ||
-        (column.id === 'em_producao' && ['em_andamento'].includes(project.status)) ||
-        (column.id === 'pos_producao' && ['revisao_cliente'].includes(project.status))
-      )
+      items: projects.filter(project => {
+        // Mapeamento dos status para colunas do Kanban
+        if (column.id === 'pre_producao') {
+          return project.status === 'pre_producao' || project.status === 'proposta' || 
+                 ['em_orcamento', 'draft'].includes(project.status);
+        } 
+        else if (column.id === 'producao') {
+          return project.status === 'producao' || 
+                 ['em_andamento', 'atrasado', 'pausado'].includes(project.status);
+        } 
+        else if (column.id === 'pos_producao') {
+          return project.status === 'pos_revisao' || project.status === 'entregue' || 
+                 project.status === 'concluido' || ['revisao_cliente'].includes(project.status);
+        }
+        return project.status === column.id;
+      })
     };
     return acc;
   }, {});
@@ -72,14 +80,14 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
       }
       
       // Criamos um objeto com os campos obrigatórios, mantendo os valores originais
-      const updateData = {
+      const updateData: any = {
         name: projectToUpdate.name,
         client_id: projectToUpdate.client_id || null,
         status: status, // Atualizamos apenas o status
       };
       
       // If project is being moved to "completed", set the completion date
-      if (status === 'concluido') {
+      if (status === 'concluido' || status === 'pos_revisao') {
         updateData.completionDate = completionDate || new Date();
       }
       
@@ -155,10 +163,21 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     
     // Update project status in backend
     const projectId = parseInt(draggableId);
-    const newStatus = destination.droppableId;
+    const columnId = destination.droppableId;
+    let newStatus = columnId;
     
-    // Use the completionDate if moving to completed status
-    const completionDate = newStatus === 'concluido' ? new Date() : undefined;
+    // Mapear a coluna do kanban para um status específico do projeto
+    // Usamos os status padrão para cada coluna, mantendo a compatibilidade
+    if (columnId === 'pre_producao') {
+      newStatus = 'pre_producao';
+    } else if (columnId === 'producao') {
+      newStatus = 'producao';
+    } else if (columnId === 'pos_producao') {
+      newStatus = 'pos_revisao';
+    }
+    
+    // Use the completionDate if moving to a column that contains completed projects
+    const completionDate = columnId === 'pos_producao' ? new Date() : undefined;
     
     updateProjectStatus.mutate({ 
       projectId,
