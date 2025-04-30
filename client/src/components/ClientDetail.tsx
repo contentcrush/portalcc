@@ -739,7 +739,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="text-2xl font-bold">
                       {client.since ? (
-                        `${Math.max(1, Math.floor(
+                        `${Math.max(0, Math.floor(
                           (new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30)
                         ) / 12).toFixed(1)} anos`
                       ) : 'N/A'}
