@@ -3,7 +3,6 @@ import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
+import { ProjectProgress } from "./ProjectProgress";
 import { ProjectStageStatus, ProjectSpecialStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
 import { 
   Dialog,

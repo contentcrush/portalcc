@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { Project } from "@/lib/types";
+import { ProjectWithClient } from "@/lib/types";
 
 interface ProjectProgressProps {
-  project: Project;
+  project: ProjectWithClient;
   showLabel?: boolean;
   showStages?: boolean;
   className?: string;
