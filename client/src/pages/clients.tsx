@@ -165,6 +165,7 @@ export default function Clients() {
       city: "",
       notes: "",
       logo: "", // Campo para armazenar a URL da imagem de logo do cliente
+      since: null, // Data de início do relacionamento com o cliente
     },
   });
 
@@ -363,8 +364,8 @@ export default function Clients() {
     // Convertendo valores para o formato esperado pela API
     const clientData: InsertClient = {
       ...data,
-      // Não enviar o campo since para deixar o servidor usar o defaultNow()
-      since: undefined,
+      // Incluir o campo since com a data selecionada
+      since: data.since,
       // Adicionar os segmentos aos dados do cliente
       segments: segmentTags.join(', '),
     };
