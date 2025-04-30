@@ -293,12 +293,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+      
+      // Garantir que a data since é um objeto Date ou null
+      if (req.body.since !== undefined && req.body.since !== null) {
+        try {
+          // Tentar converter para Date se for string
+          if (typeof req.body.since === 'string') {
+            req.body.since = new Date(req.body.since);
+            console.log(`Data convertida para: ${req.body.since}`);
+          }
+          
+          // Verificar se é uma data válida
+          if (!(req.body.since instanceof Date) || isNaN(req.body.since.getTime())) {
+            console.warn("Data 'since' inválida, definindo como null");
+            req.body.since = null;
+          }
+        } catch (e) {
+          console.warn("Erro ao processar data 'since', definindo como null:", e);
+          req.body.since = null;
+        }
+      }
 
       const client = await storage.createClient(req.body);
       res.status(201).json(client);
     } catch (error) {
       console.error("Erro ao criar cliente:", error);
-      res.status(500).json({ message: "Failed to create client" });
+      res.status(500).json({ message: "Failed to create client", error: String(error) });
     }
   });
 
@@ -320,6 +340,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Garantir que a data since é um objeto Date ou null
+      if (req.body.since !== undefined && req.body.since !== null) {
+        try {
+          // Tentar converter para Date se for string
+          if (typeof req.body.since === 'string') {
+            req.body.since = new Date(req.body.since);
+            console.log(`Data convertida para: ${req.body.since}`);
+          }
+          
+          // Verificar se é uma data válida
+          if (!(req.body.since instanceof Date) || isNaN(req.body.since.getTime())) {
+            console.warn("Data 'since' inválida, definindo como null");
+            req.body.since = null;
+          }
+        } catch (e) {
+          console.warn("Erro ao processar data 'since', definindo como null:", e);
+          req.body.since = null;
+        }
+      }
+      
       const updatedClient = await storage.updateClient(id, req.body);
       
       if (!updatedClient) {
@@ -329,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedClient);
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);
-      res.status(500).json({ message: "Failed to update client" });
+      res.status(500).json({ message: "Failed to update client", error: String(error) });
     }
   });
   
