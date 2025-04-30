@@ -79,7 +79,7 @@ import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
 // Já importado anteriormente
 import { TaskWithDetails } from "@/lib/types";
 import { UserAvatar } from "@/components/UserAvatar";
-import { ClientAvatar } from "@/components/ClientAvatar";
+import ClientAvatar from "@/components/ClientAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
