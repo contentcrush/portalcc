@@ -25,6 +25,11 @@ export interface IStorage {
   getTasksByUserId(userId: number): Promise<Task[]>;
   getTransactionsByUserId(userId: number): Promise<FinancialDocument[]>;
   
+  // User Preferences
+  getUserPreferences(userId: number): Promise<UserPreference | undefined>;
+  createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference>;
+  updateUserPreferences(userId: number, preferences: Partial<InsertUserPreference>): Promise<UserPreference | undefined>;
+  
   // Clients
   getClient(id: number): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
@@ -125,6 +130,7 @@ export class MemStorage implements IStorage {
   private financialDocumentsData: Map<number, FinancialDocument>;
   private expensesData: Map<number, Expense>;
   private eventsData: Map<number, Event>;
+  private userPreferencesData: Map<number, UserPreference>;
   
   private userId: number = 1;
   private clientId: number = 1;
@@ -138,6 +144,7 @@ export class MemStorage implements IStorage {
   private financialDocumentId: number = 1;
   private expenseId: number = 1;
   private eventId: number = 1;
+  private userPreferenceId: number = 1;
 
   constructor() {
     this.usersData = new Map();
@@ -152,6 +159,7 @@ export class MemStorage implements IStorage {
     this.financialDocumentsData = new Map();
     this.expensesData = new Map();
     this.eventsData = new Map();
+    this.userPreferencesData = new Map();
 
     // Add some initial data
     this.seedData();
@@ -170,6 +178,17 @@ export class MemStorage implements IStorage {
       bio: "Director of production with more than 10 years of experience in audiovisual projects for national and international brands.",
       avatar: "https://randomuser.me/api/portraits/men/32.jpg",
       phone: "(11) 98765-4321"
+    });
+    
+    // Create user preferences
+    this.createUserPreferences({
+      user_id: user1.id,
+      theme: 'dark',
+      accent_color: 'blue',
+      clients_view_mode: 'grid',
+      sidebar_collapsed: false,
+      dashboard_widgets: ['tasks', 'projects', 'clients', 'calendar', 'financial'],
+      quick_actions: ['new-task', 'new-project', 'new-client', 'new-event']
     });
 
     const user2 = this.createUser({
@@ -1744,6 +1763,28 @@ export class DatabaseStorage implements IStorage {
   async deleteEvent(id: number): Promise<boolean> {
     const result = await db.delete(events).where(eq(events.id, id));
     return true;
+  }
+  
+  // User Preferences
+  async getUserPreferences(userId: number): Promise<UserPreference | undefined> {
+    const [preferences] = await db.select().from(userPreferences).where(eq(userPreferences.user_id, userId));
+    return preferences;
+  }
+  
+  async createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference> {
+    const [newPreferences] = await db.insert(userPreferences).values(preferences).returning();
+    return newPreferences;
+  }
+  
+  async updateUserPreferences(userId: number, prefData: Partial<InsertUserPreference>): Promise<UserPreference | undefined> {
+    const [preferences] = await db.select().from(userPreferences).where(eq(userPreferences.user_id, userId));
+    if (!preferences) return undefined;
+    
+    const [updatedPreferences] = await db.update(userPreferences)
+      .set(prefData)
+      .where(eq(userPreferences.user_id, userId))
+      .returning();
+    return updatedPreferences;
   }
 }
 
