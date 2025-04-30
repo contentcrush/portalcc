@@ -9,7 +9,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
-import { runAutomations, checkOverdueProjects } from "./automation";
+import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação

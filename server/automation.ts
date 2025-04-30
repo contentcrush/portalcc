@@ -162,10 +162,69 @@ export async function scheduleNextDeadlineCheck(): Promise<void> {
 }
 
 /**
+ * Verifica projetos que estavam atrasados mas tiveram a data de entrega atualizada
+ * para uma data futura e reverte o status para 'producao'
+ */
+export async function checkProjectsWithUpdatedDates() {
+  try {
+    const today = new Date();
+    const formattedDate = format(today, 'yyyy-MM-dd');
+    console.log(`[Automação] Verificando projetos com datas atualizadas em ${formattedDate}`);
+    
+    // Busca projetos marcados como atrasados mas com data de entrega no futuro
+    const updatedProjects = await db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          eq(projects.status, 'atrasado'),
+          gte(projects.endDate, new Date(formattedDate))
+        )
+      );
+    
+    if (updatedProjects.length === 0) {
+      console.log('[Automação] Nenhum projeto com data atualizada encontrado');
+      return { success: true, message: 'Nenhum projeto com data atualizada encontrado', updatedCount: 0 };
+    }
+    
+    console.log(`[Automação] Encontrados ${updatedProjects.length} projetos com datas atualizadas`);
+    
+    // Atualiza o status dos projetos atrasados para 'producao' (estado padrão)
+    const updatePromises = updatedProjects.map(async (project) => {
+      console.log(`[Automação] Atualizando projeto ${project.id} - ${project.name} para status 'producao' (data futura)`);
+      
+      return db
+        .update(projects)
+        .set({ status: 'producao' })
+        .where(eq(projects.id, project.id));
+    });
+    
+    await Promise.all(updatePromises);
+    
+    return { 
+      success: true, 
+      message: `${updatedProjects.length} projetos foram restaurados para status 'producao'`, 
+      updatedCount: updatedProjects.length,
+      projects: updatedProjects.map(p => ({ id: p.id, name: p.name }))
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao verificar projetos com datas atualizadas:', error);
+    return { 
+      success: false, 
+      message: `Erro ao verificar projetos com datas atualizadas: ${error.message || 'Erro desconhecido'}`,
+      error 
+    };
+  }
+}
+
+/**
  * Executa todas as automações do sistema
  */
 export async function runAutomations() {
   console.log('[Automação] Iniciando verificações automáticas...');
+  
+  // Verifica projetos com datas atualizadas primeiro (para remover status de atrasado)
+  const updatedDatesResult = await checkProjectsWithUpdatedDates();
   
   // Verifica projetos atrasados
   const overdueResult = await checkOverdueProjects();
@@ -178,6 +237,7 @@ export async function runAutomations() {
   console.log('[Automação] Verificações automáticas concluídas');
   
   return {
+    updatedDates: updatedDatesResult,
     overdue: overdueResult,
     // Outras automações podem ser adicionadas aqui
   };
