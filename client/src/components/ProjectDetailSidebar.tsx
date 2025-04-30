@@ -5,7 +5,7 @@ import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check } from "lucide-react";
-import { formatDate, formatCurrency, getInitials, formatTeamRole } from "@/lib/utils";
+import { formatDate, formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -216,6 +216,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const handleUpdateProjectStatus = (status: string) => {
     // Verifica se o status é diferente do atual para evitar chamadas desnecessárias
     if (project && project.status !== status) {
+      // Verificar se o projeto tem status especial e se o usuário está tentando alterar para uma etapa
+      if (isProjectSpecialStatus(project.status) && isProjectStage(status)) {
+        const { specialStatus } = getNormalizedProjectStatus(project);
+        
+        // Se o projeto tiver um status especial, confirmar se o usuário quer remover o status especial
+        if (specialStatus && !window.confirm(`Este projeto está marcado como "${specialStatus}". Deseja remover esse status e atualizar para "${status}"?`)) {
+          return;
+        }
+      }
+      
       // Confirmação para status especiais
       if (['cancelado', 'pausado'].includes(status)) {
         const statusLabel = status === 'cancelado' ? 'cancelar' : 'pausar';
@@ -435,17 +445,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             <div className="space-y-4">
               {/* Etapas de fluxo padrão */}
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('proposta')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                  ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -453,11 +465,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Proposta</p>
                   <p className={`text-xs ${
-                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
-                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
@@ -465,17 +477,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </div>
               
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('pre_producao')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                  ${['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -483,11 +497,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Pré-produção</p>
                   <p className={`text-xs ${
-                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'text-indigo-600'
                       : 'text-gray-500'
                   }`}>
-                    {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
@@ -495,19 +509,21 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </div>
               
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('producao')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${project.status === 'producao' 
+                  ${getNormalizedProjectStatus(project).stageStatus === 'producao' 
                     ? 'bg-yellow-500' 
-                    : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    : ['pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'bg-green-500'
                       : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -515,15 +531,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Produção</p>
                   <p className={`text-xs ${
-                    project.status === 'producao'
+                    getNormalizedProjectStatus(project).stageStatus === 'producao'
                       ? 'text-yellow-600'
-                      : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      : ['pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                         ? 'text-slate-600'
                         : 'text-gray-500'
                   }`}>
-                    {project.status === 'producao'
+                    {getNormalizedProjectStatus(project).stageStatus === 'producao'
                       ? 'Em andamento'
-                      : ['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                      : ['pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                         ? 'Concluído'
                         : 'Pendente'}
                   </p>
@@ -531,19 +547,21 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </div>
               
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('pos_revisao')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors 
-                  ${project.status === 'pos_revisao'
+                  ${getNormalizedProjectStatus(project).stageStatus === 'pos_revisao'
                     ? 'bg-purple-500'
-                    : ['entregue', 'concluido'].includes(project.status)
+                    : ['entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'bg-green-500'
                       : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                    ['pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -551,13 +569,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Pós-produção</p>
                   <p className={`text-xs ${
-                    project.status === 'pos_revisao'
+                    getNormalizedProjectStatus(project).stageStatus === 'pos_revisao'
                       ? 'text-purple-600'
-                      : ['entregue', 'concluido'].includes(project.status)
+                      : ['entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                         ? 'text-slate-600'
                         : 'text-gray-500'
                   }`}>
-                    {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
+                    {['pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
@@ -565,19 +583,21 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </div>
               
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('entregue')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${project.status === 'entregue'
+                  ${getNormalizedProjectStatus(project).stageStatus === 'entregue'
                     ? 'bg-green-500'
-                    : project.status === 'concluido'
+                    : getNormalizedProjectStatus(project).stageStatus === 'concluido'
                       ? 'bg-green-500'
                       : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['entregue', 'concluido'].includes(project.status) 
+                    ['entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -585,11 +605,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Entregue / Aprovado</p>
                   <p className={`text-xs ${
-                    ['entregue', 'concluido'].includes(project.status)
+                    ['entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
-                    {['entregue', 'concluido'].includes(project.status)
+                    {['entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
@@ -597,17 +617,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               </div>
               
               <div 
-                className="flex items-start cursor-pointer group"
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
                 onClick={() => handleUpdateProjectStatus('concluido')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${project.status === 'concluido'
+                  ${getNormalizedProjectStatus(project).stageStatus === 'concluido'
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    project.status === 'concluido' 
+                    getNormalizedProjectStatus(project).stageStatus === 'concluido' 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -615,11 +637,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Concluído (Pago)</p>
                   <p className={`text-xs ${
-                    project.status === 'concluido'
+                    getNormalizedProjectStatus(project).stageStatus === 'concluido'
                       ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
-                    {project.status === 'concluido'
+                    {getNormalizedProjectStatus(project).stageStatus === 'concluido'
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
