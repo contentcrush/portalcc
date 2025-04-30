@@ -780,7 +780,9 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           </DialogHeader>
           
           <AddMemberForm 
-            projectId={projectId} 
+            projectId={projectId}
+            users={users || []}
+            projectMembers={projectMembers || []}
             onSuccess={() => {
               setShowAddMemberDialog(false);
               queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/members`] });
@@ -796,20 +798,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
 }
 
 // Componente de formulário para adicionar membro
-function AddMemberForm({ projectId, onSuccess }: { projectId: number, onSuccess: () => void }) {
+function AddMemberForm({ projectId, onSuccess, users, projectMembers }: { 
+  projectId: number, 
+  onSuccess: () => void,
+  users: any[],
+  projectMembers: any[]
+}) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>(TEAM_ROLE_OPTIONS[0].value); // Use o primeiro valor disponível como padrão
   const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
-  
-  const { data: users } = useQuery({
-    queryKey: ['/api/users'],
-  });
-  
-  const { data: projectMembers } = useQuery({
-    queryKey: [`/api/projects/${projectId}/members`],
-    enabled: !!projectId
-  });
   
   // Filtra usuários que já são membros do projeto
   const availableUsers = users?.filter(user => {
