@@ -1227,20 +1227,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("🤖 Erro na verificação automática de projetos atrasados:", error);
     });
   
-  // Configurar execução diária das automações (00:01)
+  // Configurar execução automática das verificações de projetos atrasados a cada 1 minuto (praticamente em tempo real)
   setInterval(() => {
-    const now = new Date();
-    if (now.getHours() === 0 && now.getMinutes() === 1) {
-      console.log("🤖 Executando verificação automática diária...");
-      runAutomations()
-        .then(result => {
-          console.log("🤖 Verificação automática diária concluída:", result);
-        })
-        .catch(error => {
-          console.error("🤖 Erro na verificação automática diária:", error);
-        });
-    }
-  }, 60000); // Verifica a cada minuto
+    console.log("🤖 Executando verificação automática de projetos atrasados (em tempo real)...");
+    checkOverdueProjects()
+      .then(result => {
+        console.log(`🤖 Verificação em tempo real concluída, ${result.updatedCount || 0} projetos atualizados`);
+      })
+      .catch(error => {
+        console.error("🤖 Erro na verificação em tempo real:", error);
+      });
+  }, 60 * 1000); // Verificação a cada 1 minuto
   
   return httpServer;
 }
