@@ -20,8 +20,14 @@ import {
   Edit
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { ProjectWithClient } from "@/lib/types";
-import { StatusLabels } from "@/lib/types";
+import { 
+  ProjectWithClient, 
+  StatusLabels, 
+  ProjectStageStatus, 
+  ProjectSpecialStatus,
+  isProjectStage, 
+  isProjectSpecialStatus
+} from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -177,6 +183,8 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
           <div className="absolute top-3 left-3">
             <StatusBadge 
               status={project.status}
+              stageStatus={isProjectStage(project.status || '') ? project.status as ProjectStageStatus : null}
+              specialStatus={isProjectSpecialStatus(project.status || '') ? project.status as ProjectSpecialStatus : null}
               small={true} 
             />
           </div>
