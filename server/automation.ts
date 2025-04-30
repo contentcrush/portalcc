@@ -1,7 +1,7 @@
 import { db } from './db';
 import { projects } from '@shared/schema';
-import { eq, and, lt, inArray } from 'drizzle-orm';
-import { format } from 'date-fns';
+import { eq, and, lt, inArray, gte } from 'drizzle-orm';
+import { format, addDays, isAfter, isBefore, parseISO } from 'date-fns';
 
 /**
  * Verifica projetos atrasados e atualiza o status automaticamente
@@ -67,6 +67,101 @@ export async function checkOverdueProjects() {
 }
 
 /**
+ * Encontra a próxima data de entrega de um projeto em desenvolvimento
+ * para agendar a verificação automática
+ */
+export async function findNextDeadline(): Promise<{ nextDate: Date | null, project?: any }> {
+  try {
+    const today = new Date();
+    const developmentStatus = ['proposta', 'pre_producao', 'producao', 'pos_revisao'];
+    
+    // Busca o próximo projeto a vencer (que ainda não está atrasado)
+    const upcomingProjects = await db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          gte(projects.endDate, new Date(format(today, 'yyyy-MM-dd'))),
+          inArray(projects.status, developmentStatus)
+        )
+      );
+    
+    if (upcomingProjects.length === 0) {
+      return { nextDate: null };
+    }
+    
+    // Ordena os projetos por data de entrega (mais próxima primeiro)
+    upcomingProjects.sort((a, b) => {
+      const dateA = new Date(a.endDate);
+      const dateB = new Date(b.endDate);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    const nextProject = upcomingProjects[0];
+    const nextDate = new Date(nextProject.endDate);
+    
+    // Define a hora para 00:01 do dia da data de entrega
+    nextDate.setHours(0, 1, 0, 0);
+    
+    return { 
+      nextDate, 
+      project: {
+        id: nextProject.id,
+        name: nextProject.name,
+        endDate: nextProject.endDate
+      }
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao buscar próxima data de entrega:', error);
+    return { nextDate: null };
+  }
+}
+
+/**
+ * Agenda a próxima verificação com base na próxima data de entrega
+ */
+export async function scheduleNextDeadlineCheck(): Promise<void> {
+  try {
+    const { nextDate, project } = await findNextDeadline();
+    
+    if (!nextDate) {
+      console.log('[Automação] Não há projetos com datas futuras para agendar verificação');
+      // Se não houver projetos futuros, verifica novamente em 24 horas
+      setTimeout(scheduleNextDeadlineCheck, 24 * 60 * 60 * 1000);
+      return;
+    }
+    
+    const now = new Date();
+    const timeUntilDeadline = nextDate.getTime() - now.getTime();
+    
+    if (timeUntilDeadline <= 0) {
+      // Se a data já passou, verificar imediatamente
+      console.log('[Automação] Data de entrega já passou, verificando imediatamente...');
+      await checkOverdueProjects();
+      // Agendar a próxima verificação
+      scheduleNextDeadlineCheck();
+      return;
+    }
+    
+    console.log(`[Automação] Próxima verificação agendada para ${format(nextDate, 'dd/MM/yyyy HH:mm')} (Projeto: ${project.name})`);
+    console.log(`[Automação] Tempo até a verificação: ${Math.round(timeUntilDeadline / (1000 * 60 * 60))} horas`);
+    
+    // Agenda a verificação para o momento exato
+    setTimeout(async () => {
+      console.log(`[Automação] Executando verificação agendada para projeto ${project.name}`);
+      await checkOverdueProjects();
+      // Após verificar, agenda a próxima verificação
+      scheduleNextDeadlineCheck();
+    }, timeUntilDeadline);
+    
+  } catch (error: any) {
+    console.error('[Automação] Erro ao agendar próxima verificação:', error);
+    // Em caso de erro, tentar novamente em 1 hora
+    setTimeout(scheduleNextDeadlineCheck, 60 * 60 * 1000);
+  }
+}
+
+/**
  * Executa todas as automações do sistema
  */
 export async function runAutomations() {
@@ -74,6 +169,9 @@ export async function runAutomations() {
   
   // Verifica projetos atrasados
   const overdueResult = await checkOverdueProjects();
+  
+  // Agenda a próxima verificação baseada em datas de entrega
+  scheduleNextDeadlineCheck();
   
   // Aqui podemos adicionar mais automações no futuro
   

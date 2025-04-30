@@ -1218,26 +1218,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Executar automações ao iniciar o servidor
-  console.log("🤖 Iniciando verificação automática de projetos atrasados...");
-  checkOverdueProjects()
+  console.log("🤖 Iniciando automações do sistema...");
+  runAutomations()
     .then(result => {
-      console.log(`🤖 Verificação de projetos atrasados concluída, ${result.updatedCount || 0} projetos atualizados`);
+      console.log(`🤖 Automações iniciais concluídas, ${result.overdue.updatedCount || 0} projetos atualizados`);
     })
     .catch(error => {
-      console.error("🤖 Erro na verificação automática de projetos atrasados:", error);
+      console.error("🤖 Erro ao executar automações iniciais:", error);
     });
-  
-  // Configurar execução automática das verificações de projetos atrasados a cada 1 minuto (praticamente em tempo real)
-  setInterval(() => {
-    console.log("🤖 Executando verificação automática de projetos atrasados (em tempo real)...");
-    checkOverdueProjects()
-      .then(result => {
-        console.log(`🤖 Verificação em tempo real concluída, ${result.updatedCount || 0} projetos atualizados`);
-      })
-      .catch(error => {
-        console.error("🤖 Erro na verificação em tempo real:", error);
-      });
-  }, 60 * 1000); // Verificação a cada 1 minuto
   
   return httpServer;
 }
