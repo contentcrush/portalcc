@@ -834,7 +834,9 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
       "transition-all duration-200",
       isCompleted ? "bg-gray-50" : "bg-white",
       isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
-      "hover:border-gray-300"
+      "hover:border-gray-300",
+      "border-l-4",
+      isOverdue ? "border-l-red-500" : isDueSoon ? "border-l-amber-500" : "border-l-blue-500"
     )}>
       <CardContent className="p-3">
         <div className="flex flex-col gap-1">
