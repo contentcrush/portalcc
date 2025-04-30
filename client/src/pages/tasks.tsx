@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import TaskDetailSidebar from "@/components/TaskDetailSidebar";
+import TaskDetailSidebarNew from "@/components/TaskDetailSidebarNew";
 import {
   Dialog,
   DialogContent,
@@ -362,9 +362,10 @@ export default function Tasks() {
     <div className="space-y-4 relative">
       {/* Task Detail Sidebar */}
       {taskDetailId && (
-        <TaskDetailSidebar
+        <TaskDetailSidebarNew
           taskId={taskDetailId}
           onClose={handleCloseTaskDetails}
+          onEdit={handleEditTask}
         />
       )}
       
