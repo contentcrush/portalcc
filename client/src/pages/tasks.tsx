@@ -338,15 +338,7 @@ export default function Tasks() {
               </svg>
               Lista
             </TabsTrigger>
-            <TabsTrigger value="quadro" className="flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-              Quadro
-            </TabsTrigger>
+            {/* Visualização em Quadro removida conforme solicitado */}
             <TabsTrigger value="calendario" className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               Calendário
@@ -441,14 +433,7 @@ export default function Tasks() {
                     )}
                   </div>
                   
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-gray-500 hover:text-gray-700"
-                    onClick={() => setShowAllCompleted(!showAllCompleted)}
-                  >
-                    {showAllCompleted ? "Ocultar" : "Ver todas"}
-                  </Button>
+                  {/* Botão de Ver todas removido conforme solicitado */}
                 </div>
                 
                 {/* Completed Tasks (Limited or Full View) */}
@@ -498,22 +483,7 @@ export default function Tasks() {
             </div>
           </TabsContent>
           
-          <TabsContent value="quadro" className="mt-4">
-            <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Visualização em Quadro</h3>
-              <p className="text-gray-500 text-sm mb-4">
-                A visualização em quadro Kanban será implementada em breve.
-              </p>
-            </div>
-          </TabsContent>
+          {/* Aba de Quadro removida conforme solicitado */}
           
           <TabsContent value="calendario" className="mt-4">
             <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
@@ -915,6 +885,17 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                     }}>
                       {isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Aqui chamaríamos uma função para excluir a tarefa
+                        alert(`Função para apagar a tarefa ${task.id} ainda será implementada`);
+                      }}
+                      className="text-red-600"
+                    >
+                      Apagar tarefa
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -950,7 +931,7 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
             {task.estimated_hours && (
               <div className="flex items-center gap-1 mr-3">
                 <AlarmClock className="h-3 w-3" />
-                <span>{task.estimated_hours}h</span>
+                <span>Estimativa: {task.estimated_hours}h</span>
               </div>
             )}
             
