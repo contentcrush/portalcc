@@ -268,8 +268,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     // Converter valores para o formato esperado pela API
     const clientData: InsertClient = {
       ...data,
-      // Não enviar o campo since para manter o valor original
-      since: undefined,
+      // Incluir o campo since para atualizar a data
       // Incluir o logo
       logo: logoPreview
     };
