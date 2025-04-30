@@ -75,8 +75,21 @@ export interface DashboardSummary {
   };
 }
 
-export type ProjectStatus = 'proposta' | 'pre_producao' | 'producao' | 'pos_revisao' | 'entregue' | 'concluido' 
-  | 'atrasado' | 'pausado' | 'cancelado';
+export type ProjectStageStatus = 'proposta' | 'pre_producao' | 'producao' | 'pos_revisao' | 'entregue' | 'concluido';
+
+export type ProjectSpecialStatus = 'atrasado' | 'pausado' | 'cancelado';
+
+export type ProjectStatus = ProjectStageStatus | ProjectSpecialStatus;
+
+// Função para verificar se o status é um status de etapa do projeto
+export function isProjectStage(status: string): status is ProjectStageStatus {
+  return ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(status);
+}
+
+// Função para verificar se o status é um status especial
+export function isProjectSpecialStatus(status: string): status is ProjectSpecialStatus {
+  return ['atrasado', 'pausado', 'cancelado'].includes(status);
+}
 
 export type TaskStatus = 'pendente' | 'em_andamento' | 'concluida' | 'bloqueada' | 'cancelada';
 

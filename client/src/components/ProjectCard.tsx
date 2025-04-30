@@ -175,7 +175,10 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
             </div>
           )}
           <div className="absolute top-3 left-3">
-            <StatusBadge status={project.status} small={true} />
+            <StatusBadge 
+              status={project.status}
+              small={true} 
+            />
           </div>
           
           <div className="absolute top-3 right-3 z-10">
