@@ -352,11 +352,22 @@ export function getNormalizedProjectStatus(project: Project | undefined | null):
   const endDate = project.endDate ? new Date(project.endDate) : null;
   const status = project.status || 'producao';
   
-  // Caso especial: projeto marcado como "atrasado" mas com data futura
-  if (status === 'atrasado' && endDate && endDate > today) {
-    // Se a data de entrega foi atualizada para uma data futura, 
-    // devemos ignorar o status "atrasado" e mostrar o status padrão (producao)
-    return { stageStatus: 'producao', specialStatus: null };
+  // Se o status atual é atrasado, mantemos esse status especial independentemente da data
+  if (status === 'atrasado') {
+    // Determinar o status subjacente (etapa) para o projeto atrasado
+    const underlyingStatus = project.underlying_status || project.original_status || 'producao';
+    // Verificamos se o underlyingStatus é uma etapa válida
+    if (isProjectStage(underlyingStatus)) {
+      return { stageStatus: underlyingStatus, specialStatus: 'atrasado' };
+    } else {
+      return { stageStatus: 'producao', specialStatus: 'atrasado' };
+    }
+  }
+  
+  // Verificar proativamente se o projeto está atrasado
+  if (isProjectStage(status) && endDate && endDate < today) {
+    // O projeto está atrasado mas ainda não foi marcado como tal
+    return { stageStatus: status, specialStatus: 'atrasado' };
   }
   
   // Verificamos se o status atual é uma etapa ou especial
@@ -382,6 +393,11 @@ export function getNormalizedProjectStatus(project: Project | undefined | null):
     
     // Se não encontrar histórico ou ocorrer erro, retorna etapa padrão
     return { stageStatus: 'producao', specialStatus: status as ProjectSpecialStatus };
+  }
+  
+  // Verificar novamente se está atrasado
+  if (endDate && endDate < today) {
+    return { stageStatus: 'producao', specialStatus: 'atrasado' };
   }
   
   // Caso não seja reconhecido, volta para o status padrão

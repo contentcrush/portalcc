@@ -132,8 +132,11 @@ export default function StatusBadge({
         statusValue.charAt(0).toUpperCase() + statusValue.slice(1).replace(/_/g, ' ') : 
         statusValue);
     
-    if (minimal) {
-      // Render just a colored dot for minimal style
+    // Status especiais (atrasado, pausado, cancelado) sempre mostram badge mesmo no modo minimal
+    const isSpecialStatus = ['atrasado', 'pausado', 'cancelado'].includes(statusValue);
+    
+    if (minimal && !isSpecialStatus) {
+      // Render just a colored dot for minimal style (apenas para status regular)
       return (
         <div className={cn("w-2 h-2 rounded-full", {
           "bg-green-500": statusValue === "em_andamento",
@@ -146,7 +149,8 @@ export default function StatusBadge({
       );
     }
     
-    // Default badge style
+    // Para status especiais, sempre usamos o badge mesmo no modo minimal
+    // também para o modo default de exibição
     return (
       <div className={cn(
         "inline-flex items-center justify-center rounded-full text-xs font-medium px-2.5 py-0.5",
