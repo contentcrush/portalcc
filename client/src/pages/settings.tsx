@@ -21,12 +21,15 @@ import {
   MousePointerSquareDashedIcon, 
   RotateCcw,
   PaintBucket,
-  Palette
+  Palette,
+  PanelLeft,
+  Layout
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAccessibility } from "@/hooks/use-accessibility";
+import { usePreferences } from "@/hooks/use-preferences";
 import { WorkspaceCustomizationWizard } from "@/components/WorkspaceCustomizationWizard";
 
 // Definição dos tipos de usuário e suas permissões
