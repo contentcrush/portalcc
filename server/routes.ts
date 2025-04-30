@@ -531,6 +531,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Adicionar PUT como alternativa ao PATCH (para compatibilidade com alguns clientes)
+  app.put("/api/projects/:id", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // O Zod já está fazendo a conversão de string para Date através do transform no schema
+      const updatedProject = await storage.updateProject(id, req.body);
+      
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Error updating project with PUT:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
   app.post("/api/projects/:id/duplicate", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
