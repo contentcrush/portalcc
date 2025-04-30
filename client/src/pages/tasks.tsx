@@ -863,14 +863,22 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                 {/* Project and Client */}
                 {task.project?.client && (
                   <div className="flex items-center mt-1">
-                    <div className="flex items-center text-xs text-gray-600">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
                       <ClientAvatar 
                         name={task.project.client.name} 
                         logoUrl={task.project.client.logo} 
                         size="xs"
-                        className="mr-1"
+                        className="mr-0.5"
                       />
                       <span>{task.project.client.shortName || task.project.client.name}</span>
+                      {task.project?.name && (
+                        <>
+                          <span className="mx-1 text-gray-400">•</span>
+                          <Badge variant="outline" className="py-0 px-1.5 h-5 text-[10px] font-normal bg-blue-50 text-blue-700 border-blue-200">
+                            {task.project.name}
+                          </Badge>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
