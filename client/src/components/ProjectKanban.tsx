@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { ClientAvatar } from './ClientAvatar';
-import { getProgressBarColor } from '@/lib/utils';
+import { getNormalizedProjectStatus, getProgressBarColor } from '@/lib/utils';
 
 // Define types for our columns
 type StatusColumn = {
@@ -188,6 +188,35 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     });
   };
   
+  // Função para calcular o progresso com base no status do projeto
+  const calculateProgress = (project: any) => {
+    // Se o projeto já tiver um valor de progresso explícito, usamos ele
+    if (project.progress) {
+      return project.progress;
+    }
+    
+    // Caso contrário, calculamos com base no status
+    const { stageStatus } = getNormalizedProjectStatus(project);
+    
+    // Valores de progresso padrão para cada status
+    switch (stageStatus) {
+      case 'proposta':
+        return 10;
+      case 'pre_producao':
+        return 30;
+      case 'producao':
+        return 50;
+      case 'pos_revisao':
+        return 75;
+      case 'entregue':
+        return 90;
+      case 'concluido':
+        return 100;
+      default:
+        return 0;
+    }
+  };
+
   // Mantemos apenas as colunas de fluxo de trabalho regular
   const mainColumns = ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'];
   
@@ -284,12 +313,12 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                   <div className="mt-2">
                                     <div className="flex justify-between text-xs mb-1">
                                       <span>Progresso</span>
-                                      <span>{project.progress}%</span>
+                                      <span>{calculateProgress(project)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-1">
                                       <div 
-                                        className={`${getProgressBarColor(project.progress)} h-1 rounded-full`}
-                                        style={{ width: `${project.progress}%` }}
+                                        className={`${getProgressBarColor(calculateProgress(project))} h-1 rounded-full ${project.status === 'pausado' ? 'bg-stripes' : ''}`}
+                                        style={{ width: `${calculateProgress(project)}%` }}
                                       ></div>
                                     </div>
                                   </div>
