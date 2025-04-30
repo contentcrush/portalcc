@@ -525,6 +525,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Após atualizar um projeto, verificar se ele deve ser marcado como atrasado
+      // Isso é especialmente importante quando a data de entrega é atualizada para uma data no passado
+      if (updatedProject.status && 
+          ['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status)) {
+        
+        const endDate = new Date(updatedProject.endDate);
+        const today = new Date();
+        
+        // Se a data de entrega já passou e o projeto está em fase de desenvolvimento
+        if (endDate < today) {
+          console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
+          
+          // Verificar se o projeto está atrasado
+          await checkOverdueProjects();
+          
+          // Recarregar o projeto para retornar o status mais atualizado
+          const refreshedProject = await storage.getProject(id);
+          if (refreshedProject) {
+            return res.json(refreshedProject);
+          }
+        }
+      }
+      
       res.json(updatedProject);
     } catch (error) {
       console.error("Error updating project:", error);
@@ -542,6 +565,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedProject) {
         return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Após atualizar um projeto, verificar se ele deve ser marcado como atrasado
+      // Isso é especialmente importante quando a data de entrega é atualizada para uma data no passado
+      if (updatedProject.status && 
+          ['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status)) {
+        
+        const endDate = new Date(updatedProject.endDate);
+        const today = new Date();
+        
+        // Se a data de entrega já passou e o projeto está em fase de desenvolvimento
+        if (endDate < today) {
+          console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
+          
+          // Verificar se o projeto está atrasado
+          await checkOverdueProjects();
+          
+          // Recarregar o projeto para retornar o status mais atualizado
+          const refreshedProject = await storage.getProject(id);
+          if (refreshedProject) {
+            return res.json(refreshedProject);
+          }
+        }
       }
       
       res.json(updatedProject);
