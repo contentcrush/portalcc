@@ -766,9 +766,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tasks - Adicionando autenticação e permissões
   app.get("/api/tasks", authenticateJWT, async (_req, res) => {
     try {
-      const tasks = await storage.getTasks();
+      // Obter tarefas com detalhes de projeto e cliente
+      const tasks = await storage.getTasksWithDetails();
       res.json(tasks);
     } catch (error) {
+      console.error("Erro ao buscar tarefas:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
     }
   });

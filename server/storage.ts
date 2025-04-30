@@ -67,6 +67,7 @@ export interface IStorage {
   // Tasks
   getTask(id: number): Promise<Task | undefined>;
   getTasks(): Promise<Task[]>;
+  getTasksWithDetails(): Promise<Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
   getTasksByProject(projectId: number): Promise<Task[]>;
   getTasksByUser(userId: number): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
