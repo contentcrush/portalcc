@@ -698,14 +698,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <div className="text-xs font-medium text-gray-500">PROGRESSO</div>
-            <div className="text-xs font-semibold">{progress}%</div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5">
-            <div 
-              className="bg-indigo-600 h-1.5 rounded-full" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
+          <ProjectProgress 
+            project={project} 
+            showLabel={true}
+            showStages={true}
+            size="md"
+          />
           {stages && (
             <div className="text-xs text-gray-500 mt-1">
               {completedStages} de {totalStages} etapas concluídas
