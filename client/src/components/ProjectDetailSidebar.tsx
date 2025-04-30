@@ -169,14 +169,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Mutation para atualizar o status do projeto
   const updateProjectStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      return apiRequest('PATCH', `/api/projects/${projectId}`, {
-        status: status,
-        // Adiciona data de conclusão da etapa atual
-        stage_dates: {
-          ...(project?.stage_dates || {}),
-          [status]: new Date().toISOString()
-        }
-      });
+      if (!project) {
+        throw new Error('Projeto não encontrado');
+      }
+      
+      // Precisamos incluir os campos obrigatórios do projeto junto com o novo status
+      const updateData = {
+        name: project.name,
+        client_id: project.client_id,
+        status: status
+      };
+      
+      // Retornamos a resposta da API
+      return apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
@@ -187,9 +192,10 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       });
     },
     onError: (error) => {
+      console.error("Erro ao atualizar status:", error);
       toast({
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: "Não foi possível atualizar o status do projeto.",
         variant: "destructive"
       });
     }
@@ -418,16 +424,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('proposta')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-slate-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-slate-600'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
-                  }
+                  <Check className={`h-5 w-5 ${
+                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Proposta</p>
@@ -437,9 +444,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? project.stage_dates?.proposta 
-                        ? `Concluído em ${formatDate(project.stage_dates.proposta)}`
-                        : 'Concluído'
+                      ? 'Concluído'
                       : 'Pendente'}
                   </p>
                 </div>
@@ -449,16 +454,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('pre_producao')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-green-500'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
-                  }
+                  <Check className={`h-5 w-5 ${
+                    ['pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Pré-produção</p>
@@ -480,16 +486,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('producao')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-yellow-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-yellow-500'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
-                  }
+                  <Check className={`h-5 w-5 ${
+                    ['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Produção</p>
@@ -499,9 +506,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['producao', 'pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? project.stage_dates?.producao 
-                        ? `Concluído em ${formatDate(project.stage_dates.producao)}`
-                        : 'Em andamento'
+                      ? 'Em andamento'
                       : 'Pendente'}
                   </p>
                 </div>
@@ -511,15 +516,18 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('pos_revisao')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors 
                   ${['pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-purple-500'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {['pos_revisao', 'entregue', 'concluido'].includes(project.status) 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
+                  {project.status === 'pos_revisao' && <div className="text-white text-sm font-semibold">3</div>}
+                  {(project.status !== 'pos_revisao' && ['entregue', 'concluido'].includes(project.status)) && 
+                    <Check className="h-5 w-5 text-white" />
+                  }
+                  {!['pos_revisao', 'entregue', 'concluido'].includes(project.status) && 
+                    <div className="text-slate-300 text-sm font-semibold">3</div>
                   }
                 </div>
                 <div>
@@ -530,9 +538,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['pos_revisao', 'entregue', 'concluido'].includes(project.status)
-                      ? project.stage_dates?.pos_revisao 
-                        ? `Concluído em ${formatDate(project.stage_dates.pos_revisao)}`
-                        : 'Concluído'
+                      ? 'Concluído'
                       : 'Pendente'}
                   </p>
                 </div>
@@ -542,16 +548,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('entregue')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['entregue', 'concluido'].includes(project.status)
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-green-500'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {['entregue', 'concluido'].includes(project.status) 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
-                  }
+                  <Check className={`h-5 w-5 ${
+                    ['entregue', 'concluido'].includes(project.status) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Entregue / Aprovado</p>
@@ -561,9 +568,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['entregue', 'concluido'].includes(project.status)
-                      ? project.stage_dates?.entregue 
-                        ? `Concluído em ${formatDate(project.stage_dates.entregue)}`
-                        : 'Concluído'
+                      ? 'Concluído'
                       : 'Pendente'}
                   </p>
                 </div>
@@ -573,16 +578,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="flex items-start cursor-pointer group"
                 onClick={() => handleUpdateProjectStatus('concluido')}
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${project.status === 'concluido'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-gray-100 text-transparent group-hover:bg-gray-200'
+                    ? 'bg-green-500'
+                    : 'bg-slate-100'
                   }`}
                 >
-                  {project.status === 'concluido' 
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Circle className="h-4 w-4 opacity-30" />
-                  }
+                  <Check className={`h-5 w-5 ${
+                    project.status === 'concluido' 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Concluído (Pago)</p>
@@ -592,9 +598,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {project.status === 'concluido'
-                      ? project.stage_dates?.concluido 
-                        ? `Concluído em ${formatDate(project.stage_dates.concluido)}`
-                        : 'Concluído'
+                      ? 'Concluído'
                       : 'Pendente'}
                   </p>
                 </div>
