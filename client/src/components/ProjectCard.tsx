@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import StatusBadge from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
-import ClientAvatar from "./ClientAvatar";
+import { ClientAvatar } from "./ClientAvatar";
 
 interface ProjectCardProps {
   project: ProjectWithClient;

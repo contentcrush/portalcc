@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
-import ClientAvatar from "./ClientAvatar";
+import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";

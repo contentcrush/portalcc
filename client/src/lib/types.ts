@@ -1,11 +1,8 @@
 import { 
   User, Client, Project, ProjectMember, ProjectStage,
-  Task as SchemaTask, TaskComment, TaskAttachment, ClientInteraction,
+  Task, TaskComment, TaskAttachment, ClientInteraction,
   FinancialDocument, Expense, Event 
 } from "@shared/schema";
-
-// Re-export Task type for direct use in components
-export type Task = SchemaTask;
 
 // Extended types with computed properties or additional client-side properties
 export interface ProjectWithClient extends Project {

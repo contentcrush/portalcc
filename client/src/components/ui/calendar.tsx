@@ -1,20 +1,12 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker, CaptionProps } from "react-day-picker"
-import { pt } from 'date-fns/locale'
+import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
-
-interface DatePickerWithYearNavigationProps {
-  date: Date | undefined
-  setDate: (date: Date | undefined) => void
-  fromYear?: number
-  toYear?: number
-}
 
 function Calendar({
   className,
@@ -24,7 +16,6 @@ function Calendar({
 }: CalendarProps) {
   return (
     <DayPicker
-      locale={pt}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
@@ -54,7 +45,7 @@ function Calendar({
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         day_today: "bg-accent text-accent-foreground",
         day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+          "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
@@ -62,89 +53,82 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: ({ className, ...props }) => (
+          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+        ),
+        IconRight: ({ className, ...props }) => (
+          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+        ),
       }}
-      weekStartsOn={1} // Segunda-feira como primeiro dia da semana (padrão europeu/brasileiro)
+      captionLayout={props.captionLayout || "buttons"}
       {...props}
     />
   )
 }
 Calendar.displayName = "Calendar"
 
-// Custom Caption component that adds year and month dropdowns
-function YearNavigation({
-  displayMonth,
-  onMonthChange,
-  fromYear = 1900,
-  toYear = new Date().getFullYear() + 1
-}: {
-  displayMonth: Date;
+// Para usar em casos onde precisamos de seleção de data antiga mais limpa
+function YearMonthSelector({ 
+  month, 
+  onMonthChange, 
+  fromYear = 1980,
+  toYear = new Date().getFullYear() + 5,
+}: { 
+  month: Date; 
   onMonthChange: (date: Date) => void;
   fromYear?: number;
   toYear?: number;
 }) {
   const years = React.useMemo(() => {
-    const yearRange = []
-    for (let year = fromYear; year <= toYear; year++) {
-      yearRange.push(year)
-    }
-    return yearRange
-  }, [fromYear, toYear])
+    return Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
+  }, [fromYear, toYear]);
 
-  const months = [
-    { value: 0, label: "Janeiro" },
-    { value: 1, label: "Fevereiro" },
-    { value: 2, label: "Março" },
-    { value: 3, label: "Abril" },
-    { value: 4, label: "Maio" },
-    { value: 5, label: "Junho" },
-    { value: 6, label: "Julho" },
-    { value: 7, label: "Agosto" },
-    { value: 8, label: "Setembro" },
-    { value: 9, label: "Outubro" },
-    { value: 10, label: "Novembro" },
-    { value: 11, label: "Dezembro" },
-  ]
+  const months = React.useMemo(() => {
+    return [
+      "Janeiro", "Fevereiro", "Março", "Abril",
+      "Maio", "Junho", "Julho", "Agosto",
+      "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+  }, []);
 
-  const handleYearChange = (year: string) => {
-    const newDate = new Date(displayMonth)
-    newDate.setFullYear(parseInt(year))
-    onMonthChange(newDate)
-  }
+  const handleYearChange = React.useCallback((value: string) => {
+    const newDate = new Date(month);
+    newDate.setFullYear(parseInt(value));
+    onMonthChange(newDate);
+  }, [month, onMonthChange]);
 
-  const handleMonthChange = (month: string) => {
-    const newDate = new Date(displayMonth)
-    newDate.setMonth(parseInt(month))
-    onMonthChange(newDate)
-  }
+  const handleMonthChange = React.useCallback((value: string) => {
+    const newDate = new Date(month);
+    newDate.setMonth(parseInt(value));
+    onMonthChange(newDate);
+  }, [month, onMonthChange]);
 
   return (
-    <div className="flex gap-1 items-center justify-center py-1">
+    <div className="flex items-center justify-between space-x-2 mb-2">
       <Select
-        value={displayMonth.getMonth().toString()}
+        value={month.getMonth().toString()}
         onValueChange={handleMonthChange}
       >
-        <SelectTrigger className="h-8 w-[130px]">
-          <SelectValue />
+        <SelectTrigger className="w-[120px] h-8">
+          <SelectValue placeholder="Mês" />
         </SelectTrigger>
-        <SelectContent>
-          {months.map((month) => (
-            <SelectItem key={month.value} value={month.value.toString()}>
-              {month.label}
+        <SelectContent position="popper">
+          {months.map((month, index) => (
+            <SelectItem key={index} value={index.toString()}>
+              {month}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-
+      
       <Select
-        value={displayMonth.getFullYear().toString()}
+        value={month.getFullYear().toString()}
         onValueChange={handleYearChange}
       >
-        <SelectTrigger className="h-8 w-[90px]">
-          <SelectValue />
+        <SelectTrigger className="w-[90px] h-8">
+          <SelectValue placeholder="Ano" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper" className="max-h-[200px]">
           {years.map((year) => (
             <SelectItem key={year} value={year.toString()}>
               {year}
@@ -153,40 +137,50 @@ function YearNavigation({
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }
 
-// Component that provides a calendar with year navigation
+// Calendário com seletor de ano/mês limpo e minimalista
 function DatePickerWithYearNavigation({
   date,
   setDate,
-  fromYear = 1900,
-  toYear = new Date().getFullYear() + 1
-}: DatePickerWithYearNavigationProps) {
-  const [month, setMonth] = React.useState<Date>(date || new Date())
+  fromYear = 1980,
+  toYear,
+  ...props
+}: {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  fromYear?: number;
+  toYear?: number;
+} & Omit<CalendarProps, "selected" | "onSelect">) {
+  const [month, setMonth] = React.useState<Date>(date || new Date());
+  
+  if (!toYear) {
+    toYear = new Date().getFullYear() + 5;
+  }
 
   return (
-    <div className="flex flex-col">
+    <div>
+      <YearMonthSelector 
+        month={month} 
+        onMonthChange={setMonth} 
+        fromYear={fromYear}
+        toYear={toYear}
+      />
       <Calendar
         mode="single"
         selected={date}
         onSelect={setDate}
         month={month}
         onMonthChange={setMonth}
-        captionLayout="buttons"
-        components={{
-          Caption: ({ displayMonth, onMonthChange }) => (
-            <YearNavigation
-              displayMonth={displayMonth}
-              onMonthChange={onMonthChange}
-              fromYear={fromYear}
-              toYear={toYear}
-            />
-          )
-        }}
+        disabled={(date) => 
+          date > new Date(toYear, 11, 31) || 
+          date < new Date(fromYear, 0, 1)
+        }
+        {...props}
       />
     </div>
-  )
+  );
 }
 
 export { Calendar, DatePickerWithYearNavigation }

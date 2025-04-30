@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import ClientAvatar from './ClientAvatar';
+import { ClientAvatar } from './ClientAvatar';
 import { getNormalizedProjectStatus, getProgressBarColor } from '@/lib/utils';
 
 // Define types for our columns

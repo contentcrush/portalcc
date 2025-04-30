@@ -11,7 +11,7 @@ interface ClientAvatarProps {
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-export default function ClientAvatar({ name, logoUrl, client_id, className = "", size = "md" }: ClientAvatarProps) {
+export function ClientAvatar({ name, logoUrl, client_id, className = "", size = "md" }: ClientAvatarProps) {
   const [validLogo, setValidLogo] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [clientName, setClientName] = useState<string>(name || "");

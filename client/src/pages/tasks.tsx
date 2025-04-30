@@ -24,8 +24,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TaskDetailSidebar from "@/components/TaskDetailSidebar";
-import TaskCalendarView from "@/components/TaskCalendarView";
-import { TaskCard } from "@/components/TaskCard";
 import {
   Dialog,
   DialogContent,
@@ -62,8 +60,7 @@ import {
   Clock,
   CheckCircle,
   AlarmClock,
-  Trash2,
-  Loader2
+  Trash2
 } from "lucide-react";
 
 import {
@@ -80,7 +77,7 @@ import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
 // Já importado anteriormente
 import { TaskWithDetails } from "@/lib/types";
 import { UserAvatar } from "@/components/UserAvatar";
-import ClientAvatar from "@/components/ClientAvatar";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -428,25 +425,6 @@ export default function Tasks() {
             </TabsTrigger>
           </TabsList>
         
-          {/* Conteúdo da Visualização em Calendário */}
-          <TabsContent value="calendario" className="mt-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              {isLoadingTasks ? (
-                <div className="flex items-center justify-center p-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <TaskCalendarView
-                  tasks={filteredTasks || []}
-                  onToggleComplete={handleToggleTaskCompletion}
-                  onView={handleViewTaskDetails}
-                  onEdit={handleEditTask}
-                  onDelete={handleDeleteTask}
-                />
-              )}
-            </div>
-          </TabsContent>
-          
           {/* Main Content */}
           <TabsContent value="lista" className="mt-4">
             {/* Task Status Tabs - Pendentes/Concluídas */}
@@ -879,7 +857,197 @@ export default function Tasks() {
   );
 }
 
-// Utilizando o componente TaskCard importado de @/components/TaskCard
+// Task Card Component
+interface TaskCardProps {
+  task: TaskWithDetails;
+  onToggleComplete: () => void;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCardProps) {
+  // Check if task has related entity data
+  const hasProject = !!task.project;
+  const hasAssignee = !!task.assignedUser;
+  const hasComments = task.comments && task.comments.length > 0;
+  const hasAttachments = task.attachments && task.attachments.length > 0;
+  
+  // Calculate task status
+  const isOverdue = isTaskOverdue(task);
+  const isDueSoon = isTaskDueSoon(task);
+  const isCompleted = task.completed;
+  
+  return (
+    <Card 
+      className={cn(
+        "transition-all duration-200 cursor-pointer hover:shadow-md",
+        isCompleted ? "bg-gray-50" : "bg-white",
+        isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
+        "hover:border-gray-300",
+        "border-l-4",
+        isOverdue ? "border-l-red-500" : isDueSoon ? "border-l-amber-500" : "border-l-blue-500"
+      )}
+      onClick={onView}  /* Adicionando evento de clique no card inteiro */
+    >
+      <CardContent className="p-3">
+        <div className="flex flex-col gap-1">
+          {/* Task Title Row */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <div onClick={(e) => e.stopPropagation()}>
+                <Checkbox 
+                  checked={isCompleted}
+                  onCheckedChange={() => onToggleComplete()}
+                  className="mt-1 mr-2"
+                />
+              </div>
+              <div>
+                <h3 className={cn(
+                  "font-medium leading-tight",
+                  isCompleted ? "text-gray-500 line-through" : "text-gray-900"
+                )}>
+                  {task.title}
+                </h3>
+                
+                {task.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    {task.description}
+                  </p>
+                )}
+                
+                {/* Project info */}
+                {task.project && (
+                  <div className="flex items-center mt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                      {task.project?.client_id && (
+                        <>
+                          <ClientAvatar 
+                            client_id={task.project.client_id}
+                            size="xs"
+                            className="mr-0.5"
+                          />
+                        </>
+                      )}
+                      <Badge variant="outline" className="py-0 px-1.5 h-5 text-[10px] font-normal bg-blue-50 text-blue-700 border-blue-200">
+                        {task.project.name}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Right side with priority badge and actions */}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1">
+                <PriorityBadge priority={task.priority} size="sm" />
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onView();
+                    }}>
+                      Ver detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}>
+                      Editar tarefa
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleComplete();
+                    }}>
+                      {isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Apagar tarefa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* User Avatar */}
+              {hasAssignee && (
+                <UserAvatar 
+                  name={task.assignedUser?.name || ""} 
+                  avatarUrl={task.assignedUser?.avatar} 
+                  size="xs"
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Task Metadata */}
+          <div className="flex items-center flex-wrap text-xs text-gray-500 mt-0.5 pl-6">
+            {/* Due date */}
+            {task.due_date && (
+              <div className={cn(
+                "flex items-center gap-1 mr-3",
+                isOverdue && !isCompleted ? "text-red-600 font-medium" : "",
+                isDueSoon && !isCompleted && !isOverdue ? "text-amber-600 font-medium" : ""
+              )}>
+                <Clock className="h-3 w-3" />
+                <span>
+                  {formatDueDateWithDaysRemaining(task.due_date)}
+                </span>
+              </div>
+            )}
+            
+            {/* Estimated hours */}
+            {task.estimated_hours && (
+              <div className="flex items-center gap-1 mr-3">
+                <AlarmClock className="h-3 w-3" />
+                <span>Estimativa: {task.estimated_hours}h</span>
+              </div>
+            )}
+            
+            {/* Comments */}
+            {hasComments && (
+              <div className="flex items-center text-xs mr-2">
+                <MessageSquare className="h-3 w-3 mr-0.5" />
+                <span>{task.comments?.length}</span>
+              </div>
+            )}
+            
+            {/* Attachments */}
+            {hasAttachments && (
+              <div className="flex items-center text-xs">
+                <Paperclip className="h-3 w-3 mr-0.5" />
+                <span>{task.attachments?.length}</span>
+              </div>
+            )}
+            
+            {/* Completion date for completed tasks (condensed) */}
+            {isCompleted && task.completed_at && (
+              <div className="flex items-center gap-1 text-green-600 ml-auto">
+                <CheckCircle className="h-3 w-3" />
+                <span>{formatDate(task.completed_at)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // Helper function for conditional classNames
 function cn(...classes: (string | boolean | undefined)[]) {

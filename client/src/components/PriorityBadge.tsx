@@ -3,7 +3,7 @@ import { PRIORITY_COLOR_CLASSES } from "@/lib/constants";
 
 interface PriorityBadgeProps {
   priority: string;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg";
   showText?: boolean;
 }
 
@@ -21,7 +21,6 @@ export default function PriorityBadge({
   
   // Tamanhos configuráveis
   const sizeClasses = {
-    xs: "text-[0.625rem] px-1.5 py-0",
     sm: "text-xs px-2 py-0.5",
     md: "text-xs px-3 py-0.5",
     lg: "text-sm px-3 py-1"

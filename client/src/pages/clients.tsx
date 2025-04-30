@@ -7,8 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { DatePickerWithYearNavigation } from "@/components/ui/date-picker-with-navigation";
+import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -16,7 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getInitials, generateAvatarColor, cn, formatDate } from "@/lib/utils";
-import ClientAvatar from "@/components/ClientAvatar";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
   SelectContent,
