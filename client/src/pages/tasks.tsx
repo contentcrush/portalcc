@@ -65,6 +65,7 @@ import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
 // Já importado anteriormente
 import { TaskWithDetails } from "@/lib/types";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -896,22 +897,12 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {task.project?.client && (
                   <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
-                      {task.project.client.logo ? (
-                        <img 
-                          src={task.project.client.logo} 
-                          alt={task.project.client.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div 
-                          className="w-full h-full flex items-center justify-center text-xs font-medium text-white"
-                          style={{ backgroundColor: generateAvatarColor(task.project.client.name) }}
-                        >
-                          {getInitials(task.project.client.name)}
-                        </div>
-                      )}
-                    </div>
+                    <ClientAvatar 
+                      name={task.project.client.name} 
+                      logoUrl={task.project.client.logo} 
+                      size="sm"
+                      className="w-5 h-5"
+                    />
                     <span className="text-xs text-gray-600">{task.project.client.name}</span>
                   </div>
                 )}

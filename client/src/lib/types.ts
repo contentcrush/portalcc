@@ -16,7 +16,7 @@ export interface ProjectWithDetails extends Project {
 }
 
 export interface TaskWithDetails extends Task {
-  project?: Project;
+  project?: ProjectWithClient;
   assignedUser?: User;
   comments?: (TaskComment & { user?: User })[];
   attachments?: TaskAttachment[];
