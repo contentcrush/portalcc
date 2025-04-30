@@ -1,17 +1,37 @@
 import { useEffect, useState } from "react";
 import { getInitials, generateAvatarColor } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
 
 interface ClientAvatarProps {
-  name: string;
-  logoUrl: string | null | undefined;
+  name?: string;
+  logoUrl?: string | null | undefined;
+  client_id?: number;
   className?: string;
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: ClientAvatarProps) {
+export function ClientAvatar({ name, logoUrl, client_id, className = "", size = "md" }: ClientAvatarProps) {
   const [validLogo, setValidLogo] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [clientName, setClientName] = useState<string>(name || "");
+  
+  // Buscar dados do cliente se um ID for fornecido
+  const { data: clientData } = useQuery({
+    queryKey: client_id ? [`/api/clients/${client_id}`] : null,
+    enabled: !!client_id
+  });
+  
+  // Atualizar dados do cliente quando estiverem disponíveis
+  useEffect(() => {
+    if (clientData) {
+      setClientName(clientData.name || clientData.shortName || "");
+      
+      if (clientData.logo) {
+        validateLogo(clientData.logo, clientData.name);
+      }
+    }
+  }, [clientData]);
   
   // Tamanhos pré-definidos
   const sizeClasses = {
@@ -21,47 +41,54 @@ export function ClientAvatar({ name, logoUrl, className = "", size = "md" }: Cli
     lg: "h-16 w-16",
   };
   
-  // Validar logo quando mudar
-  useEffect(() => {
+  // Função para validar logo
+  const validateLogo = (logo: string | null | undefined, clientName: string) => {
     setError(false);
     
-    if (!logoUrl || typeof logoUrl !== 'string' || !logoUrl.trim()) {
-      console.log(`ClientAvatar: Sem logo definido para "${name}"`);
+    if (!logo || typeof logo !== 'string' || !logo.trim()) {
+      console.log(`ClientAvatar: Sem logo definido para "${clientName}"`);
       setValidLogo(null);
       return;
     }
     
-    const trimmedLogo = logoUrl.trim();
+    const trimmedLogo = logo.trim();
     
     if (trimmedLogo.startsWith('data:image/') || 
         trimmedLogo.startsWith('http://') || 
         trimmedLogo.startsWith('https://')) {
-      console.log(`ClientAvatar: Logo válido encontrado para "${name}"`);
+      console.log(`ClientAvatar: Logo válido encontrado para "${clientName}"`);
       setValidLogo(trimmedLogo);
     } else {
-      console.warn(`ClientAvatar: Formato de URL de logo inválido para "${name}"`);
+      console.warn(`ClientAvatar: Formato de URL de logo inválido para "${clientName}"`);
       setValidLogo(null);
+    }
+  };
+  
+  // Validar logo quando for fornecido diretamente
+  useEffect(() => {
+    if (logoUrl && name) {
+      validateLogo(logoUrl, name);
     }
   }, [logoUrl, name]);
   
   // Iniciais do cliente (fallback)
-  const initials = getInitials(name);
+  const initials = getInitials(clientName || "");
   
   // Cor de fundo do avatar baseada no nome
-  const backgroundColor = generateAvatarColor(name);
+  const backgroundColor = generateAvatarColor(clientName || "");
 
   return (
     <Avatar className={`${sizeClasses[size]} ${className} border border-gray-200`}>
       {!error && validLogo ? (
         <>
           <img 
-            key={`logo-${name}-${Math.random()}`}
+            key={`logo-${clientName}-${Math.random()}`}
             src={validLogo} 
-            alt={`Logo de ${name}`}
+            alt={`Logo de ${clientName}`}
             className="h-full w-full object-cover relative z-10"
             style={{ position: 'absolute', top: 0, left: 0 }}
             onError={(e) => {
-              console.error(`ClientAvatar: Erro ao carregar logo para "${name}"`, e);
+              console.error(`ClientAvatar: Erro ao carregar logo para "${clientName}"`, e);
               setError(true);
             }}
           />
