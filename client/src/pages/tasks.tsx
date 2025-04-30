@@ -5,6 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { 
+  formatDate, 
+  formatDueDateWithDaysRemaining, 
+  isTaskOverdue, 
+  isTaskDueSoon, 
+  getTaskSortFunction,
+  truncateText
+} from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -52,7 +60,7 @@ import {
   AlarmClock
 } from "lucide-react";
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from "@/lib/constants";
-import { formatDate, getTaskSortFunction, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
+// Já importado anteriormente
 import { TaskWithDetails } from "@/lib/types";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
@@ -821,7 +829,8 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
   return (
     <Card className={cn(
       "transition-all duration-200",
-      isCompleted ? "bg-gray-50 opacity-80" : "bg-white",
+      isCompleted ? "bg-gray-50" : "bg-white",
+      isCompleted ? "border-gray-200" : isOverdue ? "border-red-200" : isDueSoon ? "border-amber-200" : "border-gray-200",
       "hover:border-gray-300"
     )}>
       <CardContent className="p-4">
@@ -876,7 +885,7 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                 "text-sm mb-2", 
                 isCompleted ? "text-gray-400" : "text-gray-600"
               )}>
-                {task.description}
+                {truncateText(task.description, 120)}
               </p>
             )}
             
@@ -890,58 +899,68 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
             )}
             
             {/* Task metadata */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
               {/* Due date */}
               {task.due_date && (
                 <div className={cn(
                   "flex items-center gap-1",
-                  isOverdue && !isCompleted ? "text-red-600" : "",
-                  isDueSoon && !isCompleted && !isOverdue ? "text-amber-600" : ""
+                  isOverdue && !isCompleted ? "text-red-600 font-medium" : "",
+                  isDueSoon && !isCompleted && !isOverdue ? "text-amber-600 font-medium" : "text-gray-500"
                 )}>
                   <Clock className="h-3.5 w-3.5" />
                   <span>
-                    {isOverdue && !isCompleted ? "Vence em " : ""}
-                    {formatDate(task.due_date)}
+                    {formatDueDateWithDaysRemaining(task.due_date)}
                   </span>
                 </div>
               )}
               
               {/* Estimated hours */}
               {task.estimated_hours && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{task.estimated_hours}h</span>
+                <div className="flex items-center gap-1 text-gray-500">
+                  <AlarmClock className="h-3.5 w-3.5" />
+                  <span>{task.estimated_hours}h estimadas</span>
+                </div>
+              )}
+              
+              {/* Completion date for completed tasks */}
+              {isCompleted && task.completed_at && (
+                <div className="flex items-center gap-1 text-green-600">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  <span>Concluída em {formatDate(task.completed_at)}</span>
                 </div>
               )}
               
               {/* Comments */}
               {hasComments && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-gray-500">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  <span>{task.comments?.length}</span>
+                  <span>{task.comments?.length} comentário{task.comments!.length !== 1 ? 's' : ''}</span>
                 </div>
               )}
               
               {/* Attachments */}
               {hasAttachments && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-gray-500">
                   <Paperclip className="h-3.5 w-3.5" />
-                  <span>{task.attachments?.length}</span>
-                </div>
-              )}
-              
-              {/* Assignee */}
-              {hasAssignee && (
-                <div className="flex items-center gap-1 ml-auto">
-                  <UserAvatar 
-                    name={task.assignedUser?.name || ""} 
-                    avatarUrl={task.assignedUser?.avatar} 
-                    size="xs"
-                  />
-                  <span className="text-gray-700">{task.assignedUser?.name}</span>
+                  <span>{task.attachments?.length} anexo{task.attachments!.length !== 1 ? 's' : ''}</span>
                 </div>
               )}
             </div>
+            
+            {/* Assignee (sempre na parte inferior com visual destacado) */}
+            {hasAssignee && (
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                <UserAvatar 
+                  name={task.assignedUser?.name || ""} 
+                  avatarUrl={task.assignedUser?.avatar} 
+                  size="sm"
+                />
+                <div>
+                  <div className="text-xs text-gray-500">Responsável</div>
+                  <div className="text-sm font-medium text-gray-800">{task.assignedUser?.name}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

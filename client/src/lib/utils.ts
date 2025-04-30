@@ -39,6 +39,29 @@ export function formatDate(date: Date | string | null | undefined): string {
   return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
 }
 
+// Formata a data no formato natural "Vence em X dias (DD/MM/YYYY)"
+export function formatDueDateWithDaysRemaining(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  
+  if (!isValid(dateObj)) return "";
+  
+  const today = new Date();
+  const diffTime = dateObj.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return `Atrasada em ${Math.abs(diffDays)} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+  } else if (diffDays === 0) {
+    return `Vence hoje (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+  } else if (diffDays === 1) {
+    return `Vence amanhã (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+  } else {
+    return `Vence em ${diffDays} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+  }
+}
+
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "";
   
