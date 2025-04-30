@@ -168,8 +168,9 @@ export default function Tasks() {
   // Toggle task completion mutation
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
-      const completionData = completed
-        ? { completed: true, completion_date: new Date() }
+      // Correção do erro toISOString - enviando string ISO já formatada ou null
+      const completionData = completed 
+        ? { completed: true, completion_date: new Date().toISOString() }
         : { completed: false, completion_date: null };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
@@ -304,6 +305,18 @@ export default function Tasks() {
         />
       )}
       
+      {/* Cabeçalho com título e botão de Nova Tarefa */}
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h1 className="text-2xl font-bold">Tarefas</h1>
+          <p className="text-sm text-gray-500">Gerenciamento de tarefas da equipe</p>
+        </div>
+        <Button onClick={handleNewTask} className="bg-indigo-600 hover:bg-indigo-700">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Tarefa
+        </Button>
+      </div>
+      
       {/* View Mode Tabs - Lista/Quadro/Calendário */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <Tabs value={viewMode} onValueChange={setViewMode}>
@@ -375,11 +388,6 @@ export default function Tasks() {
                         ))}
                       </SelectContent>
                     </Select>
-                    
-                    <Button variant="outline" size="sm" onClick={handleNewTask} className="flex items-center gap-1 border-gray-200">
-                      <Plus className="h-4 w-4" />
-                      <span>Nova</span>
-                    </Button>
                   </div>
                 </div>
                 
