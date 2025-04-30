@@ -445,14 +445,14 @@ export default function Tasks() {
                     variant="ghost" 
                     size="sm" 
                     className="text-gray-500 hover:text-gray-700"
-                    onClick={() => setActiveTab(activeTab === "pendentes" ? "concluidas" : "pendentes")}
+                    onClick={() => setShowAllCompleted(!showAllCompleted)}
                   >
-                    {activeTab === "pendentes" ? "Ver todas" : "Ocultar"}
+                    {showAllCompleted ? "Ocultar" : "Ver todas"}
                   </Button>
                 </div>
                 
                 {/* Completed Tasks (Limited or Full View) */}
-                {activeTab === "concluidas" ? (
+                {showAllCompleted ? (
                   <div className="space-y-3">
                     {isLoadingTasks ? (
                       <div className="flex justify-center items-center py-8">
