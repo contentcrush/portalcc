@@ -40,13 +40,16 @@ export const SIDEBAR_ITEMS = [
 ];
 
 export const PROJECT_STATUS_OPTIONS = [
-  { value: "draft", label: "Rascunho" },
-  { value: "em_orcamento", label: "Em Orçamento" },
+  { value: "proposta", label: "Proposta" },
   { value: "pre_producao", label: "Pré-produção" },
-  { value: "em_producao", label: "Em Produção" },
-  { value: "em_andamento", label: "Em Andamento" },
-  { value: "revisao_cliente", label: "Revisão Cliente" },
-  { value: "concluido", label: "Concluído" }
+  { value: "producao", label: "Produção" },
+  { value: "pos_revisao", label: "Pós / Revisão" },
+  { value: "entregue", label: "Entregue / Aprovado" },
+  { value: "concluido", label: "Concluído (Pago)" },
+  // Status complementares
+  { value: "atrasado", label: "Atrasado" },
+  { value: "pausado", label: "Pausado" },
+  { value: "cancelado", label: "Cancelado" }
 ];
 
 export const TASK_STATUS_OPTIONS = [

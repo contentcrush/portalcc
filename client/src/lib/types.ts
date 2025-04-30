@@ -75,7 +75,8 @@ export interface DashboardSummary {
   };
 }
 
-export type ProjectStatus = 'draft' | 'em_orcamento' | 'pre_producao' | 'em_producao' | 'em_andamento' | 'revisao_cliente' | 'concluido';
+export type ProjectStatus = 'proposta' | 'pre_producao' | 'producao' | 'pos_revisao' | 'entregue' | 'concluido' 
+  | 'atrasado' | 'pausado' | 'cancelado';
 
 export type TaskStatus = 'pendente' | 'em_andamento' | 'concluida' | 'bloqueada' | 'cancelada';
 
@@ -90,37 +91,53 @@ export type DocumentStatus = 'pendente' | 'assinado' | 'pago' | 'aprovado' | 'ca
 export type EventType = 'reuniao' | 'gravacao' | 'entrega' | 'edicao' | 'financeiro';
 
 export const StatusColors = {
-  draft: 'gray',
-  em_orcamento: 'blue',
+  // Project Status
+  proposta: 'slate',
   pre_producao: 'indigo',
-  em_producao: 'yellow',
-  em_andamento: 'green',
-  revisao_cliente: 'purple',
-  concluido: 'green',
+  producao: 'yellow',
+  pos_revisao: 'purple',
+  entregue: 'green',
+  concluido: 'emerald',
+  atrasado: 'rose',
+  pausado: 'amber',
+  cancelado: 'gray',
   
+  // Task Status
   pendente: 'yellow',
+  em_andamento: 'blue',
+  concluida: 'green',
   bloqueada: 'red',
   cancelada: 'gray',
   
+  // Priority
   baixa: 'blue',
   media: 'yellow',
-  alta: 'red',
+  alta: 'orange',
+  critica: 'red',
 };
 
 export const StatusLabels = {
-  draft: 'Rascunho',
-  em_orcamento: 'Em Orçamento',
+  // Project Status
+  proposta: 'Proposta',
   pre_producao: 'Pré-produção',
-  em_producao: 'Em Produção',
-  em_andamento: 'Em Andamento',
-  revisao_cliente: 'Revisão Cliente',
-  concluido: 'Concluído',
+  producao: 'Produção',
+  pos_revisao: 'Pós / Revisão',
+  entregue: 'Entregue / Aprovado',
+  concluido: 'Concluído (Pago)',
+  atrasado: 'Atrasado',
+  pausado: 'Pausado',
+  cancelado: 'Cancelado',
   
+  // Task Status
   pendente: 'Pendente',
+  em_andamento: 'Em Andamento',
+  concluida: 'Concluída',
   bloqueada: 'Bloqueada',
   cancelada: 'Cancelada',
   
+  // Priority
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
+  critica: 'Crítica',
 };
