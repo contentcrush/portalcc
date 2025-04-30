@@ -460,11 +460,15 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
                 <div className="flex items-start">
                   <div className="mr-3 mt-1 text-gray-400">
-                    <Badge className="h-5 w-5" />
+                    <CalendarClock className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Categoria</p>
-                    <p className="font-medium">{client.category || 'Não informado'}</p>
+                    <p className="text-sm text-gray-500">Cliente desde</p>
+                    <p className="font-medium">
+                      {client.since 
+                        ? formatDate(client.since) 
+                        : 'Não informado'}
+                    </p>
                   </div>
                 </div>
 
