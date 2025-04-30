@@ -4,6 +4,7 @@ import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -59,10 +60,127 @@ function Calendar({
           <ChevronRight className={cn("h-4 w-4", className)} {...props} />
         ),
       }}
+      captionLayout={props.captionLayout || "buttons"}
       {...props}
     />
   )
 }
 Calendar.displayName = "Calendar"
 
-export { Calendar }
+// Para usar em casos onde precisamos de seleção de data antiga mais limpa
+function YearMonthSelector({ 
+  month, 
+  onMonthChange, 
+  fromYear = 1980,
+  toYear = new Date().getFullYear() + 5,
+}: { 
+  month: Date; 
+  onMonthChange: (date: Date) => void;
+  fromYear?: number;
+  toYear?: number;
+}) {
+  const years = React.useMemo(() => {
+    return Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
+  }, [fromYear, toYear]);
+
+  const months = React.useMemo(() => {
+    return [
+      "Janeiro", "Fevereiro", "Março", "Abril",
+      "Maio", "Junho", "Julho", "Agosto",
+      "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+  }, []);
+
+  const handleYearChange = React.useCallback((value: string) => {
+    const newDate = new Date(month);
+    newDate.setFullYear(parseInt(value));
+    onMonthChange(newDate);
+  }, [month, onMonthChange]);
+
+  const handleMonthChange = React.useCallback((value: string) => {
+    const newDate = new Date(month);
+    newDate.setMonth(parseInt(value));
+    onMonthChange(newDate);
+  }, [month, onMonthChange]);
+
+  return (
+    <div className="flex items-center justify-between space-x-2 mb-2">
+      <Select
+        value={month.getMonth().toString()}
+        onValueChange={handleMonthChange}
+      >
+        <SelectTrigger className="w-[120px] h-8">
+          <SelectValue placeholder="Mês" />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          {months.map((month, index) => (
+            <SelectItem key={index} value={index.toString()}>
+              {month}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      
+      <Select
+        value={month.getFullYear().toString()}
+        onValueChange={handleYearChange}
+      >
+        <SelectTrigger className="w-[90px] h-8">
+          <SelectValue placeholder="Ano" />
+        </SelectTrigger>
+        <SelectContent position="popper" className="max-h-[200px]">
+          {years.map((year) => (
+            <SelectItem key={year} value={year.toString()}>
+              {year}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// Calendário com seletor de ano/mês limpo e minimalista
+function DatePickerWithYearNavigation({
+  date,
+  setDate,
+  fromYear = 1980,
+  toYear,
+  ...props
+}: {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  fromYear?: number;
+  toYear?: number;
+} & Omit<CalendarProps, "selected" | "onSelect">) {
+  const [month, setMonth] = React.useState<Date>(date || new Date());
+  
+  if (!toYear) {
+    toYear = new Date().getFullYear() + 5;
+  }
+
+  return (
+    <div>
+      <YearMonthSelector 
+        month={month} 
+        onMonthChange={setMonth} 
+        fromYear={fromYear}
+        toYear={toYear}
+      />
+      <Calendar
+        mode="single"
+        selected={date}
+        onSelect={setDate}
+        month={month}
+        onMonthChange={setMonth}
+        disabled={(date) => 
+          date > new Date(toYear, 11, 31) || 
+          date < new Date(fromYear, 0, 1)
+        }
+        {...props}
+      />
+    </div>
+  );
+}
+
+export { Calendar, DatePickerWithYearNavigation }
