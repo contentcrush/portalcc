@@ -860,9 +860,10 @@ interface TaskCardProps {
   onToggleComplete: () => void;
   onView: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
+function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCardProps) {
   // Check if task has related entity data
   const hasProject = !!task.project;
   const hasAssignee = !!task.assignedUser;
@@ -969,7 +970,7 @@ function TaskCard({ task, onToggleComplete, onView, onEdit }: TaskCardProps) {
                     <DropdownMenuItem 
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteTask(task.id);
+                        onDelete();
                       }}
                       className="text-red-600"
                     >
