@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { UserAvatar } from "./UserAvatar";
+import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
@@ -319,15 +320,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       
       <div className="p-6">
         <div className="flex justify-center mb-6">
-          <div 
-            className="w-16 h-16 rounded-full flex items-center justify-center font-semibold text-xl"
-            style={{ 
-              backgroundColor: client ? `rgba(59, 130, 246, 0.1)` : '#E5E7EB',
-              color: client ? `rgb(59, 130, 246)` : '#6B7280'
-            }}
-          >
-            {client ? getInitials(client.name) : ''}
-          </div>
+          {client ? (
+            <ClientAvatar 
+              name={client.name} 
+              logoUrl={client.logo} 
+              size="lg"
+            />
+          ) : (
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center font-semibold text-xl bg-gray-100 text-gray-500"
+            >
+              {''}
+            </div>
+          )}
         </div>
         
         <div className="text-center mb-6">
