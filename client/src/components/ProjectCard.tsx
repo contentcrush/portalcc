@@ -16,7 +16,8 @@ import {
   CopyCheck, 
   MoreVertical, 
   Copy as CopyIcon, 
-  Trash2 
+  Trash2,
+  Edit
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ProjectWithClient } from "@/lib/types";
@@ -25,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -183,6 +185,19 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const { openProjectForm, setProjectToEdit } = useProjectForm();
+                    setProjectToEdit(project);
+                    openProjectForm();
+                  }} 
+                  className="cursor-pointer"
+                >
+                  <Edit className="mr-2 h-4 w-4" /> 
+                  Editar Projeto
+                </DropdownMenuItem>
+                
                 <DropdownMenuItem onClick={handleDuplicateProject} className="cursor-pointer">
                   <Copy className="mr-2 h-4 w-4" /> 
                   Duplicar Projeto

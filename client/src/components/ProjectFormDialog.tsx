@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -105,6 +105,26 @@ export function ProjectFormDialog() {
       thumbnail: projectToEdit?.thumbnail || ""
     }
   });
+  
+  // Atualizar o formulário quando projectToEdit mudar
+  useEffect(() => {
+    if (projectToEdit) {
+      form.reset({
+        name: projectToEdit.name || "",
+        description: projectToEdit.description || "",
+        client_id: projectToEdit.client_id || undefined,
+        status: projectToEdit.status || "draft",
+        budget: projectToEdit.budget || undefined,
+        startDate: projectToEdit.startDate ? new Date(projectToEdit.startDate) : null,
+        endDate: projectToEdit.endDate ? new Date(projectToEdit.endDate) : null,
+        primary_area: projectToEdit.primary_area || "",
+        priority: projectToEdit.priority || "media",
+        complexity: projectToEdit.complexity || "moderada",
+        team_members: projectToEdit.team_members || [],
+        thumbnail: projectToEdit.thumbnail || ""
+      });
+    }
+  }, [projectToEdit, form]);
 
   // Mutation para criar projeto
   const createProjectMutation = useMutation({
