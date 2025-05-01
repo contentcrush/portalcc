@@ -2003,6 +2003,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       socket.to(taskRoom).emit('user-left-task', { taskId });
     });
     
+    // Entrar em uma sala de projeto específica
+    socket.on('join-project', (projectId) => {
+      const projectRoom = `project:${projectId}`;
+      socket.join(projectRoom);
+      
+      // Registrar no nosso mapeamento
+      if (!rooms.projects[projectId]) {
+        rooms.projects[projectId] = [];
+      }
+      if (!rooms.projects[projectId].includes(socket.id)) {
+        rooms.projects[projectId].push(socket.id);
+      }
+      
+      console.log(`Socket ${socket.id} entrou na sala do projeto ${projectId}`);
+      socket.to(projectRoom).emit('user-joined-project', { projectId });
+    });
+    
+    // Sair de uma sala de projeto
+    socket.on('leave-project', (projectId) => {
+      const projectRoom = `project:${projectId}`;
+      socket.leave(projectRoom);
+      
+      // Atualizar nosso mapeamento
+      if (rooms.projects[projectId]) {
+        rooms.projects[projectId] = rooms.projects[projectId].filter(id => id !== socket.id);
+      }
+      
+      console.log(`Socket ${socket.id} saiu da sala do projeto ${projectId}`);
+      socket.to(projectRoom).emit('user-left-project', { projectId });
+    });
+    
     // Enviar um comentário para uma tarefa
     socket.on('task-comment', async (data) => {
       try {
@@ -2045,6 +2076,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Enviar um comentário para um projeto
+    socket.on('project-comment', async (data) => {
+      try {
+        const { projectId, userId, comment } = data;
+        
+        if (projectId && userId && comment) {
+          // Validar se o usuário existe
+          const user = await storage.getUser(parseInt(userId));
+          if (!user) {
+            socket.emit('error', { message: 'Usuário não encontrado' });
+            return;
+          }
+          
+          // Salvar o comentário no banco de dados
+          const newComment = await storage.createProjectComment({
+            project_id: parseInt(projectId),
+            user_id: parseInt(userId),
+            comment: comment,
+            creation_date: new Date(),
+            edited: false,
+            deleted: false
+          });
+          
+          // Emitir o evento para todos na sala do projeto
+          const projectRoom = `project:${projectId}`;
+          io.to(projectRoom).emit('new-project-comment', {
+            ...newComment,
+            user: {
+              id: user.id,
+              name: user.name,
+              username: user.username,
+              avatar: user.avatar
+            }
+          });
+          
+          console.log(`Novo comentário adicionado ao projeto ${projectId} por usuário ${userId}`);
+        } else {
+          socket.emit('error', { message: 'Dados incompletos para comentário' });
+        }
+      } catch (error) {
+        console.error('Erro ao processar comentário de projeto:', error);
+        socket.emit('error', { message: 'Erro ao processar comentário' });
+      }
+    });
+    
     // Enviar notificação para um usuário específico
     socket.on('notify-user', (data) => {
       const { targetUserId, notification } = data;
@@ -2067,10 +2143,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     socket.on('disconnect', () => {
       console.log('Socket.IO desconectado:', socket.id);
       
-      // Remover o socket de todas as salas
+      // Remover o socket de todas as salas de tarefas
       for (const [taskId, sockets] of Object.entries(rooms.tasks)) {
         if (Array.isArray(sockets)) {
           rooms.tasks[taskId] = sockets.filter(id => id !== socket.id);
+        }
+      }
+      
+      // Remover o socket de todas as salas de projetos
+      for (const [projectId, sockets] of Object.entries(rooms.projects)) {
+        if (Array.isArray(sockets)) {
+          rooms.projects[projectId] = sockets.filter(id => id !== socket.id);
         }
       }
       
