@@ -71,6 +71,8 @@ import {
   PieChart,
   Users,
   BarChart,
+  CheckCircle,
+  Receipt,
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
