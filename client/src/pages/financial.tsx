@@ -114,7 +114,7 @@ export default function Financial() {
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
 
   // Fetch financial data
-  const { data: financialDocuments, isLoading: isLoadingDocuments } = useQuery({
+  const { data: financialDocuments, isLoading: isLoadingDocuments, refetch: refetchFinancialDocuments } = useQuery({
     queryKey: ['/api/financial-documents']
   });
   
@@ -128,6 +128,34 @@ export default function Financial() {
   
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
+  });
+  
+  // Mutação para gerar faturas a partir de projetos existentes
+  const generateInvoicesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/financial-documents/generate-from-projects");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao gerar faturas");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Faturas geradas com sucesso",
+        description: `${data.generated} faturas geradas, ${data.skipped} ignoradas e ${data.errors} erros.`,
+      });
+      
+      // Recarregar documentos financeiros
+      refetchFinancialDocuments();
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao gerar faturas",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Prepare financial data

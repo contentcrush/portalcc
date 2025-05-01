@@ -1363,6 +1363,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch financial documents" });
     }
   });
+  
+  // Rota para gerar automaticamente faturas para projetos existentes sem faturas
+  app.post("/api/financial-documents/generate-from-projects", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const projects = await storage.getAllProjects();
+      const results = {
+        generated: 0,
+        skipped: 0,
+        errors: 0,
+        details: []
+      };
+      
+      // Para cada projeto que tem orçamento
+      for (const project of projects) {
+        try {
+          if (!project.budget || project.budget <= 0) {
+            results.skipped++;
+            results.details.push({
+              project_id: project.id,
+              project_name: project.name,
+              status: 'skipped',
+              reason: 'No budget defined'
+            });
+            continue;
+          }
+          
+          // Verificar se já existe uma fatura para este projeto
+          const existingDocuments = await storage.getFinancialDocumentsByProject(project.id);
+          const hasPendingInvoice = existingDocuments.some(doc => 
+            doc.document_type === 'invoice' && !doc.paid
+          );
+          
+          if (hasPendingInvoice) {
+            results.skipped++;
+            results.details.push({
+              project_id: project.id,
+              project_name: project.name,
+              status: 'skipped',
+              reason: 'Already has pending invoice'
+            });
+            continue;
+          }
+          
+          // Criar nova fatura
+          const dueDate = project.endDate ? new Date(project.endDate) : new Date();
+          // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
+          if (dueDate < new Date()) {
+            dueDate.setDate(dueDate.getDate() + 15);
+          }
+          
+          const financialDocument = await storage.createFinancialDocument({
+            project_id: project.id,
+            client_id: project.client_id,
+            document_type: "invoice",
+            amount: project.budget,
+            due_date: dueDate,
+            status: "pending",
+            description: `Fatura referente ao projeto: ${project.name}`
+          });
+          
+          results.generated++;
+          results.details.push({
+            project_id: project.id,
+            project_name: project.name,
+            status: 'generated',
+            document_id: financialDocument.id,
+            amount: financialDocument.amount
+          });
+          
+          console.log(`[Sistema] Documento financeiro ID:${financialDocument.id} gerado automaticamente para o projeto existente ID:${project.id}`);
+        } catch (err) {
+          console.error(`[Sistema] Erro ao processar projeto ID:${project.id}:`, err);
+          results.errors++;
+          results.details.push({
+            project_id: project.id,
+            project_name: project.name,
+            status: 'error',
+            error: err.message
+          });
+        }
+      }
+      
+      res.status(200).json(results);
+    } catch (error) {
+      console.error("Erro ao gerar faturas a partir de projetos:", error);
+      res.status(500).json({ message: "Falha ao gerar faturas a partir de projetos" });
+    }
+  });
 
   app.get("/api/clients/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
