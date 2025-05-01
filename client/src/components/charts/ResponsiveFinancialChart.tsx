@@ -343,8 +343,7 @@ export default function ResponsiveFinancialChart({
               data={data.map(item => ({
                 id: item[xAxisDataKey],
                 label: item[xAxisDataKey],
-                value: item[yAxisDataKey],
-                color: colors[data.indexOf(item) % colors.length]
+                value: item[yAxisDataKey]
               }))}
               margin={{ 
                 top: isCompact ? 10 : 20, 
@@ -353,10 +352,8 @@ export default function ResponsiveFinancialChart({
                 left: isCompact ? 10 : 20 
               }}
               innerRadius={innerRadius}
-              activeInnerRadiusOffset={8}
               padAngle={0.7}
               cornerRadius={3}
-              activeOuterRadiusOffset={8}
               colors={colors}
               borderWidth={1}
               borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
@@ -365,11 +362,13 @@ export default function ResponsiveFinancialChart({
               arcLinkLabelsThickness={2}
               arcLinkLabelsColor={{ from: 'color' }}
               arcLabelsSkipAngle={isCompact ? 15 : 10}
-              arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
+              arcLabelsTextColor="#ffffff"
               theme={theme}
               legends={!legendPosition || legendPosition === 'none' ? [] : [
                 {
-                  anchor: legendPosition as any,
+                  anchor: legendPosition === 'right' ? 'right' : 
+                         legendPosition === 'left' ? 'left' : 
+                         legendPosition === 'top' ? 'top' : 'bottom',
                   direction: legendPosition === 'bottom' || legendPosition === 'top' ? 'row' : 'column',
                   justify: false,
                   translateX: legendPosition === 'right' ? 20 : 0,
@@ -377,55 +376,11 @@ export default function ResponsiveFinancialChart({
                   itemsSpacing: 2,
                   itemWidth: 80,
                   itemHeight: 20,
-                  itemTextColor: '#999',
                   itemDirection: 'left-to-right',
-                  itemOpacity: 1,
                   symbolSize: 12,
-                  symbolShape: 'circle',
-                  effects: [
-                    {
-                      on: 'hover',
-                      style: {
-                        itemTextColor: '#000'
-                      }
-                    }
-                  ]
+                  symbolShape: 'circle'
                 }
               ]}
-              tooltip={({ datum }) => {
-                return (
-                  <div style={{ 
-                    background: 'white', 
-                    padding: '8px 12px', 
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '4px',
-                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      fontSize: '12px'
-                    }}>
-                      <div 
-                        style={{ 
-                          width: '8px', 
-                          height: '8px', 
-                          backgroundColor: datum.color,
-                          borderRadius: '50%',
-                          marginRight: '6px'
-                        }}
-                      />
-                      <div style={{ fontWeight: 'bold' }}>{datum.label}:</div>
-                      <div style={{ marginLeft: '4px' }}>
-                        {valueFormatter(datum.value)}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '11px', marginTop: '4px', color: '#64748B' }}>
-                      {datum.formattedValue}
-                    </div>
-                  </div>
-                );
-              }}
             />
           </div>
         );
