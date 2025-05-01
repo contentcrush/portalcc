@@ -604,7 +604,7 @@ export default function Financial() {
                   colors={['#10B981', '#EF4444']}
                   height={300}
                   noCard={true}
-                  enableArea={true}
+                  enableArea
                 />
               </CardContent>
             </Card>

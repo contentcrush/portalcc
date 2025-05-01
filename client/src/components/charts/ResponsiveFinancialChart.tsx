@@ -17,13 +17,14 @@ interface ResponsiveFinancialChartProps {
   height?: number | string;
   className?: string;
   valueFormatter?: (value: number) => string;
-  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right' | 'none';
   enableGridX?: boolean;
   enableGridY?: boolean;
   isCompact?: boolean;
   noCard?: boolean;
   innerRadius?: number;
   activeInnerRadius?: number;
+  enableArea?: boolean;
   theme?: any;
 }
 
@@ -92,6 +93,7 @@ export default function ResponsiveFinancialChart({
   noCard = false,
   innerRadius = 0.6,
   activeInnerRadius = 0.55,
+  enableArea = false,
   theme: customTheme
 }: ResponsiveFinancialChartProps) {
   
@@ -161,7 +163,7 @@ export default function ResponsiveFinancialChart({
               pointBorderColor={{ from: 'serieColor' }}
               pointLabelYOffset={-12}
               useMesh={true}
-              enableArea={true}
+              enableArea={enableArea}
               areaOpacity={0.1}
               enableSlices="x"
               theme={theme}
@@ -365,7 +367,7 @@ export default function ResponsiveFinancialChart({
               arcLabelsSkipAngle={isCompact ? 15 : 10}
               arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
               theme={theme}
-              legends={legendPosition === 'none' ? [] : [
+              legends={!legendPosition || legendPosition === 'none' ? [] : [
                 {
                   anchor: legendPosition as any,
                   direction: legendPosition === 'bottom' || legendPosition === 'top' ? 'row' : 'column',
