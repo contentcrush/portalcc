@@ -78,7 +78,6 @@ const documentPaymentSchema = z.object({
   payment_date: z.date({
     required_error: "Data de pagamento é obrigatória",
   }),
-  payment_method: z.string().min(1, { message: "Método de pagamento é obrigatório" }),
   notes: z.string().optional(),
 });
 
@@ -117,18 +116,15 @@ export function PaymentRegistrationDialog({
   // Definir o schema correto com base no tipo de registro
   const schema = type === "document" ? documentPaymentSchema : expenseApprovalSchema;
 
-  // Adicionar campo personalizado ao schema para método de pagamento customizado
-  const [useCustomMethod, setUseCustomMethod] = useState(false);
+  // Nenhum campo personalizado necessário
   
   // Configurar o formulário
-  const form = useForm<z.infer<typeof schema> & { custom_method?: string }>({
+  const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
       payment_date: type === "document" ? new Date() : undefined,
       approval_date: type === "expense" ? new Date() : undefined,
-      payment_method: "",
       notes: "",
-      custom_method: "",
     },
   });
 
@@ -264,69 +260,7 @@ export function PaymentRegistrationDialog({
                     )}
                   />
 
-                  {/* Método de pagamento */}
-                  <FormField
-                    control={form.control}
-                    name="payment_method"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Método de Pagamento</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o método de pagamento" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PAYMENT_METHODS.map((method) => (
-                              <SelectItem key={method.value} value={method.value}>
-                                <div className="flex items-center">
-                                  {method.icon}
-                                  <span>{method.label}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="other">
-                              <div className="flex items-center">
-                                <ChevronsUpDown className="mr-2 h-4 w-4" />
-                                <span>Outro</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  {/* Campo de texto para "Outro" método de pagamento */}
-                  {form.watch("payment_method") === "other" && (
-                    <FormField
-                      control={form.control}
-                      name="custom_method"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Especifique o método</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Ex: Boleto, Cheque, etc." 
-                              {...field} 
-                              onChange={(e) => {
-                                field.onChange(e);
-                                // Quando o usuário digitar um método personalizado,
-                                // atualizamos o valor do campo payment_method
-                                form.setValue("payment_method", e.target.value);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
                 </>
               )}
 

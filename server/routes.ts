@@ -1289,7 +1289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/financial-documents/:id/pay", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { payment_date, payment_method, notes } = req.body;
+      const { payment_date, notes } = req.body;
       
       // Verificar se o documento existe
       const document = await storage.getFinancialDocument(id);
@@ -1302,12 +1302,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Este documento já foi pago" });
       }
       
+      // Converter a data de string para objeto Date
+      let finalPaymentDate = new Date();
+      if (payment_date) {
+        // Se for uma string de data, convertemos para objeto Date
+        if (typeof payment_date === 'string') {
+          finalPaymentDate = new Date(payment_date);
+        }
+      }
+      
       // Atualizar para pago
       const updatedDocument = await storage.updateFinancialDocument(id, {
         paid: true,
         status: 'paid',
-        payment_date: payment_date || new Date(),
-        payment_method,
+        payment_date: finalPaymentDate,
         payment_notes: notes
       });
       
