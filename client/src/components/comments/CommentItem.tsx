@@ -71,6 +71,12 @@ export function CommentItem({
   // Obter contagem de reações para este comentário
   const reactionCount = comment.reactions?.length || 0;
   
+  // Obter detalhes das reações
+  const reactionUsers = comment.reactions?.map(r => {
+    const user = users[r.user_id];
+    return user ? user.name : "Usuário desconhecido";
+  }).join(", ") || "";
+  
   // Verificar se este comentário foi editado
   const wasEdited = comment.edited;
   
@@ -212,7 +218,10 @@ export function CommentItem({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Curtir</p>
+                  {reactionCount > 0 
+                    ? <p>{reactionUsers}</p>
+                    : <p>Curtir</p>
+                  }
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
