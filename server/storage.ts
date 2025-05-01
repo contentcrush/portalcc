@@ -2013,6 +2013,11 @@ export class DatabaseStorage implements IStorage {
     const [document] = await db.select().from(financialDocuments).where(eq(financialDocuments.id, id));
     return document || undefined;
   }
+  
+  // Alias para getFinancialDocument para compatibilidade com a interface
+  async getFinancialDocumentById(id: number): Promise<FinancialDocument | undefined> {
+    return this.getFinancialDocument(id);
+  }
 
   async getFinancialDocuments(): Promise<FinancialDocument[]> {
     return await db.select().from(financialDocuments);
