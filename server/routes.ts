@@ -10,6 +10,8 @@ import {
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
+import { Server as SocketIOServer } from "socket.io";
+import { WebSocket, WebSocketServer } from "ws";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
