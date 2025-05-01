@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  useReactTable, 
+  ColumnDef, 
+  flexRender, 
+  getCoreRowModel, 
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState
+} from "@tanstack/react-table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -24,8 +35,22 @@ import {
   Filter,
   Plus,
   FileText,
-  BarChart4
+  BarChart4,
+  CalendarDays,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  Clock,
+  ArrowRight,
+  CreditCard,
+  Banknote,
+  Wallet,
+  LineChart,
+  PieChart,
+  Users
 } from "lucide-react";
+import { format, addDays, isBefore, parseISO, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { formatCurrency, calculatePercentChange } from "@/lib/utils";
 import { CURRENT_QUARTER } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
