@@ -1164,6 +1164,11 @@ export class MemStorage implements IStorage {
   async getFinancialDocument(id: number): Promise<FinancialDocument | undefined> {
     return this.financialDocumentsData.get(id);
   }
+  
+  // Alias para getFinancialDocument para compatibilidade com a interface
+  async getFinancialDocumentById(id: number): Promise<FinancialDocument | undefined> {
+    return this.getFinancialDocument(id);
+  }
 
   async getFinancialDocuments(): Promise<FinancialDocument[]> {
     return Array.from(this.financialDocumentsData.values());
