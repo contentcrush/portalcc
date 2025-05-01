@@ -1325,6 +1325,95 @@ export class MemStorage implements IStorage {
     this.userPreferencesData.set(preferences.id, updatedPreferences);
     return updatedPreferences;
   }
+
+  // Project Comments
+  async getProjectComments(projectId: number): Promise<ProjectComment[]> {
+    return Array.from(this.projectCommentsData.values())
+      .filter((comment) => comment.project_id === projectId && comment.deleted === false)
+      .sort((a, b) => a.creation_date.getTime() - b.creation_date.getTime());
+  }
+  
+  async getProjectCommentById(commentId: number): Promise<ProjectComment | undefined> {
+    return this.projectCommentsData.get(commentId);
+  }
+  
+  async createProjectComment(comment: InsertProjectComment): Promise<ProjectComment> {
+    const id = this.projectCommentId++;
+    const projectComment: ProjectComment = {
+      ...comment,
+      id,
+      creation_date: new Date(),
+      edited: false,
+      deleted: false
+    };
+    this.projectCommentsData.set(id, projectComment);
+    return projectComment;
+  }
+  
+  async updateProjectComment(commentId: number, updates: Partial<ProjectComment>): Promise<ProjectComment> {
+    const comment = this.projectCommentsData.get(commentId);
+    if (!comment) {
+      throw new Error(`Comment with ID ${commentId} not found`);
+    }
+    
+    const updatedComment = {
+      ...comment,
+      ...updates,
+      edited: true,
+      edit_date: new Date()
+    };
+    
+    this.projectCommentsData.set(commentId, updatedComment);
+    return updatedComment;
+  }
+  
+  async softDeleteProjectComment(commentId: number): Promise<boolean> {
+    const comment = this.projectCommentsData.get(commentId);
+    if (!comment) {
+      return false;
+    }
+    
+    const updatedComment = {
+      ...comment,
+      deleted: true
+    };
+    
+    this.projectCommentsData.set(commentId, updatedComment);
+    return true;
+  }
+  
+  // Project Comment Reactions
+  async getProjectCommentReactionsByProjectId(projectId: number): Promise<ProjectCommentReaction[]> {
+    const comments = await this.getProjectComments(projectId);
+    const commentIds = comments.map(comment => comment.id);
+    
+    if (commentIds.length === 0) {
+      return [];
+    }
+    
+    return Array.from(this.projectCommentReactionsData.values())
+      .filter(reaction => commentIds.includes(reaction.comment_id));
+  }
+  
+  async getProjectCommentReactionByUserAndComment(userId: number, commentId: number): Promise<ProjectCommentReaction | undefined> {
+    return Array.from(this.projectCommentReactionsData.values())
+      .find(reaction => reaction.user_id === userId && reaction.comment_id === commentId);
+  }
+  
+  async createProjectCommentReaction(reaction: InsertProjectCommentReaction): Promise<ProjectCommentReaction> {
+    const id = this.projectCommentReactionId++;
+    const projectCommentReaction: ProjectCommentReaction = {
+      ...reaction,
+      id,
+      creation_date: new Date()
+    };
+    this.projectCommentReactionsData.set(id, projectCommentReaction);
+    return projectCommentReaction;
+  }
+  
+  async deleteProjectCommentReaction(reactionId: number): Promise<boolean> {
+    return this.projectCommentReactionsData.delete(reactionId);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
