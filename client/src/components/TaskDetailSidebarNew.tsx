@@ -35,6 +35,8 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const { toast } = useToast();
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionValue, setDescriptionValue] = useState("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch task details
@@ -69,7 +71,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
 
   // Toggle task completion mutation
   const updateTaskMutation = useMutation({
-    mutationFn: async (data: { completed?: boolean, status?: string }) => {
+    mutationFn: async (data: { completed?: boolean, status?: string, description?: string }) => {
       return apiRequest('PATCH', `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
