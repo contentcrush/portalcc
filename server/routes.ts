@@ -1452,10 +1452,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Primeiro, verifique se o documento existe e obtenha seus detalhes
+      const document = await storage.getFinancialDocumentById(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Documento financeiro não encontrado" });
+      }
+      
+      // Verifica se o documento está vinculado a um projeto
+      if (document.project_id) {
+        // Se estiver vinculado a um projeto, não permite a exclusão
+        return res.status(403).json({ 
+          message: "Não é possível excluir este documento porque está vinculado a um projeto",
+          detail: "Documentos financeiros gerados automaticamente pelos projetos não podem ser excluídos. Para remover este documento, você precisa remover o projeto associado ou alterar seu orçamento para 0."
+        });
+      }
+      
+      // Se não estiver vinculado a um projeto, prossegue com a exclusão
       const deleted = await storage.deleteFinancialDocument(id);
       
       if (!deleted) {
-        return res.status(404).json({ message: "Documento financeiro não encontrado" });
+        return res.status(404).json({ message: "Falha ao excluir o documento financeiro" });
       }
       
       // Retornar 204 No Content para exclusão bem-sucedida

@@ -121,6 +121,7 @@ export interface IStorage {
   
   // Financial Documents
   getFinancialDocument(id: number): Promise<FinancialDocument | undefined>;
+  getFinancialDocumentById(id: number): Promise<FinancialDocument | undefined>; // Alias para compatibilidade
   getFinancialDocuments(): Promise<FinancialDocument[]>;
   getFinancialDocumentsByClient(clientId: number): Promise<FinancialDocument[]>;
   getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]>;
