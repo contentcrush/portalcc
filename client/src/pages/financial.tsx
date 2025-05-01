@@ -131,11 +131,13 @@ export default function Financial() {
   });
 
   // Prepare financial data
+  // Agora incluímos todas as faturas, não apenas as não pagas
   const receivablesData = financialDocuments?.filter((doc: any) => 
-    doc.document_type === 'invoice' && !doc.paid
+    doc.document_type === 'invoice'
   ) || [];
   
-  const payablesData = expenses?.filter((exp: any) => !exp.approved) || [];
+  // Incluímos todas as despesas, não apenas as não aprovadas
+  const payablesData = expenses || [];
   
   // Calculate KPIs
   const now = new Date();
@@ -977,10 +979,16 @@ export default function Financial() {
                     {receivablesData.length > 0 ? receivablesData.map((doc: any) => {
                       const client = clients?.find((c: any) => c.id === doc.client_id);
                       const project = projects?.find((p: any) => p.id === doc.project_id);
-                      const isOverdue = doc.due_date && isBefore(new Date(doc.due_date), now);
+                      const isOverdue = !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now);
                       
                       return (
-                        <TableRow key={doc.id} className="group hover:bg-muted/50">
+                        <TableRow 
+                          key={doc.id} 
+                          className={cn(
+                            "group hover:bg-muted/50",
+                            doc.paid && "bg-green-50/50 hover:bg-green-50/70" // Destacar linhas de itens pagos
+                          )}
+                        >
                           <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
@@ -1003,9 +1011,16 @@ export default function Financial() {
                             {formatCurrency(doc.amount)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={doc.status === 'pending' ? 'outline' : 'success'}>
-                              {doc.status === 'pending' ? 'Pendente' : 'Pago'}
-                            </Badge>
+                            {doc.paid ? (
+                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                {doc.payment_date ? `Pago em ${format(new Date(doc.payment_date), 'dd/MM/yy')}` : 'Pago'}
+                              </Badge>
+                            ) : (
+                              <Badge variant={isOverdue ? "destructive" : "outline"}>
+                                {isOverdue ? "Atrasado" : "Pendente"}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <FinancialRecordActions 
@@ -1029,8 +1044,22 @@ export default function Financial() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between items-center p-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {receivablesData.length || 0} de {receivablesData.length || 0} registros
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {receivablesData.length || 0} de {receivablesData.length || 0} registros
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Total pendente:</span>
+                  <span className="font-bold">{formatCurrency(
+                    receivablesData
+                      .filter((doc: any) => !doc.paid)
+                      .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0)
+                  )}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Total recebido:</span>
+                  <span className="font-bold text-green-600">{formatCurrency(totalPaidInvoices)}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled>
@@ -1263,7 +1292,13 @@ export default function Financial() {
                       const isToday = exp.date && (new Date(exp.date).toDateString() === now.toDateString());
                       
                       return (
-                        <TableRow key={exp.id} className="group hover:bg-muted/50">
+                        <TableRow 
+                          key={exp.id} 
+                          className={cn(
+                            "group hover:bg-muted/50",
+                            exp.approved && "bg-amber-50/50 hover:bg-amber-50/70" // Destacar linhas de itens aprovados
+                          )}
+                        >
                           <TableCell className="font-medium">{exp.description}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
@@ -1290,9 +1325,16 @@ export default function Financial() {
                           </TableCell>
                           <TableCell>{paidBy || '-'}</TableCell>
                           <TableCell>
-                            <Badge variant={exp.approved ? 'success' : 'outline'}>
-                              {exp.approved ? 'Aprovado' : 'Pendente'}
-                            </Badge>
+                            {exp.approved ? (
+                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                <Receipt className="w-3 h-3 mr-1" />
+                                Aprovado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">
+                                Pendente
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <FinancialRecordActions 
@@ -1322,7 +1364,15 @@ export default function Financial() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Total pendente:</span>
-                  <span className="font-bold">{formatCurrency(totalPayables)}</span>
+                  <span className="font-bold">{formatCurrency(
+                    payablesData
+                      .filter((exp: any) => !exp.approved)
+                      .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0)
+                  )}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Total aprovado:</span>
+                  <span className="font-bold text-amber-600">{formatCurrency(totalApprovedExpenses)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
