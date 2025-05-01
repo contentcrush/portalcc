@@ -154,6 +154,11 @@ export default function Financial() {
   const dueAlerts = receivablesData
     .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow))
     .length;
+    
+  // Payables next 7 days
+  const payablesNext7Days = payablesData
+    .filter((exp: any) => exp.date && isBefore(new Date(exp.date), sevenDaysFromNow))
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
   // Monthly revenue
   const currentMonth = now.getMonth();
@@ -1120,7 +1125,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">A Pagar (Total)</p>
-                  <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPayables || 24560)}</p>
+                  <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPayables)}</p>
                 </div>
                 <Wallet className="h-8 w-8 text-amber-600" />
               </CardContent>
@@ -1130,7 +1135,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Próximos 7 dias</p>
-                  <p className="text-2xl font-bold text-red-600">{formatCurrency(4800)}</p>
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(payablesNext7Days)}</p>
                 </div>
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </CardContent>
