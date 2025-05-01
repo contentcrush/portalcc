@@ -904,15 +904,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const taskId = parseInt(req.params.id);
       const comments = await storage.getTaskComments(taskId);
-      res.json(comments);
+      
+      // Obter reações para os comentários
+      const reactions = await storage.getCommentReactionsByTaskId(taskId);
+      
+      // Mapear as reações aos comentários para retornar tudo junto
+      const commentsWithReactions = comments.map(comment => ({
+        ...comment,
+        reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+      }));
+      
+      res.json(commentsWithReactions);
     } catch (error) {
+      console.error("Error fetching task comments:", error);
       res.status(500).json({ message: "Failed to fetch task comments" });
     }
   });
 
-  app.post("/api/tasks/:id/comments", authenticateJWT, async (req, res) => {
+  app.get("/api/comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getTaskCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      res.json(comment);
+    } catch (error) {
+      console.error("Error fetching comment:", error);
+      res.status(500).json({ message: "Failed to fetch comment" });
+    }
+  });
+
+  app.post("/api/tasks/:id/comments", authenticateJWT, validateBody(insertTaskCommentSchema), async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
+      
+      // Adiciona o ID do usuário autenticado como autor do comentário
+      const comment = await storage.createTaskComment({
+        ...req.body,
+        task_id: taskId,
+        user_id: req.user!.id,
+        creation_date: new Date(),
+        edited: false,
+        deleted: false
+      });
+      
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${taskId}`).emit('new-comment', comment);
+      }
+      
+      // Notificar via WebSocket nativo
+      const commentMsg = JSON.stringify({
+        type: 'new-comment',
+        data: comment
+      });
+      
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(commentMsg);
+        }
+      });
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error creating task comment:", error);
+      res.status(500).json({ message: "Failed to create task comment" });
+    }
+  });
+  
+  // Rota para respostas a comentários
+  app.post("/api/comments/:id/reply", authenticateJWT, async (req, res) => {
+    try {
+      const parentId = parseInt(req.params.id);
+      const parentComment = await storage.getTaskCommentById(parentId);
+      
+      if (!parentComment) {
+        return res.status(404).json({ message: "Parent comment not found" });
+      }
       
       if (!req.body.comment) {
         return res.status(400).json({ 
@@ -921,17 +992,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Adiciona o ID do usuário autenticado como autor do comentário
-      const comment = await storage.createTaskComment({
+      // Criar comentário com referência ao pai
+      const reply = await storage.createTaskComment({
         comment: req.body.comment,
-        task_id: taskId,
-        user_id: req.user!.id
+        task_id: parentComment.task_id,
+        user_id: req.user!.id,
+        parent_id: parentId,
+        creation_date: new Date(),
+        edited: false,
+        deleted: false
       });
       
-      res.status(201).json(comment);
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${parentComment.task_id}`).emit('new-reply', {
+          reply,
+          parentId
+        });
+      }
+      
+      res.status(201).json(reply);
     } catch (error) {
-      console.error("Error creating task comment:", error);
-      res.status(500).json({ message: "Failed to create task comment" });
+      console.error("Error creating reply:", error);
+      res.status(500).json({ message: "Failed to create reply" });
+    }
+  });
+  
+  // Rota para edição de comentários
+  app.patch("/api/comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getTaskCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se o usuário é o autor do comentário
+      if (comment.user_id !== req.user!.id) {
+        return res.status(403).json({ message: "You can only edit your own comments" });
+      }
+      
+      if (!req.body.comment) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: [{ code: "invalid_type", expected: "string", received: "undefined", path: ["comment"], message: "Required" }] 
+        });
+      }
+      
+      // Atualizar o comentário
+      const updatedComment = await storage.updateTaskComment(commentId, {
+        comment: req.body.comment,
+        edited: true,
+        edit_date: new Date()
+      });
+      
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${comment.task_id}`).emit('comment-updated', updatedComment);
+      }
+      
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      res.status(500).json({ message: "Failed to update comment" });
+    }
+  });
+  
+  // Rota para soft delete de comentários
+  app.delete("/api/comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getTaskCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se o usuário é o autor do comentário ou um admin/manager
+      if (comment.user_id !== req.user!.id && !['admin', 'manager'].includes(req.user!.role)) {
+        return res.status(403).json({ message: "You can only delete your own comments" });
+      }
+      
+      // Soft delete do comentário
+      await storage.softDeleteTaskComment(commentId);
+      
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${comment.task_id}`).emit('comment-deleted', { id: commentId });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
+  
+  // Rotas para reações de comentários
+  app.post("/api/comments/:id/reactions", authenticateJWT, validateBody(insertCommentReactionSchema), async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getTaskCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se já existe uma reação deste usuário para este comentário
+      const existingReaction = await storage.getCommentReactionByUserAndComment(req.user!.id, commentId);
+      
+      if (existingReaction) {
+        return res.status(400).json({ message: "You've already reacted to this comment" });
+      }
+      
+      // Criar nova reação
+      const reaction = await storage.createCommentReaction({
+        comment_id: commentId,
+        user_id: req.user!.id,
+        type: req.body.type || 'like'
+      });
+      
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${comment.task_id}`).emit('new-reaction', {
+          reaction,
+          commentId
+        });
+      }
+      
+      res.status(201).json(reaction);
+    } catch (error) {
+      console.error("Error creating reaction:", error);
+      res.status(500).json({ message: "Failed to create reaction" });
+    }
+  });
+  
+  app.delete("/api/comments/:commentId/reactions/:reactionId", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const reactionId = parseInt(req.params.reactionId);
+      
+      const comment = await storage.getTaskCommentById(commentId);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Remover reação
+      await storage.deleteCommentReaction(reactionId);
+      
+      // Notificar via WebSocket
+      if (io) {
+        io.to(`task-${comment.task_id}`).emit('reaction-removed', {
+          reactionId,
+          commentId
+        });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting reaction:", error);
+      res.status(500).json({ message: "Failed to delete reaction" });
     }
   });
   

@@ -42,14 +42,9 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
     staleTime: 1000 * 60 * 15 // 15 minutos
   });
   
-  // Buscar as reações dos comentários
-  const { 
-    data: reactions = [], 
-    isLoading: isLoadingReactions 
-  } = useQuery<any[]>({ 
-    queryKey: [`/api/tasks/${taskId}/comment-reactions`],
-    staleTime: 1000 * 60 * 5 // 5 minutos
-  });
+  // As reações já vêm junto com os comentários na resposta da API,
+  // não há necessidade de uma consulta separada
+  const isLoadingReactions = false;
   
   // Criar um objeto de usuários indexado por ID para acesso rápido
   const usersMap = allUsers.reduce((acc, user) => {
