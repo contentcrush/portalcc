@@ -1,4 +1,4 @@
-import { eq, and, inArray, or, count } from "drizzle-orm";
+import { eq, and, inArray, or, count, asc } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
@@ -2135,6 +2135,112 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userPreferences.user_id, userId))
       .returning();
     return updatedPreferences;
+  }
+
+  // Project Comments
+  async getProjectComments(projectId: number): Promise<ProjectComment[]> {
+    return await db.select()
+      .from(projectComments)
+      .where(and(
+        eq(projectComments.project_id, projectId),
+        eq(projectComments.deleted, false)
+      ))
+      .orderBy(asc(projectComments.creation_date));
+  }
+  
+  async getProjectCommentById(commentId: number): Promise<ProjectComment | undefined> {
+    const [comment] = await db.select()
+      .from(projectComments)
+      .where(eq(projectComments.id, commentId));
+    return comment || undefined;
+  }
+  
+  async createProjectComment(comment: InsertProjectComment): Promise<ProjectComment> {
+    const [projectComment] = await db.insert(projectComments)
+      .values({
+        ...comment,
+        creation_date: new Date(),
+        edited: false,
+        deleted: false
+      })
+      .returning();
+    return projectComment;
+  }
+  
+  async updateProjectComment(commentId: number, updates: Partial<ProjectComment>): Promise<ProjectComment> {
+    const [updatedComment] = await db.update(projectComments)
+      .set({
+        ...updates,
+        edited: true,
+        edit_date: new Date()
+      })
+      .where(eq(projectComments.id, commentId))
+      .returning();
+    
+    if (!updatedComment) {
+      throw new Error(`Comment with ID ${commentId} not found`);
+    }
+    
+    return updatedComment;
+  }
+  
+  async softDeleteProjectComment(commentId: number): Promise<boolean> {
+    const result = await db.update(projectComments)
+      .set({ deleted: true })
+      .where(eq(projectComments.id, commentId));
+    
+    return true;
+  }
+  
+  // Project Comment Reactions
+  async getProjectCommentReactionsByProjectId(projectId: number): Promise<ProjectCommentReaction[]> {
+    // Primeiro obtenha todos os IDs de comentários para o projeto
+    const commentsResult = await db.select({ id: projectComments.id })
+      .from(projectComments)
+      .where(and(
+        eq(projectComments.project_id, projectId),
+        eq(projectComments.deleted, false)
+      ));
+    
+    if (commentsResult.length === 0) {
+      return [];
+    }
+    
+    const commentIds = commentsResult.map(comment => comment.id);
+    
+    // Agora obtenha todas as reações para esses comentários
+    return await db.select()
+      .from(projectCommentReactions)
+      .where(inArray(projectCommentReactions.comment_id, commentIds));
+  }
+  
+  async getProjectCommentReactionByUserAndComment(userId: number, commentId: number): Promise<ProjectCommentReaction | undefined> {
+    const [reaction] = await db.select()
+      .from(projectCommentReactions)
+      .where(and(
+        eq(projectCommentReactions.user_id, userId),
+        eq(projectCommentReactions.comment_id, commentId)
+      ));
+    
+    return reaction || undefined;
+  }
+  
+  async createProjectCommentReaction(reaction: InsertProjectCommentReaction): Promise<ProjectCommentReaction> {
+    const [projectCommentReaction] = await db.insert(projectCommentReactions)
+      .values({
+        ...reaction,
+        creation_date: new Date()
+      })
+      .returning();
+    
+    return projectCommentReaction;
+  }
+  
+  async deleteProjectCommentReaction(reactionId: number): Promise<boolean> {
+    const result = await db.delete(projectCommentReactions)
+      .where(eq(projectCommentReactions.id, reactionId));
+      
+    return true;
   }
 }
 
