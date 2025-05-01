@@ -1519,6 +1519,279 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Rotas para Comentários de Projetos =====
+  
+  // Obter todos os comentários de um projeto
+  app.get("/api/projects/:id/comments", authenticateJWT, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const comments = await storage.getProjectComments(projectId);
+      
+      // Obter reações para os comentários
+      const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
+      
+      // Mapear as reações aos comentários para retornar tudo junto
+      const commentsWithReactions = comments.map(comment => ({
+        ...comment,
+        reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+      }));
+      
+      res.json(commentsWithReactions);
+    } catch (error) {
+      console.error("Error fetching project comments:", error);
+      res.status(500).json({ message: "Failed to fetch project comments" });
+    }
+  });
+
+  // Obter um comentário específico de projeto por ID
+  app.get("/api/project-comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getProjectCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      res.json(comment);
+    } catch (error) {
+      console.error("Error fetching project comment:", error);
+      res.status(500).json({ message: "Failed to fetch project comment" });
+    }
+  });
+
+  // Criar um novo comentário em um projeto
+  app.post("/api/projects/:id/comments", authenticateJWT, validateBody(insertProjectCommentSchema), async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      // Adiciona o ID do usuário autenticado como autor do comentário
+      const comment = await storage.createProjectComment({
+        ...req.body,
+        project_id: projectId,
+        user_id: req.user!.id,
+        creation_date: new Date(),
+        edited: false,
+        deleted: false
+      });
+      
+      // Enviar notificação por WebSocket
+      if (comment) {
+        const user = await storage.getUser(req.user!.id);
+        
+        const commentWithUser = {
+          ...comment,
+          user: {
+            id: user?.id,
+            name: user?.name,
+            username: user?.username,
+            avatar: user?.avatar
+          }
+        };
+        
+        const projectRoom = `project:${projectId}`;
+        io.to(projectRoom).emit('new-project-comment', commentWithUser);
+      }
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error creating project comment:", error);
+      res.status(500).json({ message: "Failed to create project comment" });
+    }
+  });
+
+  // Responder a um comentário de projeto
+  app.post("/api/project-comments/:id/reply", authenticateJWT, async (req, res) => {
+    try {
+      const parentId = parseInt(req.params.id);
+      const parentComment = await storage.getProjectCommentById(parentId);
+      
+      if (!parentComment) {
+        return res.status(404).json({ message: "Parent comment not found" });
+      }
+      
+      if (!req.body.comment) {
+        return res.status(400).json({ message: "Comment text is required" });
+      }
+      
+      // Criar resposta como um novo comentário com referência ao pai
+      const comment = await storage.createProjectComment({
+        project_id: parentComment.project_id,
+        user_id: req.user!.id,
+        comment: req.body.comment,
+        parent_id: parentId
+      });
+      
+      // Enviar notificação por WebSocket
+      if (comment) {
+        const user = await storage.getUser(req.user!.id);
+        
+        const commentWithUser = {
+          ...comment,
+          user: {
+            id: user?.id,
+            name: user?.name,
+            username: user?.username,
+            avatar: user?.avatar
+          }
+        };
+        
+        const projectRoom = `project:${parentComment.project_id}`;
+        io.to(projectRoom).emit('new-project-comment', commentWithUser);
+      }
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error replying to project comment:", error);
+      res.status(500).json({ message: "Failed to reply to comment" });
+    }
+  });
+
+  // Editar um comentário de projeto
+  app.patch("/api/project-comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getProjectCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se o usuário é o autor do comentário ou tem perfil de admin
+      if (comment.user_id !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "You can only edit your own comments" });
+      }
+      
+      if (!req.body.comment) {
+        return res.status(400).json({ message: "Comment text is required" });
+      }
+      
+      const updatedComment = await storage.updateProjectComment(commentId, {
+        comment: req.body.comment
+      });
+      
+      // Enviar notificação por WebSocket
+      if (updatedComment) {
+        const projectRoom = `project:${comment.project_id}`;
+        io.to(projectRoom).emit('updated-project-comment', updatedComment);
+      }
+      
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error updating project comment:", error);
+      res.status(500).json({ message: "Failed to update comment" });
+    }
+  });
+
+  // Excluir (soft delete) um comentário de projeto
+  app.delete("/api/project-comments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getProjectCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se o usuário é o autor do comentário ou tem perfil de admin
+      if (comment.user_id !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "You can only delete your own comments" });
+      }
+      
+      // Soft delete do comentário
+      const success = await storage.softDeleteProjectComment(commentId);
+      
+      if (success) {
+        // Enviar notificação por WebSocket
+        const projectRoom = `project:${comment.project_id}`;
+        io.to(projectRoom).emit('deleted-project-comment', { id: commentId });
+        
+        res.status(200).json({ message: "Comment deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete comment" });
+      }
+    } catch (error) {
+      console.error("Error deleting project comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
+
+  // Adicionar uma reação a um comentário de projeto
+  app.post("/api/project-comments/:id/reactions", authenticateJWT, validateBody(insertProjectCommentReactionSchema), async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const comment = await storage.getProjectCommentById(commentId);
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Verificar se o usuário já reagiu a este comentário
+      const existingReaction = await storage.getProjectCommentReactionByUserAndComment(
+        req.user!.id,
+        commentId
+      );
+      
+      if (existingReaction) {
+        return res.status(400).json({ 
+          message: "You have already reacted to this comment",
+          reaction: existingReaction
+        });
+      }
+      
+      // Criar nova reação
+      const reaction = await storage.createProjectCommentReaction({
+        comment_id: commentId,
+        user_id: req.user!.id,
+        reaction_type: req.body.reaction_type
+      });
+      
+      // Enviar notificação por WebSocket
+      const projectRoom = `project:${comment.project_id}`;
+      io.to(projectRoom).emit('new-project-comment-reaction', { 
+        ...reaction,
+        comment_id: commentId
+      });
+      
+      res.status(201).json(reaction);
+    } catch (error) {
+      console.error("Error creating reaction:", error);
+      res.status(500).json({ message: "Failed to create reaction" });
+    }
+  });
+
+  // Remover uma reação de um comentário de projeto
+  app.delete("/api/project-comments/:commentId/reactions/:reactionId", authenticateJWT, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const reactionId = parseInt(req.params.reactionId);
+      
+      const comment = await storage.getProjectCommentById(commentId);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Excluir a reação
+      const success = await storage.deleteProjectCommentReaction(reactionId);
+      
+      if (success) {
+        // Enviar notificação por WebSocket
+        const projectRoom = `project:${comment.project_id}`;
+        io.to(projectRoom).emit('deleted-project-comment-reaction', { 
+          id: reactionId,
+          comment_id: commentId
+        });
+        
+        res.status(200).json({ message: "Reaction removed successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to remove reaction" });
+      }
+    } catch (error) {
+      console.error("Error removing reaction:", error);
+      res.status(500).json({ message: "Failed to remove reaction" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Configurar WebSocket Server (usando 'ws' para WebSockets nativos)
