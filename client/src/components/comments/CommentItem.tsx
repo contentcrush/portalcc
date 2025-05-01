@@ -12,7 +12,9 @@ import {
   Check, 
   X, 
   MoreVertical,
-  MessageSquare
+  MessageSquare,
+  ChevronDown,
+  Send
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -117,188 +119,196 @@ export function CommentItem({
   
   return (
     <div className={cn(
-      "flex gap-3 py-3", 
-      isReply ? "ml-10 border-l-2 border-muted pl-4" : ""
+      "group rounded-md p-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors",
+      isReply ? "ml-6 border-l-2 border-slate-200 dark:border-slate-700 pl-3" : "",
+      "mb-1"
     )}>
-      <div className="shrink-0">
-        <UserAvatar user={author} size="md" />
-      </div>
-      
-      <div className="flex-1 space-y-2">
-        <div className="flex items-start justify-between">
-          <div>
+      <div className="flex gap-2.5">
+        <div className="shrink-0">
+          <UserAvatar user={author} size="sm" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{author?.name || "Usuário desconhecido"}</span>
+              <span className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                {author?.name || "Usuário desconhecido"}
+              </span>
+              <RelativeTime date={comment.creation_date} className="text-xs text-muted-foreground" />
               {wasEdited && (
                 <span className="text-xs text-muted-foreground">(editado)</span>
               )}
             </div>
-            <RelativeTime date={comment.creation_date} className="text-xs" />
-          </div>
-          
-          {isAuthor && !isEditing && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  <span>Editar</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete(comment.id)}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Excluir</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        
-        {isEditing ? (
-          <div className="space-y-2">
-            <Textarea
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              className="min-h-[100px] w-full"
-            />
-            <div className="flex justify-end space-x-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditedText(comment.comment);
-                }}
-              >
-                <X className="mr-1 h-4 w-4" />
-                Cancelar
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={handleSaveEdit}
-              >
-                <Check className="mr-1 h-4 w-4" />
-                Salvar
-              </Button>
+            
+            <div className="flex items-center gap-1 self-end sm:self-auto">
+              {isAuthor && !isEditing && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[160px]">
+                    <DropdownMenuItem onClick={() => setIsEditing(true)} className="text-xs">
+                      <Edit className="mr-2 h-3.5 w-3.5" />
+                      <span>Editar</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(comment.id)}
+                      className="text-red-600 focus:text-red-600 text-xs"
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
+                      <span>Excluir</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="text-sm">{formattedComment}</div>
-        )}
-        
-        {!isEditing && (
-          <div className="flex items-center space-x-2 pt-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant={hasReacted ? "secondary" : "ghost"} 
-                    size="sm" 
-                    className="h-7 px-2 text-xs"
-                    onClick={() => onReaction(comment.id)}
-                  >
-                    <Heart className={cn(
-                      "mr-1 h-3 w-3", 
-                      hasReacted ? "fill-primary text-primary" : ""
-                    )} />
-                    {reactionCount > 0 && reactionCount}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Curtir</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            {!isReply && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
+          
+          {isEditing ? (
+            <div className="mt-2 space-y-2">
+              <Textarea
+                value={editedText}
+                onChange={(e) => setEditedText(e.target.value)}
+                className="min-h-[80px] w-full text-sm"
+              />
+              <div className="flex justify-end gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedText(comment.comment);
+                  }}
+                >
+                  <X className="mr-1 h-3 w-3" />
+                  Cancelar
+                </Button>
+                <Button 
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={handleSaveEdit}
+                >
+                  <Check className="mr-1 h-3 w-3" />
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-800 dark:text-slate-200 mt-0.5 break-words">{formattedComment}</div>
+          )}
+          
+          {!isEditing && (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Button 
+                variant={hasReacted ? "secondary" : "ghost"} 
+                size="sm" 
+                className={cn(
+                  "h-6 px-2 text-xs rounded-full",
+                  hasReacted ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300" : ""
+                )}
+                onClick={() => onReaction(comment.id)}
+              >
+                <Heart className={cn(
+                  "mr-1 h-3 w-3", 
+                  hasReacted ? "fill-blue-500 text-blue-500" : ""
+                )} />
+                <span>{reactionCount > 0 ? "Curtir (" + reactionCount + ")" : "Curtir"}</span>
+              </Button>
+              
+              {!isReply && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs rounded-full"
+                  onClick={() => setIsReplying(!isReplying)}
+                >
+                  <Reply className="mr-1 h-3 w-3" />
+                  <span>Responder</span>
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {isReplying && (
+            <div className="mt-3 space-y-2">
+              <div className="flex gap-2.5">
+                <div className="shrink-0 pt-1">
+                  <UserAvatar user={currentUser} size="xs" />
+                </div>
+                <div className="flex-1 relative">
+                  <Textarea
+                    placeholder="Escreva sua resposta..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="min-h-[60px] resize-none text-sm pr-16"
+                  />
+                  <div className="absolute bottom-2 right-2 flex space-x-1">
                     <Button 
+                      size="icon" 
                       variant="ghost" 
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setIsReplying(!isReplying)}
+                      className="h-6 w-6 rounded-full"
+                      onClick={() => {
+                        setIsReplying(false);
+                        setReplyText("");
+                      }}
                     >
-                      <Reply className="mr-1 h-3 w-3" />
-                      Responder
+                      <X className="h-3 w-3" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Responder</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            
-            {!isReply && replies.length > 0 && (
+                    <Button 
+                      size="icon"
+                      className="h-6 w-6 rounded-full"
+                      onClick={handleSubmitReply}
+                      disabled={!replyText.trim()}
+                    >
+                      <Send className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {!isReply && replies.length > 0 && (
+            <div className="mt-1">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 px-2 text-xs"
+                className="h-6 px-0 text-xs hover:bg-transparent"
                 onClick={() => setShowReplies(!showReplies)}
               >
-                <MessageSquare className="mr-1 h-3 w-3" />
-                {replies.length} {replies.length === 1 ? "resposta" : "respostas"}
-              </Button>
-            )}
-          </div>
-        )}
-        
-        {isReplying && (
-          <div className="mt-3 space-y-2">
-            <Textarea
-              placeholder="Escreva sua resposta..."
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              className="min-h-[80px] w-full text-sm"
-            />
-            <div className="flex justify-end space-x-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  setIsReplying(false);
-                  setReplyText("");
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={handleSubmitReply}
-                disabled={!replyText.trim()}
-              >
-                Responder
+                <ChevronDown className={cn(
+                  "mr-1 h-3 w-3 transition-transform", 
+                  showReplies ? "rotate-180" : ""
+                )} />
+                <span className="text-xs text-muted-foreground">
+                  {replies.length} {replies.length === 1 ? "resposta" : "respostas"}
+                </span>
               </Button>
             </div>
-          </div>
-        )}
-        
-        {!isReply && showReplies && replies.length > 0 && (
-          <div className="mt-3 space-y-1">
-            {replies.map((reply) => (
-              <CommentItem
-                key={reply.id}
-                comment={reply}
-                users={users}
-                onReply={onReply}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                isReply={true}
-                reactions={[]} // Não é mais necessário passar reactions separadamente
-                onReaction={onReaction}
-              />
-            ))}
-          </div>
-        )}
+          )}
+          
+          {!isReply && showReplies && replies.length > 0 && (
+            <div className="mt-1">
+              {replies.map((reply) => (
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  users={users}
+                  onReply={onReply}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  isReply={true}
+                  reactions={[]} // Não é mais necessário passar reactions separadamente
+                  onReaction={onReaction}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
