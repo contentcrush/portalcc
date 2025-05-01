@@ -4,13 +4,16 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
+  projectComments, projectCommentReactions,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
+  type ProjectComment, type ProjectCommentReaction,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
-  type InsertUserPreference, type InsertCommentReaction, type CommentReaction
+  type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
+  type InsertProjectComment, type InsertProjectCommentReaction
 } from "../shared/schema";
 
 export interface IStorage {

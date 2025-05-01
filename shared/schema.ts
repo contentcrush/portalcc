@@ -405,6 +405,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   tasks: many(tasks, { relationName: "user_tasks" }),
   projectMembers: many(projectMembers),
   taskComments: many(taskComments),
+  projectComments: many(projectComments),
   taskAttachments: many(taskAttachments),
   clientInteractions: many(clientInteractions),
   expenses: many(expenses),
@@ -507,6 +508,35 @@ export const commentReactionsRelations = relations(commentReactions, ({ one }) =
   }),
   user: one(users, {
     fields: [commentReactions.user_id],
+    references: [users.id]
+  })
+}));
+
+// Relações para comentários de projeto
+export const projectCommentsRelations = relations(projectComments, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [projectComments.project_id],
+    references: [projects.id]
+  }),
+  user: one(users, {
+    fields: [projectComments.user_id],
+    references: [users.id]
+  }),
+  reactions: many(projectCommentReactions),
+  parent: one(projectComments, {
+    fields: [projectComments.parent_id],
+    references: [projectComments.id]
+  })
+}));
+
+// Relações para reações de comentários de projeto
+export const projectCommentReactionsRelations = relations(projectCommentReactions, ({ one }) => ({
+  comment: one(projectComments, {
+    fields: [projectCommentReactions.comment_id],
+    references: [projectComments.id]
+  }),
+  user: one(users, {
+    fields: [projectCommentReactions.user_id],
     references: [users.id]
   })
 }));
