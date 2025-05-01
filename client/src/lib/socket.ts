@@ -240,6 +240,32 @@ export function leaveTaskRoom(taskId: number): void {
 }
 
 /**
+ * Entrar em uma sala de projeto
+ */
+export function joinProjectRoom(projectId: number): void {
+  if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
+    return;
+  }
+
+  socket.emit('join-project', projectId);
+  console.log(`Entrou na sala do projeto ${projectId}`);
+}
+
+/**
+ * Sair de uma sala de projeto
+ */
+export function leaveProjectRoom(projectId: number): void {
+  if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
+    return;
+  }
+
+  socket.emit('leave-project', projectId);
+  console.log(`Saiu da sala do projeto ${projectId}`);
+}
+
+/**
  * Adicionar um comentário em tempo real à tarefa
  */
 export function addTaskComment(taskId: number, userId: number, comment: string): void {
@@ -249,6 +275,18 @@ export function addTaskComment(taskId: number, userId: number, comment: string):
   }
 
   socket.emit('task-comment', { taskId, userId, comment });
+}
+
+/**
+ * Adicionar um comentário em tempo real ao projeto
+ */
+export function addProjectComment(projectId: number, userId: number, comment: string): void {
+  if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
+    return;
+  }
+
+  socket.emit('project-comment', { projectId, userId, comment });
 }
 
 /**
@@ -265,6 +303,91 @@ export function onNewComment(callback: (comment: any) => void): () => void {
   // Retorna função para remover o listener
   return () => {
     socket.off('new-comment', callback);
+  };
+}
+
+/**
+ * Registra um listener para novos comentários em projetos
+ */
+export function onNewProjectComment(callback: (comment: any) => void): () => void {
+  if (!socket) {
+    console.warn('Socket.IO não está inicializado');
+    return () => {};
+  }
+
+  socket.on('new-project-comment', callback);
+  
+  // Retorna função para remover o listener
+  return () => {
+    socket.off('new-project-comment', callback);
+  };
+}
+
+/**
+ * Registra um listener para comentários de projeto atualizados
+ */
+export function onUpdatedProjectComment(callback: (comment: any) => void): () => void {
+  if (!socket) {
+    console.warn('Socket.IO não está inicializado');
+    return () => {};
+  }
+
+  socket.on('updated-project-comment', callback);
+  
+  // Retorna função para remover o listener
+  return () => {
+    socket.off('updated-project-comment', callback);
+  };
+}
+
+/**
+ * Registra um listener para comentários de projeto excluídos
+ */
+export function onDeletedProjectComment(callback: (data: { id: number }) => void): () => void {
+  if (!socket) {
+    console.warn('Socket.IO não está inicializado');
+    return () => {};
+  }
+
+  socket.on('deleted-project-comment', callback);
+  
+  // Retorna função para remover o listener
+  return () => {
+    socket.off('deleted-project-comment', callback);
+  };
+}
+
+/**
+ * Registra um listener para novas reações em comentários de projeto 
+ */
+export function onNewProjectCommentReaction(callback: (data: any) => void): () => void {
+  if (!socket) {
+    console.warn('Socket.IO não está inicializado');
+    return () => {};
+  }
+
+  socket.on('new-project-comment-reaction', callback);
+  
+  // Retorna função para remover o listener
+  return () => {
+    socket.off('new-project-comment-reaction', callback);
+  };
+}
+
+/**
+ * Registra um listener para reações excluídas em comentários de projeto
+ */
+export function onDeletedProjectCommentReaction(callback: (data: { id: number, comment_id: number }) => void): () => void {
+  if (!socket) {
+    console.warn('Socket.IO não está inicializado');
+    return () => {};
+  }
+
+  socket.on('deleted-project-comment-reaction', callback);
+  
+  // Retorna função para remover o listener
+  return () => {
+    socket.off('deleted-project-comment-reaction', callback);
   };
 }
 

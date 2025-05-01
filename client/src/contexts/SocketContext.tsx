@@ -10,8 +10,16 @@ import {
   onWebSocketMessage,
   joinTaskRoom,
   leaveTaskRoom,
+  joinProjectRoom,
+  leaveProjectRoom,
   addTaskComment,
+  addProjectComment,
   onNewComment,
+  onNewProjectComment,
+  onUpdatedProjectComment,
+  onDeletedProjectComment,
+  onNewProjectCommentReaction,
+  onDeletedProjectCommentReaction,
   notifyUser,
   closeConnections
 } from '@/lib/socket';
@@ -24,10 +32,26 @@ interface SocketContextType {
   socket: WebSocket | null; // Alias para webSocket para compatibilidade com componentes
   sendMessage: (data: any) => boolean;
   emitEvent: (event: string, data: any) => boolean;
+  
+  // Métodos para salas de tarefas
   joinTask: (taskId: number) => void;
   leaveTask: (taskId: number) => void;
   addComment: (taskId: number, comment: string) => void;
   registerCommentListener: (callback: (comment: any) => void) => () => void;
+  
+  // Métodos para salas de projetos
+  joinProject: (projectId: number) => void;
+  leaveProject: (projectId: number) => void;
+  addProjectComment: (projectId: number, comment: string) => void;
+  registerProjectCommentListener: (callback: (comment: any) => void) => () => void;
+  registerUpdatedProjectCommentListener: (callback: (comment: any) => void) => () => void;
+  registerDeletedProjectCommentListener: (callback: (data: { id: number }) => void) => () => void;
+  
+  // Métodos para reações em comentários de projetos
+  registerProjectCommentReactionListener: (callback: (data: any) => void) => () => void;
+  registerDeletedProjectCommentReactionListener: (callback: (data: { id: number, comment_id: number }) => void) => () => void;
+  
+  // Notificações
   sendNotification: (targetUserId: number, notification: {
     title: string;
     message: string;
@@ -131,6 +155,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket: webSocket, // Adicionando aliás para webSocket
     sendMessage: (data: any) => sendWebSocketMessage(data),
     emitEvent: (event: string, data: any) => emitSocketEvent(event, data),
+    
+    // Métodos para salas de tarefas
     joinTask: (taskId: number) => joinTaskRoom(taskId),
     leaveTask: (taskId: number) => leaveTaskRoom(taskId),
     addComment: (taskId: number, comment: string) => {
@@ -141,6 +167,27 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     },
     registerCommentListener: (callback: (comment: any) => void) => onNewComment(callback),
+    
+    // Métodos para salas de projetos
+    joinProject: (projectId: number) => joinProjectRoom(projectId),
+    leaveProject: (projectId: number) => leaveProjectRoom(projectId),
+    addProjectComment: (projectId: number, comment: string) => {
+      if (user) {
+        addProjectComment(projectId, user.id, comment);
+      } else {
+        console.warn('Usuário não autenticado para adicionar comentário');
+      }
+    },
+    registerProjectCommentListener: (callback: (comment: any) => void) => onNewProjectComment(callback),
+    registerUpdatedProjectCommentListener: (callback: (comment: any) => void) => onUpdatedProjectComment(callback),
+    registerDeletedProjectCommentListener: (callback: (data: { id: number }) => void) => onDeletedProjectComment(callback),
+    
+    // Métodos para reações em comentários de projetos
+    registerProjectCommentReactionListener: (callback: (data: any) => void) => onNewProjectCommentReaction(callback),
+    registerDeletedProjectCommentReactionListener: (callback: (data: { id: number, comment_id: number }) => void) => 
+      onDeletedProjectCommentReaction(callback),
+    
+    // Notificações
     sendNotification: (targetUserId: number, notification: {
       title: string;
       message: string;
