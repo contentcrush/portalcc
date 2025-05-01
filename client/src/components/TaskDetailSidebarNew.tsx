@@ -37,6 +37,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState("");
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch task details
@@ -105,6 +106,33 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       setIsSubmittingComment(false);
     }
   });
+  
+  // Upload file mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return apiRequest('POST', `/api/tasks/${taskId}/attachments`, formData, {
+        headers: {
+          // Não definir Content-Type aqui para permitir que o navegador defina corretamente para multipart/form-data
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
+      setIsUploadingFile(false);
+      toast({
+        title: "Arquivo anexado",
+        description: "Arquivo anexado à tarefa com sucesso",
+      });
+    },
+    onError: (error) => {
+      setIsUploadingFile(false);
+      toast({
+        title: "Erro ao anexar arquivo",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleToggleCompletion = () => {
     if (task) {
@@ -135,10 +163,51 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     }
   };
   
+  // Handler for file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setIsUploadingFile(true);
+    uploadFileMutation.mutate(formData);
+    
+    // Clear the input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   const handleStatusChange = (newStatus: string) => {
     if (task && newStatus !== task.status) {
       updateTaskMutation.mutate({ status: newStatus });
     }
+  };
+  
+  // Iniciar edição da descrição
+  const handleStartEditingDescription = () => {
+    if (task) {
+      setDescriptionValue(task.description || "");
+      setIsEditingDescription(true);
+    }
+  };
+  
+  // Salvar descrição editada
+  const handleSaveDescription = () => {
+    if (task) {
+      updateTaskMutation.mutate({ 
+        description: descriptionValue 
+      });
+      setIsEditingDescription(false);
+    }
+  };
+  
+  // Cancelar edição da descrição
+  const handleCancelEditDescription = () => {
+    setIsEditingDescription(false);
   };
 
   if (isLoadingTask) {
@@ -354,79 +423,139 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
         
         {/* Description */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium mb-3">Descrição</h3>
-          <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-            {task.description ? (
-              <div className="space-y-2">
-                {task.description.split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            ) : (
-              <p className="italic text-gray-400">Sem descrição</p>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-medium">Descrição</h3>
+            {!isEditingDescription && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-xs text-gray-500 hover:text-indigo-600"
+                onClick={handleStartEditingDescription}
+              >
+                Editar
+              </Button>
             )}
           </div>
+          
+          {isEditingDescription ? (
+            <div className="space-y-2">
+              <Textarea
+                value={descriptionValue}
+                onChange={(e) => setDescriptionValue(e.target.value)}
+                className="min-h-[120px] text-sm"
+                placeholder="Digite a descrição da tarefa"
+              />
+              <div className="flex justify-end gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCancelEditDescription}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSaveDescription}
+                  disabled={updateTaskMutation.isPending}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+              {task.description ? (
+                <div className="space-y-2">
+                  {task.description.split('\n').map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="italic text-gray-400">Sem descrição</p>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Attachments */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium mb-3">Anexos</h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-medium">Anexos</h3>
+            {attachments && attachments.length > 0 && (
+              <Badge variant="secondary" className="text-xs font-normal">{attachments.length} arquivo{attachments.length !== 1 && 's'}</Badge>
+            )}
+          </div>
           
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.zip"
           />
           
           {isLoadingAttachments ? (
             <div className="flex justify-center items-center py-4">
               <div className="animate-spin h-5 w-5 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
             </div>
-          ) : attachments && attachments.length > 0 ? (
-            <div className="space-y-2">
-              {attachments.map((attachment) => (
-                <div key={attachment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                  <div className="flex items-center overflow-hidden">
-                    <div className="shrink-0 mr-3">
-                      {attachment.file_name.endsWith('.pdf') ? (
-                        <div className="w-8 h-10 bg-red-100 rounded flex items-center justify-center">
-                          <span className="text-red-600 text-xs font-bold">PDF</span>
-                        </div>
-                      ) : attachment.file_name.endsWith('.zip') ? (
-                        <div className="w-8 h-10 bg-yellow-100 rounded flex items-center justify-center">
-                          <span className="text-yellow-600 text-xs font-bold">ZIP</span>
-                        </div>
-                      ) : (
-                        <div className="w-8 h-10 bg-blue-100 rounded flex items-center justify-center">
-                          <span className="text-blue-600 text-xs font-bold">DOC</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                      <p className="text-xs text-gray-500">{attachment.file_size ? `${attachment.file_size} KB` : ''}</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-gray-500 hover:text-blue-600"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+          ) : isUploadingFile ? (
+            <div className="p-4 bg-gray-50 rounded-md text-center">
+              <div className="animate-spin h-5 w-5 border-2 border-indigo-500 rounded-full border-t-transparent mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">Enviando arquivo...</p>
             </div>
           ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full border-dashed border-gray-300 bg-gray-50"
-              onClick={handleAddAttachment}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
-            </Button>
+            <>
+              {attachments && attachments.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                      <div className="flex items-center overflow-hidden">
+                        <div className="shrink-0 mr-3">
+                          {attachment.file_name.endsWith('.pdf') ? (
+                            <div className="w-8 h-10 bg-red-100 rounded flex items-center justify-center">
+                              <span className="text-red-600 text-xs font-bold">PDF</span>
+                            </div>
+                          ) : attachment.file_name.endsWith('.zip') ? (
+                            <div className="w-8 h-10 bg-yellow-100 rounded flex items-center justify-center">
+                              <span className="text-yellow-600 text-xs font-bold">ZIP</span>
+                            </div>
+                          ) : attachment.file_name.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                            <div className="w-8 h-10 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-green-600 text-xs font-bold">IMG</span>
+                            </div>
+                          ) : (
+                            <div className="w-8 h-10 bg-blue-100 rounded flex items-center justify-center">
+                              <span className="text-blue-600 text-xs font-bold">DOC</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                          <p className="text-xs text-gray-500">{attachment.file_size ? `${attachment.file_size} KB` : ''}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-gray-500 hover:text-blue-600"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full border-dashed border-gray-300 bg-gray-50"
+                onClick={handleAddAttachment}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {attachments && attachments.length > 0 ? 'Adicionar mais' : 'Adicionar anexo'}
+              </Button>
+            </>
           )}
         </div>
         
