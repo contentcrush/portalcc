@@ -1309,13 +1309,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   wss.on('connection', (ws) => {
     console.log('Nova conexão WebSocket estabelecida');
     
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
       try {
         // Parse da mensagem recebida (assumindo JSON)
         const data = JSON.parse(message.toString());
         console.log('Mensagem recebida:', data);
         
-        // Exemplo de processamento de mensagem
+        // Processamento de diferentes tipos de mensagem
         if (data.type === 'chat') {
           // Broadcast para todos os clientes conectados
           wss.clients.forEach((client) => {
@@ -1329,7 +1329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }));
             }
           });
-        } else if (data.type === 'notification') {
+        } 
+        else if (data.type === 'notification') {
           // Enviar notificação para usuários específicos
           // Aqui precisaria de uma lógica para mapear usuários a conexões
           // Para exemplo, enviamos para todos
@@ -1344,6 +1345,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }));
             }
           });
+        }
+        else if (data.type === 'comment') {
+          // Processar novo comentário
+          try {
+            const commentData = data.data;
+            const newComment = await storage.createTaskComment(commentData);
+            
+            // Broadcast para todos os clientes
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'comment',
+                  task_id: commentData.task_id,
+                  data: newComment
+                }));
+              }
+            });
+          } catch (error) {
+            console.error("Erro ao criar comentário via WebSocket:", error);
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Erro ao criar comentário'
+            }));
+          }
+        }
+        else if (data.type === 'comment_reaction') {
+          // Processar reação a comentário
+          try {
+            const reactionData = data.data;
+            let reaction;
+            
+            // Verificar se já existe uma reação do usuário
+            const existingReaction = await storage.getCommentReactionByUserAndComment(
+              reactionData.user_id,
+              reactionData.comment_id
+            );
+            
+            if (existingReaction) {
+              // Se já existe, remover (toggle)
+              await storage.deleteCommentReaction(existingReaction.id);
+              reaction = { deleted: true, id: existingReaction.id };
+            } else {
+              // Senão, criar nova reação
+              reaction = await storage.createCommentReaction(reactionData);
+            }
+            
+            // Broadcast para todos os clientes
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'comment_reaction',
+                  comment_id: reactionData.comment_id,
+                  data: reaction
+                }));
+              }
+            });
+          } catch (error) {
+            console.error("Erro ao processar reação via WebSocket:", error);
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Erro ao processar reação'
+            }));
+          }
         }
       } catch (error) {
         console.error('Erro ao processar mensagem WebSocket:', error);

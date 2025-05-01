@@ -21,6 +21,7 @@ interface SocketContextType {
   socketIoConnected: boolean;
   webSocket: WebSocket | null;
   socketIo: Socket | null;
+  socket: WebSocket | null; // Alias para webSocket para compatibilidade com componentes
   sendMessage: (data: any) => boolean;
   emitEvent: (event: string, data: any) => boolean;
   joinTask: (taskId: number) => void;
@@ -127,6 +128,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socketIoConnected,
     webSocket,
     socketIo,
+    socket: webSocket, // Adicionando aliás para webSocket
     sendMessage: (data: any) => sendWebSocketMessage(data),
     emitEvent: (event: string, data: any) => emitSocketEvent(event, data),
     joinTask: (taskId: number) => joinTaskRoom(taskId),
