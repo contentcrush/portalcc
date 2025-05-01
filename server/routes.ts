@@ -6,13 +6,16 @@ import {
   insertProjectMemberSchema, insertProjectStageSchema, insertTaskCommentSchema, 
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
   insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema,
-  insertCommentReactionSchema, insertProjectCommentSchema, insertProjectCommentReactionSchema
+  insertCommentReactionSchema, insertProjectCommentSchema, insertProjectCommentReactionSchema,
+  financialDocuments
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -782,9 +785,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Este endpoint é usado internamente e não deve ser exposto na API pública
   async function forceDeleteProjectFinancialDocuments(projectId: number): Promise<void> {
     try {
+      // Buscar documentos para logar informações antes da exclusão
+      const docsBeforeDelete = await storage.getFinancialDocumentsByProject(projectId);
+      console.log(`[Sistema] Encontrados ${docsBeforeDelete.length} documentos financeiros para exclusão (Projeto ID:${projectId})`);
+      
+      // Listar IDs para debug
+      const docIds = docsBeforeDelete.map(doc => doc.id);
+      console.log(`[Sistema] IDs de documentos a serem excluídos: ${docIds.join(', ')}`);
+      
       // Executar a exclusão diretamente no banco de dados para contornar as restrições de API
       await db.delete(financialDocuments).where(eq(financialDocuments.project_id, projectId));
       console.log(`[Sistema] Excluídos documentos financeiros do projeto ID:${projectId} diretamente no banco de dados`);
+      
+      // Verificar se a exclusão foi bem-sucedida
+      const docsAfterDelete = await storage.getFinancialDocumentsByProject(projectId);
+      if (docsAfterDelete.length > 0) {
+        console.error(`[Erro] Ainda existem ${docsAfterDelete.length} documentos financeiros após tentativa de exclusão`);
+      } else {
+        console.log(`[Sistema] Verificação confirmou que todos os documentos foram excluídos com sucesso`);
+      }
     } catch (error) {
       console.error(`[Erro] Falha ao excluir documentos financeiros do projeto ID:${projectId}:`, error);
       throw error;
