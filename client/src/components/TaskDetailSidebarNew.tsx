@@ -107,14 +107,15 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     }
   });
   
-  // Upload file mutation
+  // Upload file mutation - usando JSON em vez de FormData
   const uploadFileMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      return apiRequest('POST', `/api/tasks/${taskId}/attachments`, formData, {
-        headers: {
-          // Não definir Content-Type aqui para permitir que o navegador defina corretamente para multipart/form-data
-        }
-      });
+    mutationFn: async (attachmentData: { 
+      file_name: string; 
+      file_size?: number;
+      file_type?: string;
+      file_url: string;
+    }) => {
+      return apiRequest('POST', `/api/tasks/${taskId}/attachments`, attachmentData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
@@ -125,10 +126,11 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       });
     },
     onError: (error) => {
+      console.error("Erro ao anexar arquivo:", error);
       setIsUploadingFile(false);
       toast({
         title: "Erro ao anexar arquivo",
-        description: error.message,
+        description: error.message || "Não foi possível anexar o arquivo. Verifique o console para mais detalhes.",
         variant: "destructive",
       });
     }
@@ -163,30 +165,55 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     }
   };
   
-  // Handler for file selection
+  // Handler for file selection - Usando abordagem JSON com base64
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
     const file = files[0];
-    const formData = new FormData();
     
     // Calcular tamanho do arquivo em KB
     const fileSizeKB = Math.round(file.size / 1024);
     
-    // Adicionar o arquivo e os campos obrigatórios
-    formData.append('file', file);
-    formData.append('file_name', file.name);
-    formData.append('file_size', fileSizeKB.toString()); // Adicionar o tamanho do arquivo
+    // Obter o tipo de arquivo
+    const fileType = file.type || `application/${file.name.split('.').pop()}`;
     
-    // A API espera file_url, mas como estamos enviando o arquivo diretamente,
-    // podemos usar um placeholder que será substituído no servidor
-    formData.append('file_url', 'pending_upload');
+    // Usar FileReader para converter arquivo para base64
+    const reader = new FileReader();
     
-    setIsUploadingFile(true);
-    uploadFileMutation.mutate(formData);
+    reader.onload = () => {
+      // Extrair a string base64 do resultado
+      const base64String = (reader.result as string).split(',')[1];
+      
+      // Criar URL de dados completa que pode ser usada diretamente
+      const dataUrl = `data:${fileType};base64,${base64String}`;
+      
+      // Preparar os dados para envio como JSON
+      const fileData = {
+        file_name: file.name,
+        file_size: fileSizeKB,
+        file_type: fileType,
+        file_url: dataUrl
+      };
+      
+      setIsUploadingFile(true);
+      uploadFileMutation.mutate(fileData);
+    };
     
-    // Clear the input value to allow selecting the same file again
+    reader.onerror = () => {
+      console.error("Erro ao ler o arquivo");
+      toast({
+        title: "Erro ao anexar arquivo",
+        description: "Não foi possível processar o arquivo. Por favor, tente novamente.",
+        variant: "destructive"
+      });
+      setIsUploadingFile(false);
+    };
+    
+    // Iniciar leitura como URL de dados (data URL)
+    reader.readAsDataURL(file);
+    
+    // Limpar o input para permitir selecionar o mesmo arquivo novamente
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
