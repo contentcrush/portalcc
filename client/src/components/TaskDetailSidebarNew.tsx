@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Download, Plus, Send, ChevronDown } from "lucide-react";
+import { X, Download, Plus, Send, ChevronDown, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
@@ -135,6 +135,28 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       });
     }
   });
+  
+  // Delete file mutation
+  const deleteFileMutation = useMutation({
+    mutationFn: async (attachmentId: number) => {
+      return apiRequest('DELETE', `/api/tasks/attachments/${attachmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
+      toast({
+        title: "Arquivo excluído",
+        description: "Arquivo foi excluído com sucesso",
+      });
+    },
+    onError: (error) => {
+      console.error("Erro ao excluir arquivo:", error);
+      toast({
+        title: "Erro ao excluir arquivo",
+        description: error.message || "Não foi possível excluir o arquivo",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleToggleCompletion = () => {
     if (task) {
@@ -162,6 +184,30 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const handleAddAttachment = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+  
+  // Função para baixar um arquivo
+  const handleDownloadFile = (attachment: any) => {
+    // Verificar se é um arquivo com dados base64
+    if (attachment.file_url?.startsWith('data:')) {
+      // Criar um link para download do arquivo base64
+      const link = document.createElement('a');
+      link.href = attachment.file_url;
+      link.download = attachment.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Se não for base64, abrir em uma nova aba
+      window.open(attachment.file_url, '_blank');
+    }
+  };
+  
+  // Função para excluir um anexo
+  const handleDeleteFile = (attachmentId: number) => {
+    if (confirm('Tem certeza que deseja excluir este anexo?')) {
+      deleteFileMutation.mutate(attachmentId);
     }
   };
   
@@ -572,13 +618,26 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
                           <p className="text-xs text-gray-500">{attachment.file_size ? `${attachment.file_size} KB` : ''}</p>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-gray-500 hover:text-blue-600"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-500 hover:text-blue-600"
+                          onClick={() => handleDownloadFile(attachment)}
+                          title="Baixar arquivo"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-500 hover:text-red-600"
+                          onClick={() => handleDeleteFile(attachment.id)}
+                          title="Excluir anexo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
