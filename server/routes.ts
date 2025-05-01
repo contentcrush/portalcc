@@ -1367,7 +1367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para gerar automaticamente faturas para projetos existentes sem faturas
   app.post("/api/financial-documents/generate-from-projects", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
-      const projects = await storage.getAllProjects();
+      const projects = await storage.getProjects();
       const results = {
         generated: 0,
         skipped: 0,

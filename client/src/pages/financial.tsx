@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -73,6 +75,9 @@ import {
   BarChart,
   CheckCircle,
   Receipt,
+  FilePlus,
+  Loader2,
+  BadgeCheck,
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
