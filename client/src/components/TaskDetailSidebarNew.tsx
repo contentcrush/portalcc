@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Download, Plus, Send, ChevronDown, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/utils";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
@@ -204,11 +205,23 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     }
   };
   
-  // Função para excluir um anexo
+  // Estado para controlar o diálogo de confirmação
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<number | null>(null);
+
+  // Função para abrir o diálogo de confirmação de exclusão
   const handleDeleteFile = (attachmentId: number) => {
-    if (confirm('Tem certeza que deseja excluir este anexo?')) {
-      deleteFileMutation.mutate(attachmentId);
+    setAttachmentToDelete(attachmentId);
+    setConfirmDialogOpen(true);
+  };
+  
+  // Função para confirmar a exclusão
+  const confirmDelete = () => {
+    if (attachmentToDelete !== null) {
+      deleteFileMutation.mutate(attachmentToDelete);
+      setAttachmentToDelete(null);
     }
+    setConfirmDialogOpen(false);
   };
   
   // Handler for file selection - Usando abordagem JSON com base64
@@ -319,6 +332,17 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
 
   return (
     <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-[400px] transition-all duration-300 z-20 border-l border-gray-100 overflow-y-auto">
+      {/* Diálogo de confirmação para excluir anexo */}
+      <ConfirmDialog
+        isOpen={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Excluir anexo"
+        description="Tem certeza que deseja excluir este anexo? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+      />
+      
       {/* Header with close button */}
       <div className="sticky top-0 bg-white z-10 px-5 py-4 border-b border-gray-100 flex justify-between items-center">
         <h2 className="text-sm font-medium text-gray-500">Detalhes da Tarefa</h2>
