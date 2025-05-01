@@ -307,6 +307,8 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
             <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir o projeto "{project.name}"? Esta ação não pode ser desfeita.
+              <br /><br />
+              <strong>Todos os dados associados, incluindo documentos financeiros e tarefas, também serão excluídos permanentemente.</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
