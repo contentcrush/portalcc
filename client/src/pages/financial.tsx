@@ -945,28 +945,12 @@ export default function Financial() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  <span>Ver Detalhes</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <DollarSign className="mr-2 h-4 w-4" />
-                                  <span>Registrar Pagamento</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Download className="mr-2 h-4 w-4" />
-                                  <span>Exportar PDF</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <FinancialRecordActions 
+                              record={doc} 
+                              type="document"
+                              onViewDetails={(record) => setDetailsRecord({ record, type: "document" })}
+                              onRegisterPayment={(record) => setPaymentRecord({ record, type: "document" })}
+                            />
                           </TableCell>
                         </TableRow>
                       );
@@ -1248,27 +1232,12 @@ export default function Financial() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  <span>Ver Detalhes</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Check className="mr-2 h-4 w-4" />
-                                  <span>Aprovar Despesa</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <DollarSign className="mr-2 h-4 w-4" />
-                                  <span>Registrar Pagamento</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <FinancialRecordActions 
+                              record={exp} 
+                              type="expense"
+                              onViewDetails={(record) => setDetailsRecord({ record, type: "expense" })}
+                              onRegisterPayment={(record) => setPaymentRecord({ record, type: "expense" })}
+                            />
                           </TableCell>
                         </TableRow>
                       );
