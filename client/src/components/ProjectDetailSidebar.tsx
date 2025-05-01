@@ -13,6 +13,7 @@ import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
+import { ProjectCommentSection } from "./comments";
 import { ProjectStageStatus, ProjectSpecialStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
 import { 
   Dialog,
