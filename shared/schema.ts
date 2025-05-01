@@ -461,13 +461,13 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.client_id],
     references: [clients.id]
   }),
-  members: many(projectMembers),
-  stages: many(projectStages),
-  tasks: many(tasks),
-  comments: many(projectComments),
-  financialDocuments: many(financialDocuments),
-  expenses: many(expenses),
-  events: many(events)
+  members: many(projectMembers, { relationName: "project_members" }),
+  stages: many(projectStages, { relationName: "project_stages" }),
+  tasks: many(tasks, { relationName: "project_tasks" }),
+  comments: many(projectComments, { relationName: "project_comments" }),
+  financialDocuments: many(financialDocuments, { relationName: "project_financial_documents" }),
+  expenses: many(expenses, { relationName: "project_expenses" }),
+  events: many(events, { relationName: "project_events" })
 }));
 
 export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
@@ -491,7 +491,9 @@ export const projectStagesRelations = relations(projectStages, ({ one }) => ({
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
   project: one(projects, {
     fields: [tasks.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_tasks",
+    onDelete: "cascade"
   }),
   assignedUser: one(users, {
     fields: [tasks.assigned_to],
