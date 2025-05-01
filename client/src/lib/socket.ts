@@ -392,6 +392,29 @@ export function onDeletedProjectCommentReaction(callback: (data: { id: number, c
 }
 
 /**
+ * Adicionar uma resposta a um comentário de projeto
+ */
+export function addProjectCommentReply(projectId: number, userId: number, comment: string, parentId: number): boolean {
+  if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
+    return false;
+  }
+
+  try {
+    socket.emit('project-comment-reply', {
+      projectId,
+      userId,
+      comment,
+      parentId
+    });
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar resposta a comentário de projeto:', error);
+    return false;
+  }
+}
+
+/**
  * Enviar notificação para um usuário específico
  */
 export function notifyUser(targetUserId: number, notification: { 
