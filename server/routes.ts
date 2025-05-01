@@ -1317,6 +1317,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Falha ao registrar pagamento" });
     }
   });
+  
+  // Excluir um documento financeiro
+  app.delete("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteFinancialDocument(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Documento financeiro não encontrado" });
+      }
+      
+      // Retornar 204 No Content para exclusão bem-sucedida
+      res.status(204).end();
+    } catch (error) {
+      console.error("Erro ao excluir documento financeiro:", error);
+      res.status(500).json({ message: "Falha ao excluir documento financeiro" });
+    }
+  });
 
   // Expenses - Adicionando autenticação e permissões
   app.get("/api/expenses", authenticateJWT, async (_req, res) => {

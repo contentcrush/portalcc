@@ -117,15 +117,19 @@ export function PaymentRegistrationDialog({
   // Definir o schema correto com base no tipo de registro
   const schema = type === "document" ? documentPaymentSchema : expenseApprovalSchema;
 
+  // Adicionar campo personalizado ao schema para método de pagamento customizado
+  const [useCustomMethod, setUseCustomMethod] = useState(false);
+  
   // Configurar o formulário
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<z.infer<typeof schema> & { custom_method?: string }>({
     resolver: zodResolver(schema),
     defaultValues: {
       payment_date: type === "document" ? new Date() : undefined,
       approval_date: type === "expense" ? new Date() : undefined,
       payment_method: "",
       notes: "",
-    } as any,
+      custom_method: "",
+    },
   });
 
   // Mutação para registrar pagamento
@@ -302,7 +306,7 @@ export function PaymentRegistrationDialog({
                   {form.watch("payment_method") === "other" && (
                     <FormField
                       control={form.control}
-                      name="custom_payment_method"
+                      name="custom_method"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Especifique o método</FormLabel>
@@ -312,6 +316,8 @@ export function PaymentRegistrationDialog({
                               {...field} 
                               onChange={(e) => {
                                 field.onChange(e);
+                                // Quando o usuário digitar um método personalizado,
+                                // atualizamos o valor do campo payment_method
                                 form.setValue("payment_method", e.target.value);
                               }}
                             />
