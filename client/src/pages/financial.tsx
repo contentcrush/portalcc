@@ -181,8 +181,13 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total
-  const totalReceivables = receivablesData.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  // Receivables total - com log para debug
+  console.log('Documentos financeiros (receivables):', receivablesData);
+  const totalReceivables = receivablesData.reduce((sum: number, doc: any) => {
+    console.log(`Documento #${doc.id}: R$${doc.amount}`);
+    return sum + (doc.amount || 0);
+  }, 0);
+  console.log('Total calculado (soma real):', totalReceivables);
   
   // Payables total
   const totalPayables = payablesData.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
