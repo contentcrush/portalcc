@@ -13,6 +13,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -529,9 +535,51 @@ export default function Financial() {
               <h3 className="text-lg font-medium">Contas a Receber</h3>
               <p className="text-sm text-muted-foreground">Faturas emitidas e não pagas</p>
             </div>
-            <div className="flex space-x-2 mt-4 md:mt-0">
+            <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
+              <div className="w-full sm:w-auto">
+                <Input 
+                  type="search" 
+                  placeholder="Buscar fatura..." 
+                  className="w-full"
+                  size={32}
+                />
+              </div>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center justify-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    <span className="sm:inline hidden">Período</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="end">
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <h4 className="font-medium">Filtrar por data</h4>
+                      <Separator />
+                      <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">De</p>
+                            <Calendar mode="single" className="rounded-md border" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Até</p>
+                            <Calendar mode="single" className="rounded-md border" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                          <Button variant="outline" size="sm">Limpar</Button>
+                          <Button size="sm">Aplicar</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
               <Select defaultValue="todas">
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Filtrar por" />
                 </SelectTrigger>
                 <SelectContent>
@@ -541,81 +589,237 @@ export default function Financial() {
                   <SelectItem value="proximas">Próximas (7d)</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" /> Exportar
+              
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                <span className="sm:inline hidden">Exportar</span>
+              </Button>
+              
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="sm:inline hidden">Nova Fatura</span>
               </Button>
             </div>
           </div>
           
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>NÚMERO</TableHead>
-                    <TableHead>CLIENTE</TableHead>
-                    <TableHead>PROJETO</TableHead>
-                    <TableHead>EMISSÃO</TableHead>
-                    <TableHead>VENCIMENTO</TableHead>
-                    <TableHead className="text-right">VALOR</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead className="text-right">AÇÕES</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receivablesData.map(doc => {
-                    const client = clients?.find(c => c.id === doc.client_id);
-                    const project = projects?.find(p => p.id === doc.project_id);
-                    const isOverdue = doc.due_date && new Date(doc.due_date) < new Date();
-                    
-                    return (
-                      <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
-                        <TableCell>{client?.name || '-'}</TableCell>
-                        <TableCell>{project?.name || '-'}</TableCell>
-                        <TableCell>{doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}</TableCell>
-                        <TableCell>
-                          {doc.due_date ? (
-                            <div className="flex items-center">
-                              <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-                                {format(new Date(doc.due_date), 'dd/MM/yyyy')}
-                              </span>
-                              {isOverdue && (
-                                <Badge variant="destructive" className="ml-2 text-xs">
-                                  Vencida
-                                </Badge>
-                              )}
-                            </div>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(doc.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={doc.status === 'pending' ? 'outline' : 'success'}>
-                            {doc.status === 'pending' ? 'Pendente' : 'Pago'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  
-                  {receivablesData.length === 0 && (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
-                        Nenhuma fatura pendente encontrada
-                      </TableCell>
+                      <TableHead>NÚMERO</TableHead>
+                      <TableHead>CLIENTE</TableHead>
+                      <TableHead>PROJETO</TableHead>
+                      <TableHead>EMISSÃO</TableHead>
+                      <TableHead>VENCIMENTO</TableHead>
+                      <TableHead className="text-right">VALOR</TableHead>
+                      <TableHead>STATUS</TableHead>
+                      <TableHead className="text-right">AÇÕES</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {receivablesData.map(doc => {
+                      const client = clients?.find(c => c.id === doc.client_id);
+                      const project = projects?.find(p => p.id === doc.project_id);
+                      const isOverdue = doc.due_date && new Date(doc.due_date) < new Date();
+                      
+                      return (
+                        <TableRow key={doc.id} className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
+                          <TableCell>{client?.name || '-'}</TableCell>
+                          <TableCell>{project?.name || '-'}</TableCell>
+                          <TableCell>{doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                          <TableCell>
+                            {doc.due_date ? (
+                              <div className="flex items-center">
+                                <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
+                                  {format(new Date(doc.due_date), 'dd/MM/yyyy')}
+                                </span>
+                                {isOverdue && (
+                                  <Badge variant="destructive" className="ml-2 text-xs">
+                                    Vencida
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(doc.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={doc.status === 'pending' ? 'outline' : 'success'}>
+                              {doc.status === 'pending' ? 'Pendente' : 'Pago'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    
+                    {/* Exemplo de dados para visualização (será removido quando houver dados reais) */}
+                    {receivablesData.length === 0 && (
+                      <>
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">F-1001</TableCell>
+                          <TableCell>Cervejaria Therezópolis</TableCell>
+                          <TableCell>Campanha de Verão</TableCell>
+                          <TableCell>{format(addDays(new Date(), -15), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span className="text-red-500 font-medium">
+                                {format(addDays(new Date(), -5), 'dd/MM/yyyy')}
+                              </span>
+                              <Badge variant="destructive" className="ml-2 text-xs">
+                                Vencida
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(12450)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">F-1002</TableCell>
+                          <TableCell>Citroen</TableCell>
+                          <TableCell>Lançamento SUV C3</TableCell>
+                          <TableCell>{format(addDays(new Date(), -10), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span>{format(addDays(new Date(), 15), 'dd/MM/yyyy')}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(24800)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">F-1003</TableCell>
+                          <TableCell>Seara Alimentos Ltda</TableCell>
+                          <TableCell>InCarne 2025</TableCell>
+                          <TableCell>{format(addDays(new Date(), -5), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span>{format(addDays(new Date(), 25), 'dd/MM/yyyy')}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(18350)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
+            <CardFooter className="flex justify-between items-center px-6 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {receivablesData.length || 3} faturas de um total de {receivablesData.length || 3}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled>Anterior</Button>
+                <Button variant="outline" size="sm" disabled>Próxima</Button>
+              </div>
+            </CardFooter>
           </Card>
+          
+          {/* Resumo das Contas a Receber */}
+          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Previsão de Recebimentos</CardTitle>
+                <CardDescription>Fluxo de caixa previsto para os próximos 30 dias</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FinancialChart 
+                  type="bar"
+                  title=""
+                  data={[
+                    { name: 'Hoje - 7 dias', value: 12450 },
+                    { name: '8 - 15 dias', value: 24800 },
+                    { name: '16 - 30 dias', value: 18350 },
+                  ]}
+                  dataKeys={['value']}
+                  xAxisDataKey="name"
+                  colors={['#5046E5']}
+                  height={250}
+                />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Distribuição por Cliente</CardTitle>
+                <CardDescription>Valores a receber por cliente</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FinancialChart 
+                  type="pie"
+                  title=""
+                  data={[
+                    { name: 'Cervejaria Therezópolis', value: 12450 },
+                    { name: 'Citroen', value: 24800 },
+                    { name: 'Seara Alimentos', value: 18350 },
+                  ]}
+                  dataKeys={['value']}
+                  xAxisDataKey="name"
+                  colors={['#10B981', '#6366F1', '#F59E0B']}
+                  height={250}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         {/* Tab "A Pagar" */}
@@ -625,9 +829,51 @@ export default function Financial() {
               <h3 className="text-lg font-medium">Contas a Pagar</h3>
               <p className="text-sm text-muted-foreground">Despesas não aprovadas/pagas</p>
             </div>
-            <div className="flex space-x-2 mt-4 md:mt-0">
+            <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
+              <div className="w-full sm:w-auto">
+                <Input 
+                  type="search" 
+                  placeholder="Buscar despesa..." 
+                  className="w-full"
+                  size={32}
+                />
+              </div>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center justify-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    <span className="sm:inline hidden">Período</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="end">
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <h4 className="font-medium">Filtrar por data</h4>
+                      <Separator />
+                      <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">De</p>
+                            <Calendar mode="single" className="rounded-md border" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Até</p>
+                            <Calendar mode="single" className="rounded-md border" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                          <Button variant="outline" size="sm">Limpar</Button>
+                          <Button size="sm">Aplicar</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
               <Select defaultValue="todas">
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Filtrar por" />
                 </SelectTrigger>
                 <SelectContent>
@@ -637,99 +883,327 @@ export default function Financial() {
                   <SelectItem value="categoria">Por Categoria</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" /> Exportar
+              
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                <span className="sm:inline hidden">Exportar</span>
+              </Button>
+              
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="sm:inline hidden">Nova Despesa</span>
               </Button>
             </div>
           </div>
           
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>DESCRIÇÃO</TableHead>
-                    <TableHead>CATEGORIA</TableHead>
-                    <TableHead>PROJETO</TableHead>
-                    <TableHead>DATA</TableHead>
-                    <TableHead className="text-right">VALOR</TableHead>
-                    <TableHead>PAGO POR</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead className="text-right">AÇÕES</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payablesData.map(exp => {
-                    const project = projects?.find(p => p.id === exp.project_id);
-                    const paidBy = users?.find(u => u.id === exp.paid_by);
-                    const isToday = exp.date && (new Date(exp.date).toDateString() === new Date().toDateString());
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>DESCRIÇÃO</TableHead>
+                      <TableHead>CATEGORIA</TableHead>
+                      <TableHead>PROJETO</TableHead>
+                      <TableHead>DATA</TableHead>
+                      <TableHead className="text-right">VALOR</TableHead>
+                      <TableHead>PAGO POR</TableHead>
+                      <TableHead>STATUS</TableHead>
+                      <TableHead className="text-right">AÇÕES</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payablesData.map(exp => {
+                      const project = projects?.find(p => p.id === exp.project_id);
+                      const paidBy = expenses?.find(u => u.id === exp.paid_by)?.name;
+                      const isToday = exp.date && (new Date(exp.date).toDateString() === new Date().toDateString());
+                      
+                      return (
+                        <TableRow key={exp.id} className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">{exp.description}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {exp.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{project?.name || '-'}</TableCell>
+                          <TableCell>
+                            {exp.date ? (
+                              <div className="flex items-center">
+                                <span>
+                                  {format(new Date(exp.date), 'dd/MM/yyyy')}
+                                </span>
+                                {isToday && (
+                                  <Badge variant="success" className="ml-2 text-xs">
+                                    Hoje
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(exp.amount)}
+                          </TableCell>
+                          <TableCell>{paidBy || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={exp.approved ? 'success' : 'outline'}>
+                              {exp.approved ? 'Aprovado' : 'Pendente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                {exp.receipt ? (
+                                  <FileText className="h-4 w-4" />
+                                ) : (
+                                  <Plus className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                     
-                    return (
-                      <TableRow key={exp.id}>
-                        <TableCell className="font-medium">{exp.description}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {exp.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{project?.name || '-'}</TableCell>
-                        <TableCell>
-                          {exp.date ? (
+                    {/* Exemplo de dados para visualização (será removido quando houver dados reais) */}
+                    {payablesData.length === 0 && (
+                      <>
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">Aluguel de equipamentos</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              Equipamentos
+                            </Badge>
+                          </TableCell>
+                          <TableCell>Campanha de Verão</TableCell>
+                          <TableCell>
                             <div className="flex items-center">
                               <span>
-                                {format(new Date(exp.date), 'dd/MM/yyyy')}
+                                {format(addDays(new Date(), 3), 'dd/MM/yyyy')}
                               </span>
-                              {isToday && (
-                                <Badge variant="success" className="ml-2 text-xs">
-                                  Hoje
-                                </Badge>
-                              )}
                             </div>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(exp.amount)}
-                        </TableCell>
-                        <TableCell>{paidBy?.name || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={exp.approved ? 'success' : 'outline'}>
-                            {exp.approved ? 'Aprovado' : 'Pendente'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            {exp.receipt ? (
-                              <FileText className="h-4 w-4" />
-                            ) : (
-                              <Plus className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  
-                  {payablesData.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
-                        Nenhuma despesa pendente encontrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(4800)}
+                          </TableCell>
+                          <TableCell>Ana Silva</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">Licença software edição</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              Software
+                            </Badge>
+                          </TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span>
+                                {format(addDays(new Date(), 10), 'dd/MM/yyyy')}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(7560)}
+                          </TableCell>
+                          <TableCell>Lucas Mendes</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow className="group hover:bg-gray-50">
+                          <TableCell className="font-medium">Locação estúdio</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              Locação
+                            </Badge>
+                          </TableCell>
+                          <TableCell>InCarne 2025</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span>
+                                {format(addDays(new Date(), 15), 'dd/MM/yyyy')}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(12200)}
+                          </TableCell>
+                          <TableCell>Bruno Costa</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pendente</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-between px-6 py-4 border-t">
+            <CardFooter className="flex justify-between items-center px-6 py-4 border-t">
               <div>
                 <p className="text-sm text-muted-foreground">Total pendente</p>
-                <p className="text-lg font-medium">{formatCurrency(aPagarAberto)}</p>
+                <p className="text-lg font-medium">{formatCurrency(aPagarAberto || 24560)}</p>
               </div>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Despesa
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled>Anterior</Button>
+                <Button variant="outline" size="sm" disabled>Próxima</Button>
+              </div>
             </CardFooter>
           </Card>
+          
+          {/* Resumo de Categorias de Despesas */}
+          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Despesas por Projeto</CardTitle>
+                <CardDescription>Visão geral das despesas agrupadas por projeto</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>PROJETO</TableHead>
+                      <TableHead>CLIENTE</TableHead>
+                      <TableHead className="text-right">VALOR</TableHead>
+                      <TableHead className="text-right">% DO ORÇAMENTO</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectPerformanceData.slice(0, 3).map(project => {
+                      const budgetPercentage = project.budget > 0 
+                        ? (project.expenses / project.budget) * 100 
+                        : 0;
+                        
+                      return (
+                        <TableRow key={project.id}>
+                          <TableCell className="font-medium">{project.name}</TableCell>
+                          <TableCell>{project.client}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(project.expenses)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24">
+                                <Progress value={Math.min(budgetPercentage, 100)} className="h-2" />
+                              </div>
+                              <span className={`text-sm font-medium ${
+                                budgetPercentage > 90 ? 'text-red-600' : 
+                                budgetPercentage > 75 ? 'text-amber-600' : 
+                                'text-green-600'
+                              }`}>
+                                {budgetPercentage.toFixed(0)}%
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    
+                    {projectPerformanceData.length === 0 && (
+                      <>
+                        <TableRow>
+                          <TableCell className="font-medium">Campanha de Verão</TableCell>
+                          <TableCell>Cervejaria Therezópolis</TableCell>
+                          <TableCell className="text-right">{formatCurrency(4800)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24">
+                                <Progress value={60} className="h-2" />
+                              </div>
+                              <span className="text-sm font-medium text-green-600">60%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow>
+                          <TableCell className="font-medium">Lançamento SUV C3</TableCell>
+                          <TableCell>Citroen</TableCell>
+                          <TableCell className="text-right">{formatCurrency(0)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24">
+                                <Progress value={0} className="h-2" />
+                              </div>
+                              <span className="text-sm font-medium text-green-600">0%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        
+                        <TableRow>
+                          <TableCell className="font-medium">InCarne 2025</TableCell>
+                          <TableCell>Seara Alimentos Ltda</TableCell>
+                          <TableCell className="text-right">{formatCurrency(12200)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24">
+                                <Progress value={85} className="h-2" />
+                              </div>
+                              <span className="text-sm font-medium text-amber-600">85%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Despesas por Categoria</CardTitle>
+                <CardDescription>Distribuição de gastos por tipo</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FinancialChart 
+                  type="pie"
+                  title=""
+                  data={expenseCategoriesData}
+                  dataKeys={['value']}
+                  xAxisDataKey="name"
+                  colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
+                  height={250}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
       
