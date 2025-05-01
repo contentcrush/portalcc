@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { z } from "zod";
-import { CalendarIcon, Check } from "lucide-react";
+import { CalendarIcon, Check, CreditCard, ArrowDownToLine, ChevronsUpDown, Banknote } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -35,7 +35,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 // Tipos para os registros financeiros
 interface FinancialDocument {
@@ -81,6 +89,15 @@ const expenseApprovalSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Lista de métodos de pagamento comuns
+const PAYMENT_METHODS = [
+  { value: "pix", label: "PIX", icon: <ArrowDownToLine className="mr-2 h-4 w-4" /> },
+  { value: "credit_card", label: "Cartão de Crédito", icon: <CreditCard className="mr-2 h-4 w-4" /> },
+  { value: "debit_card", label: "Cartão de Débito", icon: <CreditCard className="mr-2 h-4 w-4" /> },
+  { value: "bank_transfer", label: "Transferência Bancária", icon: <ArrowDownToLine className="mr-2 h-4 w-4" /> },
+  { value: "cash", label: "Dinheiro", icon: <Banknote className="mr-2 h-4 w-4" /> },
+];
+
 interface PaymentRegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -123,11 +140,11 @@ export function PaymentRegistrationDialog({
       const response = await apiRequest("POST", endpoint, data);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erro ao registrar pagamento");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Erro ao processar a solicitação");
       }
       
-      return response.json();
+      return response.json().catch(() => ({}));
     },
     onSuccess: () => {
       toast({
@@ -160,32 +177,42 @@ export function PaymentRegistrationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {type === "document" ? "Registrar Pagamento" : "Aprovar Despesa"}
-          </DialogTitle>
-          <DialogDescription>
-            {type === "document" 
-              ? "Registre o pagamento para esta fatura" 
-              : "Aprove esta despesa para processamento"}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[450px] p-0">
+        <div className="bg-primary/5 p-6 border-b">
+          <DialogHeader className="mb-3">
+            <DialogTitle>
+              {type === "document" ? "Registrar Pagamento" : "Aprovar Despesa"}
+            </DialogTitle>
+            <DialogDescription>
+              {type === "document" 
+                ? "Registre o pagamento para esta fatura" 
+                : "Aprove esta despesa para processamento"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="my-4">
-          <div className="flex justify-between mb-4">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {type === "document" 
-                  ? `Fatura ${(record as FinancialDocument).document_number || `#${record.id}`}` 
-                  : `Despesa #${record.id}`}
-              </p>
-            </div>
-            <div>
-              <p className="text-lg font-semibold">{formatCurrency(record.amount)}</p>
+          <div className="bg-background rounded-lg p-4 shadow-sm">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {type === "document" 
+                    ? `Fatura ${(record as FinancialDocument).document_number || `#${record.id}`}` 
+                    : `Despesa #${record.id}`}
+                </p>
+                <p className="text-sm mt-1">
+                  {record.description || (type === "expense" ? (record as Expense).category : "Sem descrição")}
+                </p>
+              </div>
+              <div className="text-right">
+                <Badge variant={type === "document" ? "outline" : "secondary"} className="mb-1">
+                  {type === "document" ? "Documento" : "Despesa"}
+                </Badge>
+                <p className="text-lg font-semibold">{formatCurrency(record.amount)}</p>
+              </div>
             </div>
           </div>
+        </div>
 
+        <div className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
               {type === "document" && (
@@ -240,13 +267,60 @@ export function PaymentRegistrationDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Método de Pagamento</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: PIX, Transferência, etc." {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o método de pagamento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {PAYMENT_METHODS.map((method) => (
+                              <SelectItem key={method.value} value={method.value}>
+                                <div className="flex items-center">
+                                  {method.icon}
+                                  <span>{method.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="other">
+                              <div className="flex items-center">
+                                <ChevronsUpDown className="mr-2 h-4 w-4" />
+                                <span>Outro</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Campo de texto para "Outro" método de pagamento */}
+                  {form.watch("payment_method") === "other" && (
+                    <FormField
+                      control={form.control}
+                      name="custom_payment_method"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Especifique o método</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Ex: Boleto, Cheque, etc." 
+                              {...field} 
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.setValue("payment_method", e.target.value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </>
               )}
 
@@ -305,7 +379,7 @@ export function PaymentRegistrationDialog({
                     <FormControl>
                       <Textarea
                         placeholder="Inserir observações ou comentários..."
-                        className="min-h-[100px]"
+                        className="min-h-[80px] resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -314,11 +388,11 @@ export function PaymentRegistrationDialog({
                 )}
               />
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <DialogFooter className="gap-2 sm:gap-0 mt-6">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={mutation.isPending}>
+                <Button type="submit" disabled={mutation.isPending} className="w-full sm:w-auto">
                   {mutation.isPending ? (
                     <span className="flex items-center gap-1">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

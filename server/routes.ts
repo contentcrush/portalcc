@@ -1284,6 +1284,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update financial document" });
     }
   });
+  
+  // Rota para registrar pagamento de um documento financeiro
+  app.post("/api/financial-documents/:id/pay", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { payment_date, payment_method, notes } = req.body;
+      
+      // Verificar se o documento existe
+      const document = await storage.getFinancialDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Documento financeiro não encontrado" });
+      }
+      
+      // Se já estiver pago, retornar erro
+      if (document.paid) {
+        return res.status(400).json({ message: "Este documento já foi pago" });
+      }
+      
+      // Atualizar para pago
+      const updatedDocument = await storage.updateFinancialDocument(id, {
+        paid: true,
+        status: 'paid',
+        payment_date: payment_date || new Date(),
+        payment_method,
+        payment_notes: notes
+      });
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Erro ao registrar pagamento:", error);
+      res.status(500).json({ message: "Falha ao registrar pagamento" });
+    }
+  });
 
   // Expenses - Adicionando autenticação e permissões
   app.get("/api/expenses", authenticateJWT, async (_req, res) => {

@@ -88,11 +88,11 @@ export function FinancialRecordActions({
       const response = await apiRequest("DELETE", endpoint);
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Erro ao excluir registro");
       }
       
-      return response.json();
+      return null; // Não esperamos nenhum conteúdo para resposta DELETE
     },
     onSuccess: () => {
       toast({
