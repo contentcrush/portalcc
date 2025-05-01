@@ -178,11 +178,12 @@ export function NewFinancialRecordDialog({
     // Calcula o valor com base nas mesmas regras de formatAmount
     let numericAmount = 0;
     if (numbers) {
-      // Por padrão é um valor em centavos
-      numericAmount = parseInt(numbers, 10) / 100;
-      
-      // Se for um número sem casas decimais
-      if (!hasDecimalSeparator && numbers.length >= 3) {
+      if (hasDecimalSeparator) {
+        // Se o usuário incluiu algum separador decimal, trata normalmente como valor em centavos
+        numericAmount = parseInt(numbers, 10) / 100;
+      } else {
+        // Se NÃO tem separador decimal, trata como valor inteiro (ex: 50 = R$50,00)
+        // ao invés de centavos (ex: 50 = R$0,50)
         numericAmount = parseInt(numbers, 10);
       }
     }
@@ -269,22 +270,18 @@ export function NewFinancialRecordDialog({
     // Remove todos os caracteres não numéricos
     const numbers = value.replace(/\D/g, "");
     
-    // Verifica se é um número inteiro sem centavos (como 500)
-    // Se for um número com menos de 3 dígitos ou terminar com "00", multiplica por 100
+    // Verifica se é um número inteiro sem centavos (qualquer dígito sem separador)
     let amount = 0;
     if (numbers) {
-      // Por padrão assume que é um valor em centavos (ex: 12345 = R$123,45)
-      amount = parseInt(numbers, 10) / 100;
-      
-      // Se o número for digitado sem os centavos (ex: apenas 500)
-      // e não contém ponto ou vírgula, converte para um valor com centavos (50000)
+      // Determina se há um separador decimal no valor digitado
       const hasDecimalSeparator = value.includes(',') || value.includes('.');
-      if (!hasDecimalSeparator && numbers.length <= 2) {
-        // Se tem 1 ou 2 dígitos, considera como centavos (ex: 50 = R$0,50)
+      
+      if (hasDecimalSeparator) {
+        // Se o usuário incluiu algum separador decimal, trata normalmente como valor em centavos
         amount = parseInt(numbers, 10) / 100;
-      } else if (!hasDecimalSeparator && numbers.length >= 3) {
-        // Se tem 3+ dígitos sem separador decimal, considera como número inteiro
-        // Ex: 500 => R$500,00 em vez de R$5,00
+      } else {
+        // Se NÃO tem separador decimal, trata como valor inteiro (ex: 50 = R$50,00)
+        // ao invés de centavos (ex: 50 = R$0,50)
         amount = parseInt(numbers, 10);
       }
     }
