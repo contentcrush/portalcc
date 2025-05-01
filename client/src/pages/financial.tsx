@@ -252,30 +252,101 @@ export default function Financial() {
     }
   ];
 
-  // Chart data for dashboard
-  const monthlyData = [
-    { month: 'Jan', receita: 42000, despesas: 21000 },
-    { month: 'Fev', receita: 48500, despesas: 22500 },
-    { month: 'Mar', receita: 51000, despesas: 24000 },
-    { month: 'Abr', receita: 61500, despesas: 26800 },
-    { month: 'Mai', receita: 68500, despesas: 28000 },
-    { month: 'Jun', receita: 80750, despesas: 29500 },
-  ];
+  // Chart data for dashboard - calculado a partir de dados reais
+  // Cria último semestre de dados financeiros
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 5 + i);
+    return {
+      date: date,
+      month: format(date, 'MMM', { locale: ptBR }).charAt(0).toUpperCase() + format(date, 'MMM', { locale: ptBR }).slice(1),
+      year: date.getFullYear(),
+      monthNumber: date.getMonth(),
+      receita: 0,
+      despesas: 0
+    };
+  });
+  
+  // Preenche com dados reais quando disponíveis
+  if (financialDocuments && financialDocuments.length > 0) {
+    financialDocuments.forEach((doc: any) => {
+      if (doc.paid && doc.payment_date) {
+        const paymentDate = new Date(doc.payment_date);
+        const monthData = last6Months.find(m => 
+          m.monthNumber === paymentDate.getMonth() && 
+          m.year === paymentDate.getFullYear()
+        );
+        
+        if (monthData) {
+          monthData.receita += doc.amount || 0;
+        }
+      }
+    });
+  }
+  
+  if (expenses && expenses.length > 0) {
+    expenses.forEach((exp: any) => {
+      if (exp.approved && exp.date) {
+        const expenseDate = new Date(exp.date);
+        const monthData = last6Months.find(m => 
+          m.monthNumber === expenseDate.getMonth() && 
+          m.year === expenseDate.getFullYear()
+        );
+        
+        if (monthData) {
+          monthData.despesas += exp.amount || 0;
+        }
+      }
+    });
+  }
+  
+  const monthlyData = last6Months.map(m => ({
+    month: m.month,
+    receita: m.receita,
+    despesas: m.despesas
+  }));
 
-  // Expense categories data
-  const expenseCategoriesData = [
-    { name: 'Equipamentos', value: 32034 },
-    { name: 'Pessoal', value: 25390 },
-    { name: 'Locação', value: 16880 },
-    { name: 'Software', value: 10116 },
-  ];
+  // Expense categories data - calculado dinamicamente a partir dos dados reais
+  const expenseCategoriesMap: Record<string, number> = {};
+  
+  if (expenses && expenses.length > 0) {
+    expenses.forEach((exp: any) => {
+      if (exp.category) {
+        const category = exp.category.charAt(0).toUpperCase() + exp.category.slice(1);
+        if (!expenseCategoriesMap[category]) {
+          expenseCategoriesMap[category] = 0;
+        }
+        expenseCategoriesMap[category] += exp.amount || 0;
+      }
+    });
+  }
+  
+  const expenseCategoriesData = Object.keys(expenseCategoriesMap).map(category => ({
+    name: category,
+    value: expenseCategoriesMap[category]
+  }));
 
-  // Client distribution data
-  const clientDistributionData = [
-    { name: 'Cervejaria Therezópolis', value: 12450 },
-    { name: 'Citroen', value: 24800 },
-    { name: 'Seara Alimentos', value: 18350 },
-  ];
+  // Client distribution data - calculado a partir de dados reais
+  const clientDistributionMap: Record<string, number> = {};
+  
+  if (financialDocuments && financialDocuments.length > 0 && clients && clients.length > 0) {
+    financialDocuments.forEach((doc: any) => {
+      if (doc.client_id) {
+        const client = clients.find((c: any) => c.id === doc.client_id);
+        if (client && client.name) {
+          if (!clientDistributionMap[client.name]) {
+            clientDistributionMap[client.name] = 0;
+          }
+          clientDistributionMap[client.name] += doc.amount || 0;
+        }
+      }
+    });
+  }
+  
+  const clientDistributionData = Object.keys(clientDistributionMap).map(clientName => ({
+    name: clientName,
+    value: clientDistributionMap[clientName]
+  })).sort((a, b) => b.value - a.value).slice(0, 5); // Apenas os 5 maiores clientes
 
   // Project margin data
   const projectMarginData = projects?.map((project: any) => {
@@ -303,73 +374,7 @@ export default function Financial() {
     };
   }).sort((a: any, b: any) => b.margin - a.margin).slice(0, 5) || [];
 
-  // Example data to display when no data is available
-  const exampleReceivables = [
-    {
-      id: 1001,
-      invoice: "F-1001",
-      client: "Cervejaria Therezópolis",
-      project: "Campanha de Verão",
-      issueDate: addDays(now, -15),
-      dueDate: addDays(now, -5),
-      amount: 12450,
-      status: "overdue"
-    },
-    {
-      id: 1002,
-      invoice: "F-1002",
-      client: "Citroen",
-      project: "Lançamento SUV C3",
-      issueDate: addDays(now, -10),
-      dueDate: addDays(now, 15),
-      amount: 24800,
-      status: "pending"
-    },
-    {
-      id: 1003,
-      invoice: "F-1003",
-      client: "Seara Alimentos Ltda",
-      project: "InCarne 2025",
-      issueDate: addDays(now, -5),
-      dueDate: addDays(now, 25),
-      amount: 18350,
-      status: "pending"
-    }
-  ];
-
-  const examplePayables = [
-    {
-      id: 2001,
-      description: "Aluguel de equipamentos",
-      category: "Equipamentos",
-      project: "Campanha de Verão",
-      date: addDays(now, 3),
-      amount: 4800,
-      paidBy: "Ana Silva",
-      status: "pending"
-    },
-    {
-      id: 2002,
-      description: "Licença software edição",
-      category: "Software",
-      project: "-",
-      date: addDays(now, 10),
-      amount: 7560,
-      paidBy: "Lucas Mendes",
-      status: "pending",
-      receipt: true
-    },
-    {
-      id: 2003,
-      description: "Locação estúdio",
-      category: "Locação",
-      project: "InCarne 2025",
-      date: addDays(now, 15),
-      amount: 12200,
-      paidBy: "Bruno Costa",
-      status: "pending"
-    }
-  ];
+  // Não usamos mais dados de exemplo - apenas dados reais do banco de dados
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
@@ -891,65 +896,20 @@ export default function Financial() {
                           </TableCell>
                         </TableRow>
                       );
-                    }) : exampleReceivables.map((item) => (
-                      <TableRow key={item.id} className="group hover:bg-muted/50">
-                        <TableCell className="font-medium">{item.invoice}</TableCell>
-                        <TableCell>{item.client}</TableCell>
-                        <TableCell>{item.project}</TableCell>
-                        <TableCell>{format(item.issueDate, 'dd/MM/yyyy')}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <span className={item.status === 'overdue' ? 'text-red-500 font-medium' : ''}>
-                              {format(item.dueDate, 'dd/MM/yyyy')}
-                            </span>
-                            {item.status === 'overdue' && (
-                              <Badge variant="destructive" className="ml-2 text-xs">
-                                Vencida
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={item.status === 'overdue' ? 'destructive' : item.status === 'paid' ? 'success' : 'outline'}>
-                            {item.status === 'overdue' ? 'Vencida' : item.status === 'paid' ? 'Pago' : 'Pendente'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" />
-                                <span>Ver Detalhes</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                <span>Registrar Pagamento</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem>
-                                <Download className="mr-2 h-4 w-4" />
-                                <span>Exportar PDF</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    }) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-24 text-center">
+                          <p className="text-muted-foreground">Nenhum registro encontrado</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between items-center p-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Mostrando {receivablesData.length || exampleReceivables.length} de {receivablesData.length || exampleReceivables.length} registros
+                Mostrando {receivablesData.length || 0} de {receivablesData.length || 0} registros
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled>
@@ -1232,63 +1192,13 @@ export default function Financial() {
                           </TableCell>
                         </TableRow>
                       );
-                    }) : examplePayables.map((item) => (
-                      <TableRow key={item.id} className="group hover:bg-muted/50">
-                        <TableCell className="font-medium">{item.description}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {item.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{item.project}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <span>{format(item.date, 'dd/MM/yyyy')}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.amount)}
-                        </TableCell>
-                        <TableCell>{item.paidBy}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.status === 'approved' ? 'success' : 'outline'}>
-                            {item.status === 'approved' ? 'Aprovado' : 'Pendente'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" />
-                                <span>Ver Detalhes</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Check className="mr-2 h-4 w-4" />
-                                <span>Aprovar Despesa</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                {item.receipt ? (
-                                  <>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    <span>Ver Comprovante</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    <span>Adicionar Comprovante</span>
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    }) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-24 text-center">
+                          <p className="text-muted-foreground">Nenhum registro encontrado</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
