@@ -75,6 +75,9 @@ import {
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
 import { NewFinancialRecordDialog } from "@/components/financial/NewFinancialRecordDialog";
+import { FinancialRecordActions } from "@/components/financial/FinancialRecordActions";
+import { FinancialRecordDetails } from "@/components/financial/FinancialRecordDetails";
+import { PaymentRegistrationDialog } from "@/components/financial/PaymentRegistrationDialog";
 
 // Definição de tipos
 interface Transaction {
@@ -103,6 +106,10 @@ export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
   const [period, setPeriod] = useState<string>("month");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  
+  // Estados para controlar os diálogos de detalhes e pagamento
+  const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
 
   // Fetch financial data
   const { data: financialDocuments, isLoading: isLoadingDocuments } = useQuery({
@@ -1361,6 +1368,25 @@ export default function Financial() {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Diálogos para exibir detalhes e registrar pagamentos */}
+      {detailsRecord && (
+        <FinancialRecordDetails
+          open={!!detailsRecord}
+          onOpenChange={(open) => !open && setDetailsRecord(null)}
+          record={detailsRecord.record}
+          type={detailsRecord.type}
+        />
+      )}
+      
+      {paymentRecord && (
+        <PaymentRegistrationDialog
+          open={!!paymentRecord}
+          onOpenChange={(open) => !open && setPaymentRecord(null)}
+          record={paymentRecord.record}
+          type={paymentRecord.type}
+        />
+      )}
     </div>
   );
 }
