@@ -1254,11 +1254,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/financial-documents", authenticateJWT, requirePermission('manage_financials'), validateBody(insertFinancialDocumentSchema), async (req, res) => {
+  app.post("/api/financial-documents", authenticateJWT, requirePermission('manage_financials'), (req, res, next) => {
+    // Pré-processamento de data antes da validação
+    if (req.body && req.body.due_date && typeof req.body.due_date === 'string') {
+      req.body.due_date = new Date(req.body.due_date);
+    }
+    next();
+  }, validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
       const document = await storage.createFinancialDocument(req.body);
       res.status(201).json(document);
     } catch (error) {
+      console.error("Erro ao criar documento financeiro:", error);
       res.status(500).json({ message: "Failed to create financial document" });
     }
   });
@@ -1298,11 +1305,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expenses", authenticateJWT, requirePermission('manage_financials'), validateBody(insertExpenseSchema), async (req, res) => {
+  app.post("/api/expenses", authenticateJWT, requirePermission('manage_financials'), (req, res, next) => {
+    // Pré-processamento de data antes da validação
+    if (req.body && req.body.date && typeof req.body.date === 'string') {
+      req.body.date = new Date(req.body.date);
+    }
+    next();
+  }, validateBody(insertExpenseSchema), async (req, res) => {
     try {
       const expense = await storage.createExpense(req.body);
       res.status(201).json(expense);
     } catch (error) {
+      console.error("Erro ao criar despesa:", error);
       res.status(500).json({ message: "Failed to create expense" });
     }
   });
