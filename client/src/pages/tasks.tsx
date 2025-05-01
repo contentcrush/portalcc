@@ -224,9 +224,12 @@ export default function Tasks() {
   // Toggle task completion mutation
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
-      // Enviando apenas o campo completed - a data será definida no servidor
+      // Quando a tarefa é marcada como concluída, também mudamos o status para "concluido"
+      // Quando é desmarcada, voltamos para o status "pendente"
       const completionData = { 
-        completed: completed 
+        completed: completed,
+        // Atualiza o status baseado no estado de conclusão
+        status: completed ? "concluido" : "pendente"
       };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
