@@ -64,6 +64,8 @@ export function FinancialRecordActions({
   onRegisterPayment,
 }: FinancialRecordActionsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: "", detail: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -78,6 +80,15 @@ export function FinancialRecordActions({
     }
   };
 
+  // Verifica se o documento está vinculado a um projeto
+  const isLinkedToProject = () => {
+    if (type === "document") {
+      const doc = record as FinancialDocument;
+      return doc.project_id !== null;
+    }
+    return false;
+  };
+
   // Mutação para excluir registro
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -89,6 +100,15 @@ export function FinancialRecordActions({
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        // Se temos detalhes adicionais sobre o erro, vamos salvá-los para exibir no diálogo
+        if (errorData.detail) {
+          setErrorMessage({
+            title: errorData.message || "Erro ao excluir registro",
+            detail: errorData.detail
+          });
+          setErrorDialogOpen(true);
+          throw new Error("ERROR_DIALOG_SHOWN");
+        }
         throw new Error(errorData.message || "Erro ao excluir registro");
       }
       
@@ -106,13 +126,19 @@ export function FinancialRecordActions({
       } else {
         queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       }
+      
+      // Recarregar projetos também para manter tudo sincronizado
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
     onError: (error) => {
-      toast({
-        title: "Erro ao excluir registro",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Só mostramos o toast se não estamos exibindo o diálogo de erro
+      if (error.message !== "ERROR_DIALOG_SHOWN") {
+        toast({
+          title: "Erro ao excluir registro",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -190,6 +216,33 @@ export function FinancialRecordActions({
             >
               {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Diálogo de erro para exclusão */}
+      <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              {errorMessage.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base mt-4">
+              {errorMessage.detail}
+            </AlertDialogDescription>
+            {isLinkedToProject() && (
+              <div className="mt-4 p-4 bg-muted rounded-md">
+                <h4 className="font-medium mb-2">Como resolver:</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Edite o projeto associado e altere o valor do orçamento para 0</li>
+                  <li>Ou exclua o projeto associado completamente</li>
+                </ul>
+              </div>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Entendi</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
