@@ -19,6 +19,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
 import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
+import { SocketProvider } from "@/contexts/SocketContext";
 import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
@@ -30,7 +31,8 @@ function App() {
         <PreferencesProvider>
           <AccessibilityProvider>
             <ProjectFormProvider>
-              <TooltipProvider>
+              <SocketProvider>
+                <TooltipProvider>
                 <Switch>
                   <Route path="/auth" component={AuthPage} />
                   <Route>
@@ -57,6 +59,7 @@ function App() {
                 <ProjectFormDialog />
                 <Toaster />
               </TooltipProvider>
+              </SocketProvider>
             </ProjectFormProvider>
           </AccessibilityProvider>
         </PreferencesProvider>

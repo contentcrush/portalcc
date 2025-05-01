@@ -1299,6 +1299,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
+  // Configurar WebSocket Server (usando 'ws' para WebSockets nativos)
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws' 
+  });
+
+  wss.on('connection', (ws) => {
+    console.log('Nova conexão WebSocket estabelecida');
+    
+    ws.on('message', (message) => {
+      try {
+        // Parse da mensagem recebida (assumindo JSON)
+        const data = JSON.parse(message.toString());
+        console.log('Mensagem recebida:', data);
+        
+        // Exemplo de processamento de mensagem
+        if (data.type === 'chat') {
+          // Broadcast para todos os clientes conectados
+          wss.clients.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: 'chat',
+                userId: data.userId,
+                userName: data.userName,
+                message: data.message,
+                timestamp: new Date().toISOString()
+              }));
+            }
+          });
+        } else if (data.type === 'notification') {
+          // Enviar notificação para usuários específicos
+          // Aqui precisaria de uma lógica para mapear usuários a conexões
+          // Para exemplo, enviamos para todos
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: 'notification',
+                title: data.title,
+                message: data.message,
+                userId: data.userId,
+                timestamp: new Date().toISOString()
+              }));
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('Conexão WebSocket fechada');
+    });
+    
+    // Enviar mensagem de boas-vindas
+    ws.send(JSON.stringify({ 
+      type: 'system', 
+      message: 'Conectado ao servidor WebSocket com sucesso!' 
+    }));
+  });
+
+  // Configurar Socket.IO (mais rico em recursos que WebSockets puros)
+  const io = new SocketIOServer(httpServer, {
+    path: '/socket.io',
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST']
+    }
+  });
+
+  // Mapeamento de salas para projetos e tarefas
+  const rooms = {
+    tasks: {},      // tasks[taskId] = [socketId1, socketId2, ...]
+    projects: {},   // projects[projectId] = [socketId1, socketId2, ...]
+    users: {}       // users[userId] = socketId
+  };
+
+  io.on('connection', (socket) => {
+    console.log('Nova conexão Socket.IO estabelecida:', socket.id);
+    
+    // Autenticação do usuário
+    socket.on('authenticate', async (data) => {
+      try {
+        const { userId, token } = data;
+        
+        // Aqui você deveria verificar o token usando a mesma lógica de auth.ts
+        // Para simplicidade, estamos apenas verificando se userId é um número válido
+        if (userId && !isNaN(parseInt(userId))) {
+          const userIdNum = parseInt(userId);
+          const user = await storage.getUser(userIdNum);
+          
+          if (user) {
+            // Registrar o socket para este usuário
+            rooms.users[userIdNum] = socket.id;
+            
+            socket.emit('authenticated', { 
+              success: true, 
+              userId: userIdNum,
+              userName: user.name
+            });
+            
+            console.log(`Usuário ${userIdNum} (${user.name}) autenticado via Socket.IO`);
+          } else {
+            socket.emit('authenticated', { success: false, error: 'Usuário não encontrado' });
+          }
+        } else {
+          socket.emit('authenticated', { success: false, error: 'ID de usuário inválido' });
+        }
+      } catch (error) {
+        console.error('Erro ao autenticar usuário no Socket.IO:', error);
+        socket.emit('authenticated', { success: false, error: 'Erro de autenticação' });
+      }
+    });
+    
+    // Entrar em uma sala de tarefa específica
+    socket.on('join-task', (taskId) => {
+      const taskRoom = `task:${taskId}`;
+      socket.join(taskRoom);
+      
+      // Registrar no nosso mapeamento
+      if (!rooms.tasks[taskId]) {
+        rooms.tasks[taskId] = [];
+      }
+      if (!rooms.tasks[taskId].includes(socket.id)) {
+        rooms.tasks[taskId].push(socket.id);
+      }
+      
+      console.log(`Socket ${socket.id} entrou na sala da tarefa ${taskId}`);
+      socket.to(taskRoom).emit('user-joined-task', { taskId });
+    });
+    
+    // Sair de uma sala de tarefa
+    socket.on('leave-task', (taskId) => {
+      const taskRoom = `task:${taskId}`;
+      socket.leave(taskRoom);
+      
+      // Atualizar nosso mapeamento
+      if (rooms.tasks[taskId]) {
+        rooms.tasks[taskId] = rooms.tasks[taskId].filter(id => id !== socket.id);
+      }
+      
+      console.log(`Socket ${socket.id} saiu da sala da tarefa ${taskId}`);
+      socket.to(taskRoom).emit('user-left-task', { taskId });
+    });
+    
+    // Enviar um comentário para uma tarefa
+    socket.on('task-comment', async (data) => {
+      try {
+        const { taskId, userId, comment } = data;
+        
+        if (taskId && userId && comment) {
+          // Validar se o usuário existe
+          const user = await storage.getUser(parseInt(userId));
+          if (!user) {
+            socket.emit('error', { message: 'Usuário não encontrado' });
+            return;
+          }
+          
+          // Salvar o comentário no banco de dados
+          const newComment = await storage.createTaskComment({
+            task_id: parseInt(taskId),
+            user_id: parseInt(userId),
+            comment: comment,
+            created_at: new Date()
+          });
+          
+          // Emitir o evento para todos na sala da tarefa
+          const taskRoom = `task:${taskId}`;
+          io.to(taskRoom).emit('new-comment', {
+            id: newComment.id,
+            taskId: parseInt(taskId),
+            userId: parseInt(userId),
+            userName: user.name,
+            comment: comment,
+            createdAt: newComment.created_at
+          });
+          
+          console.log(`Novo comentário adicionado à tarefa ${taskId} por usuário ${userId}`);
+        } else {
+          socket.emit('error', { message: 'Dados incompletos para comentário' });
+        }
+      } catch (error) {
+        console.error('Erro ao processar comentário de tarefa:', error);
+        socket.emit('error', { message: 'Erro ao processar comentário' });
+      }
+    });
+    
+    // Enviar notificação para um usuário específico
+    socket.on('notify-user', (data) => {
+      const { targetUserId, notification } = data;
+      
+      if (targetUserId && notification && rooms.users[targetUserId]) {
+        const targetSocketId = rooms.users[targetUserId];
+        
+        io.to(targetSocketId).emit('notification', {
+          ...notification,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log(`Notificação enviada para usuário ${targetUserId}`);
+      } else {
+        socket.emit('error', { message: 'Usuário não encontrado ou dados incompletos' });
+      }
+    });
+    
+    // Manipular evento de desconexão
+    socket.on('disconnect', () => {
+      console.log('Socket.IO desconectado:', socket.id);
+      
+      // Remover o socket de todas as salas
+      for (const [taskId, sockets] of Object.entries(rooms.tasks)) {
+        if (Array.isArray(sockets)) {
+          rooms.tasks[taskId] = sockets.filter(id => id !== socket.id);
+        }
+      }
+      
+      // Remover o socket do mapeamento de usuários
+      for (const [userId, socketId] of Object.entries(rooms.users)) {
+        if (socketId === socket.id) {
+          delete rooms.users[userId];
+        }
+      }
+    });
+  });
+  
   // Executar automações ao iniciar o servidor
   console.log("🤖 Iniciando automações do sistema...");
   runAutomations()
