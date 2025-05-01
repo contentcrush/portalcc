@@ -3,14 +3,14 @@ import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
-  expenses, events, refreshTokens, userPreferences,
+  expenses, events, refreshTokens, userPreferences, commentReactions,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
-  type InsertUserPreference
+  type InsertUserPreference, type InsertCommentReaction, type CommentReaction
 } from "../shared/schema";
 
 export interface IStorage {
@@ -29,6 +29,19 @@ export interface IStorage {
   getUserPreferences(userId: number): Promise<UserPreference | undefined>;
   createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference>;
   updateUserPreferences(userId: number, preferences: Partial<InsertUserPreference>): Promise<UserPreference | undefined>;
+  
+  // Comments
+  getTaskComments(taskId: number): Promise<TaskComment[]>;
+  getTaskCommentById(commentId: number): Promise<TaskComment | undefined>;
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  updateTaskComment(commentId: number, updates: Partial<TaskComment>): Promise<TaskComment>;
+  softDeleteTaskComment(commentId: number): Promise<boolean>;
+  
+  // Comment Reactions
+  getCommentReactionsByTaskId(taskId: number): Promise<CommentReaction[]>;
+  getCommentReactionByUserAndComment(userId: number, commentId: number): Promise<CommentReaction | undefined>;
+  createCommentReaction(reaction: InsertCommentReaction): Promise<CommentReaction>;
+  deleteCommentReaction(reactionId: number): Promise<boolean>;
   
   // Clients
   getClient(id: number): Promise<Client | undefined>;
@@ -1747,16 +1760,104 @@ export class DatabaseStorage implements IStorage {
   
   // Task Comments
   async getTaskComments(taskId: number): Promise<TaskComment[]> {
-    return await db.select().from(taskComments).where(eq(taskComments.task_id, taskId));
+    return await db.select()
+      .from(taskComments)
+      .where(and(
+        eq(taskComments.task_id, taskId),
+        eq(taskComments.deleted, false)
+      ))
+      .orderBy(taskComments.creation_date);
+  }
+  
+  async getTaskCommentById(commentId: number): Promise<TaskComment | undefined> {
+    const [comment] = await db.select()
+      .from(taskComments)
+      .where(eq(taskComments.id, commentId));
+    return comment;
   }
 
   async createTaskComment(insertComment: InsertTaskComment): Promise<TaskComment> {
-    const [comment] = await db.insert(taskComments).values(insertComment).returning();
+    const [comment] = await db.insert(taskComments)
+      .values({
+        ...insertComment,
+        creation_date: new Date(),
+        edited: false,
+        deleted: false
+      })
+      .returning();
     return comment;
+  }
+  
+  async updateTaskComment(commentId: number, updates: Partial<TaskComment>): Promise<TaskComment> {
+    const [updatedComment] = await db.update(taskComments)
+      .set(updates)
+      .where(eq(taskComments.id, commentId))
+      .returning();
+    
+    if (!updatedComment) {
+      throw new Error(`Comment with ID ${commentId} not found`);
+    }
+    
+    return updatedComment;
+  }
+  
+  async softDeleteTaskComment(commentId: number): Promise<boolean> {
+    const [result] = await db.update(taskComments)
+      .set({
+        deleted: true,
+        delete_date: new Date()
+      })
+      .where(eq(taskComments.id, commentId))
+      .returning();
+      
+    return !!result;
   }
 
   async deleteTaskComment(id: number): Promise<boolean> {
     const result = await db.delete(taskComments).where(eq(taskComments.id, id));
+    return true;
+  }
+  
+  // Comment Reactions
+  async getCommentReactionsByTaskId(taskId: number): Promise<CommentReaction[]> {
+    const comments = await this.getTaskComments(taskId);
+    const commentIds = comments.map(comment => comment.id);
+    
+    if (commentIds.length === 0) {
+      return [];
+    }
+    
+    // Usando o operador inArray para buscar reações para vários comentários
+    const reactions = await db.select()
+      .from(commentReactions)
+      .where(inArray(commentReactions.comment_id, commentIds));
+      
+    return reactions;
+  }
+  
+  async getCommentReactionByUserAndComment(userId: number, commentId: number): Promise<CommentReaction | undefined> {
+    const [reaction] = await db.select()
+      .from(commentReactions)
+      .where(and(
+        eq(commentReactions.user_id, userId),
+        eq(commentReactions.comment_id, commentId)
+      ));
+      
+    return reaction;
+  }
+  
+  async createCommentReaction(reaction: InsertCommentReaction): Promise<CommentReaction> {
+    const [createdReaction] = await db.insert(commentReactions)
+      .values(reaction)
+      .returning();
+      
+    return createdReaction;
+  }
+  
+  async deleteCommentReaction(reactionId: number): Promise<boolean> {
+    const result = await db.delete(commentReactions)
+      .where(eq(commentReactions.id, reactionId));
+      
     return true;
   }
   
