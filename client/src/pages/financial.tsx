@@ -133,6 +133,47 @@ export default function Financial() {
   const thirtyDaysFromNow = addDays(now, 30);
   const sevenDaysFromNow = addDays(now, 7);
   
+  // Calcula os valores previstos a receber divididos por períodos
+  const calculateUpcomingReceivables = (documents: any[] = []) => {
+    if (!documents || documents.length === 0) {
+      return [
+        { name: 'Hoje - 7 dias', value: 0 },
+        { name: '8 - 15 dias', value: 0 },
+        { name: '16 - 30 dias', value: 0 },
+      ];
+    }
+    
+    const today = new Date();
+    const in7Days = addDays(today, 7);
+    const in15Days = addDays(today, 15);
+    const in30Days = addDays(today, 30);
+    
+    let nextWeek = 0;
+    let next2Weeks = 0;
+    let nextMonth = 0;
+    
+    documents.forEach((doc: any) => {
+      if (!doc.paid && doc.due_date) {
+        const dueDate = new Date(doc.due_date);
+        const amount = doc.amount || 0;
+        
+        if (isBefore(dueDate, in7Days)) {
+          nextWeek += amount;
+        } else if (isBefore(dueDate, in15Days)) {
+          next2Weeks += amount;
+        } else if (isBefore(dueDate, in30Days)) {
+          nextMonth += amount;
+        }
+      }
+    });
+    
+    return [
+      { name: 'Hoje - 7 dias', value: nextWeek },
+      { name: '8 - 15 dias', value: next2Weeks },
+      { name: '16 - 30 dias', value: nextMonth },
+    ];
+  };
+  
   // Receivables total
   const totalReceivables = receivablesData.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
@@ -933,11 +974,7 @@ export default function Financial() {
                 <FinancialChart 
                   type="bar"
                   title=""
-                  data={[
-                    { name: 'Hoje - 7 dias', value: 12450 },
-                    { name: '8 - 15 dias', value: 24800 },
-                    { name: '16 - 30 dias', value: 18350 },
-                  ]}
+                  data={calculateUpcomingReceivables(financialDocuments)}
                   dataKeys={['value']}
                   xAxisDataKey="name"
                   colors={['#6366F1']}
@@ -1206,7 +1243,7 @@ export default function Financial() {
             <CardFooter className="flex justify-between items-center p-4 border-t">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {payablesData.length || examplePayables.length} de {payablesData.length || examplePayables.length} registros
+                  Mostrando {payablesData.length || 0} de {payablesData.length || 0} registros
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Total pendente:</span>
