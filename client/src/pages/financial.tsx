@@ -1145,7 +1145,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Despesa Mensal</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(monthlyExpenses || 18000)}</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(monthlyExpenses)}</p>
                 </div>
                 <BarChart className="h-8 w-8 text-blue-600" />
               </CardContent>
@@ -1300,7 +1300,7 @@ export default function Financial() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Total pendente:</span>
-                  <span className="font-bold">{formatCurrency(totalPayables || 24560)}</span>
+                  <span className="font-bold">{formatCurrency(totalPayables)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
