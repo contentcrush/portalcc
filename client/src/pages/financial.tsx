@@ -1,24 +1,28 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  useReactTable, 
-  ColumnDef, 
-  flexRender, 
-  getCoreRowModel, 
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState
-} from "@tanstack/react-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { format, addDays, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -34,37 +38,71 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Calendar } from "@/components/ui/calendar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   ArrowUpRight,
   ArrowDownRight,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  CreditCard,
   Download,
   Filter,
+  MoreHorizontal,
   Plus,
-  FileText,
-  BarChart4,
-  CalendarDays,
+  Search,
+  Settings,
+  Wallet,
   DollarSign,
+  FileText,
+  Banknote,
   TrendingUp,
   AlertCircle,
   Clock,
-  ArrowRight,
-  CreditCard,
-  Banknote,
-  Wallet,
   LineChart,
   PieChart,
-  Users
+  Users,
+  BarChart,
 } from "lucide-react";
-import { format, addDays, isBefore, parseISO, formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { formatCurrency, calculatePercentChange } from "@/lib/utils";
-import { CURRENT_QUARTER } from "@/lib/constants";
+import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
-import StatusBadge from "@/components/StatusBadge";
+
+// Definição de tipos
+interface Transaction {
+  id: number;
+  description: string;
+  date: Date;
+  dueDate?: Date;
+  amount: number;
+  status: "pending" | "paid" | "overdue";
+  client: string;
+  project: string;
+  type: "income" | "expense";
+  category?: string;
+}
+
+interface FinancialKPI {
+  title: string;
+  value: number | string;
+  change?: number;
+  icon: React.ReactNode;
+  description: string;
+  variant?: "green" | "red" | "blue" | "amber" | "default";
+}
 
 export default function Financial() {
-  const [period, setPeriod] = useState(CURRENT_QUARTER);
-  
+  const [selectedTab, setSelectedTab] = useState<string>("dashboard");
+  const [period, setPeriod] = useState<string>("month");
+  const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+
   // Fetch financial data
   const { data: financialDocuments, isLoading: isLoadingDocuments } = useQuery({
     queryKey: ['/api/financial-documents']
@@ -82,22 +120,133 @@ export default function Financial() {
     queryKey: ['/api/clients']
   });
 
-  // Calculate financial metrics
-  const totalRevenue = financialDocuments?.reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
-  const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const netProfit = totalRevenue - totalExpenses;
+  // Prepare financial data
+  const receivablesData = financialDocuments?.filter((doc: any) => 
+    doc.document_type === 'invoice' && !doc.paid
+  ) || [];
   
-  // Calculate previous period metrics (in a real app, these would be calculated from actual data)
-  const previousRevenue = totalRevenue * 0.78;
-  const previousExpenses = totalExpenses * 0.85;
-  const previousProfit = previousRevenue - previousExpenses;
+  const payablesData = expenses?.filter((exp: any) => !exp.approved) || [];
   
-  // Calculate percent changes
-  const revenueChange = calculatePercentChange(totalRevenue, previousRevenue);
-  const expensesChange = calculatePercentChange(totalExpenses, previousExpenses);
-  const profitChange = calculatePercentChange(netProfit, previousProfit);
+  // Calculate KPIs
+  const now = new Date();
+  const thirtyDaysFromNow = addDays(now, 30);
+  const sevenDaysFromNow = addDays(now, 7);
+  
+  // Receivables total
+  const totalReceivables = receivablesData.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  
+  // Payables total
+  const totalPayables = payablesData.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+  
+  // Cash flow next 30 days
+  const receivablesNext30Days = receivablesData
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), thirtyDaysFromNow))
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+    
+  const payablesNext30Days = payablesData
+    .filter((exp: any) => exp.date && isBefore(new Date(exp.date), thirtyDaysFromNow))
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    
+  const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
+  
+  // Due alerts (next 7 days)
+  const dueAlerts = receivablesData
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow))
+    .length;
+  
+  // Monthly revenue
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  const monthlyRevenue = financialDocuments
+    ?.filter((doc: any) => {
+      if (!doc.paid || !doc.payment_date) return false;
+      const paymentDate = new Date(doc.payment_date);
+      return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
+    })
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
+  
+  // Monthly expenses
+  const monthlyExpenses = expenses
+    ?.filter((exp: any) => {
+      const expDate = new Date(exp.date);
+      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && exp.approved;
+    })
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
+  
+  // Gross margin
+  const grossMargin = monthlyRevenue > 0 
+    ? ((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100 
+    : 0;
+  
+  // Avg cost per minute
+  const totalMinutes = 250; // This would be calculated from actual data
+  const avgCostPerMinute = monthlyExpenses > 0 ? monthlyExpenses / totalMinutes : 0;
+  
+  // Average collection period
+  const dso = 28; // This would be calculated from actual data
 
-  // Chart data
+  // Dashboard KPIs
+  const kpis: FinancialKPI[] = [
+    {
+      title: "A Receber",
+      value: totalReceivables,
+      icon: <CreditCard className="h-5 w-5" />,
+      description: "Total de faturas a receber",
+      variant: "green"
+    },
+    {
+      title: "A Pagar",
+      value: totalPayables,
+      icon: <Wallet className="h-5 w-5" />,
+      description: "Total de despesas pendentes",
+      variant: "amber"
+    },
+    {
+      title: "Fluxo de Caixa",
+      value: cashFlowNext30Days,
+      icon: <TrendingUp className="h-5 w-5" />,
+      description: "Próximos 30 dias",
+      variant: cashFlowNext30Days >= 0 ? "blue" : "red"
+    },
+    {
+      title: "Alertas",
+      value: dueAlerts,
+      icon: <AlertCircle className="h-5 w-5" />,
+      description: "Faturas vencendo em 7 dias",
+      variant: "red"
+    },
+    {
+      title: "Receita Mensal",
+      value: monthlyRevenue,
+      icon: <Banknote className="h-5 w-5" />,
+      description: "Valor recebido no mês",
+      variant: "green"
+    },
+    {
+      title: "Despesas Mensais",
+      value: monthlyExpenses,
+      icon: <Wallet className="h-5 w-5" />,
+      description: "Despesas pagas no mês",
+      variant: "red"
+    },
+    {
+      title: "Margem Bruta",
+      value: `${grossMargin.toFixed(1)}%`,
+      icon: <LineChart className="h-5 w-5" />,
+      description: "Lucro antes de despesas fixas",
+      variant: grossMargin >= 30 ? "green" : grossMargin >= 15 ? "amber" : "red"
+    },
+    {
+      title: "Custo/Minuto",
+      value: avgCostPerMinute,
+      icon: <Clock className="h-5 w-5" />,
+      description: "Custo médio por minuto de vídeo",
+      variant: "blue"
+    }
+  ];
+
+  // Chart data for dashboard
   const monthlyData = [
     { month: 'Jan', receita: 42000, despesas: 21000 },
     { month: 'Fev', receita: 48500, despesas: 22500 },
@@ -106,23 +255,7 @@ export default function Financial() {
     { month: 'Mai', receita: 68500, despesas: 28000 },
     { month: 'Jun', receita: 80750, despesas: 29500 },
   ];
-  
-  // Project revenue data
-  const projectRevenueData = projects?.map(project => {
-    const client = clients?.find(c => c.id === project.client_id);
-    
-    // Calculate revenue for this project
-    const projectRevenue = financialDocuments
-      ?.filter(doc => doc.project_id === project.id)
-      .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
-      
-    return {
-      name: project.name,
-      client: client?.name || "Cliente",
-      value: projectRevenue
-    };
-  }).sort((a, b) => b.value - a.value).slice(0, 5) || [];
-  
+
   // Expense categories data
   const expenseCategoriesData = [
     { name: 'Equipamentos', value: 32034 },
@@ -130,135 +263,25 @@ export default function Financial() {
     { name: 'Locação', value: 16880 },
     { name: 'Software', value: 10116 },
   ];
-  
-  // Project performance data
-  const projectPerformanceData = projects?.map(project => {
-    const client = clients?.find(c => c.id === project.client_id);
-    
-    // Calculate revenue for this project
-    const projectRevenue = financialDocuments
-      ?.filter(doc => doc.project_id === project.id)
-      .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
-      
-    // Calculate expenses for this project
-    const projectExpenses = expenses
-      ?.filter(exp => exp.project_id === project.id)
-      .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-      
-    // Calculate margin
-    const margin = projectRevenue > 0 
-      ? Math.round(((projectRevenue - projectExpenses) / projectRevenue) * 100) 
-      : 0;
-      
-    return {
-      id: project.id,
-      name: project.name,
-      client: client?.name || "Cliente",
-      status: project.status,
-      progress: project.progress || 0,
-      budget: project.budget || 0,
-      revenue: projectRevenue,
-      expenses: projectExpenses,
-      margin
-    };
-  }).sort((a, b) => b.revenue - a.revenue).slice(0, 5) || [];
-  
-  // Upcoming transactions
-  const upcomingTransactions = [
-    {
-      entity: "Banco Azul",
-      type: "payment",
-      amount: 18000,
-      date: new Date("2025-05-05")
-    },
-    {
-      entity: "Tech Courses Inc.",
-      type: "payment",
-      amount: 12500,
-      date: new Date("2025-05-15")
-    },
-    {
-      entity: "Eco Preserve",
-      type: "payment",
-      amount: 14375,
-      date: new Date("2025-05-20")
-    },
-    {
-      entity: "Marca X",
-      type: "payment",
-      amount: 7500,
-      date: new Date("2025-05-28")
-    }
+
+  // Client distribution data
+  const clientDistributionData = [
+    { name: 'Cervejaria Therezópolis', value: 12450 },
+    { name: 'Citroen', value: 24800 },
+    { name: 'Seara Alimentos', value: 18350 },
   ];
 
-  // Calcular KPIs da página financeira
-  const receivablesData = financialDocuments?.filter(doc => 
-    doc.document_type === 'invoice' && !doc.paid
-  ) || [];
-  
-  const payablesData = expenses?.filter(exp => !exp.approved) || [];
-  
-  // Calcular dados para os KPIs essenciais
-  const aReceberAberto = receivablesData.reduce((sum, doc) => sum + (doc.amount || 0), 0);
-  const aPagarAberto = payablesData.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  
-  // Calcular fluxo de caixa próximos 30 dias
-  const now = new Date();
-  const thirtyDaysFromNow = addDays(now, 30);
-  const receivablesNext30Days = receivablesData
-    .filter(doc => doc.due_date && isBefore(new Date(doc.due_date), thirtyDaysFromNow))
-    .reduce((sum, doc) => sum + (doc.amount || 0), 0);
-  const payablesNext30Days = payablesData
-    .filter(exp => exp.date && isBefore(new Date(exp.date), thirtyDaysFromNow))
-    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  const fluxoDeCaixaProx30Dias = receivablesNext30Days - payablesNext30Days;
-  
-  // Calcular receita mensal realizada (documentos pagos no mês atual)
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const receitaMensalRealizada = financialDocuments
-    ?.filter(doc => {
-      if (!doc.paid || !doc.payment_date) return false;
-      const paymentDate = new Date(doc.payment_date);
-      return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
-    })
-    .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
-  
-  // Calcular despesas mensais (despesas pagas no mês atual)
-  const despesasMensais = expenses
-    ?.filter(exp => {
-      const expDate = new Date(exp.date);
-      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && exp.approved;
-    })
-    .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  
-  // Calcular margem bruta do mês
-  const margemBrutaMes = receitaMensalRealizada > 0 
-    ? ((receitaMensalRealizada - despesasMensais) / receitaMensalRealizada) * 100 
-    : 0;
-
-  // Alertas de vencimento próximos 7 dias
-  const sevenDaysFromNow = addDays(now, 7);
-  const alertasVencimento = receivablesData
-    .filter(doc => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow))
-    .length;
-  
-  // Calcular o custo médio por minuto de vídeo (usando dados de exemplo)
-  const totalMinutos = 250; // Este seria um cálculo real baseado em algum campo
-  const custoMedioPorMinuto = despesasMensais > 0 ? despesasMensais / totalMinutos : 0;
-  
-  // Calcular o tempo médio de recebimento (DSO - Days Sales Outstanding)
-  const tempoMedioRecebimento = 28; // Cálculo seria baseado na diferença média entre emissão e pagamento
-
-  // Identificar a margem de lucro por projeto
-  const projectMarginsData = projects?.map(project => {
+  // Project margin data
+  const projectMarginData = projects?.map((project: any) => {
+    const client = clients?.find((c: any) => c.id === project.client_id);
+    
     const projectRevenue = financialDocuments
-      ?.filter(doc => doc.project_id === project.id && doc.paid)
-      .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
+      ?.filter((doc: any) => doc.project_id === project.id && doc.paid)
+      .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
       
     const projectExpenses = expenses
-      ?.filter(exp => exp.project_id === project.id)
-      .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      ?.filter((exp: any) => exp.project_id === project.id)
+      .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
       
     const projectMargin = projectRevenue > 0 
       ? ((projectRevenue - projectExpenses) / projectRevenue) * 100 
@@ -267,233 +290,319 @@ export default function Financial() {
     return {
       id: project.id,
       name: project.name,
-      client: clients?.find(c => c.id === project.client_id)?.name || "Cliente",
+      client: client?.name || "Cliente",
       revenue: projectRevenue,
       expenses: projectExpenses,
       margin: projectMargin
     };
-  }).sort((a, b) => b.margin - a.margin).slice(0, 5) || [];
-  
+  }).sort((a: any, b: any) => b.margin - a.margin).slice(0, 5) || [];
+
+  // Example data to display when no data is available
+  const exampleReceivables = [
+    {
+      id: 1001,
+      invoice: "F-1001",
+      client: "Cervejaria Therezópolis",
+      project: "Campanha de Verão",
+      issueDate: addDays(now, -15),
+      dueDate: addDays(now, -5),
+      amount: 12450,
+      status: "overdue"
+    },
+    {
+      id: 1002,
+      invoice: "F-1002",
+      client: "Citroen",
+      project: "Lançamento SUV C3",
+      issueDate: addDays(now, -10),
+      dueDate: addDays(now, 15),
+      amount: 24800,
+      status: "pending"
+    },
+    {
+      id: 1003,
+      invoice: "F-1003",
+      client: "Seara Alimentos Ltda",
+      project: "InCarne 2025",
+      issueDate: addDays(now, -5),
+      dueDate: addDays(now, 25),
+      amount: 18350,
+      status: "pending"
+    }
+  ];
+
+  const examplePayables = [
+    {
+      id: 2001,
+      description: "Aluguel de equipamentos",
+      category: "Equipamentos",
+      project: "Campanha de Verão",
+      date: addDays(now, 3),
+      amount: 4800,
+      paidBy: "Ana Silva",
+      status: "pending"
+    },
+    {
+      id: 2002,
+      description: "Licença software edição",
+      category: "Software",
+      project: "-",
+      date: addDays(now, 10),
+      amount: 7560,
+      paidBy: "Lucas Mendes",
+      status: "pending",
+      receipt: true
+    },
+    {
+      id: 2003,
+      description: "Locação estúdio",
+      category: "Locação",
+      project: "InCarne 2025",
+      date: addDays(now, 15),
+      amount: 12200,
+      paidBy: "Bruno Costa",
+      status: "pending"
+    }
+  ];
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
+    <div className="container mx-auto px-4 py-6 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Financeiro</h1>
-          <p className="text-muted-foreground">Controle financeiro e indicadores de desempenho</p>
+          <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
+          <p className="text-muted-foreground">Gerenciamento financeiro e análise de performance</p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <div className="flex space-x-2">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Q1 2025">Q1 2025</SelectItem>
-                <SelectItem value="Q2 2025">Q2 2025</SelectItem>
-                <SelectItem value="2025">2025 (Total)</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <div className="flex">
-              <Button variant="outline" size="icon" className="rounded-r-none">
-                <Filter className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Este Mês</SelectItem>
+              <SelectItem value="quarter">Este Trimestre</SelectItem>
+              <SelectItem value="year">Este Ano</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon">
+                <CalendarIcon className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" className="rounded-l-none">
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={dateRange}
+                onSelect={setDateRange}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Button variant="outline" size="icon">
+            <Download className="h-4 w-4" />
+          </Button>
           
           <Button>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
             Novo Registro
           </Button>
         </div>
       </div>
       
-      {/* Tabs para navegação */}
-      <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full md:w-auto grid-cols-3 md:inline-flex md:justify-start">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="receber">A Receber</TabsTrigger>
-          <TabsTrigger value="pagar">A Pagar</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="dashboard" className="pt-4">
-          {/* KPIs essenciais */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {/* A Receber (Aberto) */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <CreditCard className="mr-2 h-4 w-4" /> A Receber (Aberto)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(aReceberAberto)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Valor total de faturas ainda não pagas
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* A Pagar (Aberto) */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Wallet className="mr-2 h-4 w-4" /> A Pagar (Aberto)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-amber-600">{formatCurrency(aPagarAberto)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Valor total de contas a pagar pendentes
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Fluxo de Caixa Próx. 30d */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <TrendingUp className="mr-2 h-4 w-4" /> Fluxo de Caixa Próx. 30d
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className={`text-2xl font-bold ${fluxoDeCaixaProx30Dias >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  {formatCurrency(fluxoDeCaixaProx30Dias)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Entradas − saídas nos próximos 30 dias
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Alertas de Vencimento */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <AlertCircle className="mr-2 h-4 w-4" /> Alertas de Vencimento
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-red-600">
-                  {alertasVencimento}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Faturas vencendo nos próximos 7 dias
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Receita Mensal Realizada */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Banknote className="mr-2 h-4 w-4" /> Receita Mensal Realizada
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(receitaMensalRealizada)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Entradas pagas no mês corrente
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Despesas Mensais */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Wallet className="mr-2 h-4 w-4" /> Despesas Mensais
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-red-600">
-                  {formatCurrency(despesasMensais)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Saídas pagas no mês corrente
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Margem Bruta do Mês */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <LineChart className="mr-2 h-4 w-4" /> Margem Bruta do Mês
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className={`text-2xl font-bold ${margemBrutaMes >= 30 ? 'text-green-600' : margemBrutaMes >= 15 ? 'text-amber-600' : 'text-red-600'}`}>
-                  {margemBrutaMes.toFixed(1)}%
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Percentual de lucro antes de despesas fixas
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Custo Médio por Minuto */}
-            <Card className="overflow-hidden">
-              <CardHeader className="p-4 pb-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Clock className="mr-2 h-4 w-4" /> Custo Médio por Minuto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <div className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(custoMedioPorMinuto)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Despesas totais ÷ minutos de vídeo entregues
-                </p>
-              </CardContent>
-            </Card>
+      {/* Navigation Tabs */}
+      <Tabs defaultValue="dashboard" className="w-full" onValueChange={setSelectedTab}>
+        <div className="border-b">
+          <div className="flex justify-between items-center">
+            <TabsList className="h-10">
+              <TabsTrigger value="dashboard" className="rounded-none data-[state=active]:border-primary data-[state=active]:border-b-2 data-[state=active]:shadow-none">
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="receivables" className="rounded-none data-[state=active]:border-primary data-[state=active]:border-b-2 data-[state=active]:shadow-none">
+                A Receber
+              </TabsTrigger>
+              <TabsTrigger value="payables" className="rounded-none data-[state=active]:border-primary data-[state=active]:border-b-2 data-[state=active]:shadow-none">
+                A Pagar
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </div>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard" className="mt-6 space-y-8">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpis.map((kpi, index) => (
+              <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.title}</p>
+                      <h2 className={cn("text-2xl font-bold", 
+                        kpi.variant === "green" ? "text-green-600" : 
+                        kpi.variant === "red" ? "text-red-600" : 
+                        kpi.variant === "blue" ? "text-blue-600" : 
+                        kpi.variant === "amber" ? "text-amber-600" : 
+                        "text-foreground"
+                      )}>
+                        {typeof kpi.value === 'number' ? formatCurrency(kpi.value) : kpi.value}
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-1">{kpi.description}</p>
+                    </div>
+                    <div className={cn("p-2 rounded-full", 
+                      kpi.variant === "green" ? "bg-green-100" : 
+                      kpi.variant === "red" ? "bg-red-100" : 
+                      kpi.variant === "blue" ? "bg-blue-100" : 
+                      kpi.variant === "amber" ? "bg-amber-100" : 
+                      "bg-gray-100"
+                    )}>
+                      {kpi.icon}
+                    </div>
+                  </div>
+                  
+                  {kpi.change !== undefined && (
+                    <div className="flex items-center mt-4 text-sm">
+                      {kpi.change > 0 ? (
+                        <div className="flex items-center text-green-600">
+                          <ArrowUpRight className="h-4 w-4 mr-1" />
+                          <span>+{kpi.change}%</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-red-600">
+                          <ArrowDownRight className="h-4 w-4 mr-1" />
+                          <span>{kpi.change}%</span>
+                        </div>
+                      )}
+                      <span className="text-muted-foreground ml-1.5">vs período anterior</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
           
-          {/* Gráficos e visualizações */}
-          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-2">
-            <FinancialChart 
-              type="area"
-              title="Fluxo de Caixa Mensal"
-              data={monthlyData}
-              dataKeys={['receita', 'despesas']}
-              xAxisDataKey="month"
-              colors={['#10B981', '#EF4444']}
-            />
-            
+          {/* Charts and Tables */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">Margem por Projeto (TOP 5)</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-base font-medium">Fluxo de Caixa Mensal</CardTitle>
+                  <CardDescription>Receitas vs despesas por mês</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Download className="mr-2 h-4 w-4" />
+                      <span>Exportar</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Filter className="mr-2 h-4 w-4" />
+                      <span>Filtrar</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
               <CardContent>
+                <FinancialChart 
+                  type="area"
+                  title=""
+                  data={monthlyData}
+                  dataKeys={['receita', 'despesas']}
+                  xAxisDataKey="month"
+                  colors={['#10B981', '#EF4444']}
+                  height={300}
+                />
+              </CardContent>
+            </Card>
+            
+            <div className="grid gap-6 grid-cols-1">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-medium">Distribuição de Despesas</CardTitle>
+                    <CardDescription>Por categoria</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={expenseCategoriesData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
+                    height={140}
+                  />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-medium">Receita por Cliente</CardTitle>
+                    <CardDescription>Principais clientes</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={clientDistributionData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#10B981', '#6366F1', '#F59E0B']}
+                    height={140}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          
+          {/* Margin and DSO Metrics */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Margem por Projeto</CardTitle>
+                <CardDescription>Top 5 projetos por margem de lucro</CardDescription>
+              </CardHeader>
+              <CardContent className="px-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>PROJETO</TableHead>
+                      <TableHead className="pl-6">PROJETO</TableHead>
                       <TableHead>CLIENTE</TableHead>
                       <TableHead className="text-right">RECEITA</TableHead>
-                      <TableHead className="text-right">MARGEM</TableHead>
+                      <TableHead className="text-right pr-6">MARGEM</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projectMarginsData.map(project => (
-                      <TableRow key={project.id}>
-                        <TableCell className="font-medium">{project.name}</TableCell>
+                    {(projectMarginData.length > 0 ? projectMarginData : [
+                      { id: 1, name: "Campanha de Verão", client: "Cervejaria Therezópolis", revenue: 24500, margin: 55 },
+                      { id: 2, name: "Lançamento SUV C3", client: "Citroen", revenue: 38900, margin: 42 },
+                      { id: 3, name: "InCarne 2025", client: "Seara Alimentos", revenue: 31200, margin: 38 },
+                      { id: 4, name: "Promoção Inverno", client: "Margarinas Delícia", revenue: 18600, margin: 35 },
+                      { id: 5, name: "Institucional 2025", client: "Banco Azul", revenue: 42300, margin: 30 }
+                    ]).map((project, index) => (
+                      <TableRow key={project.id} className="group hover:bg-muted/50">
+                        <TableCell className="font-medium pl-6">{project.name}</TableCell>
                         <TableCell>{project.client}</TableCell>
                         <TableCell className="text-right">{formatCurrency(project.revenue)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right pr-6">
                           <span className={`font-medium ${
                             project.margin > 40 ? 'text-green-600' : 
                             project.margin > 20 ? 'text-amber-600' : 
                             'text-red-600'
                           }`}>
-                            {project.margin.toFixed(1)}%
+                            {typeof project.margin === 'number' ? project.margin.toFixed(1) : project.margin}%
                           </span>
                         </TableCell>
                       </TableRow>
@@ -502,113 +611,217 @@ export default function Financial() {
                 </Table>
               </CardContent>
             </Card>
-          </div>
-          
-          {/* Tempo Médio de Recebimento */}
-          <div className="grid gap-6 mt-6 grid-cols-1">
+            
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">Tempo Médio de Recebimento (DSO)</CardTitle>
-                <CardDescription>Período médio entre a emissão e o pagamento das faturas</CardDescription>
+                <CardTitle className="text-base font-medium">Tempo Médio de Recebimento</CardTitle>
+                <CardDescription>Dias entre emissão e pagamento</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-600">{tempoMedioRecebimento}</div>
+              <CardContent>
+                <div className="flex flex-col items-center p-4">
+                  <div className="text-5xl font-bold text-blue-600">{dso}</div>
                   <div className="text-sm text-muted-foreground mt-1">dias em média</div>
-                </div>
-                <div className="md:col-span-2 flex flex-col justify-center">
-                  <p className="text-sm text-muted-foreground">
-                    O DSO (Days Sales Outstanding) indica a saúde do ciclo de cobrança. 
-                    Quanto menor o valor, mais rápido a empresa converte faturas em caixa.
-                    Um valor abaixo de 30 dias é considerado excelente para o setor de serviços.
-                  </p>
+                  
+                  <div className="w-full mt-6 space-y-4">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span>Ótimo (&lt;30 dias)</span>
+                        <span>30</span>
+                      </div>
+                      <Progress value={dso > 30 ? 100 : (dso / 30) * 100} className="h-2" />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span>Bom (30-45 dias)</span>
+                        <span>45</span>
+                      </div>
+                      <Progress 
+                        value={dso > 45 ? 100 : dso < 30 ? 0 : ((dso - 30) / 15) * 100} 
+                        className="h-2"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span>Regular (45-60 dias)</span>
+                        <span>60</span>
+                      </div>
+                      <Progress 
+                        value={dso > 60 ? 100 : dso < 45 ? 0 : ((dso - 45) / 15) * 100} 
+                        className="h-2" 
+                      />
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-4">
+                      O tempo médio de recebimento (DSO) mede a eficiência do ciclo de cobrança. 
+                      Quanto menor o valor, mais rápido a empresa está convertendo faturas em caixa.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-        
-        {/* Tab "A Receber" */}
-        <TabsContent value="receber" className="pt-4">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-medium">Contas a Receber</h3>
-              <p className="text-sm text-muted-foreground">Faturas emitidas e não pagas</p>
+
+        {/* Receivables Tab */}
+        <TabsContent value="receivables" className="mt-6 space-y-6">
+          {/* Filter controls */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar fatura, cliente ou projeto..."
+                className="w-full sm:w-[300px] pl-8"
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
-              <div className="w-full sm:w-auto">
-                <Input 
-                  type="search" 
-                  placeholder="Buscar fatura..." 
-                  className="w-full"
-                  size={32}
-                />
-              </div>
-              
+            
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex items-center justify-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    <span className="sm:inline hidden">Período</span>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <Filter className="mr-2 h-3.5 w-3.5" />
+                    Filtros
+                    <ChevronsUpDown className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="end">
+                <PopoverContent align="end" className="w-[220px] p-4">
                   <div className="space-y-4">
-                    <div className="grid gap-2">
-                      <h4 className="font-medium">Filtrar por data</h4>
-                      <Separator />
-                      <div className="flex flex-col gap-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">De</p>
-                            <Calendar mode="single" className="rounded-md border" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Até</p>
-                            <Calendar mode="single" className="rounded-md border" />
-                          </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Status</h4>
+                      <Select defaultValue="all">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="pending">Pendentes</SelectItem>
+                          <SelectItem value="overdue">Vencidas</SelectItem>
+                          <SelectItem value="paid">Pagas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Cliente</h4>
+                      <Select defaultValue="all">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="1">Cervejaria Therezópolis</SelectItem>
+                          <SelectItem value="2">Citroen</SelectItem>
+                          <SelectItem value="3">Seara Alimentos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Vencimento</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <span className="text-xs text-muted-foreground">De</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                <span>Selecionar</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" />
+                            </PopoverContent>
+                          </Popover>
                         </div>
-                        <div className="flex justify-end gap-2 mt-2">
-                          <Button variant="outline" size="sm">Limpar</Button>
-                          <Button size="sm">Aplicar</Button>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs text-muted-foreground">Até</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                <span>Selecionar</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="outline" size="sm">Limpar</Button>
+                      <Button size="sm">Aplicar</Button>
                     </div>
                   </div>
                 </PopoverContent>
               </Popover>
               
-              <Select defaultValue="todas">
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Filtrar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendentes">Pendentes</SelectItem>
-                  <SelectItem value="vencidas">Vencidas</SelectItem>
-                  <SelectItem value="proximas">Próximas (7d)</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                <span className="sm:inline hidden">Exportar</span>
+              <Button variant="outline" size="sm" className="h-9">
+                <Download className="mr-2 h-3.5 w-3.5" />
+                Exportar
               </Button>
               
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                <span className="sm:inline hidden">Nova Fatura</span>
+              <Button size="sm" className="h-9">
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Nova Fatura
               </Button>
             </div>
           </div>
           
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">A Receber (Total)</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceivables || 55600)}</p>
+                </div>
+                <CreditCard className="h-8 w-8 text-green-600" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Vencidas</p>
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(12450)}</p>
+                </div>
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Próximos 30 dias</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(43150)}</p>
+                </div>
+                <CalendarIcon className="h-8 w-8 text-blue-600" />
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Receivables Table */}
           <Card>
             <CardContent className="p-0">
               <div className="overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>NÚMERO</TableHead>
+                      <TableHead>FATURA</TableHead>
                       <TableHead>CLIENTE</TableHead>
                       <TableHead>PROJETO</TableHead>
                       <TableHead>EMISSÃO</TableHead>
@@ -619,13 +832,13 @@ export default function Financial() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {receivablesData.map(doc => {
-                      const client = clients?.find(c => c.id === doc.client_id);
-                      const project = projects?.find(p => p.id === doc.project_id);
-                      const isOverdue = doc.due_date && new Date(doc.due_date) < new Date();
+                    {receivablesData.length > 0 ? receivablesData.map((doc: any) => {
+                      const client = clients?.find((c: any) => c.id === doc.client_id);
+                      const project = projects?.find((p: any) => p.id === doc.project_id);
+                      const isOverdue = doc.due_date && isBefore(new Date(doc.due_date), now);
                       
                       return (
-                        <TableRow key={doc.id} className="group hover:bg-gray-50">
+                        <TableRow key={doc.id} className="group hover:bg-muted/50">
                           <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
@@ -653,129 +866,104 @@ export default function Financial() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  <span>Ver Detalhes</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  <span>Registrar Pagamento</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                  <Download className="mr-2 h-4 w-4" />
+                                  <span>Exportar PDF</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
-                    })}
-                    
-                    {/* Exemplo de dados para visualização (será removido quando houver dados reais) */}
-                    {receivablesData.length === 0 && (
-                      <>
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">F-1001</TableCell>
-                          <TableCell>Cervejaria Therezópolis</TableCell>
-                          <TableCell>Campanha de Verão</TableCell>
-                          <TableCell>{format(addDays(new Date(), -15), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span className="text-red-500 font-medium">
-                                {format(addDays(new Date(), -5), 'dd/MM/yyyy')}
-                              </span>
+                    }) : exampleReceivables.map((item) => (
+                      <TableRow key={item.id} className="group hover:bg-muted/50">
+                        <TableCell className="font-medium">{item.invoice}</TableCell>
+                        <TableCell>{item.client}</TableCell>
+                        <TableCell>{item.project}</TableCell>
+                        <TableCell>{format(item.issueDate, 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span className={item.status === 'overdue' ? 'text-red-500 font-medium' : ''}>
+                              {format(item.dueDate, 'dd/MM/yyyy')}
+                            </span>
+                            {item.status === 'overdue' && (
                               <Badge variant="destructive" className="ml-2 text-xs">
                                 Vencida
                               </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(12450)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(item.amount)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={item.status === 'overdue' ? 'destructive' : item.status === 'paid' ? 'success' : 'outline'}>
+                            {item.status === 'overdue' ? 'Vencida' : item.status === 'paid' ? 'Pago' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">F-1002</TableCell>
-                          <TableCell>Citroen</TableCell>
-                          <TableCell>Lançamento SUV C3</TableCell>
-                          <TableCell>{format(addDays(new Date(), -10), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>{format(addDays(new Date(), 15), 'dd/MM/yyyy')}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(24800)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">F-1003</TableCell>
-                          <TableCell>Seara Alimentos Ltda</TableCell>
-                          <TableCell>InCarne 2025</TableCell>
-                          <TableCell>{format(addDays(new Date(), -5), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>{format(addDays(new Date(), 25), 'dd/MM/yyyy')}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(18350)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </>
-                    )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <FileText className="mr-2 h-4 w-4" />
+                                <span>Ver Detalhes</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                <span>Registrar Pagamento</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem>
+                                <Download className="mr-2 h-4 w-4" />
+                                <span>Exportar PDF</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between items-center px-6 py-4 border-t">
+            <CardFooter className="flex justify-between items-center p-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Mostrando {receivablesData.length || 3} faturas de um total de {receivablesData.length || 3}
+                Mostrando {receivablesData.length || exampleReceivables.length} de {receivablesData.length || exampleReceivables.length} registros
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>Anterior</Button>
-                <Button variant="outline" size="sm" disabled>Próxima</Button>
+                <Button variant="outline" size="sm" disabled>
+                  Anterior
+                </Button>
+                <Button variant="outline" size="sm" disabled>
+                  Próxima
+                </Button>
               </div>
             </CardFooter>
           </Card>
           
-          {/* Resumo das Contas a Receber */}
-          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-3">
+          {/* Charts */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-medium">Previsão de Recebimentos</CardTitle>
@@ -792,8 +980,8 @@ export default function Financial() {
                   ]}
                   dataKeys={['value']}
                   xAxisDataKey="name"
-                  colors={['#5046E5']}
-                  height={250}
+                  colors={['#6366F1']}
+                  height={230}
                 />
               </CardContent>
             </Card>
@@ -807,95 +995,167 @@ export default function Financial() {
                 <FinancialChart 
                   type="pie"
                   title=""
-                  data={[
-                    { name: 'Cervejaria Therezópolis', value: 12450 },
-                    { name: 'Citroen', value: 24800 },
-                    { name: 'Seara Alimentos', value: 18350 },
-                  ]}
+                  data={clientDistributionData}
                   dataKeys={['value']}
                   xAxisDataKey="name"
                   colors={['#10B981', '#6366F1', '#F59E0B']}
-                  height={250}
+                  height={230}
                 />
               </CardContent>
             </Card>
           </div>
         </TabsContent>
-        
-        {/* Tab "A Pagar" */}
-        <TabsContent value="pagar" className="pt-4">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-medium">Contas a Pagar</h3>
-              <p className="text-sm text-muted-foreground">Despesas não aprovadas/pagas</p>
+
+        {/* Payables Tab */}
+        <TabsContent value="payables" className="mt-6 space-y-6">
+          {/* Filter controls */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar despesa, fornecedor ou projeto..."
+                className="w-full sm:w-[300px] pl-8"
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
-              <div className="w-full sm:w-auto">
-                <Input 
-                  type="search" 
-                  placeholder="Buscar despesa..." 
-                  className="w-full"
-                  size={32}
-                />
-              </div>
-              
+            
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex items-center justify-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    <span className="sm:inline hidden">Período</span>
+                  <Button variant="outline" size="sm" className="h-9">
+                    <Filter className="mr-2 h-3.5 w-3.5" />
+                    Filtros
+                    <ChevronsUpDown className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="end">
+                <PopoverContent align="end" className="w-[220px] p-4">
                   <div className="space-y-4">
-                    <div className="grid gap-2">
-                      <h4 className="font-medium">Filtrar por data</h4>
-                      <Separator />
-                      <div className="flex flex-col gap-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">De</p>
-                            <Calendar mode="single" className="rounded-md border" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Até</p>
-                            <Calendar mode="single" className="rounded-md border" />
-                          </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Status</h4>
+                      <Select defaultValue="all">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="pending">Pendentes</SelectItem>
+                          <SelectItem value="approved">Aprovados</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Categoria</h4>
+                      <Select defaultValue="all">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="equipment">Equipamentos</SelectItem>
+                          <SelectItem value="software">Software</SelectItem>
+                          <SelectItem value="location">Locação</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Data</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <span className="text-xs text-muted-foreground">De</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                <span>Selecionar</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" />
+                            </PopoverContent>
+                          </Popover>
                         </div>
-                        <div className="flex justify-end gap-2 mt-2">
-                          <Button variant="outline" size="sm">Limpar</Button>
-                          <Button size="sm">Aplicar</Button>
+                        
+                        <div className="space-y-1">
+                          <span className="text-xs text-muted-foreground">Até</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                <span>Selecionar</span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="outline" size="sm">Limpar</Button>
+                      <Button size="sm">Aplicar</Button>
                     </div>
                   </div>
                 </PopoverContent>
               </Popover>
               
-              <Select defaultValue="todas">
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Filtrar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendentes">Pendentes</SelectItem>
-                  <SelectItem value="proximas">Próximas (7d)</SelectItem>
-                  <SelectItem value="categoria">Por Categoria</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                <span className="sm:inline hidden">Exportar</span>
+              <Button variant="outline" size="sm" className="h-9">
+                <Download className="mr-2 h-3.5 w-3.5" />
+                Exportar
               </Button>
               
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                <span className="sm:inline hidden">Nova Despesa</span>
+              <Button size="sm" className="h-9">
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Nova Despesa
               </Button>
             </div>
           </div>
           
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">A Pagar (Total)</p>
+                  <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPayables || 24560)}</p>
+                </div>
+                <Wallet className="h-8 w-8 text-amber-600" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Próximos 7 dias</p>
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(4800)}</p>
+                </div>
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Despesa Mensal</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(monthlyExpenses || 18000)}</p>
+                </div>
+                <BarChart className="h-8 w-8 text-blue-600" />
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Payables Table */}
           <Card>
             <CardContent className="p-0">
               <div className="overflow-auto">
@@ -907,19 +1167,19 @@ export default function Financial() {
                       <TableHead>PROJETO</TableHead>
                       <TableHead>DATA</TableHead>
                       <TableHead className="text-right">VALOR</TableHead>
-                      <TableHead>PAGO POR</TableHead>
+                      <TableHead>RESPONSÁVEL</TableHead>
                       <TableHead>STATUS</TableHead>
                       <TableHead className="text-right">AÇÕES</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payablesData.map(exp => {
-                      const project = projects?.find(p => p.id === exp.project_id);
-                      const paidBy = expenses?.find(u => u.id === exp.paid_by)?.name;
-                      const isToday = exp.date && (new Date(exp.date).toDateString() === new Date().toDateString());
+                    {payablesData.length > 0 ? payablesData.map((exp: any) => {
+                      const project = projects?.find((p: any) => p.id === exp.project_id);
+                      const paidBy = expenses?.find((u: any) => u.id === exp.paid_by)?.name;
+                      const isToday = exp.date && (new Date(exp.date).toDateString() === now.toDateString());
                       
                       return (
-                        <TableRow key={exp.id} className="group hover:bg-gray-50">
+                        <TableRow key={exp.id} className="group hover:bg-muted/50">
                           <TableCell className="font-medium">{exp.description}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
@@ -951,241 +1211,114 @@ export default function Financial() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                {exp.receipt ? (
-                                  <FileText className="h-4 w-4" />
-                                ) : (
-                                  <Plus className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  <span>Ver Detalhes</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Check className="mr-2 h-4 w-4" />
+                                  <span>Aprovar Despesa</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  <span>Registrar Pagamento</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
-                    })}
-                    
-                    {/* Exemplo de dados para visualização (será removido quando houver dados reais) */}
-                    {payablesData.length === 0 && (
-                      <>
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">Aluguel de equipamentos</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              Equipamentos
-                            </Badge>
-                          </TableCell>
-                          <TableCell>Campanha de Verão</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>
-                                {format(addDays(new Date(), 3), 'dd/MM/yyyy')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(4800)}
-                          </TableCell>
-                          <TableCell>Ana Silva</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Plus className="h-4 w-4" />
+                    }) : examplePayables.map((item) => (
+                      <TableRow key={item.id} className="group hover:bg-muted/50">
+                        <TableCell className="font-medium">{item.description}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {item.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{item.project}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span>{format(item.date, 'dd/MM/yyyy')}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(item.amount)}
+                        </TableCell>
+                        <TableCell>{item.paidBy}</TableCell>
+                        <TableCell>
+                          <Badge variant={item.status === 'approved' ? 'success' : 'outline'}>
+                            {item.status === 'approved' ? 'Aprovado' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">Licença software edição</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              Software
-                            </Badge>
-                          </TableCell>
-                          <TableCell>-</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>
-                                {format(addDays(new Date(), 10), 'dd/MM/yyyy')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(7560)}
-                          </TableCell>
-                          <TableCell>Lucas Mendes</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow className="group hover:bg-gray-50">
-                          <TableCell className="font-medium">Locação estúdio</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              Locação
-                            </Badge>
-                          </TableCell>
-                          <TableCell>InCarne 2025</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <span>
-                                {format(addDays(new Date(), 15), 'dd/MM/yyyy')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(12200)}
-                          </TableCell>
-                          <TableCell>Bruno Costa</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Pendente</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </>
-                    )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <FileText className="mr-2 h-4 w-4" />
+                                <span>Ver Detalhes</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Check className="mr-2 h-4 w-4" />
+                                <span>Aprovar Despesa</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                {item.receipt ? (
+                                  <>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    <span>Ver Comprovante</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    <span>Adicionar Comprovante</span>
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between items-center px-6 py-4 border-t">
-              <div>
-                <p className="text-sm text-muted-foreground">Total pendente</p>
-                <p className="text-lg font-medium">{formatCurrency(aPagarAberto || 24560)}</p>
+            <CardFooter className="flex justify-between items-center p-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {payablesData.length || examplePayables.length} de {payablesData.length || examplePayables.length} registros
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Total pendente:</span>
+                  <span className="font-bold">{formatCurrency(totalPayables || 24560)}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>Anterior</Button>
-                <Button variant="outline" size="sm" disabled>Próxima</Button>
+                <Button variant="outline" size="sm" disabled>
+                  Anterior
+                </Button>
+                <Button variant="outline" size="sm" disabled>
+                  Próxima
+                </Button>
               </div>
             </CardFooter>
           </Card>
           
-          {/* Resumo de Categorias de Despesas */}
-          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">Despesas por Projeto</CardTitle>
-                <CardDescription>Visão geral das despesas agrupadas por projeto</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>PROJETO</TableHead>
-                      <TableHead>CLIENTE</TableHead>
-                      <TableHead className="text-right">VALOR</TableHead>
-                      <TableHead className="text-right">% DO ORÇAMENTO</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {projectPerformanceData.slice(0, 3).map(project => {
-                      const budgetPercentage = project.budget > 0 
-                        ? (project.expenses / project.budget) * 100 
-                        : 0;
-                        
-                      return (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium">{project.name}</TableCell>
-                          <TableCell>{project.client}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(project.expenses)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24">
-                                <Progress value={Math.min(budgetPercentage, 100)} className="h-2" />
-                              </div>
-                              <span className={`text-sm font-medium ${
-                                budgetPercentage > 90 ? 'text-red-600' : 
-                                budgetPercentage > 75 ? 'text-amber-600' : 
-                                'text-green-600'
-                              }`}>
-                                {budgetPercentage.toFixed(0)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    
-                    {projectPerformanceData.length === 0 && (
-                      <>
-                        <TableRow>
-                          <TableCell className="font-medium">Campanha de Verão</TableCell>
-                          <TableCell>Cervejaria Therezópolis</TableCell>
-                          <TableCell className="text-right">{formatCurrency(4800)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24">
-                                <Progress value={60} className="h-2" />
-                              </div>
-                              <span className="text-sm font-medium text-green-600">60%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow>
-                          <TableCell className="font-medium">Lançamento SUV C3</TableCell>
-                          <TableCell>Citroen</TableCell>
-                          <TableCell className="text-right">{formatCurrency(0)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24">
-                                <Progress value={0} className="h-2" />
-                              </div>
-                              <span className="text-sm font-medium text-green-600">0%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        
-                        <TableRow>
-                          <TableCell className="font-medium">InCarne 2025</TableCell>
-                          <TableCell>Seara Alimentos Ltda</TableCell>
-                          <TableCell className="text-right">{formatCurrency(12200)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-24">
-                                <Progress value={85} className="h-2" />
-                              </div>
-                              <span className="text-sm font-medium text-amber-600">85%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            
+          {/* Charts */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-medium">Despesas por Categoria</CardTitle>
@@ -1203,166 +1336,76 @@ export default function Financial() {
                 />
               </CardContent>
             </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Despesas por Projeto</CardTitle>
+                <CardDescription>Gastos por projeto vs orçamento</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[250px]">
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm">Campanha de Verão</span>
+                        <span className="text-sm text-muted-foreground">60% do orçamento</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={60} className="h-2" />
+                        <span className="text-xs font-medium text-green-600">R$ 4.800</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm">Lançamento SUV C3</span>
+                        <span className="text-sm text-muted-foreground">0% do orçamento</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={0} className="h-2" />
+                        <span className="text-xs font-medium text-green-600">R$ 0</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm">InCarne 2025</span>
+                        <span className="text-sm text-muted-foreground">85% do orçamento</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={85} className="h-2" />
+                        <span className="text-xs font-medium text-amber-600">R$ 12.200</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm">Promoção Inverno</span>
+                        <span className="text-sm text-muted-foreground">40% do orçamento</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={40} className="h-2" />
+                        <span className="text-xs font-medium text-green-600">R$ 7.560</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm">Institucional 2025</span>
+                        <span className="text-sm text-muted-foreground">0% do orçamento</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={0} className="h-2" />
+                        <span className="text-xs font-medium text-green-600">R$ 0</span>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
-      
-      {/* Project Performance Table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle>Desempenho de Projetos</CardTitle>
-            <Button variant="ghost" size="sm" className="text-xs">
-              Ver todos os projetos
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>PROJETO</TableHead>
-                <TableHead>CLIENTE</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead>PROGRESSO</TableHead>
-                <TableHead>ORÇAMENTO</TableHead>
-                <TableHead>MARGEM</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projectPerformanceData.map(project => (
-                <TableRow key={project.id}>
-                  <TableCell className="font-medium">{project.name}</TableCell>
-                  <TableCell>{project.client}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={project.status} small={true} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            project.progress > 75 ? 'bg-green-500' : 
-                            project.progress > 40 ? 'bg-yellow-500' : 
-                            'bg-blue-500'
-                          }`}
-                          style={{ width: `${project.progress}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-medium">{project.progress}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(project.budget)}</TableCell>
-                  <TableCell>
-                    <div className={`font-medium ${
-                      project.margin > 40 ? 'text-green-600' : 
-                      project.margin > 20 ? 'text-yellow-600' : 
-                      'text-red-600'
-                    }`}>
-                      {project.margin}%
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      
-      {/* Bottom row */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle>Detalhamento de Despesas</CardTitle>
-            <CardDescription>{formatCurrency(totalExpenses)}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FinancialChart 
-              type="pie"
-              title=""
-              data={expenseCategoriesData}
-              dataKeys={['value']}
-              xAxisDataKey="name"
-              colors={['#5046E5', '#10B981', '#6366F1', '#EF4444']}
-              height={220}
-            />
-            
-            <Table>
-              <TableBody>
-                {expenseCategoriesData.map((category, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: ['#5046E5', '#10B981', '#6366F1', '#EF4444'][index % 4] }}
-                        ></div>
-                        <span className="font-medium">{category.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(category.value)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {Math.round((category.value / totalExpenses) * 100)}%
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle>Transações Previstas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex space-x-2 mb-4">
-              <Button variant="outline" className="bg-primary/5 border-primary/20 text-primary">
-                Recebimentos
-              </Button>
-              <Button variant="outline">
-                Pagamentos
-              </Button>
-            </div>
-            
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>CLIENTE</TableHead>
-                  <TableHead>DATA</TableHead>
-                  <TableHead className="text-right">VALOR</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {upcomingTransactions.map((transaction, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{transaction.entity}</TableCell>
-                    <TableCell>
-                      {transaction.date.toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(transaction.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell className="font-medium">Total previsto</TableCell>
-                  <TableCell></TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatCurrency(upcomingTransactions.reduce((sum, t) => sum + t.amount, 0))}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-            
-            <Button variant="outline" className="w-full mt-4">
-              Gerenciar transações
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
