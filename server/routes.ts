@@ -5,7 +5,8 @@ import {
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
   insertProjectMemberSchema, insertProjectStageSchema, insertTaskCommentSchema, 
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
-  insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema
+  insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema,
+  insertCommentReactionSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
