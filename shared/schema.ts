@@ -588,7 +588,9 @@ export const financialDocumentsRelations = relations(financialDocuments, ({ one 
   }),
   project: one(projects, {
     fields: [financialDocuments.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_financial_documents",
+    onDelete: "cascade" // Adiciona exclusão em cascata
   })
 }));
 

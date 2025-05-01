@@ -7,6 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Objeto global para armazenar listeners de websocket para invalidação de cache
+export const cacheInvalidationListeners: { [key: string]: (() => void)[] } = {};
+
 // Função para obter o token de autenticação
 function getAuthToken(): string | null {
   return localStorage.getItem("authToken");

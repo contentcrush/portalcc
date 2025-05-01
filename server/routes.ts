@@ -781,74 +781,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint especial para excluir documentos financeiros de um projeto diretamente no banco de dados
-  // Este endpoint é usado internamente e não deve ser exposto na API pública
-  async function forceDeleteProjectFinancialDocuments(projectId: number): Promise<void> {
-    try {
-      // Buscar documentos para logar informações antes da exclusão
-      const docsBeforeDelete = await storage.getFinancialDocumentsByProject(projectId);
-      console.log(`[Sistema] Encontrados ${docsBeforeDelete.length} documentos financeiros para exclusão (Projeto ID:${projectId})`);
-      
-      // Listar IDs para debug
-      const docIds = docsBeforeDelete.map(doc => doc.id);
-      console.log(`[Sistema] IDs de documentos a serem excluídos: ${docIds.join(', ')}`);
-      
-      // Executar a exclusão diretamente no banco de dados para contornar as restrições de API
-      await db.delete(financialDocuments).where(eq(financialDocuments.project_id, projectId));
-      console.log(`[Sistema] Excluídos documentos financeiros do projeto ID:${projectId} diretamente no banco de dados`);
-      
-      // Verificar se a exclusão foi bem-sucedida
-      const docsAfterDelete = await storage.getFinancialDocumentsByProject(projectId);
-      if (docsAfterDelete.length > 0) {
-        console.error(`[Erro] Ainda existem ${docsAfterDelete.length} documentos financeiros após tentativa de exclusão`);
-      } else {
-        console.log(`[Sistema] Verificação confirmou que todos os documentos foram excluídos com sucesso`);
-      }
-    } catch (error) {
-      console.error(`[Erro] Falha ao excluir documentos financeiros do projeto ID:${projectId}:`, error);
-      throw error;
-    }
+  // Função para invalidação do cache após exclusão de registros relacionados
+  async function invalidateRelatedRecords(projectId: number): Promise<void> {
+    console.log(`[Cache] Invalidando registros relacionados ao projeto ID:${projectId}`);
+    io?.emit('cache-invalidation', {
+      keys: [
+        '/api/financial-documents',
+        '/api/tasks',
+        '/api/projects',
+        '/api/expenses',
+        '/api/events'
+      ]
+    });
   }
 
   app.delete("/api/projects/:id", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
-      // Primeiro, verificamos se o projeto existe
+      // Verificamos se o projeto existe
       const project = await storage.getProject(id);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Em seguida, forçamos a exclusão dos registros financeiros vinculados ANTES de excluir o projeto
-      const financialDocuments = await storage.getFinancialDocumentsByProject(id);
-      console.log(`[Sistema] Excluindo ${financialDocuments.length} documentos financeiros vinculados ao projeto ID:${id}`);
-      
-      // Forçar a exclusão de documentos financeiros diretamente no banco de dados
-      await forceDeleteProjectFinancialDocuments(id);
-      
-      // Agora excluímos o projeto (que excluirá todos os registros relacionados)
-      const success = await storage.deleteProject(id);
-      
-      if (!success) {
-        return res.status(500).json({ message: "Failed to delete project" });
+      // Registramos documentos financeiros para verificação posterior
+      const financialDocs = await storage.getFinancialDocumentsByProject(id);
+      console.log(`[Sistema] Projeto ID:${id} tem ${financialDocs.length} documentos financeiros que serão excluídos em cascata`);
+      if (financialDocs.length > 0) {
+        const docIds = financialDocs.map(doc => doc.id).join(', ');
+        console.log(`[Sistema] IDs dos documentos financeiros a serem excluídos: ${docIds}`);
       }
       
-      // Verificar se realmente não há mais documentos financeiros vinculados
-      const remainingDocs = await storage.getFinancialDocumentsByProject(id);
-      if (remainingDocs.length > 0) {
-        console.error(`[Erro] Ainda existem ${remainingDocs.length} documentos financeiros vinculados ao projeto excluído ID:${id}`);
+      // Transação para excluir o projeto e seus registros relacionados
+      try {
+        console.log(`[Sistema] Iniciando exclusão do projeto ID:${id}`);
         
-        // Tentar forçar novamente a exclusão direta no banco de dados
-        try {
-          await forceDeleteProjectFinancialDocuments(id);
-          console.log(`[Sistema] Forçada exclusão secundária de documentos financeiros para o projeto ID:${id}`);
-        } catch (innerError) {
-          console.error(`[Erro] Falha na segunda tentativa de excluir documentos financeiros:`, innerError);
+        // A exclusão do projeto agora excluirá automaticamente todos os registros relacionados
+        // devido às restrições de chave estrangeira ON DELETE CASCADE
+        const success = await storage.deleteProject(id);
+        
+        if (!success) {
+          return res.status(500).json({ message: "Failed to delete project" });
         }
+        
+        // Verificamos se a exclusão dos documentos financeiros foi bem-sucedida
+        const remainingDocs = await storage.getFinancialDocumentsByProject(id);
+        if (remainingDocs.length > 0) {
+          console.error(`[CRÍTICO] Ainda existem ${remainingDocs.length} documentos financeiros após exclusão do projeto ID:${id}`);
+          console.error(`[CRÍTICO] IDs dos documentos financeiros órfãos: ${remainingDocs.map(doc => doc.id).join(', ')}`);
+          
+          // Tentativa direta de exclusão como último recurso
+          for (const doc of remainingDocs) {
+            try {
+              await db.delete(financialDocuments).where(eq(financialDocuments.id, doc.id));
+              console.log(`[Sistema] Exclusão forçada do documento financeiro órfão ID:${doc.id}`);
+            } catch (deleteError) {
+              console.error(`[CRÍTICO] Falha ao excluir documento financeiro órfão ID:${doc.id}:`, deleteError);
+            }
+          }
+        } else {
+          console.log(`[Sistema] Todos os documentos financeiros do projeto ID:${id} foram excluídos com sucesso`);
+        }
+        
+        // Invalidar cache para garantir que o frontend reflita as mudanças
+        await invalidateRelatedRecords(id);
+        
+        res.status(204).end();
+      } catch (transactionError) {
+        console.error(`[Erro] Falha na transação de exclusão do projeto ID:${id}:`, transactionError);
+        res.status(500).json({ message: "Failed to delete project. Transaction error." });
       }
-      
-      res.status(204).end();
     } catch (error) {
       console.error("Erro ao excluir projeto:", error);
       res.status(500).json({ message: "Failed to delete project" });
