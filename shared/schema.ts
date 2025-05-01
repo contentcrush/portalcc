@@ -223,8 +223,10 @@ export const financialDocuments = pgTable("financial_documents", {
   due_date: timestamp("due_date"),
   paid: boolean("paid").default(false),
   payment_date: timestamp("payment_date"),
+  payment_notes: text("payment_notes"),
   status: text("status").default("pending"),
   creation_date: timestamp("creation_date").defaultNow(),
+  description: text("description"),
 });
 
 export const expenses = pgTable("expenses", {

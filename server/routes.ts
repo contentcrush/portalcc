@@ -1289,7 +1289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/financial-documents/:id/pay", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { payment_date, notes } = req.body;
+      const { notes } = req.body;
       
       // Verificar se o documento existe
       const document = await storage.getFinancialDocument(id);
@@ -1302,19 +1302,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Este documento já foi pago" });
       }
       
-      // Garante que temos uma data de pagamento válida
-      const now = new Date();
-      
-      // Nunca usamos payment_date diretamente - só garante que estamos usando um objeto Date válido
-      let updatedFields = {
+      // Sempre usar a data e hora atuais para o pagamento
+      // Evitamos problemas com conversão de datas do frontend
+      const updatedDocument = await storage.updateFinancialDocument(id, {
         paid: true,
         status: 'paid',
-        payment_date: now,  // Use a data atual como fallback
+        payment_date: new Date(),
         payment_notes: notes || null
-      };
-      
-      // Atualizar para pago
-      const updatedDocument = await storage.updateFinancialDocument(id, updatedFields);
+      });
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1413,7 +1408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses/:id/approve", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { approval_date, notes } = req.body;
+      const { notes } = req.body;
       
       // Verificar se a despesa existe
       const expense = await storage.getExpense(id);
@@ -1421,11 +1416,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Despesa não encontrada" });
       }
       
-      // Atualizar para aprovado
+      // Atualizar para aprovado, sempre usando a data atual
       const updatedExpense = await storage.updateExpense(id, {
         approved: true,
-        approval_date: approval_date || new Date(),
-        approval_notes: notes
+        notes: notes || null
       });
       
       res.json(updatedExpense);
