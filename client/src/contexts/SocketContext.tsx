@@ -43,6 +43,7 @@ interface SocketContextType {
   joinProject: (projectId: number) => void;
   leaveProject: (projectId: number) => void;
   addProjectComment: (projectId: number, comment: string) => void;
+  addProjectCommentReply: (projectId: number, comment: string, parentId: number) => void;
   registerProjectCommentListener: (callback: (comment: any) => void) => () => void;
   registerUpdatedProjectCommentListener: (callback: (comment: any) => void) => () => void;
   registerDeletedProjectCommentListener: (callback: (data: { id: number }) => void) => () => void;
@@ -176,6 +177,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         addProjectComment(projectId, user.id, comment);
       } else {
         console.warn('Usuário não autenticado para adicionar comentário');
+      }
+    },
+    addProjectCommentReply: (projectId: number, comment: string, parentId: number) => {
+      if (user) {
+        addProjectCommentReply(projectId, user.id, comment, parentId);
+      } else {
+        console.warn('Usuário não autenticado para adicionar resposta a comentário');
       }
     },
     registerProjectCommentListener: (callback: (comment: any) => void) => onNewProjectComment(callback),

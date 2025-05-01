@@ -23,6 +23,7 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     joinProject, 
     leaveProject, 
     addProjectComment,
+    addProjectCommentReply,
     registerProjectCommentListener,
     registerUpdatedProjectCommentListener,
     registerDeletedProjectCommentListener
@@ -89,6 +90,32 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     onError: (error: Error) => {
       toast({
         title: "Erro ao adicionar comentário",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Mutation para adicionar resposta a um comentário
+  const addReplyMutation = useMutation({
+    mutationFn: async (data: { parentId: number; text: string }) => {
+      const commentData: InsertProjectComment = {
+        project_id: projectId,
+        user_id: currentUser?.id as number,
+        comment: data.text,
+        parent_id: data.parentId
+      };
+      const res = await apiRequest('POST', `/api/projects/${projectId}/comments`, commentData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/projects/${projectId}/comments`] 
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao adicionar resposta",
         description: error.message,
         variant: "destructive"
       });
@@ -171,6 +198,23 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
       setCommentText("");
     } else {
       addCommentMutation.mutate(commentData);
+    }
+  };
+  
+  // Lidar com a resposta a um comentário
+  const handleReply = (comment: ProjectComment) => {
+    // Função de callback chamada pelo CommentItem quando o usuário envia uma resposta
+  };
+  
+  // Enviar uma resposta a um comentário
+  const handleSendReply = (parentId: number, replyText: string) => {
+    if (!replyText.trim() || !currentUser?.id) return;
+    
+    // Se temos Socket.IO conectado, enviar por ele, senão pela API REST
+    if (socketIoConnected) {
+      addProjectCommentReply(projectId, replyText.trim(), parentId);
+    } else {
+      addReplyMutation.mutate({ parentId, text: replyText.trim() });
     }
   };
   
