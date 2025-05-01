@@ -348,18 +348,38 @@ export default function Financial() {
   }));
 
   // Expense categories data - calculado dinamicamente a partir dos dados reais
+  // Identificando quais despesas são do processo de seed e quais foram criadas pelo usuário
+  // Despesas do seed são as que têm description específica e foram criadas com paid_by = user específico
+  const seedUserIds = [1, 2, 3]; // IDs dos usuários criados pelo seed
+  const seedExpenseDescriptions = [
+    "Aluguel de equipamento de iluminação",
+    "Hospedagem para filmagem em campo",
+    "Licenças de software para edição"
+  ];
+  
   const expenseCategoriesMap: Record<string, number> = {};
   
   if (expenses && expenses.length > 0) {
-    expenses.forEach((exp: any) => {
-      if (exp.category) {
-        const category = exp.category.charAt(0).toUpperCase() + exp.category.slice(1);
-        if (!expenseCategoriesMap[category]) {
-          expenseCategoriesMap[category] = 0;
-        }
-        expenseCategoriesMap[category] += exp.amount || 0;
-      }
+    // Filtrar para usar apenas despesas que NÃO são do seed
+    const userExpenses = expenses.filter((exp: any) => {
+      return !(
+        seedUserIds.includes(exp.paid_by) && 
+        seedExpenseDescriptions.includes(exp.description)
+      );
     });
+    
+    // Se tiver alguma despesa criada pelo usuário, usamos apenas estas
+    if (userExpenses.length > 0) {
+      userExpenses.forEach((exp: any) => {
+        if (exp.category) {
+          const category = exp.category.charAt(0).toUpperCase() + exp.category.slice(1);
+          if (!expenseCategoriesMap[category]) {
+            expenseCategoriesMap[category] = 0;
+          }
+          expenseCategoriesMap[category] += exp.amount || 0;
+        }
+      });
+    }
   }
   
   const expenseCategoriesData = Object.keys(expenseCategoriesMap).map(category => ({
@@ -989,15 +1009,25 @@ export default function Financial() {
                 <CardDescription>Valores a receber por cliente</CardDescription>
               </CardHeader>
               <CardContent>
-                <FinancialChart 
-                  type="pie"
-                  title=""
-                  data={clientDistributionData}
-                  dataKeys={['value']}
-                  xAxisDataKey="name"
-                  colors={['#10B981', '#6366F1', '#F59E0B']}
-                  height={230}
-                />
+                {clientDistributionData.length > 0 ? (
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={clientDistributionData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#10B981', '#6366F1', '#F59E0B']}
+                    height={230}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Users className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium">Sem dados de clientes</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-2">
+                      Adicione faturas para visualizar a distribuição por cliente
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1269,15 +1299,25 @@ export default function Financial() {
                 <CardDescription>Distribuição de gastos por tipo</CardDescription>
               </CardHeader>
               <CardContent>
-                <FinancialChart 
-                  type="pie"
-                  title=""
-                  data={expenseCategoriesData}
-                  dataKeys={['value']}
-                  xAxisDataKey="name"
-                  colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
-                  height={250}
-                />
+                {expenseCategoriesData.length > 0 ? (
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={expenseCategoriesData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
+                    height={250}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <PieChart className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium">Sem despesas registradas</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-2">
+                      Adicione despesas para visualizar a distribuição por categoria
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
             
@@ -1287,40 +1327,53 @@ export default function Financial() {
                 <CardDescription>Gastos por projeto vs orçamento</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[250px]">
-                  <div className="space-y-5">
-                    {projects && projects.length > 0 ? (
-                      projects.map((project: any) => {
-                        // Calcular o total de despesas desse projeto
-                        const projectExpenses = expenses ? expenses.filter((exp: any) => exp.project_id === project.id) : [];
-                        const totalExpenses = projectExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
-                        
-                        // Calcular a porcentagem em relação ao orçamento
-                        const budget = project.budget || 1; // Para evitar divisão por zero
-                        const percentUsed = Math.min(100, Math.round((totalExpenses / budget) * 100)) || 0;
-                        
-                        return (
-                          <div className="space-y-1.5" key={project.id}>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-sm">{project.name}</span>
-                              <span className="text-sm text-muted-foreground">{percentUsed}% do orçamento</span>
+                {expenses && expenses.length > 0 ? (
+                  <ScrollArea className="h-[250px]">
+                    <div className="space-y-5">
+                      {projects && projects.length > 0 ? (
+                        projects.map((project: any) => {
+                          // Calcular o total de despesas desse projeto
+                          const projectExpenses = expenses.filter((exp: any) => exp.project_id === project.id);
+                          const totalExpenses = projectExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+                          
+                          // Se não houver despesas neste projeto, não mostrar
+                          if (totalExpenses === 0) return null;
+                          
+                          // Calcular a porcentagem em relação ao orçamento
+                          const budget = project.budget || 1; // Para evitar divisão por zero
+                          const percentUsed = Math.min(100, Math.round((totalExpenses / budget) * 100)) || 0;
+                          
+                          return (
+                            <div className="space-y-1.5" key={project.id}>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-sm">{project.name}</span>
+                                <span className="text-sm text-muted-foreground">{percentUsed}% do orçamento</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Progress value={percentUsed} className="h-2" />
+                                <span className={`text-xs font-medium ${percentUsed > 80 ? 'text-amber-600' : 'text-green-600'}`}>
+                                  {formatCurrency(totalExpenses)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Progress value={percentUsed} className="h-2" />
-                              <span className={`text-xs font-medium ${percentUsed > 80 ? 'text-amber-600' : 'text-green-600'}`}>
-                                {formatCurrency(totalExpenses)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="py-8 text-center">
-                        <p className="text-sm text-muted-foreground">Nenhum projeto com despesas encontrado</p>
-                      </div>
-                    )}
+                          );
+                        }).filter(Boolean)
+                      ) : (
+                        <div className="py-8 text-center">
+                          <p className="text-sm text-muted-foreground">Nenhum projeto com despesas encontrado</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center h-[250px]">
+                    <BarChart className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium">Sem despesas registradas</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-2">
+                      Adicione despesas para visualizar gastos por projeto
+                    </p>
                   </div>
-                </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </div>
