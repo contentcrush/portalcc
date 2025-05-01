@@ -244,6 +244,16 @@ export default function Financial() {
       return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
     })
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
+    
+  // Total de faturas recebidas (todas as que já foram pagas)
+  const totalPaidInvoices = financialDocuments
+    ?.filter((doc: any) => doc.paid === true)
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
+    
+  // Total de despesas aprovadas
+  const totalApprovedExpenses = expenses
+    ?.filter((exp: any) => exp.approved === true)
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
   
   // Gross margin
   const grossMargin = monthlyRevenue > 0 
@@ -577,6 +587,45 @@ export default function Financial() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          
+          {/* Informações sobre pagamentos recebidos e despesas pagas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Faturas Recebidas</CardTitle>
+                <CardDescription>Total histórico de valores recebidos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-3xl font-bold text-green-600">{formatCurrency(totalPaidInvoices)}</span>
+                    <span className="text-sm text-muted-foreground mt-1">Total de {financialDocuments?.filter((doc: any) => doc.paid === true).length || 0} faturas pagas</span>
+                  </div>
+                  <div className="h-14 w-14 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Despesas Pagas</CardTitle>
+                <CardDescription>Total histórico de despesas aprovadas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-3xl font-bold text-amber-600">{formatCurrency(totalApprovedExpenses)}</span>
+                    <span className="text-sm text-muted-foreground mt-1">Total de {expenses?.filter((exp: any) => exp.approved === true).length || 0} despesas aprovadas</span>
+                  </div>
+                  <div className="h-14 w-14 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Receipt className="h-8 w-8 text-amber-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           
           {/* Charts and Tables */}
