@@ -46,6 +46,19 @@ export interface IStorage {
   createCommentReaction(reaction: InsertCommentReaction): Promise<CommentReaction>;
   deleteCommentReaction(reactionId: number): Promise<boolean>;
   
+  // Project Comments
+  getProjectComments(projectId: number): Promise<ProjectComment[]>;
+  getProjectCommentById(commentId: number): Promise<ProjectComment | undefined>;
+  createProjectComment(comment: InsertProjectComment): Promise<ProjectComment>;
+  updateProjectComment(commentId: number, updates: Partial<ProjectComment>): Promise<ProjectComment>;
+  softDeleteProjectComment(commentId: number): Promise<boolean>;
+  
+  // Project Comment Reactions
+  getProjectCommentReactionsByProjectId(projectId: number): Promise<ProjectCommentReaction[]>;
+  getProjectCommentReactionByUserAndComment(userId: number, commentId: number): Promise<ProjectCommentReaction | undefined>;
+  createProjectCommentReaction(reaction: InsertProjectCommentReaction): Promise<ProjectCommentReaction>;
+  deleteProjectCommentReaction(reactionId: number): Promise<boolean>;
+  
   // Clients
   getClient(id: number): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
@@ -148,6 +161,8 @@ export class MemStorage implements IStorage {
   private expensesData: Map<number, Expense>;
   private eventsData: Map<number, Event>;
   private userPreferencesData: Map<number, UserPreference>;
+  private projectCommentsData: Map<number, ProjectComment>;
+  private projectCommentReactionsData: Map<number, ProjectCommentReaction>;
   
   private userId: number = 1;
   private clientId: number = 1;
@@ -162,6 +177,8 @@ export class MemStorage implements IStorage {
   private expenseId: number = 1;
   private eventId: number = 1;
   private userPreferenceId: number = 1;
+  private projectCommentId: number = 1;
+  private projectCommentReactionId: number = 1;
 
   constructor() {
     this.usersData = new Map();
@@ -177,6 +194,8 @@ export class MemStorage implements IStorage {
     this.expensesData = new Map();
     this.eventsData = new Map();
     this.userPreferencesData = new Map();
+    this.projectCommentsData = new Map();
+    this.projectCommentReactionsData = new Map();
 
     // Add some initial data
     this.seedData();
