@@ -937,7 +937,80 @@ export class MemStorage implements IStorage {
   }
 
   async deleteProject(id: number): Promise<boolean> {
-    return this.projectsData.delete(id);
+    try {
+      // Excluir todos os dados relacionados ao projeto antes de excluir o projeto em si
+      
+      // Excluir membros do projeto
+      const members = await this.getProjectMembers(id);
+      for (const member of members) {
+        this.projectMembersData.delete(member.id);
+      }
+      
+      // Excluir estágios do projeto
+      const stages = await this.getProjectStages(id);
+      for (const stage of stages) {
+        this.projectStagesData.delete(stage.id);
+      }
+      
+      // Excluir tarefas e dados relacionados
+      const tasks = await this.getTasksByProject(id);
+      for (const task of tasks) {
+        // Excluir comentários da tarefa
+        const comments = Array.from(this.taskCommentsData.values())
+          .filter(comment => comment.task_id === task.id);
+        for (const comment of comments) {
+          this.taskCommentsData.delete(comment.id);
+        }
+        
+        // Excluir anexos da tarefa
+        const attachments = Array.from(this.taskAttachmentsData.values())
+          .filter(attachment => attachment.task_id === task.id);
+        for (const attachment of attachments) {
+          this.taskAttachmentsData.delete(attachment.id);
+        }
+        
+        // Excluir a tarefa
+        this.tasksData.delete(task.id);
+      }
+      
+      // Excluir documentos financeiros do projeto
+      const financialDocs = await this.getFinancialDocumentsByProject(id);
+      for (const doc of financialDocs) {
+        this.financialDocumentsData.delete(doc.id);
+      }
+      
+      // Excluir despesas do projeto
+      const expenses = await this.getExpensesByProject(id);
+      for (const expense of expenses) {
+        this.expensesData.delete(expense.id);
+      }
+      
+      // Excluir eventos do projeto
+      const events = Array.from(this.eventsData.values())
+        .filter(event => event.project_id === id);
+      for (const event of events) {
+        this.eventsData.delete(event.id);
+      }
+      
+      // Excluir comentários do projeto
+      const projectComments = await this.getProjectComments(id);
+      for (const comment of projectComments) {
+        // Também excluir reações aos comentários
+        const reactions = Array.from(this.projectCommentReactionsData.values())
+          .filter(reaction => reaction.comment_id === comment.id);
+        for (const reaction of reactions) {
+          this.projectCommentReactionsData.delete(reaction.id);
+        }
+        
+        this.projectCommentsData.delete(comment.id);
+      }
+      
+      // Finalmente, excluir o projeto
+      return this.projectsData.delete(id);
+    } catch (error) {
+      console.error("Erro ao excluir projeto:", error);
+      return false;
+    }
   }
 
   // Project Members

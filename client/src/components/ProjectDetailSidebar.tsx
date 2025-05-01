@@ -164,10 +164,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       return apiRequest('DELETE', `/api/projects/${projectId}`);
     },
     onSuccess: () => {
+      // Atualiza todos os dados relacionados, incluindo documentos financeiros
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      
       toast({
         title: "Projeto excluído com sucesso",
-        description: "O projeto foi removido permanentemente."
+        description: "O projeto e todos seus dados relacionados foram removidos permanentemente."
       });
       onClose(); // Fechar o painel lateral após exclusão
     },

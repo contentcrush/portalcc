@@ -111,13 +111,16 @@ export default function Projects() {
     onSuccess: () => {
       toast({
         title: "Projeto excluído com sucesso",
-        description: "O projeto foi removido permanentemente",
+        description: "O projeto e todos seus dados relacionados foram removidos permanentemente",
         variant: "default",
       });
       // Fecha o sidebar de detalhes caso esteja aberto
       setSelectedProjectId(null);
-      // Atualiza a lista de projetos
+      // Atualiza a lista de projetos e todos os dados relacionados
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     },
     onError: (error: Error) => {
       toast({
