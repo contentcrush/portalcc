@@ -185,12 +185,95 @@ export default function Financial() {
     }
   ];
 
+  // Calcular KPIs da página financeira
+  const receivablesData = financialDocuments?.filter(doc => 
+    doc.document_type === 'invoice' && !doc.paid
+  ) || [];
+  
+  const payablesData = expenses?.filter(exp => !exp.approved) || [];
+  
+  // Calcular dados para os KPIs essenciais
+  const aReceberAberto = receivablesData.reduce((sum, doc) => sum + (doc.amount || 0), 0);
+  const aPagarAberto = payablesData.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  
+  // Calcular fluxo de caixa próximos 30 dias
+  const now = new Date();
+  const thirtyDaysFromNow = addDays(now, 30);
+  const receivablesNext30Days = receivablesData
+    .filter(doc => doc.due_date && isBefore(new Date(doc.due_date), thirtyDaysFromNow))
+    .reduce((sum, doc) => sum + (doc.amount || 0), 0);
+  const payablesNext30Days = payablesData
+    .filter(exp => exp.date && isBefore(new Date(exp.date), thirtyDaysFromNow))
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const fluxoDeCaixaProx30Dias = receivablesNext30Days - payablesNext30Days;
+  
+  // Calcular receita mensal realizada (documentos pagos no mês atual)
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const receitaMensalRealizada = financialDocuments
+    ?.filter(doc => {
+      if (!doc.paid || !doc.payment_date) return false;
+      const paymentDate = new Date(doc.payment_date);
+      return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
+  
+  // Calcular despesas mensais (despesas pagas no mês atual)
+  const despesasMensais = expenses
+    ?.filter(exp => {
+      const expDate = new Date(exp.date);
+      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && exp.approved;
+    })
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+  
+  // Calcular margem bruta do mês
+  const margemBrutaMes = receitaMensalRealizada > 0 
+    ? ((receitaMensalRealizada - despesasMensais) / receitaMensalRealizada) * 100 
+    : 0;
+
+  // Alertas de vencimento próximos 7 dias
+  const sevenDaysFromNow = addDays(now, 7);
+  const alertasVencimento = receivablesData
+    .filter(doc => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow))
+    .length;
+  
+  // Calcular o custo médio por minuto de vídeo (usando dados de exemplo)
+  const totalMinutos = 250; // Este seria um cálculo real baseado em algum campo
+  const custoMedioPorMinuto = despesasMensais > 0 ? despesasMensais / totalMinutos : 0;
+  
+  // Calcular o tempo médio de recebimento (DSO - Days Sales Outstanding)
+  const tempoMedioRecebimento = 28; // Cálculo seria baseado na diferença média entre emissão e pagamento
+
+  // Identificar a margem de lucro por projeto
+  const projectMarginsData = projects?.map(project => {
+    const projectRevenue = financialDocuments
+      ?.filter(doc => doc.project_id === project.id && doc.paid)
+      .reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
+      
+    const projectExpenses = expenses
+      ?.filter(exp => exp.project_id === project.id)
+      .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      
+    const projectMargin = projectRevenue > 0 
+      ? ((projectRevenue - projectExpenses) / projectRevenue) * 100 
+      : 0;
+      
+    return {
+      id: project.id,
+      name: project.name,
+      client: clients?.find(c => c.id === project.client_id)?.name || "Cliente",
+      revenue: projectRevenue,
+      expenses: projectExpenses,
+      margin: projectMargin
+    };
+  }).sort((a, b) => b.margin - a.margin).slice(0, 5) || [];
+  
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold">Relatórios Financeiros</h1>
-          <p className="text-muted-foreground">Visão detalhada do desempenho financeiro e progresso de projetos</p>
+          <h1 className="text-2xl font-bold">Financeiro</h1>
+          <p className="text-muted-foreground">Controle financeiro e indicadores de desempenho</p>
         </div>
         
         <div className="flex items-center space-x-3">
@@ -218,121 +301,437 @@ export default function Financial() {
           
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Fatura
+            Novo Registro
           </Button>
         </div>
       </div>
       
-      {/* Financial summary cards */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Receita Total</p>
-                <h2 className="text-3xl font-bold text-green-600">{formatCurrency(totalRevenue)}</h2>
-              </div>
-              <div className="p-2 rounded-full bg-green-100">
-                <BarChart4 className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            
-            <div className="flex items-center mt-4 text-sm">
-              {revenueChange > 0 ? (
-                <div className="flex items-center text-green-600">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+{revenueChange}%</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-red-600">
-                  <ArrowDownRight className="h-4 w-4 mr-1" />
-                  <span>{revenueChange}%</span>
-                </div>
-              )}
-              <span className="text-muted-foreground ml-1.5">vs período anterior</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs para navegação */}
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full md:w-auto grid-cols-3 md:inline-flex md:justify-start">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="receber">A Receber</TabsTrigger>
+          <TabsTrigger value="pagar">A Pagar</TabsTrigger>
+        </TabsList>
         
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Despesas Totais</p>
-                <h2 className="text-3xl font-bold text-red-600">{formatCurrency(totalExpenses)}</h2>
-              </div>
-              <div className="p-2 rounded-full bg-red-100">
-                <BarChart4 className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
+        <TabsContent value="dashboard" className="pt-4">
+          {/* KPIs essenciais */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {/* A Receber (Aberto) */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <CreditCard className="mr-2 h-4 w-4" /> A Receber (Aberto)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-green-600">{formatCurrency(aReceberAberto)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor total de faturas ainda não pagas
+                </p>
+              </CardContent>
+            </Card>
             
-            <div className="flex items-center mt-4 text-sm">
-              {expensesChange > 0 ? (
-                <div className="flex items-center text-red-600">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+{expensesChange}%</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-green-600">
-                  <ArrowDownRight className="h-4 w-4 mr-1" />
-                  <span>{expensesChange}%</span>
-                </div>
-              )}
-              <span className="text-muted-foreground ml-1.5">vs período anterior</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Lucro Líquido</p>
-                <h2 className="text-3xl font-bold text-blue-600">{formatCurrency(netProfit)}</h2>
-              </div>
-              <div className="p-2 rounded-full bg-blue-100">
-                <BarChart4 className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
+            {/* A Pagar (Aberto) */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <Wallet className="mr-2 h-4 w-4" /> A Pagar (Aberto)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-amber-600">{formatCurrency(aPagarAberto)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor total de contas a pagar pendentes
+                </p>
+              </CardContent>
+            </Card>
             
-            <div className="flex items-center mt-4 text-sm">
-              {profitChange > 0 ? (
-                <div className="flex items-center text-green-600">
-                  <ArrowUpRight className="h-4 w-4 mr-1" />
-                  <span>+{profitChange}%</span>
+            {/* Fluxo de Caixa Próx. 30d */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <TrendingUp className="mr-2 h-4 w-4" /> Fluxo de Caixa Próx. 30d
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className={`text-2xl font-bold ${fluxoDeCaixaProx30Dias >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  {formatCurrency(fluxoDeCaixaProx30Dias)}
                 </div>
-              ) : (
-                <div className="flex items-center text-red-600">
-                  <ArrowDownRight className="h-4 w-4 mr-1" />
-                  <span>{profitChange}%</span>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entradas − saídas nos próximos 30 dias
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Alertas de Vencimento */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <AlertCircle className="mr-2 h-4 w-4" /> Alertas de Vencimento
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-red-600">
+                  {alertasVencimento}
                 </div>
-              )}
-              <span className="text-muted-foreground ml-1.5">vs período anterior</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Charts */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <FinancialChart 
-          type="area"
-          title="Tendência Mensal"
-          data={monthlyData}
-          dataKeys={['receita', 'despesas']}
-          xAxisDataKey="month"
-          colors={['#5046E5', '#EF4444']}
-        />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Faturas vencendo nos próximos 7 dias
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Receita Mensal Realizada */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <Banknote className="mr-2 h-4 w-4" /> Receita Mensal Realizada
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(receitaMensalRealizada)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entradas pagas no mês corrente
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Despesas Mensais */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <Wallet className="mr-2 h-4 w-4" /> Despesas Mensais
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(despesasMensais)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Saídas pagas no mês corrente
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Margem Bruta do Mês */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <LineChart className="mr-2 h-4 w-4" /> Margem Bruta do Mês
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className={`text-2xl font-bold ${margemBrutaMes >= 30 ? 'text-green-600' : margemBrutaMes >= 15 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {margemBrutaMes.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Percentual de lucro antes de despesas fixas
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Custo Médio por Minuto */}
+            <Card className="overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                  <Clock className="mr-2 h-4 w-4" /> Custo Médio por Minuto
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(custoMedioPorMinuto)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Despesas totais ÷ minutos de vídeo entregues
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Gráficos e visualizações */}
+          <div className="grid gap-6 mt-6 grid-cols-1 lg:grid-cols-2">
+            <FinancialChart 
+              type="area"
+              title="Fluxo de Caixa Mensal"
+              data={monthlyData}
+              dataKeys={['receita', 'despesas']}
+              xAxisDataKey="month"
+              colors={['#10B981', '#EF4444']}
+            />
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Margem por Projeto (TOP 5)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>PROJETO</TableHead>
+                      <TableHead>CLIENTE</TableHead>
+                      <TableHead className="text-right">RECEITA</TableHead>
+                      <TableHead className="text-right">MARGEM</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectMarginsData.map(project => (
+                      <TableRow key={project.id}>
+                        <TableCell className="font-medium">{project.name}</TableCell>
+                        <TableCell>{project.client}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(project.revenue)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={`font-medium ${
+                            project.margin > 40 ? 'text-green-600' : 
+                            project.margin > 20 ? 'text-amber-600' : 
+                            'text-red-600'
+                          }`}>
+                            {project.margin.toFixed(1)}%
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Tempo Médio de Recebimento */}
+          <div className="grid gap-6 mt-6 grid-cols-1">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Tempo Médio de Recebimento (DSO)</CardTitle>
+                <CardDescription>Período médio entre a emissão e o pagamento das faturas</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-3xl font-bold text-blue-600">{tempoMedioRecebimento}</div>
+                  <div className="text-sm text-muted-foreground mt-1">dias em média</div>
+                </div>
+                <div className="md:col-span-2 flex flex-col justify-center">
+                  <p className="text-sm text-muted-foreground">
+                    O DSO (Days Sales Outstanding) indica a saúde do ciclo de cobrança. 
+                    Quanto menor o valor, mais rápido a empresa converte faturas em caixa.
+                    Um valor abaixo de 30 dias é considerado excelente para o setor de serviços.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
         
-        <FinancialChart 
-          type="bar"
-          title="Receita por Projeto"
-          data={projectRevenueData}
-          dataKeys={['value']}
-          xAxisDataKey="name"
-          colors={['#5046E5']}
-        />
-      </div>
+        {/* Tab "A Receber" */}
+        <TabsContent value="receber" className="pt-4">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-medium">Contas a Receber</h3>
+              <p className="text-sm text-muted-foreground">Faturas emitidas e não pagas</p>
+            </div>
+            <div className="flex space-x-2 mt-4 md:mt-0">
+              <Select defaultValue="todas">
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filtrar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="pendentes">Pendentes</SelectItem>
+                  <SelectItem value="vencidas">Vencidas</SelectItem>
+                  <SelectItem value="proximas">Próximas (7d)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" /> Exportar
+              </Button>
+            </div>
+          </div>
+          
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>NÚMERO</TableHead>
+                    <TableHead>CLIENTE</TableHead>
+                    <TableHead>PROJETO</TableHead>
+                    <TableHead>EMISSÃO</TableHead>
+                    <TableHead>VENCIMENTO</TableHead>
+                    <TableHead className="text-right">VALOR</TableHead>
+                    <TableHead>STATUS</TableHead>
+                    <TableHead className="text-right">AÇÕES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receivablesData.map(doc => {
+                    const client = clients?.find(c => c.id === doc.client_id);
+                    const project = projects?.find(p => p.id === doc.project_id);
+                    const isOverdue = doc.due_date && new Date(doc.due_date) < new Date();
+                    
+                    return (
+                      <TableRow key={doc.id}>
+                        <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
+                        <TableCell>{client?.name || '-'}</TableCell>
+                        <TableCell>{project?.name || '-'}</TableCell>
+                        <TableCell>{doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                        <TableCell>
+                          {doc.due_date ? (
+                            <div className="flex items-center">
+                              <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
+                                {format(new Date(doc.due_date), 'dd/MM/yyyy')}
+                              </span>
+                              {isOverdue && (
+                                <Badge variant="destructive" className="ml-2 text-xs">
+                                  Vencida
+                                </Badge>
+                              )}
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(doc.amount)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={doc.status === 'pending' ? 'outline' : 'success'}>
+                            {doc.status === 'pending' ? 'Pendente' : 'Pago'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  
+                  {receivablesData.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                        Nenhuma fatura pendente encontrada
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Tab "A Pagar" */}
+        <TabsContent value="pagar" className="pt-4">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-medium">Contas a Pagar</h3>
+              <p className="text-sm text-muted-foreground">Despesas não aprovadas/pagas</p>
+            </div>
+            <div className="flex space-x-2 mt-4 md:mt-0">
+              <Select defaultValue="todas">
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filtrar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="pendentes">Pendentes</SelectItem>
+                  <SelectItem value="proximas">Próximas (7d)</SelectItem>
+                  <SelectItem value="categoria">Por Categoria</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" /> Exportar
+              </Button>
+            </div>
+          </div>
+          
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>DESCRIÇÃO</TableHead>
+                    <TableHead>CATEGORIA</TableHead>
+                    <TableHead>PROJETO</TableHead>
+                    <TableHead>DATA</TableHead>
+                    <TableHead className="text-right">VALOR</TableHead>
+                    <TableHead>PAGO POR</TableHead>
+                    <TableHead>STATUS</TableHead>
+                    <TableHead className="text-right">AÇÕES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payablesData.map(exp => {
+                    const project = projects?.find(p => p.id === exp.project_id);
+                    const paidBy = users?.find(u => u.id === exp.paid_by);
+                    const isToday = exp.date && (new Date(exp.date).toDateString() === new Date().toDateString());
+                    
+                    return (
+                      <TableRow key={exp.id}>
+                        <TableCell className="font-medium">{exp.description}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {exp.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{project?.name || '-'}</TableCell>
+                        <TableCell>
+                          {exp.date ? (
+                            <div className="flex items-center">
+                              <span>
+                                {format(new Date(exp.date), 'dd/MM/yyyy')}
+                              </span>
+                              {isToday && (
+                                <Badge variant="success" className="ml-2 text-xs">
+                                  Hoje
+                                </Badge>
+                              )}
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(exp.amount)}
+                        </TableCell>
+                        <TableCell>{paidBy?.name || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={exp.approved ? 'success' : 'outline'}>
+                            {exp.approved ? 'Aprovado' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            {exp.receipt ? (
+                              <FileText className="h-4 w-4" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  
+                  {payablesData.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                        Nenhuma despesa pendente encontrada
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+            <CardFooter className="flex justify-between px-6 py-4 border-t">
+              <div>
+                <p className="text-sm text-muted-foreground">Total pendente</p>
+                <p className="text-lg font-medium">{formatCurrency(aPagarAberto)}</p>
+              </div>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Despesa
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
       
       {/* Project Performance Table */}
       <Card>
