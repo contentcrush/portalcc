@@ -33,7 +33,7 @@ interface CommentItemProps {
   onDelete: (commentId: number) => void;
   onEdit: (commentId: number, newText: string) => void;
   isReply?: boolean;
-  reactions?: any[]; // Temporariamente usando 'any' durante a migração
+  reactions?: any[]; // Mantido por compatibilidade, mas as reações agora vêm do próprio comentário
   onReaction: (commentId: number) => void;
   replies?: TaskComment[];
 }
@@ -293,7 +293,7 @@ export function CommentItem({
                 onDelete={onDelete}
                 onEdit={onEdit}
                 isReply={true}
-                reactions={reactions}
+                reactions={[]} // Não é mais necessário passar reactions separadamente
                 onReaction={onReaction}
               />
             ))}

@@ -281,7 +281,7 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
             onEdit={(commentId, newText) => 
               editCommentMutation.mutate({ commentId, text: newText })
             }
-            reactions={comment.reactions || []}
+            reactions={[]} // Não é mais necessário passar reactions separadamente
             onReaction={handleReaction}
             replies={thread.replies}
           />
