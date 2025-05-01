@@ -170,7 +170,18 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     
     const file = files[0];
     const formData = new FormData();
+    
+    // Calcular tamanho do arquivo em KB
+    const fileSizeKB = Math.round(file.size / 1024);
+    
+    // Adicionar o arquivo e os campos obrigatórios
     formData.append('file', file);
+    formData.append('file_name', file.name);
+    formData.append('file_size', fileSizeKB.toString()); // Adicionar o tamanho do arquivo
+    
+    // A API espera file_url, mas como estamos enviando o arquivo diretamente,
+    // podemos usar um placeholder que será substituído no servidor
+    formData.append('file_url', 'pending_upload');
     
     setIsUploadingFile(true);
     uploadFileMutation.mutate(formData);
