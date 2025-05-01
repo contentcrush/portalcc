@@ -122,7 +122,7 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comment-reactions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
     },
     onError: (error: Error) => {
       toast({
@@ -171,7 +171,8 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
         if (data.type === "comment" && data.task_id === taskId) {
           queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
         } else if (data.type === "comment_reaction") {
-          queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comment-reactions`] });
+          // As reações agora vêm junto com os comentários
+          queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
         }
       } catch (error) {
         console.error("Erro ao processar mensagem do WebSocket:", error);
@@ -280,7 +281,7 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
             onEdit={(commentId, newText) => 
               editCommentMutation.mutate({ commentId, text: newText })
             }
-            reactions={reactions || []}
+            reactions={comment.reactions || []}
             onReaction={handleReaction}
             replies={thread.replies}
           />

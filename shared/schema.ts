@@ -332,7 +332,9 @@ export type Project = typeof projects.$inferSelect;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type ProjectStage = typeof projectStages.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
-export type TaskComment = typeof taskComments.$inferSelect;
+export type TaskComment = typeof taskComments.$inferSelect & {
+  reactions?: CommentReaction[];
+};
 export type CommentReaction = typeof commentReactions.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
