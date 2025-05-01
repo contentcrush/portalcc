@@ -864,6 +864,27 @@ export default function Financial() {
             </div>
             
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+              {/* Botão para gerar faturas de projetos existentes */}
+              <Button 
+                onClick={() => generateInvoicesMutation.mutate()} 
+                disabled={generateInvoicesMutation.isPending}
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2"
+              >
+                {generateInvoicesMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Processando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FilePlus className="h-3.5 w-3.5" />
+                    <span>Gerar Faturas</span>
+                  </>
+                )}
+              </Button>
+              
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9">
