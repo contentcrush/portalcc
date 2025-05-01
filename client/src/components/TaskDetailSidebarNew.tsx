@@ -13,6 +13,7 @@ import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
 import { TASK_STATUS_OPTIONS } from "@/lib/constants";
+import { CommentSection } from "@/components/comments/CommentSection";
 import {
   Select,
   SelectContent,
@@ -680,7 +681,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
           )}
         </div>
         
-        {/* Comments */}
+        {/* Advanced Comments System */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium">Comentários</h3>
@@ -689,71 +690,12 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
             )}
           </div>
           
-          {isLoadingComments ? (
-            <div className="flex justify-center items-center py-4">
-              <div className="animate-spin h-5 w-5 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
-            </div>
-          ) : comments && comments.length > 0 ? (
-            <div className="space-y-3 mb-4">
-              {comments.map((comment) => (
-                <div key={comment.id} className="bg-gray-50 rounded-md p-3">
-                  <div className="flex items-start">
-                    <UserAvatar 
-                      user={comment.user} 
-                      className="h-7 w-7 mt-0.5 mr-2" 
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <p className="text-sm font-medium">{comment.user?.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(comment.created_at).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                      <p className="text-sm">{comment.content}</p>
-                      <div className="flex gap-3 mt-2">
-                        <button className="text-xs text-gray-500 hover:text-gray-700">Responder</button>
-                        <span className="text-gray-300">•</span>
-                        <button className="text-xs text-gray-500 hover:text-gray-700">Curtir</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4 mb-4 bg-gray-50 rounded-md">
-              <p className="text-sm text-gray-500">Nenhum comentário ainda</p>
-            </div>
-          )}
-          
-          <form onSubmit={handleSubmitComment} className="mt-2">
-            <Textarea
-              placeholder="Adicionar um comentário..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="min-h-[80px] text-sm resize-none mb-2"
-            />
-            <div className="flex justify-end">
-              <Button 
-                type="submit" 
-                size="sm" 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                disabled={!newComment.trim() || isSubmittingComment}
-              >
-                {isSubmittingComment ? (
-                  <div className="animate-spin h-3 w-3 border-2 border-white rounded-full border-t-transparent mr-1"></div>
-                ) : (
-                  <Send className="h-3 w-3 mr-1" />
-                )}
-                Enviar
-              </Button>
-            </div>
-          </form>
+          {/* Using the CommentSection component */}
+          <div className="mb-4">
+            {taskId && (
+              <CommentSection taskId={taskId} className="pt-0" />
+            )}
+          </div>
         </div>
       </div>
     </div>
