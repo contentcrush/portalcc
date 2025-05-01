@@ -781,14 +781,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/projects/:id", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Primeiro, verificamos se o projeto existe
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Em seguida, forçamos uma atualização dos registros financeiros vinculados
+      // para garantir que eles sejam excluídos adequadamente
+      const financialDocuments = await storage.getFinancialDocumentsByProject(id);
+      console.log(`[Sistema] Excluindo ${financialDocuments.length} documentos financeiros vinculados ao projeto ID:${id}`);
+      
+      // Agora excluímos o projeto (que excluirá todos os registros relacionados)
       const success = await storage.deleteProject(id);
       
       if (!success) {
-        return res.status(404).json({ message: "Project not found" });
+        return res.status(500).json({ message: "Failed to delete project" });
+      }
+      
+      // Verificar novamente se todos os documentos financeiros foram excluídos
+      const remainingDocs = await storage.getFinancialDocumentsByProject(id);
+      if (remainingDocs.length > 0) {
+        console.error(`[Erro] Ainda existem ${remainingDocs.length} documentos financeiros vinculados ao projeto excluído ID:${id}`);
+        // Tentar força uma segunda limpeza
+        for (const doc of remainingDocs) {
+          await storage.deleteFinancialDocument(doc.id);
+          console.log(`[Sistema] Forçando exclusão do documento financeiro ID:${doc.id} vinculado ao projeto excluído ID:${id}`);
+        }
       }
       
       res.status(204).end();
     } catch (error) {
+      console.error("Erro ao excluir projeto:", error);
       res.status(500).json({ message: "Failed to delete project" });
     }
   });
