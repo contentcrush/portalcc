@@ -26,7 +26,9 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     addProjectCommentReply,
     registerProjectCommentListener,
     registerUpdatedProjectCommentListener,
-    registerDeletedProjectCommentListener
+    registerDeletedProjectCommentListener,
+    registerProjectCommentReactionListener,
+    registerDeletedProjectCommentReactionListener
   } = useSocket();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -203,10 +205,11 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
   
   // Lidar com a resposta a um comentário
   const handleReply = (comment: ProjectComment) => {
-    // Esta função é chamada pelo CommentItem quando um usuário clica no botão de resposta
-    // O CommentItem internamente lidará com a UI de resposta e chamará onReply com o texto
-    // Quando o usuário submeter a resposta, o CommentItem irá chamar o prop onReply com o texto da resposta
-    console.log("Preparando para responder ao comentário:", comment.id);
+    // Esta função é chamada pelo CommentItem quando o usuário submeter a resposta
+    // O CommentItem já terá coletado o texto da resposta que está em comment.comment
+    if (!comment.comment.trim() || !currentUser?.id) return;
+    
+    handleSendReply(comment.id, comment.comment);
   };
   
   // Enviar uma resposta a um comentário
@@ -243,11 +246,22 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
     });
     
+    // Registrar listeners para eventos de reações
+    const unregisterNewReaction = registerProjectCommentReactionListener((data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
+    });
+    
+    const unregisterDeletedReaction = registerDeletedProjectCommentReactionListener((data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
+    });
+    
     // Limpar listeners quando o componente desmontar
     return () => {
       unregisterNewComment();
       unregisterUpdatedComment();
       unregisterDeletedComment();
+      unregisterNewReaction();
+      unregisterDeletedReaction();
     };
   }, [
     socketIoConnected, 
@@ -255,7 +269,9 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     queryClient, 
     registerProjectCommentListener, 
     registerUpdatedProjectCommentListener, 
-    registerDeletedProjectCommentListener
+    registerDeletedProjectCommentListener,
+    registerProjectCommentReactionListener,
+    registerDeletedProjectCommentReactionListener
   ]);
   
   // Organizar comentários em threads (comentários principais e respostas)

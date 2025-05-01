@@ -88,22 +88,19 @@ export function CommentItem({
   
   // Função para enviar resposta
   const handleSubmitReply = () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !currentUser?.id) return;
     
-    const replyData = {
-      task_id: comment.task_id,
-      user_id: currentUser?.id,
+    // Criar um objeto representando a resposta
+    const replyComment = {
+      ...comment, // Preservamos propriedades como task_id ou project_id
+      id: comment.id, // ID do comentário pai
+      user_id: currentUser.id,
       comment: replyText,
       parent_id: comment.id
     };
     
-    // Enviar pelo Socket se disponível, senão via API normal
-    if (socket) {
-      socket.send(JSON.stringify({
-        type: "comment",
-        data: replyData
-      }));
-    }
+    // Chamar a função de callback fornecida pelo componente pai
+    onReply(replyComment);
     
     // Resetar state
     setReplyText("");
