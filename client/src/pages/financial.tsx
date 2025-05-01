@@ -74,6 +74,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
+import { NewFinancialRecordDialog } from "@/components/financial/NewFinancialRecordDialog";
 
 // Definição de tipos
 interface Transaction {
@@ -407,10 +408,7 @@ export default function Financial() {
             <Download className="h-4 w-4" />
           </Button>
           
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Registro
-          </Button>
+          <NewFinancialRecordDialog />
         </div>
       </div>
       
@@ -774,10 +772,7 @@ export default function Financial() {
                 Exportar
               </Button>
               
-              <Button size="sm" className="h-9">
-                <Plus className="mr-2 h-3.5 w-3.5" />
-                Nova Fatura
-              </Button>
+              <NewFinancialRecordDialog />
             </div>
           </div>
           
@@ -1115,10 +1110,7 @@ export default function Financial() {
                 Exportar
               </Button>
               
-              <Button size="sm" className="h-9">
-                <Plus className="mr-2 h-3.5 w-3.5" />
-                Nova Despesa
-              </Button>
+              <NewFinancialRecordDialog />
             </div>
           </div>
           
