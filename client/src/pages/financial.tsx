@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import ResponsiveFinancialChart from "@/components/charts/ResponsiveFinancialChart";
 import {
   Card,
   CardContent,
@@ -594,58 +595,48 @@ export default function Financial() {
                 </DropdownMenu>
               </CardHeader>
               <CardContent>
-                <FinancialChart 
-                  type="area"
+                <ResponsiveFinancialChart 
+                  type="line"
                   title=""
                   data={monthlyData}
                   dataKeys={['receita', 'despesas']}
                   xAxisDataKey="month"
                   colors={['#10B981', '#EF4444']}
                   height={300}
+                  noCard={true}
+                  enableArea={true}
                 />
               </CardContent>
             </Card>
             
             <div className="grid gap-6 grid-cols-1">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base font-medium">Distribuição de Despesas</CardTitle>
-                    <CardDescription>Por categoria</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <FinancialChart 
-                    type="pie"
-                    title=""
-                    data={expenseCategoriesData}
-                    dataKeys={['value']}
-                    xAxisDataKey="name"
-                    colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
-                    height={140}
-                  />
-                </CardContent>
-              </Card>
+              <ResponsiveFinancialChart 
+                type="pie"
+                title="Distribuição de Despesas"
+                description="Por categoria"
+                data={expenseCategoriesData}
+                dataKeys={['value']}
+                xAxisDataKey="name"
+                yAxisDataKey="value"
+                colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
+                height={180}
+                innerRadius={0.6}
+                isCompact={true}
+              />
               
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base font-medium">Receita por Cliente</CardTitle>
-                    <CardDescription>Principais clientes</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <FinancialChart 
-                    type="pie"
-                    title=""
-                    data={clientDistributionData}
-                    dataKeys={['value']}
-                    xAxisDataKey="name"
-                    colors={['#10B981', '#6366F1', '#F59E0B']}
-                    height={140}
-                  />
-                </CardContent>
-              </Card>
+              <ResponsiveFinancialChart 
+                type="pie"
+                title="Receita por Cliente"
+                description="Principais clientes"
+                data={clientDistributionData}
+                dataKeys={['value']}
+                xAxisDataKey="name"
+                yAxisDataKey="value"
+                colors={['#10B981', '#6366F1', '#F59E0B']}
+                height={180}
+                innerRadius={0.6}
+                isCompact={true}
+              />
             </div>
           </div>
           
@@ -998,41 +989,42 @@ export default function Financial() {
           
           {/* Charts */}
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">Previsão de Recebimentos</CardTitle>
-                <CardDescription>Fluxo de caixa previsto para os próximos 30 dias</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FinancialChart 
-                  type="bar"
-                  title=""
-                  data={calculateUpcomingReceivables(financialDocuments)}
-                  dataKeys={['value']}
-                  xAxisDataKey="name"
-                  colors={['#6366F1']}
-                  height={230}
-                />
-              </CardContent>
-            </Card>
+            <div className="lg:col-span-2">
+              <ResponsiveFinancialChart 
+                type="bar"
+                title="Previsão de Recebimentos"
+                description="Fluxo de caixa previsto para os próximos 30 dias"
+                data={calculateUpcomingReceivables(financialDocuments)}
+                dataKeys={['value']}
+                xAxisDataKey="name"
+                colors={['#6366F1']}
+                height={280}
+                enableGridX={false}
+                isCompact={false}
+              />
+            </div>
             
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium">Distribuição por Cliente</CardTitle>
-                <CardDescription>Valores a receber por cliente</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {clientDistributionData.length > 0 ? (
-                  <FinancialChart 
-                    type="pie"
-                    title=""
-                    data={clientDistributionData}
-                    dataKeys={['value']}
-                    xAxisDataKey="name"
-                    colors={['#10B981', '#6366F1', '#F59E0B']}
-                    height={230}
-                  />
-                ) : (
+            {clientDistributionData.length > 0 ? (
+              <ResponsiveFinancialChart 
+                type="pie"
+                title="Distribuição por Cliente"
+                description="Valores a receber por cliente"
+                data={clientDistributionData}
+                dataKeys={['value']}
+                xAxisDataKey="name"
+                yAxisDataKey="value"
+                colors={['#10B981', '#6366F1', '#F59E0B', '#EF4444']}
+                height={280}
+                innerRadius={0.6}
+                legendPosition="bottom"
+              />
+            ) : (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-medium">Distribuição por Cliente</CardTitle>
+                  <CardDescription>Valores a receber por cliente</CardDescription>
+                </CardHeader>
+                <CardContent>
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Users className="h-16 w-16 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-medium">Sem dados de clientes</h3>
@@ -1040,9 +1032,9 @@ export default function Financial() {
                       Adicione faturas para visualizar a distribuição por cliente
                     </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 

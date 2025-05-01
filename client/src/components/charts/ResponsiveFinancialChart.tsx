@@ -207,12 +207,12 @@ export default function ResponsiveFinancialChart({
                         style={{ 
                           width: '8px', 
                           height: '8px', 
-                          backgroundColor: point.point.serieColor,
+                          backgroundColor: point.point.seriesColor,
                           borderRadius: '50%',
                           marginRight: '6px'
                         }}
                       />
-                      <div>{point.point.serieId}:</div>
+                      <div>{point.point.seriesId}:</div>
                       <div style={{ fontWeight: 'bold', marginLeft: '4px' }}>
                         {valueFormatter(point.point.data.y as number)}
                       </div>
