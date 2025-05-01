@@ -9,7 +9,7 @@ import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients";
 import ClientDetail from "@/pages/client-detail";
-import Financial from "@/pages/financial-fixed";
+import Financial from "@/pages/financial";
 import Calendar from "@/pages/calendar";
 import Team from "@/pages/team";
 import UserProfile from "@/pages/user-profile";

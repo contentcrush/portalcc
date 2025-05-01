@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import ResponsiveFinancialChart from "@/components/charts/ResponsiveFinancialChart";
 import {
   Card,
   CardContent,
@@ -595,71 +594,15 @@ export default function Financial() {
                 </DropdownMenu>
               </CardHeader>
               <CardContent>
-                <div className="space-y-8 pt-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="text-sm font-medium">Receitas</span>
-                      </div>
-                      <span className="text-sm font-medium">{formatCurrency(monthlyTotals.income)}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 rounded-full" 
-                        style={{ width: `${(monthlyTotals.income / (monthlyTotals.income + monthlyTotals.expenses)) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                        <span className="text-sm font-medium">Despesas</span>
-                      </div>
-                      <span className="text-sm font-medium">{formatCurrency(monthlyTotals.expenses)}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-red-500 rounded-full" 
-                        style={{ width: `${(monthlyTotals.expenses / (monthlyTotals.income + monthlyTotals.expenses)) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="pt-2 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Resultado:</span>
-                      <span className={`text-lg font-bold ${monthlyTotals.income - monthlyTotals.expenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(monthlyTotals.income - monthlyTotals.expenses)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Margem:</span>
-                      <span className={`text-sm font-medium ${monthlyTotals.income - monthlyTotals.expenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {monthlyTotals.income > 0 
-                          ? `${((monthlyTotals.income - monthlyTotals.expenses) / monthlyTotals.income * 100).toFixed(1)}%` 
-                          : '0%'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Meses */}
-                  <div className="grid grid-cols-6 gap-2 pt-2">
-                    {monthlyData.map((month, i) => (
-                      <div key={i} className="text-center">
-                        <div className="text-xs text-muted-foreground">{month.month}</div>
-                        <div className="text-sm font-medium mt-1">{formatShortMoney(month.receita - month.despesas)}</div>
-                        <div className={`text-xs ${month.receita - month.despesas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {month.receita > 0 
-                            ? `${((month.receita - month.despesas) / month.receita * 100).toFixed(0)}%` 
-                            : '0%'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <FinancialChart 
+                  type="area"
+                  title=""
+                  data={monthlyData}
+                  dataKeys={['receita', 'despesas']}
+                  xAxisDataKey="month"
+                  colors={['#10B981', '#EF4444']}
+                  height={300}
+                />
               </CardContent>
             </Card>
             
@@ -672,20 +615,15 @@ export default function Financial() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {expenseCategoriesData.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: ['#EF4444', '#F59E0B', '#6366F1', '#10B981'][index % 4] }}
-                          />
-                          <span className="text-sm">{item.name}</span>
-                        </div>
-                        <span className="text-sm font-medium">{formatCurrency(item.value)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={expenseCategoriesData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
+                    height={140}
+                  />
                 </CardContent>
               </Card>
               
@@ -697,20 +635,15 @@ export default function Financial() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {clientDistributionData.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: ['#10B981', '#6366F1', '#F59E0B'][index % 3] }}
-                          />
-                          <span className="text-sm">{item.name}</span>
-                        </div>
-                        <span className="text-sm font-medium">{formatCurrency(item.value)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={clientDistributionData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#10B981', '#6366F1', '#F59E0B']}
+                    height={140}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -1065,42 +998,41 @@ export default function Financial() {
           
           {/* Charts */}
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ResponsiveFinancialChart 
-                type="bar"
-                title="Previsão de Recebimentos"
-                description="Fluxo de caixa previsto para os próximos 30 dias"
-                data={calculateUpcomingReceivables(financialDocuments)}
-                dataKeys={['value']}
-                xAxisDataKey="name"
-                colors={['#6366F1']}
-                height={280}
-                enableGridX={false}
-                isCompact={false}
-              />
-            </div>
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Previsão de Recebimentos</CardTitle>
+                <CardDescription>Fluxo de caixa previsto para os próximos 30 dias</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FinancialChart 
+                  type="bar"
+                  title=""
+                  data={calculateUpcomingReceivables(financialDocuments)}
+                  dataKeys={['value']}
+                  xAxisDataKey="name"
+                  colors={['#6366F1']}
+                  height={230}
+                />
+              </CardContent>
+            </Card>
             
-            {clientDistributionData.length > 0 ? (
-              <ResponsiveFinancialChart 
-                type="pie"
-                title="Distribuição por Cliente"
-                description="Valores a receber por cliente"
-                data={clientDistributionData}
-                dataKeys={['value']}
-                xAxisDataKey="name"
-                yAxisDataKey="value"
-                colors={['#10B981', '#6366F1', '#F59E0B', '#EF4444']}
-                height={280}
-                innerRadius={0.6}
-                legendPosition="bottom"
-              />
-            ) : (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium">Distribuição por Cliente</CardTitle>
-                  <CardDescription>Valores a receber por cliente</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-medium">Distribuição por Cliente</CardTitle>
+                <CardDescription>Valores a receber por cliente</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientDistributionData.length > 0 ? (
+                  <FinancialChart 
+                    type="pie"
+                    title=""
+                    data={clientDistributionData}
+                    dataKeys={['value']}
+                    xAxisDataKey="name"
+                    colors={['#10B981', '#6366F1', '#F59E0B']}
+                    height={230}
+                  />
+                ) : (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Users className="h-16 w-16 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-medium">Sem dados de clientes</h3>
@@ -1108,9 +1040,9 @@ export default function Financial() {
                       Adicione faturas para visualizar a distribuição por cliente
                     </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
