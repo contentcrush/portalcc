@@ -203,7 +203,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
   
   // Lidar com a resposta a um comentário
   const handleReply = (comment: ProjectComment) => {
-    // Função de callback chamada pelo CommentItem quando o usuário envia uma resposta
+    // Esta função é chamada pelo CommentItem quando um usuário clica no botão de resposta
+    // O CommentItem internamente lidará com a UI de resposta e chamará onReply com o texto
+    // Quando o usuário submeter a resposta, o CommentItem irá chamar o prop onReply com o texto da resposta
+    console.log("Preparando para responder ao comentário:", comment.id);
   };
   
   // Enviar uma resposta a um comentário
@@ -345,7 +348,7 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
             key={thread.comment!.id}
             comment={thread.comment! as any} // Tipo compatível com TaskComment para reutilizar o componente
             users={usersMap}
-            onReply={() => {}} // Gerenciado pelo próprio componente CommentItem
+            onReply={(parentComment) => handleReply(parentComment as any)}
             onDelete={(commentId) => deleteCommentMutation.mutate(commentId)}
             onEdit={(commentId, newText) => 
               editCommentMutation.mutate({ commentId, text: newText })
