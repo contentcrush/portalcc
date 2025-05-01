@@ -481,7 +481,7 @@ export default function Financial() {
             <Download className="h-4 w-4" />
           </Button>
           
-          <NewFinancialRecordDialog />
+          <NewFinancialRecordDialog initialTab={selectedTab === "payables" ? "expense" : "income"} />
         </div>
       </div>
       

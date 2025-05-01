@@ -98,9 +98,15 @@ const expenseCategories = [
 ];
 
 // Componente de Dialog para novo registro financeiro
-export function NewFinancialRecordDialog({ onSuccess }: { onSuccess?: () => void }) {
+export function NewFinancialRecordDialog({ 
+  onSuccess, 
+  initialTab 
+}: { 
+  onSuccess?: () => void;
+  initialTab?: "income" | "expense";
+}) {
   const [open, setOpen] = useState(false);
-  const [recordType, setRecordType] = useState<"income" | "expense">("income");
+  const [recordType, setRecordType] = useState<"income" | "expense">(initialTab || "income");
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
   const [openProjectCombobox, setOpenProjectCombobox] = useState(false);
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
@@ -267,7 +273,7 @@ export function NewFinancialRecordDialog({ onSuccess }: { onSuccess?: () => void
         </DialogHeader>
 
         <Tabs 
-          defaultValue="income" 
+          defaultValue={recordType} 
           onValueChange={(value) => updateDefaultValues(value as "income" | "expense")}
           className="mt-2"
         >
