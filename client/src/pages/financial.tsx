@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -75,9 +73,6 @@ import {
   BarChart,
   CheckCircle,
   Receipt,
-  FilePlus,
-  Loader2,
-  BadgeCheck,
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
@@ -119,7 +114,7 @@ export default function Financial() {
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
 
   // Fetch financial data
-  const { data: financialDocuments, isLoading: isLoadingDocuments, refetch: refetchFinancialDocuments } = useQuery({
+  const { data: financialDocuments, isLoading: isLoadingDocuments } = useQuery({
     queryKey: ['/api/financial-documents']
   });
   
@@ -133,34 +128,6 @@ export default function Financial() {
   
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
-  });
-  
-  // Mutação para gerar faturas a partir de projetos existentes
-  const generateInvoicesMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/financial-documents/generate-from-projects");
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erro ao gerar faturas");
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Faturas geradas com sucesso",
-        description: `${data.generated} faturas geradas, ${data.skipped} ignoradas e ${data.errors} erros.`,
-      });
-      
-      // Recarregar documentos financeiros
-      refetchFinancialDocuments();
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao gerar faturas",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   // Prepare financial data
@@ -864,27 +831,6 @@ export default function Financial() {
             </div>
             
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-              {/* Botão para gerar faturas de projetos existentes */}
-              <Button 
-                onClick={() => generateInvoicesMutation.mutate()} 
-                disabled={generateInvoicesMutation.isPending}
-                variant="outline"
-                size="sm"
-                className="h-9 gap-2"
-              >
-                {generateInvoicesMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Processando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FilePlus className="h-3.5 w-3.5" />
-                    <span>Gerar Faturas</span>
-                  </>
-                )}
-              </Button>
-              
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9">
