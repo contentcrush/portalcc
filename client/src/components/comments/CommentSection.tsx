@@ -155,6 +155,37 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
     }
   };
   
+  // Lidar com a resposta a um comentário
+  const handleReply = (comment: TaskComment) => {
+    // Esta função é chamada pelo CommentItem quando o usuário submeter a resposta
+    // O CommentItem já terá coletado o texto da resposta que está em comment.comment
+    if (!comment.comment.trim() || !currentUser?.id) return;
+    
+    handleSendReply(comment.id, comment.comment);
+  };
+  
+  // Enviar uma resposta a um comentário
+  const handleSendReply = (parentId: number, replyText: string) => {
+    if (!replyText.trim() || !currentUser?.id) return;
+    
+    const replyData: InsertTaskComment = {
+      task_id: taskId,
+      user_id: currentUser.id,
+      comment: replyText.trim(),
+      parent_id: parentId
+    };
+    
+    // Se temos WebSocket, enviar por ele, senão pela API REST
+    if (socket) {
+      socket.send(JSON.stringify({
+        type: "comment",
+        data: replyData
+      }));
+    } else {
+      addCommentMutation.mutate(replyData);
+    }
+  };
+  
   // Reagir a um comentário
   const handleReaction = (commentId: number) => {
     reactToCommentMutation.mutate(commentId);
@@ -276,7 +307,7 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
             key={thread.comment!.id}
             comment={thread.comment!}
             users={usersMap}
-            onReply={() => {}} // Gerenciado pelo próprio componente CommentItem
+            onReply={(parentComment) => handleReply(parentComment as any)}
             onDelete={(commentId) => deleteCommentMutation.mutate(commentId)}
             onEdit={(commentId, newText) => 
               editCommentMutation.mutate({ commentId, text: newText })
