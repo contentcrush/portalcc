@@ -213,11 +213,12 @@ export default function Financial() {
     })
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
   
-  // Monthly expenses
+  // Monthly expenses - incluindo todas as despesas do mês atual, mesmo as pendentes
   const monthlyExpenses = expenses
     ?.filter((exp: any) => {
       const expDate = new Date(exp.date);
-      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && exp.approved;
+      // Não aplicamos filtro de "approved" para mostrar o total de todas as despesas
+      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
     })
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
   
@@ -274,7 +275,7 @@ export default function Financial() {
       title: "Despesas Mensais",
       value: monthlyExpenses,
       icon: <Wallet className="h-5 w-5" />,
-      description: "Despesas pagas no mês",
+      description: "Total despesas do mês",
       variant: "red"
     },
     {
@@ -327,7 +328,8 @@ export default function Financial() {
   
   if (expenses && expenses.length > 0) {
     expenses.forEach((exp: any) => {
-      if (exp.approved && exp.date) {
+      // Incluir todas as despesas, mesmo as que não são aprovadas
+      if (exp.date) {
         const expenseDate = new Date(exp.date);
         const monthData = last6Months.find(m => 
           m.monthNumber === expenseDate.getMonth() && 
