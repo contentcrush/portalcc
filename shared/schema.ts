@@ -344,7 +344,15 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
   encryption_key_id: true
 });
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
-export const insertFinancialDocumentSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
+// Schema base para documentos financeiros
+const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
+
+// Schema personalizado com transformações para datas
+export const insertFinancialDocumentSchema = financialDocumentBaseSchema.extend({
+  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional(),
+});
 export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
 // Schema base para eventos
 const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
