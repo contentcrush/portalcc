@@ -33,11 +33,7 @@ interface CommentItemProps {
   onDelete: (commentId: number) => void;
   onEdit: (commentId: number, newText: string) => void;
   isReply?: boolean;
-  reactions: { 
-    commentId: number; 
-    userId: number; 
-    count: number 
-  }[];
+  reactions?: any[]; // Temporariamente usando 'any' durante a migração
   onReaction: (commentId: number) => void;
   replies?: TaskComment[];
 }
@@ -68,14 +64,12 @@ export function CommentItem({
   const isAuthor = currentUser?.id === comment.user_id;
   
   // Verificar se o usuário atual já reagiu a este comentário
-  const hasReacted = reactions.some(r => 
-    r.commentId === comment.id && r.userId === currentUser?.id
-  );
+  const hasReacted = comment.reactions?.some(r => 
+    r.user_id === currentUser?.id
+  ) || false;
   
   // Obter contagem de reações para este comentário
-  const reactionCount = reactions
-    .filter(r => r.commentId === comment.id)
-    .reduce((total, r) => total + r.count, 0);
+  const reactionCount = comment.reactions?.length || 0;
   
   // Verificar se este comentário foi editado
   const wasEdited = comment.edited;
