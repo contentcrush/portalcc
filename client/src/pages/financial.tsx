@@ -595,48 +595,124 @@ export default function Financial() {
                 </DropdownMenu>
               </CardHeader>
               <CardContent>
-                <ResponsiveFinancialChart 
-                  type="line"
-                  title=""
-                  data={monthlyData}
-                  dataKeys={['receita', 'despesas']}
-                  xAxisDataKey="month"
-                  colors={['#10B981', '#EF4444']}
-                  height={300}
-                  noCard={true}
-                  enableArea
-                />
+                <div className="space-y-8 pt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                        <span className="text-sm font-medium">Receitas</span>
+                      </div>
+                      <span className="text-sm font-medium">{formatCurrency(monthlyTotals.income)}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-green-500 rounded-full" 
+                        style={{ width: `${(monthlyTotals.income / (monthlyTotals.income + monthlyTotals.expenses)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <span className="text-sm font-medium">Despesas</span>
+                      </div>
+                      <span className="text-sm font-medium">{formatCurrency(monthlyTotals.expenses)}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-red-500 rounded-full" 
+                        style={{ width: `${(monthlyTotals.expenses / (monthlyTotals.income + monthlyTotals.expenses)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Resultado:</span>
+                      <span className={`text-lg font-bold ${monthlyTotals.income - monthlyTotals.expenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(monthlyTotals.income - monthlyTotals.expenses)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Margem:</span>
+                      <span className={`text-sm font-medium ${monthlyTotals.income - monthlyTotals.expenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {monthlyTotals.income > 0 
+                          ? `${((monthlyTotals.income - monthlyTotals.expenses) / monthlyTotals.income * 100).toFixed(1)}%` 
+                          : '0%'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Meses */}
+                  <div className="grid grid-cols-6 gap-2 pt-2">
+                    {monthlyData.map((month, i) => (
+                      <div key={i} className="text-center">
+                        <div className="text-xs text-muted-foreground">{month.month}</div>
+                        <div className="text-sm font-medium mt-1">{formatShortMoney(month.receita - month.despesas)}</div>
+                        <div className={`text-xs ${month.receita - month.despesas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {month.receita > 0 
+                            ? `${((month.receita - month.despesas) / month.receita * 100).toFixed(0)}%` 
+                            : '0%'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
             
             <div className="grid gap-6 grid-cols-1">
-              <ResponsiveFinancialChart 
-                type="pie"
-                title="Distribuição de Despesas"
-                description="Por categoria"
-                data={expenseCategoriesData}
-                dataKeys={['value']}
-                xAxisDataKey="name"
-                yAxisDataKey="value"
-                colors={['#EF4444', '#F59E0B', '#6366F1', '#10B981']}
-                height={180}
-                innerRadius={0.6}
-                isCompact={true}
-              />
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-medium">Distribuição de Despesas</CardTitle>
+                    <CardDescription>Por categoria</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {expenseCategoriesData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: ['#EF4444', '#F59E0B', '#6366F1', '#10B981'][index % 4] }}
+                          />
+                          <span className="text-sm">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-medium">{formatCurrency(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
               
-              <ResponsiveFinancialChart 
-                type="pie"
-                title="Receita por Cliente"
-                description="Principais clientes"
-                data={clientDistributionData}
-                dataKeys={['value']}
-                xAxisDataKey="name"
-                yAxisDataKey="value"
-                colors={['#10B981', '#6366F1', '#F59E0B']}
-                height={180}
-                innerRadius={0.6}
-                isCompact={true}
-              />
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-medium">Receita por Cliente</CardTitle>
+                    <CardDescription>Principais clientes</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {clientDistributionData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: ['#10B981', '#6366F1', '#F59E0B'][index % 3] }}
+                          />
+                          <span className="text-sm">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-medium">{formatCurrency(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
           

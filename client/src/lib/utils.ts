@@ -29,6 +29,17 @@ export function formatCurrency(value: number | null | undefined): string {
   }).format(value);
 }
 
+export function formatShortMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "R$ 0";
+  if (Math.abs(value) >= 1000000) {
+    return `R$ ${(value / 1000000).toFixed(1)}M`;
+  } else if (Math.abs(value) >= 1000) {
+    return `R$ ${(value / 1000).toFixed(1)}K`;
+  } else {
+    return `R$ ${value.toFixed(0)}`;
+  }
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
