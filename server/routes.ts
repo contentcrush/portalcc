@@ -1225,7 +1225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Financial Documents - Adicionando autenticação e permissões
-  app.get("/api/financial-documents", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
+  app.get("/api/financial-documents", authenticateJWT, async (_req, res) => {
     try {
       const documents = await storage.getFinancialDocuments();
       res.json(documents);
@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Expenses - Adicionando autenticação e permissões
-  app.get("/api/expenses", authenticateJWT, requirePermission('view_financials'), async (_req, res) => {
+  app.get("/api/expenses", authenticateJWT, async (_req, res) => {
     try {
       const expenses = await storage.getExpenses();
       res.json(expenses);
