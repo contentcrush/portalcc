@@ -180,9 +180,20 @@ export default function Financial() {
   // Payables total
   const totalPayables = payablesData.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
+  // Overdue receivables
+  const today = new Date();
+  const overdueReceivables = receivablesData
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  
   // Cash flow next 30 days
   const receivablesNext30Days = receivablesData
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), thirtyDaysFromNow))
+    .filter((doc: any) => 
+      doc.due_date && 
+      isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
+      !isBefore(new Date(doc.due_date), today) && // Não vencidas 
+      !doc.paid // Ainda não pagas
+    )
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
   const payablesNext30Days = payablesData
@@ -865,7 +876,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Vencidas</p>
-                  <p className="text-2xl font-bold text-red-600">{formatCurrency(12450)}</p>
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(overdueReceivables)}</p>
                 </div>
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </CardContent>
@@ -875,7 +886,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Próximos 30 dias</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(43150)}</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(receivablesNext30Days)}</p>
                 </div>
                 <CalendarIcon className="h-8 w-8 text-blue-600" />
               </CardContent>
