@@ -1335,6 +1335,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update expense" });
     }
   });
+  
+  // Excluir uma despesa
+  app.delete("/api/expenses/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteExpense(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Despesa não encontrada" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Erro ao excluir despesa:", error);
+      res.status(500).json({ message: "Falha ao excluir despesa" });
+    }
+  });
+  
+  // Aprovar uma despesa
+  app.post("/api/expenses/:id/approve", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { approval_date, notes } = req.body;
+      
+      // Verificar se a despesa existe
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Despesa não encontrada" });
+      }
+      
+      // Atualizar para aprovado
+      const updatedExpense = await storage.updateExpense(id, {
+        approved: true,
+        approval_date: approval_date || new Date(),
+        approval_notes: notes
+      });
+      
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error("Erro ao aprovar despesa:", error);
+      res.status(500).json({ message: "Falha ao aprovar despesa" });
+    }
+  });
 
   // Events - Adicionando autenticação e permissões
   app.get("/api/events", authenticateJWT, async (_req, res) => {
