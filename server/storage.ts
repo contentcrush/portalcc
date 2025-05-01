@@ -1760,48 +1760,20 @@ export class DatabaseStorage implements IStorage {
   
   // Task Comments
   async getTaskComments(taskId: number): Promise<TaskComment[]> {
-    // Primeiro buscamos todos os comentários da tarefa
-    const commentsResult = await db.select()
+    return await db.select()
       .from(taskComments)
       .where(and(
         eq(taskComments.task_id, taskId),
         eq(taskComments.deleted, false)
       ))
       .orderBy(taskComments.creation_date);
-    
-    // Para cada comentário, buscamos as reações relacionadas
-    const commentsWithReactions = await Promise.all(
-      commentsResult.map(async (comment) => {
-        const reactions = await db.select()
-          .from(commentReactions)
-          .where(eq(commentReactions.comment_id, comment.id));
-        
-        return {
-          ...comment,
-          reactions: reactions || []
-        };
-      })
-    );
-    
-    return commentsWithReactions;
   }
   
   async getTaskCommentById(commentId: number): Promise<TaskComment | undefined> {
     const [comment] = await db.select()
       .from(taskComments)
       .where(eq(taskComments.id, commentId));
-    
-    if (!comment) return undefined;
-    
-    // Buscar as reações para este comentário
-    const reactions = await db.select()
-      .from(commentReactions)
-      .where(eq(commentReactions.comment_id, commentId));
-    
-    return {
-      ...comment,
-      reactions: reactions || []
-    };
+    return comment;
   }
 
   async createTaskComment(insertComment: InsertTaskComment): Promise<TaskComment> {
@@ -1813,12 +1785,7 @@ export class DatabaseStorage implements IStorage {
         deleted: false
       })
       .returning();
-    
-    // Adicionar array de reações vazio ao comentário retornado
-    return {
-      ...comment,
-      reactions: []
-    };
+    return comment;
   }
   
   async updateTaskComment(commentId: number, updates: Partial<TaskComment>): Promise<TaskComment> {
@@ -1831,15 +1798,7 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Comment with ID ${commentId} not found`);
     }
     
-    // Buscar reações após a atualização
-    const reactions = await db.select()
-      .from(commentReactions)
-      .where(eq(commentReactions.comment_id, commentId));
-    
-    return {
-      ...updatedComment,
-      reactions: reactions || []
-    };
+    return updatedComment;
   }
   
   async softDeleteTaskComment(commentId: number): Promise<boolean> {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 interface UserAvatarProps {
   user: User | undefined;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -18,7 +18,6 @@ export function UserAvatar({ user, size = "md", className = "" }: UserAvatarProp
   
   // Determinar o tamanho do avatar
   const sizeClass = {
-    xs: "h-5 w-5 text-[10px]",
     sm: "h-6 w-6 text-xs",
     md: "h-8 w-8 text-sm",
     lg: "h-10 w-10 text-base"

@@ -232,28 +232,45 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
   
   return (
     <div className={cn("mt-4", className)}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-medium text-slate-700 dark:text-slate-300">
-          Comentários <span className="ml-1 text-sm text-muted-foreground">({comments.filter(c => !c.parent_id).length})</span>
-        </h3>
+      <h3 className="text-lg font-medium mb-4">
+        Comentários ({comments.filter(c => !c.parent_id).length})
+      </h3>
+      
+      {/* Formulário para adicionar novo comentário */}
+      <div className="mb-6 space-y-2">
+        <Textarea
+          placeholder="Escreva um comentário..."
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          className="min-h-[100px] w-full"
+        />
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleSubmitComment} 
+            disabled={!commentText.trim() || addCommentMutation.isPending}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Comentar
+          </Button>
+        </div>
       </div>
       
+      {/* Exibir mensagem de carregamento */}
+      {isLoading && (
+        <div className="py-4 text-center text-muted-foreground">
+          Carregando comentários...
+        </div>
+      )}
+      
+      {/* Exibir mensagem quando não há comentários */}
+      {!isLoading && sortedThreads.length === 0 && (
+        <div className="py-4 text-center text-muted-foreground">
+          Nenhum comentário ainda. Seja o primeiro a comentar!
+        </div>
+      )}
+      
       {/* Lista de comentários */}
-      <div className="space-y-0.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 p-3 mb-4">
-        {/* Exibir mensagem de carregamento */}
-        {isLoading && (
-          <div className="py-4 text-center text-muted-foreground">
-            Carregando comentários...
-          </div>
-        )}
-        
-        {/* Exibir mensagem quando não há comentários */}
-        {!isLoading && sortedThreads.length === 0 && (
-          <div className="py-4 text-center text-muted-foreground">
-            Nenhum comentário ainda. Seja o primeiro a comentar!
-          </div>
-        )}
-        
+      <div className="space-y-1 divide-y">
         {sortedThreads.map(thread => (
           <CommentItem
             key={thread.comment!.id}
@@ -269,25 +286,6 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
             replies={thread.replies}
           />
         ))}
-      </div>
-      
-      {/* Campo de comentário com design mais moderno */}
-      <div className="relative">
-        <Textarea
-          placeholder="Adicionar um comentário..."
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          className="min-h-[60px] resize-none pr-12 text-sm rounded-md bg-card"
-        />
-        <Button 
-          onClick={handleSubmitComment}
-          disabled={!commentText.trim() || addCommentMutation.isPending}
-          size="icon"
-          variant="ghost"
-          className="absolute bottom-2 right-2 h-8 w-8 text-primary hover:text-primary/80"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
