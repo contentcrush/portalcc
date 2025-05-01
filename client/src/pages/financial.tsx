@@ -1342,60 +1342,36 @@ export default function Financial() {
               <CardContent>
                 <ScrollArea className="h-[250px]">
                   <div className="space-y-5">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-sm">Campanha de Verão</span>
-                        <span className="text-sm text-muted-foreground">60% do orçamento</span>
+                    {projects && projects.length > 0 ? (
+                      projects.map((project: any) => {
+                        // Calcular o total de despesas desse projeto
+                        const projectExpenses = expenses ? expenses.filter((exp: any) => exp.project_id === project.id) : [];
+                        const totalExpenses = projectExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+                        
+                        // Calcular a porcentagem em relação ao orçamento
+                        const budget = project.budget || 1; // Para evitar divisão por zero
+                        const percentUsed = Math.min(100, Math.round((totalExpenses / budget) * 100)) || 0;
+                        
+                        return (
+                          <div className="space-y-1.5" key={project.id}>
+                            <div className="flex justify-between">
+                              <span className="font-medium text-sm">{project.name}</span>
+                              <span className="text-sm text-muted-foreground">{percentUsed}% do orçamento</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Progress value={percentUsed} className="h-2" />
+                              <span className={`text-xs font-medium ${percentUsed > 80 ? 'text-amber-600' : 'text-green-600'}`}>
+                                {formatCurrency(totalExpenses)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-8 text-center">
+                        <p className="text-sm text-muted-foreground">Nenhum projeto com despesas encontrado</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={60} className="h-2" />
-                        <span className="text-xs font-medium text-green-600">R$ 4.800</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-sm">Lançamento SUV C3</span>
-                        <span className="text-sm text-muted-foreground">0% do orçamento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={0} className="h-2" />
-                        <span className="text-xs font-medium text-green-600">R$ 0</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-sm">InCarne 2025</span>
-                        <span className="text-sm text-muted-foreground">85% do orçamento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={85} className="h-2" />
-                        <span className="text-xs font-medium text-amber-600">R$ 12.200</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-sm">Promoção Inverno</span>
-                        <span className="text-sm text-muted-foreground">40% do orçamento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={40} className="h-2" />
-                        <span className="text-xs font-medium text-green-600">R$ 7.560</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-sm">Institucional 2025</span>
-                        <span className="text-sm text-muted-foreground">0% do orçamento</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={0} className="h-2" />
-                        <span className="text-xs font-medium text-green-600">R$ 0</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
