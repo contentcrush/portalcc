@@ -353,7 +353,15 @@ export const insertFinancialDocumentSchema = financialDocumentBaseSchema.extend(
     val === null || val === undefined ? null : typeof val === 'string' ? new Date(val) : val
   ).nullable().optional(),
 });
-export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
+// Schema base para despesas
+const expenseBaseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
+
+// Schema personalizado com transformações para datas
+export const insertExpenseSchema = expenseBaseSchema.extend({
+  date: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
 // Schema base para eventos
 const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
 // Schema personalizado com transformações para datas
