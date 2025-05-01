@@ -878,7 +878,7 @@ export default function Financial() {
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">A Receber (Total)</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceivables || 55600)}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceivables)}</p>
                 </div>
                 <CreditCard className="h-8 w-8 text-green-600" />
               </CardContent>
