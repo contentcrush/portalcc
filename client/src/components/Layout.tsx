@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
 import QuickActions from "./QuickActions";
+import { ChatWidget } from "./ChatWidget";
 import { Button } from "@/components/ui/button";
 import { Bell, Menu, UserCircle, Plus, List, User, LogOut, Settings } from "lucide-react";
 import {
@@ -154,6 +155,9 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
       </main>
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }
