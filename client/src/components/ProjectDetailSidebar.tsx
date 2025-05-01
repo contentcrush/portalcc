@@ -713,6 +713,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           />
         </div>
         
+        {/* Seção de comentários do projeto */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-xs font-medium text-gray-500">COMENTÁRIOS</div>
+          </div>
+          <ProjectCommentSection projectId={projectId} />
+        </div>
+        
         <div>
           <Button 
             className="w-full bg-indigo-600 hover:bg-indigo-700 mb-3"
