@@ -473,7 +473,9 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
   project: one(projects, {
     fields: [projectMembers.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_members",
+    onDelete: "cascade"
   }),
   user: one(users, {
     fields: [projectMembers.user_id],
@@ -484,7 +486,9 @@ export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
 export const projectStagesRelations = relations(projectStages, ({ one }) => ({
   project: one(projects, {
     fields: [projectStages.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_stages",
+    onDelete: "cascade"
   })
 }));
 
@@ -508,7 +512,8 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
 export const taskCommentsRelations = relations(taskComments, ({ one, many }) => ({
   task: one(tasks, {
     fields: [taskComments.task_id],
-    references: [tasks.id]
+    references: [tasks.id],
+    onDelete: "cascade"
   }),
   user: one(users, {
     fields: [taskComments.user_id],
@@ -524,7 +529,8 @@ export const taskCommentsRelations = relations(taskComments, ({ one, many }) => 
 export const commentReactionsRelations = relations(commentReactions, ({ one }) => ({
   comment: one(taskComments, {
     fields: [commentReactions.comment_id],
-    references: [taskComments.id]
+    references: [taskComments.id],
+    onDelete: "cascade"
   }),
   user: one(users, {
     fields: [commentReactions.user_id],
@@ -536,7 +542,9 @@ export const commentReactionsRelations = relations(commentReactions, ({ one }) =
 export const projectCommentsRelations = relations(projectComments, ({ one, many }) => ({
   project: one(projects, {
     fields: [projectComments.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_comments",
+    onDelete: "cascade"
   }),
   user: one(users, {
     fields: [projectComments.user_id],
@@ -553,7 +561,8 @@ export const projectCommentsRelations = relations(projectComments, ({ one, many 
 export const projectCommentReactionsRelations = relations(projectCommentReactions, ({ one }) => ({
   comment: one(projectComments, {
     fields: [projectCommentReactions.comment_id],
-    references: [projectComments.id]
+    references: [projectComments.id],
+    onDelete: "cascade"
   }),
   user: one(users, {
     fields: [projectCommentReactions.user_id],
@@ -564,7 +573,8 @@ export const projectCommentReactionsRelations = relations(projectCommentReaction
 export const taskAttachmentsRelations = relations(taskAttachments, ({ one }) => ({
   task: one(tasks, {
     fields: [taskAttachments.task_id],
-    references: [tasks.id]
+    references: [tasks.id],
+    onDelete: "cascade"
   }),
   uploader: one(users, {
     fields: [taskAttachments.uploaded_by],
@@ -599,7 +609,9 @@ export const financialDocumentsRelations = relations(financialDocuments, ({ one 
 export const expensesRelations = relations(expenses, ({ one }) => ({
   project: one(projects, {
     fields: [expenses.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_expenses",
+    onDelete: "cascade"
   }),
   paidBy: one(users, {
     fields: [expenses.paid_by],
@@ -614,7 +626,9 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
   project: one(projects, {
     fields: [events.project_id],
-    references: [projects.id]
+    references: [projects.id],
+    relationName: "project_events",
+    onDelete: "cascade"
   }),
   client: one(clients, {
     fields: [events.client_id],
@@ -622,6 +636,7 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
   task: one(tasks, {
     fields: [events.task_id],
-    references: [tasks.id]
+    references: [tasks.id],
+    onDelete: "cascade"
   })
 }));
