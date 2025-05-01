@@ -510,7 +510,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const project = await storage.createProject(req.body);
-      res.status(201).json(project);
+      
+      // Gerar automaticamente um documento financeiro (fatura a receber) se o projeto tem orçamento
+      if (project.budget && project.budget > 0) {
+        const dueDate = project.endDate ? new Date(project.endDate) : new Date();
+        // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
+        if (dueDate < new Date()) {
+          dueDate.setDate(dueDate.getDate() + 15);
+        }
+        
+        const financialDocument = await storage.createFinancialDocument({
+          project_id: project.id,
+          client_id: project.client_id,
+          document_type: "invoice",
+          amount: project.budget,
+          due_date: dueDate,
+          status: "pending",
+          description: `Fatura referente ao projeto: ${project.name}`
+        });
+        
+        console.log(`[Sistema] Documento financeiro ID:${financialDocument.id} gerado automaticamente para o projeto ID:${project.id}`);
+        
+        // Incluir informação da fatura gerada na resposta
+        res.status(201).json({
+          ...project,
+          generated_invoice: financialDocument
+        });
+      } else {
+        res.status(201).json(project);
+      }
     } catch (error) {
       console.error("Error creating project:", error);
       res.status(500).json({ message: "Failed to create project" });
@@ -521,33 +549,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      // Verificar se o projeto existe e obter dados atuais antes de atualizar
+      const currentProject = await storage.getProject(id);
+      if (!currentProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, req.body);
       
-      if (!updatedProject) {
-        return res.status(404).json({ message: "Project not found" });
+      // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
+      if (req.body.budget && (currentProject.budget !== req.body.budget)) {
+        // Verificar se já existe uma fatura para este projeto
+        const existingInvoices = await storage.getFinancialDocumentsByProject(id);
+        const pendingInvoice = existingInvoices.find(doc => 
+          doc.document_type === "invoice" && doc.status === "pending" && !doc.paid
+        );
+        
+        if (pendingInvoice) {
+          // Atualizar a fatura existente
+          await storage.updateFinancialDocument(pendingInvoice.id, {
+            amount: req.body.budget,
+            description: `Fatura atualizada do projeto: ${updatedProject.name}`,
+            // Manter data de vencimento ou definir nova baseada na data de fim do projeto
+            due_date: updatedProject.endDate && new Date(updatedProject.endDate) > new Date() 
+              ? new Date(updatedProject.endDate) 
+              : pendingInvoice.due_date
+          });
+          
+          console.log(`[Sistema] Documento financeiro ID:${pendingInvoice.id} atualizado para o novo valor do projeto ID:${id}`);
+        } else {
+          // Criar nova fatura
+          const dueDate = updatedProject.endDate ? new Date(updatedProject.endDate) : new Date();
+          // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
+          if (dueDate < new Date()) {
+            dueDate.setDate(dueDate.getDate() + 15);
+          }
+          
+          const financialDocument = await storage.createFinancialDocument({
+            project_id: id,
+            client_id: updatedProject.client_id,
+            document_type: "invoice",
+            amount: updatedProject.budget,
+            due_date: dueDate,
+            status: "pending",
+            description: `Fatura referente ao projeto: ${updatedProject.name}`
+          });
+          
+          console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
+        }
       }
       
       // Verificar se precisamos atualizar o status baseado na data de entrega
       if (updatedProject) {
-        const endDate = new Date(updatedProject.endDate);
-        const today = new Date();
-        
-        // Caso 1: Projeto está marcado como atrasado mas a data foi atualizada para o futuro
-        if (updatedProject.status === 'atrasado' && endDate > today) {
-          console.log(`[Automação] Projeto ${id} está marcado como 'atrasado' mas a data de entrega (${endDate.toISOString()}) foi atualizada para o futuro.`);
-          await checkProjectsWithUpdatedDates();
-        } 
-        // Caso 2: Projeto tem status de desenvolvimento mas a data está no passado
-        else if (['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status) && endDate < today) {
-          console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
-          await checkOverdueProjects();
+        if (updatedProject.endDate) {
+          const endDate = new Date(updatedProject.endDate);
+          const today = new Date();
+          
+          // Caso 1: Projeto está marcado como atrasado mas a data foi atualizada para o futuro
+          if (updatedProject.status === 'atrasado' && endDate > today) {
+            console.log(`[Automação] Projeto ${id} está marcado como 'atrasado' mas a data de entrega (${endDate.toISOString()}) foi atualizada para o futuro.`);
+            await checkProjectsWithUpdatedDates();
+          } 
+          // Caso 2: Projeto tem status de desenvolvimento mas a data está no passado
+          else if (['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status) && endDate < today) {
+            console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
+            await checkOverdueProjects();
+          }
         }
         
         // Recarregar o projeto para retornar o status mais atualizado
         const refreshedProject = await storage.getProject(id);
         if (refreshedProject) {
-          return res.json(refreshedProject);
+          // Incluir informações de faturas na resposta
+          const invoices = await storage.getFinancialDocumentsByProject(id);
+          return res.json({
+            ...refreshedProject,
+            invoices: invoices
+          });
         }
       }
       
@@ -563,33 +642,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      // Verificar se o projeto existe e obter dados atuais antes de atualizar
+      const currentProject = await storage.getProject(id);
+      if (!currentProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, req.body);
       
-      if (!updatedProject) {
-        return res.status(404).json({ message: "Project not found" });
+      // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
+      if (req.body.budget && (currentProject.budget !== req.body.budget)) {
+        // Verificar se já existe uma fatura para este projeto
+        const existingInvoices = await storage.getFinancialDocumentsByProject(id);
+        const pendingInvoice = existingInvoices.find(doc => 
+          doc.document_type === "invoice" && doc.status === "pending" && !doc.paid
+        );
+        
+        if (pendingInvoice) {
+          // Atualizar a fatura existente
+          await storage.updateFinancialDocument(pendingInvoice.id, {
+            amount: req.body.budget,
+            description: `Fatura atualizada do projeto: ${updatedProject.name}`,
+            // Manter data de vencimento ou definir nova baseada na data de fim do projeto
+            due_date: updatedProject.endDate && new Date(updatedProject.endDate) > new Date() 
+              ? new Date(updatedProject.endDate) 
+              : pendingInvoice.due_date
+          });
+          
+          console.log(`[Sistema] Documento financeiro ID:${pendingInvoice.id} atualizado para o novo valor do projeto ID:${id}`);
+        } else {
+          // Criar nova fatura
+          const dueDate = updatedProject.endDate ? new Date(updatedProject.endDate) : new Date();
+          // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
+          if (dueDate < new Date()) {
+            dueDate.setDate(dueDate.getDate() + 15);
+          }
+          
+          const financialDocument = await storage.createFinancialDocument({
+            project_id: id,
+            client_id: updatedProject.client_id,
+            document_type: "invoice",
+            amount: updatedProject.budget,
+            due_date: dueDate,
+            status: "pending",
+            description: `Fatura referente ao projeto: ${updatedProject.name}`
+          });
+          
+          console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
+        }
       }
       
       // Verificar se precisamos atualizar o status baseado na data de entrega
       if (updatedProject) {
-        const endDate = new Date(updatedProject.endDate);
-        const today = new Date();
-        
-        // Caso 1: Projeto está marcado como atrasado mas a data foi atualizada para o futuro
-        if (updatedProject.status === 'atrasado' && endDate > today) {
-          console.log(`[Automação] Projeto ${id} está marcado como 'atrasado' mas a data de entrega (${endDate.toISOString()}) foi atualizada para o futuro.`);
-          await checkProjectsWithUpdatedDates();
-        } 
-        // Caso 2: Projeto tem status de desenvolvimento mas a data está no passado
-        else if (['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status) && endDate < today) {
-          console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
-          await checkOverdueProjects();
+        if (updatedProject.endDate) {
+          const endDate = new Date(updatedProject.endDate);
+          const today = new Date();
+          
+          // Caso 1: Projeto está marcado como atrasado mas a data foi atualizada para o futuro
+          if (updatedProject.status === 'atrasado' && endDate > today) {
+            console.log(`[Automação] Projeto ${id} está marcado como 'atrasado' mas a data de entrega (${endDate.toISOString()}) foi atualizada para o futuro.`);
+            await checkProjectsWithUpdatedDates();
+          } 
+          // Caso 2: Projeto tem status de desenvolvimento mas a data está no passado
+          else if (['proposta', 'pre_producao', 'producao', 'pos_revisao'].includes(updatedProject.status) && endDate < today) {
+            console.log(`[Automação] Projeto ${id} foi atualizado com data de entrega (${endDate.toISOString()}) no passado. Verificando status...`);
+            await checkOverdueProjects();
+          }
         }
         
         // Recarregar o projeto para retornar o status mais atualizado
         const refreshedProject = await storage.getProject(id);
         if (refreshedProject) {
-          return res.json(refreshedProject);
+          // Incluir informações de faturas na resposta
+          const invoices = await storage.getFinancialDocumentsByProject(id);
+          return res.json({
+            ...refreshedProject,
+            invoices: invoices
+          });
         }
       }
       
