@@ -144,6 +144,10 @@ export function ProjectFormDialog() {
       // Atualizar a cache após criação bem-sucedida
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
+      // Importante: Invalidar cache de documentos financeiros também
+      // já que a criação do projeto gera automaticamente uma fatura
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      
       // Mostrar uma mensagem de sucesso
       toast({
         title: "Projeto criado com sucesso",
@@ -182,10 +186,15 @@ export function ProjectFormDialog() {
       return await res.json();
     },
     onSuccess: (updatedProject) => {
+      // Invalidar cache de projetos
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       if (projectToEdit?.id) {
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectToEdit.id}`] });
       }
+      
+      // Importante: Invalidar cache de documentos financeiros também
+      // já que a alteração do projeto pode ter criado ou atualizado uma fatura
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       
       toast({
         title: "Projeto atualizado",
