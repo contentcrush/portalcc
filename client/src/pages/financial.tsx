@@ -264,12 +264,18 @@ export default function Financial() {
     ? ((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100 
     : 0;
   
-  // Avg cost per minute
-  const totalMinutes = 250; // This would be calculated from actual data
+  // Calcular total de minutos de vídeo (com base nos projetos)
+  const totalMinutes = projects
+    ?.filter((p: any) => p.duration)
+    .reduce((sum: number, p: any) => sum + (p.duration || 0), 0) || 1; // Usar 1 como mínimo para evitar divisão por zero
+  
   const avgCostPerMinute = monthlyExpenses > 0 ? monthlyExpenses / totalMinutes : 0;
   
-  // Average collection period
-  const dso = 28; // This would be calculated from actual data
+  // Average collection period (calculado dinamicamente)
+  // A fórmula usada é: (Contas a receber / Receita total) * 30 dias
+  const dso = totalReceivables > 0 && monthlyRevenue > 0 
+    ? Math.round((totalReceivables / monthlyRevenue) * 30) 
+    : 0;
 
   // Dashboard KPIs
   const kpis: FinancialKPI[] = [
