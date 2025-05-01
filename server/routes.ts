@@ -1302,22 +1302,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Este documento já foi pago" });
       }
       
-      // Converter a data de string para objeto Date
-      let finalPaymentDate = new Date();
-      if (payment_date) {
-        // Se for uma string de data, convertemos para objeto Date
-        if (typeof payment_date === 'string') {
-          finalPaymentDate = new Date(payment_date);
-        }
-      }
+      // Garante que temos uma data de pagamento válida
+      const now = new Date();
       
-      // Atualizar para pago
-      const updatedDocument = await storage.updateFinancialDocument(id, {
+      // Nunca usamos payment_date diretamente - só garante que estamos usando um objeto Date válido
+      let updatedFields = {
         paid: true,
         status: 'paid',
-        payment_date: finalPaymentDate,
-        payment_notes: notes
-      });
+        payment_date: now,  // Use a data atual como fallback
+        payment_notes: notes || null
+      };
+      
+      // Atualizar para pago
+      const updatedDocument = await storage.updateFinancialDocument(id, updatedFields);
       
       res.json(updatedDocument);
     } catch (error) {
