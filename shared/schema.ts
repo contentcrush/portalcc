@@ -148,6 +148,20 @@ export const taskComments = pgTable("task_comments", {
   task_id: integer("task_id").notNull(),
   user_id: integer("user_id").notNull(),
   comment: text("comment").notNull(),
+  parent_id: integer("parent_id"), // para respostas a outros comentários
+  creation_date: timestamp("creation_date").defaultNow(),
+  edited: boolean("edited").default(false),
+  edit_date: timestamp("edit_date"),
+  deleted: boolean("deleted").default(false),
+  delete_date: timestamp("delete_date"),
+});
+
+// Reações aos comentários (like, etc)
+export const commentReactions = pgTable("comment_reactions", {
+  id: serial("id").primaryKey(),
+  comment_id: integer("comment_id").notNull(),
+  user_id: integer("user_id").notNull(),
+  reaction_type: text("reaction_type").notNull().default("like"), // like, heart, etc
   creation_date: timestamp("creation_date").defaultNow(),
 });
 
@@ -278,7 +292,15 @@ export const insertTaskSchema = taskBaseSchema.extend({
     val === null || val === undefined ? undefined : typeof val === 'string' ? new Date(val) : val
   ).optional()
 });
-export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, creation_date: true });
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ 
+  id: true, 
+  creation_date: true, 
+  edited: true, 
+  edit_date: true, 
+  deleted: true, 
+  delete_date: true 
+});
+export const insertCommentReactionSchema = createInsertSchema(commentReactions).omit({ id: true, creation_date: true });
 export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).omit({ 
   id: true, 
   upload_date: true,
@@ -311,6 +333,7 @@ export type ProjectMember = typeof projectMembers.$inferSelect;
 export type ProjectStage = typeof projectStages.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type TaskComment = typeof taskComments.$inferSelect;
+export type CommentReaction = typeof commentReactions.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
@@ -327,6 +350,7 @@ export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
 export type InsertProjectStage = z.infer<typeof insertProjectStageSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+export type InsertCommentReaction = z.infer<typeof insertCommentReactionSchema>;
 export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
 export type InsertClientInteraction = z.infer<typeof insertClientInteractionSchema>;
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
@@ -416,13 +440,29 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   events: many(events)
 }));
 
-export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+export const taskCommentsRelations = relations(taskComments, ({ one, many }) => ({
   task: one(tasks, {
     fields: [taskComments.task_id],
     references: [tasks.id]
   }),
   user: one(users, {
     fields: [taskComments.user_id],
+    references: [users.id]
+  }),
+  reactions: many(commentReactions),
+  parent: one(taskComments, {
+    fields: [taskComments.parent_id],
+    references: [taskComments.id]
+  })
+}));
+
+export const commentReactionsRelations = relations(commentReactions, ({ one }) => ({
+  comment: one(taskComments, {
+    fields: [commentReactions.comment_id],
+    references: [taskComments.id]
+  }),
+  user: one(users, {
+    fields: [commentReactions.user_id],
     references: [users.id]
   })
 }));
