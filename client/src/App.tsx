@@ -41,6 +41,7 @@ function App() {
                       <Switch>
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
+                        {/* Rota para dashboard antigo removida */}
                         <Route path="/projects" component={Projects} />
                         <Route path="/projects/:id" component={Projects} />
                         <Route path="/tasks" component={Tasks} />

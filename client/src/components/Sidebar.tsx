@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useMemo } from "react";
+import { useLocation } from "wouter";
 import { cn, getNormalizedProjectStatus } from "@/lib/utils";
 import { SIDEBAR_ITEMS } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
@@ -46,18 +46,6 @@ interface SidebarProps {
 
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Efeito para detectar alterações no tamanho da tela
-  useMemo(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Define um tipo mais completo de Projeto para suportar o componente de progresso
   interface Project {
@@ -119,13 +107,12 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         <div className="px-3">
           {/* Navigation items */}
           {SIDEBAR_ITEMS.map((item) => (
-            <Link
+            <a
               key={item.path}
               href={item.path}
-              onClick={() => {
-                if (isMobile) {
-                  setMobileMenuOpen(false);
-                }
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(item.path);
               }}
               className={cn(
                 "sidebar-item",
@@ -136,7 +123,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
             >
               <DynamicIcon name={item.icon} />
               <span>{item.name}</span>
-            </Link>
+            </a>
           ))}
         </div>
         
@@ -147,13 +134,17 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           <div className="space-y-3">
             {projects?.map((project) => (
               <div key={project.id} className="flex flex-col">
-                <Link
+                <a
                   href={`/projects/${project.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate(`/projects/${project.id}`);
+                  }}
                   className="flex items-center px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
                 >
                   <span className={cn("status-badge", getStatusColor(project.status))}></span>
                   <span className="truncate">{project.name}</span>
-                </Link>
+                </a>
                 
                 {/* Barra de progresso */}
                 <div className="px-3 pb-1">
@@ -196,13 +187,17 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
 
         {/* Link para configurações */}
-        <Link
+        <a
           href="/settings"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate("/settings");
+          }}
           className="sidebar-item"
         >
           <DynamicIcon name="settings" />
           <span className="ml-3">Configurações</span>
-        </Link>
+        </a>
       </div>
     </aside>
   );
