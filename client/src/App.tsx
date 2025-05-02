@@ -35,9 +35,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/dashboard" component={Dashboard} />
-      <ProtectedRoute path="/dashboard-novo" component={DashboardNovo} />
+      <ProtectedRoute path="/" component={DashboardNovo} />
+      <ProtectedRoute path="/dashboard" component={DashboardNovo} />
+      <ProtectedRoute path="/dashboard-antigo" component={Dashboard} />
       <ProtectedRoute path="/projects" component={Projects} />
       <ProtectedRoute path="/projects/:id" component={Projects} />
       <ProtectedRoute path="/tasks" component={Tasks} />
