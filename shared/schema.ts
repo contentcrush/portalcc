@@ -237,6 +237,7 @@ export const expenses = pgTable("expenses", {
   amount: doublePrecision("amount").notNull(),
   date: timestamp("date").notNull(),
   paid_by: integer("paid_by"),
+  paid: boolean("paid").default(false),
   reimbursement: boolean("reimbursement").default(false),
   receipt: text("receipt"),
   approved: boolean("approved").default(false),
@@ -365,6 +366,7 @@ export const insertExpenseSchema = expenseBaseSchema.extend({
   date: z.union([z.string(), z.date()]).transform(val => 
     typeof val === 'string' ? new Date(val) : val
   ),
+  paid: z.boolean().optional().default(false),
 });
 // Schema base para eventos
 const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
