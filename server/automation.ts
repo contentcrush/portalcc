@@ -755,39 +755,25 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
     
     // 3. Remover eventos financeiros antigos (sem financial_document_id) 
     // e eventos de documentos pagos
-    const paidDocsIds = (await db
-      .select({ id: financialDocuments.id })
-      .from(financialDocuments)
-      .where(eq(financialDocuments.paid, true))).map(doc => doc.id);
+    const { cleanupPaidDocumentEvents } = await import('./utils/calendarSync');
     
-    // Primeiro remover eventos antigos (sem financial_document_id)
-    const removedOldEvents = await db.delete(events)
+    // Usar a função especializada para limpeza de eventos financeiros pagos
+    const removedPaidDocsEvents = await cleanupPaidDocumentEvents();
+    eventsRemoved += removedPaidDocsEvents;
+    console.log(`[Automação] Removidos ${removedPaidDocsEvents} eventos financeiros de documentos pagos`);
+    
+    // Limpar eventos antigos sem referência a documento (formato legado)
+    const removedOrphanFinancialEvents = await db
+      .delete(events)
       .where(
         and(
           eq(events.type, 'financeiro'),
-          isNull(events.financial_document_id),
-          gte(events.start_date, new Date()) // Manter eventos históricos
+          isNull(events.financial_document_id)
         )
       )
       .returning();
     
-    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento)`);
-    eventsRemoved += removedOldEvents.length;
-    
-    // Agora remover eventos de documentos pagos
-    if (paidDocsIds.length > 0) {
-      const removedFinancialEvents = await db.delete(events)
-        .where(
-          and(
-            eq(events.type, 'financeiro'),
-            gte(events.start_date, new Date()), // Manter eventos históricos
-            inArray(events.financial_document_id, paidDocsIds)
-          )
-        )
-        .returning();
-      
-      eventsRemoved += removedFinancialEvents.length;
-    }
+    eventsRemoved += removedOrphanFinancialEvents.length;
     
     console.log(`[Automação] ${eventsRemoved} eventos antigos removidos do calendário`);
     return {
