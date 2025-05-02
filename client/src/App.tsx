@@ -42,18 +42,42 @@ function App() {
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
                         {/* Rota para dashboard antigo removida */}
-                        <Route path="/projects" component={Projects} />
-                        <Route path="/projects/:id" component={Projects} />
-                        <Route path="/tasks" component={Tasks} />
-                        <Route path="/tasks/:id" component={Tasks} />
-                        <Route path="/clients" component={Clients} />
-                        <Route path="/clients/:id" component={ClientDetail} />
-                        <Route path="/financial" component={Financial} />
-                        <Route path="/calendar" component={Calendar} />
-                        <Route path="/team" component={Team} />
-                        <Route path="/team/user/:id" component={UserProfile} />
-                        <Route path="/settings" component={Settings} />
-                        <Route component={NotFound} />
+                        <Route path="/projects">
+                          {(params) => <Projects />}
+                        </Route>
+                        <Route path="/projects/:id">
+                          {(params) => <Projects params={params} />}
+                        </Route>
+                        <Route path="/tasks">
+                          {(params) => <Tasks />}
+                        </Route>
+                        <Route path="/tasks/:id">
+                          {(params) => <Tasks params={params} />}
+                        </Route>
+                        <Route path="/clients">
+                          {(params) => <Clients />}
+                        </Route>
+                        <Route path="/clients/:id">
+                          {(params) => <ClientDetail params={params} />}
+                        </Route>
+                        <Route path="/financial">
+                          {() => <Financial />}
+                        </Route>
+                        <Route path="/calendar">
+                          {() => <Calendar />}
+                        </Route>
+                        <Route path="/team">
+                          {() => <Team />}
+                        </Route>
+                        <Route path="/team/user/:id">
+                          {(params) => <UserProfile params={params} />}
+                        </Route>
+                        <Route path="/settings">
+                          {() => <Settings />}
+                        </Route>
+                        <Route>
+                          {() => <NotFound />}
+                        </Route>
                       </Switch>
                     </Layout>
                   )} />
