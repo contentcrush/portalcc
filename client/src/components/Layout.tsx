@@ -18,6 +18,7 @@ import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/use-auth";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { cn } from "@/lib/utils";
+import logoImage from "@/assets/CNTN_CRUSH_no_bg.png";
 
 interface LayoutProps {
   children: ReactNode;
