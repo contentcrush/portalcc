@@ -25,6 +25,35 @@ import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Layout>{children}</Layout>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/dashboard-novo" component={DashboardNovo} />
+      <ProtectedRoute path="/projects" component={Projects} />
+      <ProtectedRoute path="/projects/:id" component={Projects} />
+      <ProtectedRoute path="/tasks" component={Tasks} />
+      <ProtectedRoute path="/tasks/:id" component={Tasks} />
+      <ProtectedRoute path="/clients" component={Clients} />
+      <ProtectedRoute path="/clients/:id" component={ClientDetail} />
+      <ProtectedRoute path="/financial" component={Financial} />
+      <ProtectedRoute path="/calendar" component={Calendar} />
+      <ProtectedRoute path="/team" component={Team} />
+      <ProtectedRoute path="/team/user/:id" component={UserProfile} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -34,34 +63,13 @@ function App() {
             <ProjectFormProvider>
               <SocketProvider>
                 <TooltipProvider>
-                <Switch>
-                  <Route path="/auth" component={AuthPage} />
-                  <Route>
-                    <Layout>
-                      <Switch>
-                        <Route path="/" component={Dashboard} />
-                        <Route path="/dashboard" component={Dashboard} />
-                        <Route path="/dashboard-novo" component={DashboardNovo} />
-                        <Route path="/projects" component={Projects} />
-                        <Route path="/projects/:id" component={Projects} />
-                        <Route path="/tasks" component={Tasks} />
-                        <Route path="/tasks/:id" component={Tasks} />
-                        <Route path="/clients" component={Clients} />
-                        <Route path="/clients/:id" component={ClientDetail} />
-                        <Route path="/financial" component={Financial} />
-                        <Route path="/calendar" component={Calendar} />
-                        <Route path="/team" component={Team} />
-                        <Route path="/team/user/:id" component={UserProfile} />
-                        <Route path="/settings" component={Settings} />
-                        <Route component={NotFound} />
-                      </Switch>
-                    </Layout>
-                  </Route>
-                </Switch>
-                {/* Renderizar o diálogo de formulário de projeto globalmente */}
-                <ProjectFormDialog />
-                <Toaster />
-              </TooltipProvider>
+                  <Layout>
+                    <Router />
+                  </Layout>
+                  {/* Renderizar o diálogo de formulário de projeto globalmente */}
+                  <ProjectFormDialog />
+                  <Toaster />
+                </TooltipProvider>
               </SocketProvider>
             </ProjectFormProvider>
           </AccessibilityProvider>

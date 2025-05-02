@@ -48,8 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
-      // Armazenar o token no localStorage (ou você pode usar cookies via um pacote como js-cookie)
-      localStorage.setItem("authToken", data.token);
+      // O token agora é armazenado em cookies HTTP-only pelo servidor
       toast({
         title: "Login bem-sucedido",
         description: `Bem-vindo de volta, ${data.user.name}!`,
@@ -72,8 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
-      // Armazenar o token no localStorage
-      localStorage.setItem("authToken", data.token);
+      // O token agora é armazenado em cookies HTTP-only pelo servidor
       toast({
         title: "Registro bem-sucedido",
         description: `Bem-vindo, ${data.user.name}!`,
