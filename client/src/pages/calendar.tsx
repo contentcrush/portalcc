@@ -69,14 +69,16 @@ export default function CalendarPage() {
 
   // Efeito para escutar eventos de calendário via WebSocket
   useEffect(() => {
+    console.log('Configurando listeners WebSocket na página de calendário...');
+    
     // Inicializar WebSocket se ainda não estiver conectado
     initWebSocket().catch(error => {
       console.error('Erro ao inicializar WebSocket na página de calendário:', error);
     });
     
-    // Registrar listener para eventos do tipo "calendar_updated"
+    // Registrar listeners para os vários formatos possíveis de eventos de calendário
     const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
-      console.log('Recebida notificação de atualização do calendário:', data);
+      console.log('Recebida notificação de atualização do calendário (formato novo):', data);
       
       // Atualizar dados do calendário
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
@@ -89,24 +91,59 @@ export default function CalendarPage() {
       });
     });
     
+    // Suporte para formato antigo (calendar_update)
+    const unregisterCalendarOldHandler = onWebSocketMessage('calendar_update', (data) => {
+      console.log('Recebida notificação de atualização do calendário (formato antigo):', data);
+      
+      // Atualizar dados do calendário
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    });
+    
     // Registrar listener para eventos financeiros (despesas e documentos)
     const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
-      console.log('Recebida notificação de atualização financeira:', data);
+      console.log('Recebida notificação de atualização financeira (formato novo):', data);
       
       // Atualizar dados do calendário quando houver mudanças financeiras
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       
-      toast({
-        title: 'Registros financeiros atualizados',
-        description: 'O calendário foi atualizado com as mudanças financeiras',
-        variant: 'default',
-      });
+      // Só exibir toast se a notificação explicitamente mencionar o calendário
+      if (data.affects_calendar || data.updateCalendar || data.calendar) {
+        toast({
+          title: 'Calendário atualizado',
+          description: 'Eventos financeiros foram atualizados no calendário',
+          variant: 'default',
+        });
+      }
+    });
+    
+    // Suporte para formato antigo (financial_update)
+    const unregisterFinancialOldHandler = onWebSocketMessage('financial_update', (data) => {
+      console.log('Recebida notificação de atualização financeira (formato antigo):', data);
+      
+      // Atualizar dados do calendário quando houver mudanças financeiras
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    });
+    
+    // Também registrar para o tipo genérico 'financial' e 'calendar' para maior compatibilidade
+    const unregisterFinancialGenericHandler = onWebSocketMessage('financial', (data) => {
+      console.log('Recebida notificação genérica financeira:', data);
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    });
+    
+    const unregisterCalendarGenericHandler = onWebSocketMessage('calendar', (data) => {
+      console.log('Recebida notificação genérica de calendário:', data);
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
     });
     
     // Limpar listeners quando o componente for desmontado
     return () => {
+      console.log('Removendo listeners WebSocket da página de calendário');
       unregisterCalendarUpdateHandler();
+      unregisterCalendarOldHandler();
       unregisterFinancialUpdateHandler();
+      unregisterFinancialOldHandler();
+      unregisterFinancialGenericHandler();
+      unregisterCalendarGenericHandler();
     };
   }, [queryClient, toast]);
 

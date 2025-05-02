@@ -21,7 +21,8 @@ import {
   onNewProjectCommentReaction,
   onDeletedProjectCommentReaction,
   notifyUser,
-  closeConnections
+  closeConnections,
+  getMessageHandlersForType
 } from '@/lib/socket';
 
 interface SocketContextType {
@@ -134,8 +135,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         const newEvent = { ...data, type: 'financial_updated' };
         try {
           // Processar manualmente a mensagem como se tivesse vindo do servidor
-          const handlers = messageHandlers['financial_updated'] || [];
-          handlers.forEach(handler => handler(newEvent));
+          // Usando a função auxiliar para acessar os handlers
+          const handlers = getMessageHandlersForType('financial_updated');
+          if (handlers && handlers.length > 0) {
+            handlers.forEach(h => h(newEvent));
+          }
         } catch (error) {
           console.error('Erro ao processar evento financial_update para financial_updated:', error);
         }

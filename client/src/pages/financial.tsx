@@ -119,18 +119,24 @@ export default function Financial() {
   
   // Efeito para escutar eventos financeiros via WebSocket
   useEffect(() => {
+    console.log('Configurando listeners WebSocket na página financeira...');
+    
     // Inicializar WebSocket se ainda não estiver conectado
     initWebSocket().catch(error => {
       console.error('Erro ao inicializar WebSocket na página financeira:', error);
     });
     
-    // Registrar listeners para eventos financeiros
+    // Registrar listeners para eventos financeiros (incluindo versões do formato antigo)
+    // WebSocket deve processar tanto 'financial_updated' quanto 'financial_update'
     const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
-      console.log('Recebida notificação de atualização financeira:', data);
+      console.log('Recebida notificação de atualização financeira (format novo):', data);
       
       // Invalidar consultas financeiras para recarregar os dados
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      
+      // Também invalidar eventos do calendário para garantir sincronização bidirecional
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       
       // Notificar o usuário
       toast({
@@ -138,6 +144,19 @@ export default function Financial() {
         description: data.message || 'Os registros financeiros foram atualizados',
         variant: 'default',
       });
+    });
+    
+    // Suporte para formato antigo (financial_update sem o 'd')
+    // Redundante com a correção no SocketContext, mas mantido por precaução
+    const unregisterOldFormatHandler = onWebSocketMessage('financial_update', (data) => {
+      console.log('Recebida notificação de atualização financeira (formato antigo):', data);
+      
+      // Invalidar consultas financeiras para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      
+      // Também invalidar eventos do calendário para garantir sincronização bidirecional
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
     });
     
     const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
@@ -150,7 +169,9 @@ export default function Financial() {
     
     // Limpar listeners quando o componente for desmontado
     return () => {
+      console.log('Removendo listeners WebSocket da página financeira');
       unregisterFinancialUpdateHandler();
+      unregisterOldFormatHandler();
       unregisterCalendarUpdateHandler();
     };
   }, [queryClient, toast]);

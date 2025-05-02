@@ -27,6 +27,12 @@ const messageHandlers: { [key: string]: MessageHandler[] } = {
   calendar: [],         // Suporte para correspondência parcial
 };
 
+// Função auxiliar para acessar os handlers de mensagem a partir de outros arquivos
+// sem expor diretamente a variável messageHandlers
+export function getMessageHandlersForType(type: string): MessageHandler[] {
+  return messageHandlers[type] || [];
+}
+
 /**
  * Inicializa a conexão WebSocket
  */
