@@ -263,37 +263,7 @@
   }
   
   .dashboard-card {
-    @apply bg-white rounded-lg shadow-sm p-4 transition-all duration-200 hover:shadow-md;
-  }
-  
-  /* Cores para os blocos do dashboard */
-  .dashboard-stats-normal {
-    @apply bg-emerald-100 text-emerald-700 hover:bg-emerald-200;
-  }
-  
-  .dashboard-stats-warning {
-    @apply bg-amber-100 text-amber-700 hover:bg-amber-200;
-  }
-  
-  .dashboard-stats-alert {
-    @apply bg-red-100 text-red-700 hover:bg-red-200;
-  }
-  
-  /* Customização de barras de progresso */
-  .progress-bar-low {
-    @apply bg-blue-400;
-  }
-  
-  .progress-bar-normal {
-    @apply bg-emerald-500;
-  }
-  
-  .progress-bar-high {
-    @apply bg-amber-500;
-  }
-  
-  .progress-bar-overbooked {
-    @apply bg-red-500;
+    @apply bg-white rounded-lg shadow-sm p-4;
   }
   
   .metrics-value {
