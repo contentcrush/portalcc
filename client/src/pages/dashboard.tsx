@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatCurrency, calculatePercentChange, formatDate, cn } from "@/lib/utils";
+import { formatCurrency, calculatePercentChange, formatDate, cn, calculateDaysRemaining } from "@/lib/utils";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -568,252 +568,100 @@ export default function Dashboard() {
         </Card>
       </div>
       
-      {/* Tarefas Próximas */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-1">
-        <Card className="dashboard-card">
-          <CardHeader className="pb-2">
+      {/* Visão Financeira */}
+      <div className="grid gap-6 grid-cols-1">
+        <Card>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Tarefas Próximas</CardTitle>
-              <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-indigo-600">
-                  Ver todas
+              <CardTitle className="text-base font-medium">Visão Financeira - {formattedMonth}</CardTitle>
+              <Link href="/financial">
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-purple-600">
+                  Ver detalhes
                 </Button>
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div>
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Finalizar edição do teaser - Banco Azul</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 2 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Bruno Silva" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Aprovar storyboard - Documentário Natureza</p>
-                    <p className="text-xs text-red-600 mt-1">Vence hoje</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Alta</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/women/44.jpg" 
-                    alt="Ana Oliveira" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Reunião de pré-produção - Curso Online Tech</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">Baixa</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/67.jpg" 
-                    alt="Carlos Mendes" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Revisar orçamento - Projeto Marca X</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Bruno Silva" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 flex justify-center">
-                <Button variant="ghost" size="sm" className="text-indigo-600">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar nova tarefa
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Financeiro</CardTitle>
-          </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+              {/* Faturamento por Projeto */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Próximos Pagamentos</h4>
-                  <span className="text-xs text-muted-foreground">Abril 2025</span>
-                </div>
+                <h3 className="text-sm font-medium mb-3">Faturamento por Projeto</h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-green-100 text-green-600 rounded mr-2">
-                        <Building className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Banco Azul</p>
-                        <p className="text-xs text-muted-foreground">Fatura 23</p>
-                      </div>
+                  {Array.isArray(financialDocuments) && financialDocuments.length > 0 ? (
+                    <div className="space-y-2">
+                      {financialDocuments.slice(0, 4).map((doc, index) => (
+                        <div key={doc.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                          <div className="flex items-center">
+                            <div className={cn(
+                              "w-2 h-2 rounded-full mr-3",
+                              index % 4 === 0 ? "bg-indigo-500" :
+                              index % 4 === 1 ? "bg-green-500" :
+                              index % 4 === 2 ? "bg-amber-500" : 
+                              "bg-blue-500"
+                            )}></div>
+                            <span className="text-sm font-medium">
+                              {doc.description ? 
+                                doc.description.length > 25 ? 
+                                  doc.description.substring(0, 25) + '...' : 
+                                  doc.description 
+                                : 'Fatura ' + doc.id}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium">
+                            {formatCurrency(doc.amount || 0)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(18000)}</p>
-                      <p className="text-xs text-muted-foreground">05/04/2025</p>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">Nenhum documento financeiro</p>
                     </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
-                        <Building className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Tech Courses Inc.</p>
-                        <p className="text-xs text-muted-foreground">Pagamento Julho</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(12500)}</p>
-                      <p className="text-xs text-muted-foreground">15/04/2025</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
               
+              {/* Gráfico de Receitas */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Próximas Despesas</h4>
-                  <span className="text-xs text-muted-foreground">Abril 2025</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-red-100 text-red-600 rounded mr-2">
-                        <CircleDollarSign className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Aluguel de Equipamentos</p>
-                        <p className="text-xs text-muted-foreground">20/04/2025</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(3500)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full">
-                <CircleDollarSign className="mr-2 h-4 w-4" />
-                Gerenciar Finanças
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Próximas Reuniões</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Hoje, 10:30</h4>
-                  <Badge variant="outline" className="text-xs">1h</Badge>
-                </div>
-                <div className="flex">
-                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Daily Standup</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <User className="h-3 w-3 mr-1" />
-                      <span>Equipe de Produção</span>
-                    </div>
-                  </div>
+                <h3 className="text-sm font-medium mb-3">Receitas x Despesas (2025)</h3>
+                <div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart
+                      data={monthlyData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                      <YAxis 
+                        tickFormatter={(value) => `R$ ${value/1000}k`}
+                        tickLine={false}
+                        axisLine={false}
+                        width={60}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`R$ ${formatCurrency(value as number, false)}`, '']}
+                        labelFormatter={(label) => `${label}`}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        fill="#5046E5" 
+                        stroke="#5046E5"
+                        fillOpacity={0.1}
+                        name="Receitas"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="expenses" 
+                        fill="#EF4444" 
+                        stroke="#EF4444"
+                        fillOpacity={0.1}
+                        name="Despesas"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Amanhã, 14:00</h4>
-                  <Badge variant="outline" className="text-xs">1h 30m</Badge>
-                </div>
-                <div className="flex">
-                  <div className="p-1.5 bg-yellow-100 text-yellow-600 rounded mr-2">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Revisão do Projeto</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Building className="h-3 w-3 mr-1" />
-                      <span>Marca X</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                Ver Calendário
-              </Button>
             </div>
           </CardContent>
         </Card>
