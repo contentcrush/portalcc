@@ -1,5 +1,5 @@
 import { db } from './db';
-import { projects, clients, tasks, events, financialDocuments } from '@shared/schema';
+import { projects, clients, tasks, events, financialDocuments, expenses } from '@shared/schema';
 import { eq, and, lt, inArray, gte, or, isNull, lte, sql } from 'drizzle-orm';
 import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, addHours, 
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
