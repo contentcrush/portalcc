@@ -1962,7 +1962,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Callback do Google OAuth
   app.get("/api/google/callback", async (req, res) => {
     try {
-      const { code, state } = req.query;
+      const { code, state, error } = req.query;
+      
+      // Se houver um erro de "access_denied", isso significa que o usuário cancelou
+      // ou optou por não continuar com um aplicativo não verificado
+      if (error === 'access_denied') {
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Google Calendar - Autenticação Cancelada</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+              h2 { color: #333; }
+              .steps { margin-top: 20px; }
+              .step { margin-bottom: 15px; }
+              .button { display: inline-block; padding: 10px 15px; background-color: #4285f4; color: white; 
+                        text-decoration: none; border-radius: 4px; font-weight: bold; }
+            </style>
+            <script>
+              window.onload = function() {
+                window.opener.postMessage({type: 'GOOGLE_AUTH_ERROR', error: 'Acesso negado'}, '*');
+                // Não fechamos automaticamente para permitir que o usuário leia as instruções
+              }
+            </script>
+          </head>
+          <body>
+            <h2>Autenticação com Google Calendar não concluída</h2>
+            <p>O Content Crush é um aplicativo em desenvolvimento e ainda não foi verificado pelo Google.</p>
+            
+            <div class="steps">
+              <p>Para continuar mesmo assim:</p>
+              <div class="step">1. Clique em "Avançar" quando o Google mostrar o aviso sobre aplicativo não verificado</div>
+              <div class="step">2. Em seguida, conceda as permissões solicitadas</div>
+              <div class="step">3. Você será redirecionado de volta automaticamente</div>
+            </div>
+            
+            <p style="margin-top: 20px;">
+              <a href="javascript:window.close();" class="button">Fechar esta janela</a>
+              <a href="${getAuthUrl(JSON.parse(state as string).userId)}" class="button" style="margin-left: 10px;">Tentar novamente</a>
+            </p>
+          </body>
+          </html>
+        `);
+      }
       
       if (!code || !state) {
         return res.status(400).json({ error: "Parâmetros inválidos" });
@@ -1977,16 +2020,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <html>
         <head>
           <title>Google Calendar - Autenticação Concluída</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+            h2 { color: #4CAF50; }
+          </style>
           <script>
             window.onload = function() {
               window.opener.postMessage({type: 'GOOGLE_AUTH_SUCCESS'}, '*');
-              window.close();
+              setTimeout(function() { window.close(); }, 3000); // Fechar após 3 segundos
             }
           </script>
         </head>
         <body>
           <h2>Autenticação concluída com sucesso!</h2>
-          <p>Você pode fechar esta janela agora.</p>
+          <p>Você conectou com sucesso sua conta Google Calendar ao Content Crush.</p>
+          <p>Esta janela será fechada automaticamente em alguns segundos...</p>
         </body>
         </html>
       `);
@@ -1997,16 +2045,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <html>
         <head>
           <title>Google Calendar - Erro na Autenticação</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+            h2 { color: #f44336; }
+          </style>
           <script>
             window.onload = function() {
               window.opener.postMessage({type: 'GOOGLE_AUTH_ERROR', error: 'Erro na autenticação'}, '*');
-              window.close();
+              setTimeout(function() { window.close(); }, 5000); // Fechar após 5 segundos
             }
           </script>
         </head>
         <body>
           <h2>Erro na autenticação</h2>
-          <p>Ocorreu um erro durante a autenticação com o Google. Por favor, tente novamente.</p>
+          <p>Ocorreu um erro durante a autenticação com o Google.</p>
+          <p>Motivos comuns incluem:</p>
+          <ul>
+            <li>Você não concedeu todas as permissões necessárias</li>
+            <li>Houve um problema de conexão com o serviço do Google</li>
+            <li>As credenciais do aplicativo podem estar incorretas</li>
+          </ul>
+          <p>Esta janela será fechada automaticamente em alguns segundos...</p>
         </body>
         </html>
       `);
