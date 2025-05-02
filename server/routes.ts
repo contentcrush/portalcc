@@ -1513,6 +1513,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_notes: notes || null
       });
       
+      // Sincroniza eventos do calendário após pagamento
+      await syncFinancialEvents();
+      
       res.json(updatedDocument);
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
@@ -1547,6 +1550,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Falha ao excluir o documento financeiro" });
       }
+      
+      // Sincroniza eventos do calendário após exclusão do documento
+      await syncFinancialEvents();
       
       // Retornar 204 No Content para exclusão bem-sucedida
       res.status(204).end();
@@ -1585,6 +1591,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, validateBody(insertExpenseSchema), async (req, res) => {
     try {
       const expense = await storage.createExpense(req.body);
+      
+      // Sincroniza eventos do calendário após criar nova despesa
+      await syncFinancialEvents();
+      
       res.status(201).json(expense);
     } catch (error) {
       console.error("Erro ao criar despesa:", error);
@@ -1601,6 +1611,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Expense not found" });
       }
       
+      // Sincroniza eventos do calendário após atualizar despesa
+      await syncFinancialEvents();
+      
       res.json(updatedExpense);
     } catch (error) {
       res.status(500).json({ message: "Failed to update expense" });
@@ -1616,6 +1629,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Despesa não encontrada" });
       }
+      
+      // Sincroniza eventos do calendário após excluir despesa
+      await syncFinancialEvents();
       
       res.status(204).end();
     } catch (error) {
@@ -1641,6 +1657,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approved: true,
         notes: notes || null
       });
+      
+      // Sincroniza eventos do calendário após aprovar despesa
+      await syncFinancialEvents();
       
       res.json(updatedExpense);
     } catch (error) {
