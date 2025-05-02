@@ -158,24 +158,29 @@ export default function FinancialChart({
       case 'pie':
         return (
           <ResponsiveContainer width="100%" height={height}>
-            <PieChart>
+            <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                outerRadius={80}
+                labelLine={true}
+                outerRadius={70}
                 innerRadius={40}
                 dataKey={dataKeys[0]}
                 nameKey={xAxisDataKey}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={false} // Removendo o label para evitar sobreposição com legenda
               >
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </Pie>
               {showTooltip && <Tooltip formatter={tooltipFormatter} />}
-              {showLegend && <Legend wrapperStyle={{ fontSize: '12px' }} />}
+              {showLegend && <Legend 
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{ fontSize: '12px', paddingTop: '15px' }}
+              />}
             </PieChart>
           </ResponsiveContainer>
         );
