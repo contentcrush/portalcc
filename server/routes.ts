@@ -16,6 +16,16 @@ import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import {
+  getAuthUrl,
+  handleAuthCallback,
+  getConnectionStatus,
+  syncEventToGoogleCalendar,
+  syncAllEventsToGoogleCalendar,
+  getGoogleCalendarEvents,
+  deleteGoogleCalendarEvent,
+  disconnectGoogleCalendar
+} from './googleCalendar';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -1929,6 +1939,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao excluir evento:", error);
       res.status(500).json({ message: "Falha ao excluir evento" });
+    }
+  });
+  
+  // ===== Rotas para integração com Google Calendar =====
+  
+  // Rota para obter URL de autorização do Google
+  app.get("/api/google/auth-url", authenticateJWT, (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const authUrl = getAuthUrl(req.user.id);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Erro ao gerar URL de autorização:", error);
+      res.status(500).json({ error: "Erro ao gerar URL de autorização" });
+    }
+  });
+  
+  // Callback do Google OAuth
+  app.get("/api/google/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || !state) {
+        return res.status(400).json({ error: "Parâmetros inválidos" });
+      }
+      
+      await handleAuthCallback(code as string, state as string);
+      
+      // Redireciona de volta para a aplicação após autenticação bem-sucedida
+      // Usamos um script HTML simples para redirecionar o usuário de volta para a aplicação
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Google Calendar - Autenticação Concluída</title>
+          <script>
+            window.onload = function() {
+              window.opener.postMessage({type: 'GOOGLE_AUTH_SUCCESS'}, '*');
+              window.close();
+            }
+          </script>
+        </head>
+        <body>
+          <h2>Autenticação concluída com sucesso!</h2>
+          <p>Você pode fechar esta janela agora.</p>
+        </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error("Erro na callback do Google:", error);
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Google Calendar - Erro na Autenticação</title>
+          <script>
+            window.onload = function() {
+              window.opener.postMessage({type: 'GOOGLE_AUTH_ERROR', error: 'Erro na autenticação'}, '*');
+              window.close();
+            }
+          </script>
+        </head>
+        <body>
+          <h2>Erro na autenticação</h2>
+          <p>Ocorreu um erro durante a autenticação com o Google. Por favor, tente novamente.</p>
+        </body>
+        </html>
+      `);
+    }
+  });
+  
+  // Verificar status da conexão com Google Calendar
+  app.get("/api/google/status", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const status = await getConnectionStatus(req.user.id);
+      res.json(status);
+    } catch (error) {
+      console.error("Erro ao verificar status da conexão:", error);
+      res.status(500).json({ error: "Erro ao verificar status da conexão" });
+    }
+  });
+  
+  // Sincronizar evento específico com Google Calendar
+  app.post("/api/google/sync-event/:eventId", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const eventId = parseInt(req.params.eventId);
+      const result = await syncEventToGoogleCalendar(eventId, req.user.id);
+      res.json(result);
+    } catch (error) {
+      console.error("Erro ao sincronizar evento:", error);
+      res.status(500).json({ error: "Erro ao sincronizar evento com Google Calendar" });
+    }
+  });
+  
+  // Sincronizar todos os eventos com Google Calendar
+  app.post("/api/google/sync-all-events", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const result = await syncAllEventsToGoogleCalendar(req.user.id);
+      res.json(result);
+    } catch (error) {
+      console.error("Erro ao sincronizar todos os eventos:", error);
+      res.status(500).json({ error: "Erro ao sincronizar eventos com Google Calendar" });
+    }
+  });
+  
+  // Buscar eventos do Google Calendar
+  app.get("/api/google/events", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const events = await getGoogleCalendarEvents(req.user.id);
+      res.json(events);
+    } catch (error) {
+      console.error("Erro ao buscar eventos do Google Calendar:", error);
+      res.status(500).json({ error: "Erro ao buscar eventos do Google Calendar" });
+    }
+  });
+  
+  // Remover evento do Google Calendar
+  app.delete("/api/google/events/:eventId", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const eventId = parseInt(req.params.eventId);
+      const result = await deleteGoogleCalendarEvent(eventId, req.user.id);
+      res.json({ success: result });
+    } catch (error) {
+      console.error("Erro ao remover evento do Google Calendar:", error);
+      res.status(500).json({ error: "Erro ao remover evento do Google Calendar" });
+    }
+  });
+  
+  // Desconectar Google Calendar
+  app.post("/api/google/disconnect", authenticateJWT, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+      
+      const result = await disconnectGoogleCalendar(req.user.id);
+      res.json({ success: result });
+    } catch (error) {
+      console.error("Erro ao desconectar Google Calendar:", error);
+      res.status(500).json({ error: "Erro ao desconectar Google Calendar" });
     }
   });
   
