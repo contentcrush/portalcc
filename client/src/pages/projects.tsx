@@ -58,14 +58,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getProgressBarColor } from "@/lib/utils";
 
-export default function Projects() {
+export default function Projects({ params }: { params?: { id?: string } }) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  // Inicializa o projeto selecionado a partir do ID na URL, se disponível
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    params?.id ? parseInt(params.id) : null
+  );
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
