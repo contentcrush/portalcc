@@ -2016,6 +2016,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota para sincronização manual do calendário
+  app.post("/api/calendar/sync", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
+    try {
+      console.log('[API] Iniciando sincronização manual do calendário');
+      const { syncFinancialEvents } = await import('./automation');
+      
+      // Sincronizar eventos financeiros
+      const financialResult = await syncFinancialEvents();
+      
+      // Usar módulo de utilitários para limpar eventos de documentos pagos
+      const { cleanupPaidDocumentEvents } = await import('./utils/calendarSync');
+      const cleanupResult = await cleanupPaidDocumentEvents();
+      
+      console.log(`[API] Sincronização manual do calendário concluída: ${financialResult.count} eventos financeiros sincronizados, ${cleanupResult} eventos de documentos pagos removidos`);
+      
+      res.json({
+        success: true,
+        message: `Sincronização concluída com sucesso. ${financialResult.count} eventos financeiros sincronizados.`,
+        financial: financialResult,
+        cleanup: cleanupResult
+      });
+    } catch (error: any) {
+      console.error('[API] Erro na sincronização manual do calendário:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Erro ao sincronizar calendário: ${error.message || 'Erro desconhecido'}` 
+      });
+    }
+  });
+  
   // ===== Rotas para Comentários de Projetos =====
   
   // Obter todos os comentários de um projeto
