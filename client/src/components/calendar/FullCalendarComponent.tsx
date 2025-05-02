@@ -24,12 +24,17 @@ interface FullCalendarComponentProps {
 }
 
 const eventColors: Record<string, string> = {
-  meeting: '#3b82f6', // Azul para reuniões
-  deadline: '#ef4444', // Vermelho para prazos
-  task: '#10b981',    // Verde para tarefas
-  appointment: '#8b5cf6', // Roxo para compromissos
-  reminder: '#f59e0b', // Âmbar para lembretes
-  other: '#6b7280',    // Cinza para outros
+  reuniao: '#2563EB',    // blue-600
+  prazo: '#DB2777',      // pink-600
+  gravacao: '#D97706',   // amber-600
+  edicao: '#DC2626',     // red-600
+  entrega: '#7C3AED',    // violet-600
+  externo: '#4F46E5',    // indigo-600
+  financeiro: '#059669', // emerald-600
+  projeto: '#4B5563',    // gray-600
+  planejamento: '#0284C7', // sky-600
+  capacitacao: '#0D9488', // teal-600
+  other: '#6b7280',     // gray-500
 };
 
 const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({

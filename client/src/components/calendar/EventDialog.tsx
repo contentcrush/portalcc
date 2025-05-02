@@ -75,12 +75,16 @@ type EventFormValues = z.infer<typeof eventFormSchema>;
 
 // Opções de tipo de evento
 const eventTypes = [
-  { id: 'meeting', label: 'Reunião' },
-  { id: 'deadline', label: 'Prazo' },
-  { id: 'task', label: 'Tarefa' },
-  { id: 'appointment', label: 'Compromisso' },
-  { id: 'reminder', label: 'Lembrete' },
-  { id: 'other', label: 'Outro' }
+  { id: 'reuniao', label: 'Reunião' },
+  { id: 'prazo', label: 'Prazo' },
+  { id: 'gravacao', label: 'Gravação' },
+  { id: 'edicao', label: 'Edição' },
+  { id: 'entrega', label: 'Entrega' },
+  { id: 'externo', label: 'Evento Externo' },
+  { id: 'financeiro', label: 'Financeiro' },
+  { id: 'projeto', label: 'Projeto' },
+  { id: 'planejamento', label: 'Planejamento' },
+  { id: 'capacitacao', label: 'Capacitação' }
 ];
 
 // Lista de horários para os selects
@@ -112,7 +116,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
     defaultValues: {
       title: '',
       description: '',
-      type: 'meeting',
+      type: 'reuniao',
       start_date: initialDate || new Date(),
       end_date: initialDate ? addHours(initialDate, 1) : addHours(new Date(), 1),
       all_day: false,
@@ -131,7 +135,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
       form.reset({
         title: '',
         description: '',
-        type: 'meeting',
+        type: 'reuniao',
         start_date: defaultStartDate,
         end_date: defaultEndDate,
         all_day: false,
