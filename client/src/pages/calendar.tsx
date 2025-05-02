@@ -21,6 +21,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { initWebSocket, onWebSocketMessage } from '@/lib/socket';
+import { queryClient } from '@/lib/queryClient';
 
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
