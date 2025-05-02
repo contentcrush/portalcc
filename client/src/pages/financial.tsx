@@ -314,7 +314,7 @@ export default function Financial() {
       value: dueAlerts,
       icon: <AlertCircle className="h-5 w-5" />,
       description: "Faturas vencendo em 7 dias",
-      variant: "red"
+      variant: "green" // Alterado para verde pois são faturas a receber (positivo para a empresa)
     },
     {
       title: "Receita Mensal",
