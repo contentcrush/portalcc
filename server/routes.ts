@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
-import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
+import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates, syncFinancialEvents } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
@@ -1458,6 +1458,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
       const document = await storage.createFinancialDocument(req.body);
+      
+      // Sincroniza eventos do calendário para o novo documento financeiro
+      await syncFinancialEvents();
+      
       res.status(201).json(document);
     } catch (error) {
       console.error("Erro ao criar documento financeiro:", error);
@@ -1473,6 +1477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedDocument) {
         return res.status(404).json({ message: "Financial document not found" });
       }
+      
+      // Sincroniza eventos do calendário após atualização
+      await syncFinancialEvents();
       
       res.json(updatedDocument);
     } catch (error) {
