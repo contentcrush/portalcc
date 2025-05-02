@@ -4,7 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
+import Dashboard from "@/pages/dashboard-new-v2";
+// import DashboardOriginal from "@/pages/dashboard"; // Mantendo o original comentado
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients";
@@ -35,11 +36,12 @@ function App() {
                 <TooltipProvider>
                 <Switch>
                   <Route path="/auth" component={AuthPage} />
-                  <Route>
+                  <ProtectedRoute path="/" component={() => (
                     <Layout>
                       <Switch>
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
+                        {/* Rota para dashboard antigo removida */}
                         <Route path="/projects" component={Projects} />
                         <Route path="/projects/:id" component={Projects} />
                         <Route path="/tasks" component={Tasks} />
@@ -54,7 +56,7 @@ function App() {
                         <Route component={NotFound} />
                       </Switch>
                     </Layout>
-                  </Route>
+                  )} />
                 </Switch>
                 {/* Renderizar o diálogo de formulário de projeto globalmente */}
                 <ProjectFormDialog />
