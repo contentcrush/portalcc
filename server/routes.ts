@@ -11,13 +11,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
-import { 
-  runAutomations, 
-  checkOverdueProjects, 
-  checkProjectsWithUpdatedDates, 
-  syncFinancialEvents,
-  notifyCalendarUpdates
-} from "./automation";
+import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
@@ -1464,13 +1458,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
       const document = await storage.createFinancialDocument(req.body);
-      
-      // Sincroniza eventos do calendário para o novo documento financeiro
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
-      
       res.status(201).json(document);
     } catch (error) {
       console.error("Erro ao criar documento financeiro:", error);
@@ -1486,12 +1473,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedDocument) {
         return res.status(404).json({ message: "Financial document not found" });
       }
-      
-      // Sincroniza eventos do calendário após atualização
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1524,12 +1505,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_date: new Date(),
         payment_notes: notes || null
       });
-      
-      // Sincroniza eventos do calendário após pagamento
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1565,12 +1540,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Falha ao excluir o documento financeiro" });
       }
-      
-      // Sincroniza eventos do calendário após exclusão do documento
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
       
       // Retornar 204 No Content para exclusão bem-sucedida
       res.status(204).end();
@@ -1609,13 +1578,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, validateBody(insertExpenseSchema), async (req, res) => {
     try {
       const expense = await storage.createExpense(req.body);
-      
-      // Sincroniza eventos do calendário após criar nova despesa
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
-      
       res.status(201).json(expense);
     } catch (error) {
       console.error("Erro ao criar despesa:", error);
@@ -1632,12 +1594,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Expense not found" });
       }
       
-      // Sincroniza eventos do calendário após atualizar despesa
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
-      
       res.json(updatedExpense);
     } catch (error) {
       res.status(500).json({ message: "Failed to update expense" });
@@ -1653,12 +1609,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Despesa não encontrada" });
       }
-      
-      // Sincroniza eventos do calendário após excluir despesa
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
       
       res.status(204).end();
     } catch (error) {
@@ -1684,12 +1634,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approved: true,
         notes: notes || null
       });
-      
-      // Sincroniza eventos do calendário após aprovar despesa
-      await syncFinancialEvents();
-      
-      // Notifica clientes sobre atualização do calendário
-      notifyCalendarUpdates(wss);
       
       res.json(updatedExpense);
     } catch (error) {

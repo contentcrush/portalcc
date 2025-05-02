@@ -21,120 +21,18 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { initWebSocket, onWebSocketMessage } from '@/lib/socket';
-import { queryClient } from '@/lib/queryClient';
 
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
-  const { toast } = useToast();
   
   // Buscar eventos
-  const { data: events, isLoading, error, refetch } = useQuery<Event[]>({
+  const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
     staleTime: 1000 * 60 * 5, // 5 minutos
     retry: 1,
     refetchOnWindowFocus: true
   });
-  
-  // Configurar WebSocket
-  useEffect(() => {
-    // Inicializar conexão WebSocket
-    let wsConnection: WebSocket | null = null;
-    let unsubscribeHandler: (() => void) | null = null;
-    
-    const initConnection = async () => {
-      try {
-        wsConnection = await initWebSocket();
-        setWsStatus('connected');
-        
-        // Adicionar event listeners para status da conexão
-        wsConnection.addEventListener('close', () => {
-          setWsStatus('disconnected');
-          console.log('WebSocket connection closed');
-        });
-        
-        wsConnection.addEventListener('error', () => {
-          setWsStatus('disconnected');
-          console.error('WebSocket connection error');
-        });
-        
-        // Registrar handler para notificações específicas de calendário
-        const calendarHandler = onWebSocketMessage('calendar_updated', (data) => {
-          console.log('Recebida atualização de calendário via WebSocket:', data);
-          
-          // Atualizar os dados do calendário
-          refetch();
-          
-          // Notificar o usuário sobre a atualização
-          toast({
-            title: 'Calendário atualizado',
-            description: data.message || 'Novos eventos foram sincronizados',
-          });
-        });
-        
-        // Registrar handler de fallback para qualquer atualização de eventos
-        const eventHandler = onWebSocketMessage('event_updated', (data) => {
-          console.log('Evento atualizado via WebSocket:', data);
-          refetch();
-        });
-        
-        // Registrar handler genérico para capturar qualquer tipo de mensagem relacionada a calendário
-        const genericHandler = (event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            // Verificar se a mensagem está relacionada ao calendário de alguma forma
-            if (data && (
-              data.type?.includes('calendar') || 
-              data.type?.includes('event') || 
-              data.message?.includes('calendário') || 
-              data.message?.includes('evento')
-            )) {
-              console.log('Mensagem genérica relacionada ao calendário recebida:', data);
-              refetch();
-            }
-          } catch (error) {
-            console.error('Erro ao processar mensagem WebSocket:', error);
-          }
-        };
-        
-        wsConnection.addEventListener('message', genericHandler);
-        
-        // Combinar os handlers para limpeza
-        unsubscribeHandler = () => {
-          if (typeof calendarHandler === 'function') calendarHandler();
-          if (typeof eventHandler === 'function') eventHandler();
-          wsConnection?.removeEventListener('message', genericHandler);
-        };
-      } catch (error) {
-        console.error('Erro ao conectar WebSocket:', error);
-        toast({
-          title: 'Erro de conexão',
-          description: 'Não foi possível conectar ao serviço de atualizações em tempo real',
-          variant: 'destructive',
-        });
-      }
-    };
-    
-    // Iniciar conexão
-    initConnection();
-    
-    // Função de limpeza do useEffect
-    return () => {
-      // Limpar os handlers ao desmontar o componente
-      if (unsubscribeHandler) {
-        unsubscribeHandler();
-      }
-      
-      // Fechar a conexão WebSocket
-      if (wsConnection) {
-        wsConnection.close();
-      }
-    };
-  }, [refetch, toast]);
 
   // Filtragem de eventos com base no filtro selecionado
   const filteredEvents = React.useMemo(() => {
@@ -220,26 +118,6 @@ export default function CalendarPage() {
         </div>
         
         <div className="flex items-center space-x-2">
-          {/* Indicador de status do WebSocket */}
-          <div className="flex items-center mr-2">
-            <div 
-              className={`w-2 h-2 rounded-full mr-1.5 ${
-                wsStatus === 'connected' 
-                  ? 'bg-green-500' 
-                  : wsStatus === 'connecting' 
-                    ? 'bg-amber-500 animate-pulse' 
-                    : 'bg-red-500'
-              }`} 
-            />
-            <span className="text-xs text-muted-foreground">
-              {wsStatus === 'connected' 
-                ? 'Tempo real ativo' 
-                : wsStatus === 'connecting' 
-                  ? 'Conectando...' 
-                  : 'Desconectado'}
-            </span>
-          </div>
-          
           <Select value={selectedFilter} onValueChange={setSelectedFilter}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filtrar por tipo" />

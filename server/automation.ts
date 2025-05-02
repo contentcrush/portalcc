@@ -1,11 +1,10 @@
 import { db } from './db';
-import { projects, clients, tasks, events, financialDocuments, expenses } from '@shared/schema';
+import { projects, clients, tasks, events, financialDocuments } from '@shared/schema';
 import { eq, and, lt, inArray, gte, or, isNull, lte, sql } from 'drizzle-orm';
 import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, addHours, 
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
-import { WebSocket, WebSocketServer } from 'ws';
 
 /**
  * Verifica projetos atrasados e atualiza o status automaticamente
@@ -549,7 +548,6 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
  * Sincroniza eventos do calendário com base em datas financeiras importantes
  * - Datas de vencimento de faturas
  * - Datas de pagamento programadas
- * - Datas de despesas
  */
 export async function syncFinancialEvents(): Promise<{ success: boolean, message: string, count: number }> {
   try {
@@ -566,35 +564,18 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
         )
       );
     
-    // Busca despesas não pagas e com data futura
-    const expensesList = await db
-      .select()
-      .from(expenses)
-      .where(
-        and(
-          eq(expenses.paid, false),
-          gte(expenses.date, new Date())
-        )
-      );
-    
-    console.log(`[Automação] Encontradas ${expensesList.length} despesas para sincronizar`);
-    
     let eventsCreated = 0;
     
-    // Primeiro, vamos limpar quaisquer eventos antigos (sem financial_document_id e expense_id)
+    // Primeiro, vamos limpar quaisquer eventos antigos (sem financial_document_id)
     // para evitar duplicações com o formato antigo
-    const deletedEvents = await db.delete(events)
+    await db.delete(events)
       .where(
         and(
           eq(events.type, 'financeiro'),
           isNull(events.financial_document_id),
-          isNull(events.expense_id),
           gte(events.start_date, new Date())
         )
-      )
-      .returning();
-    
-    console.log(`[Automação] Removidos ${deletedEvents.length} eventos financeiros antigos (sem referência a documento/despesa)`);
+      );
       
     // Cria eventos para datas de vencimento financeiro
     for (const doc of financialDocs) {
@@ -706,75 +687,6 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
         }
       }
     }
-    
-    // Cria eventos para as despesas
-    for (const expense of expensesList) {
-      if (expense.date) {
-        // Verifica se já existe um evento para esta despesa
-        const existingEvents = await db.select()
-          .from(events)
-          .where(
-            and(
-              eq(events.type, 'financeiro'),
-              eq(events.expense_id, expense.id)
-            )
-          );
-          
-        // Busca informações do projeto relacionado se existir
-        let projectName = '';
-        if (expense.project_id) {
-          const [project] = await db.select().from(projects).where(eq(projects.id, expense.project_id));
-          if (project) {
-            projectName = project.name;
-          }
-        }
-        
-        // Prepara os dados do evento
-        const title = `Despesa: ${projectName || expense.category || `#${expense.id}`}`;
-        const color = '#ef4444'; // Vermelho para despesas
-        const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(expense.amount);
-        const tooltipDescription = `Despesa - ${valorFormatado}
-        ${projectName ? `Projeto: ${projectName}` : ''}
-        Categoria: ${expense.category}
-        ${expense.description ? `Descrição: ${expense.description}` : ''}
-        Data: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`;
-        
-        // Se já existe um evento, atualiza em vez de criar um novo
-        if (existingEvents.length > 0) {
-          const existingEvent = existingEvents[0];
-          
-          await db.update(events)
-            .set({
-              title,
-              description: tooltipDescription,
-              start_date: expense.date,
-              end_date: expense.date,
-              project_id: expense.project_id || null,
-              color
-            })
-            .where(eq(events.id, existingEvent.id));
-            
-          console.log(`[Automação] Evento financeiro atualizado para despesa #${expense.id}: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`);
-        } else {
-          // Criar novo evento para a despesa
-          await db.insert(events).values({
-            title,
-            description: tooltipDescription,
-            user_id: 1, // ID do usuário admin/sistema
-            project_id: expense.project_id || null,
-            expense_id: expense.id, // Armazena referência à despesa
-            type: 'financeiro',
-            start_date: expense.date,
-            end_date: expense.date,
-            all_day: true,
-            color,
-          });
-          
-          eventsCreated++;
-          console.log(`[Automação] Evento financeiro criado para despesa #${expense.id}: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`);
-        }
-      }
-    }
 
     return {
       success: true,
@@ -841,31 +753,25 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
       eventsRemoved += removedProjectEvents.length;
     }
     
-    // 3. Remover eventos financeiros antigos (sem financial_document_id e sem expense_id) 
-    // e eventos de documentos/despesas pagos
+    // 3. Remover eventos financeiros antigos (sem financial_document_id) 
+    // e eventos de documentos pagos
     const paidDocsIds = (await db
       .select({ id: financialDocuments.id })
       .from(financialDocuments)
       .where(eq(financialDocuments.paid, true))).map(doc => doc.id);
     
-    const paidExpenseIds = (await db
-      .select({ id: expenses.id })
-      .from(expenses)
-      .where(eq(expenses.paid, true))).map(expense => expense.id);
-    
-    // Primeiro remover eventos antigos (sem financial_document_id e sem expense_id)
+    // Primeiro remover eventos antigos (sem financial_document_id)
     const removedOldEvents = await db.delete(events)
       .where(
         and(
           eq(events.type, 'financeiro'),
           isNull(events.financial_document_id),
-          isNull(events.expense_id),
           gte(events.start_date, new Date()) // Manter eventos históricos
         )
       )
       .returning();
     
-    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento/despesa)`);
+    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento)`);
     eventsRemoved += removedOldEvents.length;
     
     // Agora remover eventos de documentos pagos
@@ -880,24 +786,7 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
         )
         .returning();
       
-      console.log(`[Automação] Removidos ${removedFinancialEvents.length} eventos de documentos financeiros pagos`);
       eventsRemoved += removedFinancialEvents.length;
-    }
-    
-    // Remover eventos de despesas pagas
-    if (paidExpenseIds.length > 0) {
-      const removedExpenseEvents = await db.delete(events)
-        .where(
-          and(
-            eq(events.type, 'financeiro'),
-            gte(events.start_date, new Date()), // Manter eventos históricos
-            inArray(events.expense_id, paidExpenseIds)
-          )
-        )
-        .returning();
-      
-      console.log(`[Automação] Removidos ${removedExpenseEvents.length} eventos de despesas pagas`);
-      eventsRemoved += removedExpenseEvents.length;
     }
     
     console.log(`[Automação] ${eventsRemoved} eventos antigos removidos do calendário`);
@@ -988,30 +877,6 @@ export async function createReminderEvents(): Promise<{ success: boolean, messag
       message: `Erro ao criar eventos de lembrete: ${error.message || 'Erro desconhecido'}`,
       count: 0
     };
-  }
-}
-
-/**
- * Notifica os clientes conectados via WebSocket sobre as mudanças no calendário
- */
-
-export function notifyCalendarUpdates(wss?: WebSocketServer) {
-  if (!wss) return;
-
-  // Envia uma notificação para todos os clientes conectados ao WebSocket
-  try {
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'calendar_updated',
-          timestamp: new Date().toISOString(),
-          message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
-        }));
-      }
-    });
-    console.log('[Automação] Notificação de atualização do calendário enviada via WebSocket');
-  } catch (error) {
-    console.error('[Automação] Erro ao enviar notificação de atualização do calendário:', error);
   }
 }
 
