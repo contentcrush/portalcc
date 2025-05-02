@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,10 +58,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getProgressBarColor } from "@/lib/utils";
 
-export default function Projects() {
+export default function Projects({ params }: { params?: { id?: string } }) {
   const { toast } = useToast();
-  const params = useParams();
-  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
@@ -179,13 +177,13 @@ export default function Projects() {
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
     // Atualizar a URL para refletir o projeto que está sendo visualizado
-    setLocation(`/projects/${projectId}`);
+    window.history.pushState(null, '', `/projects/${projectId}`);
   };
 
   const handleCloseProjectDetails = () => {
     // Limpar o ID selecionado e atualizar a URL para a página principal de projetos
     setSelectedProjectId(null);
-    setLocation('/projects');
+    window.history.pushState(null, '', '/projects');
   };
   
   const handleDuplicateProject = (projectId: number) => {
