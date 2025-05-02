@@ -252,7 +252,7 @@ export default function DashboardNovo() {
             </Button>
           </CardHeader>
           <CardContent className="px-6 space-y-3">
-            {upcomingTasks.map(task => (
+            {upcomingTasks.map((task: any) => (
               <div key={task.id} className="flex items-start gap-3 py-1">
                 <Circle className="h-5 w-5 mt-0.5 stroke-1 text-muted-foreground" />
                 <div className="flex-1">
@@ -405,7 +405,7 @@ export default function DashboardNovo() {
             </Button>
           </CardHeader>
           <CardContent className="px-6 space-y-4">
-            {clients?.slice(0, 5).map(client => (
+            {clients.slice(0, 5).map((client: any) => (
               <div key={client.id} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">

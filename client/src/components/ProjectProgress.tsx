@@ -1,8 +1,7 @@
-import { cn, getNormalizedProjectStatus } from "@/lib/utils";
-import { ProjectWithClient, ProjectStageStatus, ProjectSpecialStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ProjectProgressProps {
-  project: ProjectWithClient;
+  project: any;
   showLabel?: boolean;
   showStages?: boolean;
   className?: string;
@@ -24,13 +23,12 @@ export function ProjectProgress({
   let progressValue = project.progress || 0;
   
   // Primeiro obtém o status do projeto (normalizado)
-  const { stageStatus, specialStatus } = getNormalizedProjectStatus(project);
-  let baseStatus = stageStatus;
+  const stageStatus = project.status;
   
   // Calcular progresso baseado no status se não tiver valor explícito
   if (!project.progress) {
     // Para status especiais, usamos o status de etapa subjacente
-    switch(baseStatus) {
+    switch(stageStatus) {
       case 'proposta':
         progressValue = 10;
         break;
@@ -38,9 +36,13 @@ export function ProjectProgress({
         progressValue = 30;
         break;
       case 'producao':
+      case 'em_producao':
+      case 'em_andamento':
         progressValue = 50;
         break;
       case 'pos_revisao':
+      case 'em_edicao':
+      case 'edicao':
         progressValue = 75;
         break;
       case 'entregue':
@@ -82,7 +84,7 @@ export function ProjectProgress({
             getProgressBarColor(progressValue), 
             heightClass, 
             "rounded-full",
-            { "bg-stripes": isPaused }
+            { "opacity-60 bg-stripes": isPaused }
           )}
           style={{ width: `${progressValue}%` }}
         />
