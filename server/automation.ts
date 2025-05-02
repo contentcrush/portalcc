@@ -5,6 +5,7 @@ import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, add
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
+import { WebSocket } from 'ws';
 
 /**
  * Verifica projetos atrasados e atualiza o status automaticamente
@@ -987,6 +988,29 @@ export async function createReminderEvents(): Promise<{ success: boolean, messag
       message: `Erro ao criar eventos de lembrete: ${error.message || 'Erro desconhecido'}`,
       count: 0
     };
+  }
+}
+
+/**
+ * Notifica os clientes conectados via WebSocket sobre as mudanças no calendário
+ */
+export function notifyCalendarUpdates(wss?: WebSocketServer) {
+  if (!wss) return;
+
+  // Envia uma notificação para todos os clientes conectados ao WebSocket
+  try {
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'calendar_updated',
+          timestamp: new Date().toISOString(),
+          message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+        }));
+      }
+    });
+    console.log('[Automação] Notificação de atualização do calendário enviada via WebSocket');
+  } catch (error) {
+    console.error('[Automação] Erro ao enviar notificação de atualização do calendário:', error);
   }
 }
 

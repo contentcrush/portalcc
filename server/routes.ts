@@ -11,7 +11,13 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
-import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates, syncFinancialEvents } from "./automation";
+import { 
+  runAutomations, 
+  checkOverdueProjects, 
+  checkProjectsWithUpdatedDates, 
+  syncFinancialEvents,
+  notifyCalendarUpdates
+} from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
@@ -1595,6 +1601,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sincroniza eventos do calendário após criar nova despesa
       await syncFinancialEvents();
       
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
+      
       res.status(201).json(expense);
     } catch (error) {
       console.error("Erro ao criar despesa:", error);
@@ -1613,6 +1622,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sincroniza eventos do calendário após atualizar despesa
       await syncFinancialEvents();
+      
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
       
       res.json(updatedExpense);
     } catch (error) {
