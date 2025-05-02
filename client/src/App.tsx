@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
+import DashboardNovo from "@/pages/dashboard-novo";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients";
@@ -40,6 +41,7 @@ function App() {
                       <Switch>
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
+                        <Route path="/dashboard-novo" component={DashboardNovo} />
                         <Route path="/projects" component={Projects} />
                         <Route path="/projects/:id" component={Projects} />
                         <Route path="/tasks" component={Tasks} />
