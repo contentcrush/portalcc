@@ -19,6 +19,8 @@ const messageHandlers: { [key: string]: MessageHandler[] } = {
   chat: [],
   notification: [],
   system: [],
+  financial_updated: [],
+  calendar_updated: [],
 };
 
 /**
@@ -26,23 +28,46 @@ const messageHandlers: { [key: string]: MessageHandler[] } = {
  */
 export function initWebSocket(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
+    // Se já estiver conectado, apenas retorne a conexão existente
     if (ws instanceof WebSocket && ws.readyState === WebSocket.OPEN) {
       console.log('WebSocket já está conectado');
       resolve(ws);
       return;
     }
 
-    // Fechar conexão existente se houver
+    // Se estiver conectando, aguarde a conexão
+    if (ws instanceof WebSocket && ws.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket está conectando...');
+      ws.onopen = () => {
+        console.log('WebSocket conexão completada');
+        resolve(ws!);
+      };
+      return;
+    }
+
+    // Fechar conexão existente se houver e estiver em outro estado
     if (ws) {
+      console.log('Fechando conexão WebSocket existente...');
       ws.close();
+      ws = null;
     }
 
     try {
-      console.log('Iniciando conexão WebSocket:', wsUrl);
+      console.log('Iniciando nova conexão WebSocket:', wsUrl);
       ws = new WebSocket(wsUrl);
 
+      // Defina um timeout para a conexão
+      const connectionTimeout = setTimeout(() => {
+        if (ws && ws.readyState !== WebSocket.OPEN) {
+          console.warn('Timeout ao conectar WebSocket');
+          ws.close();
+          reject(new Error('Timeout de conexão WebSocket'));
+        }
+      }, 10000); // 10 segundos de timeout
+
       ws.onopen = () => {
-        console.log('Conexão WebSocket estabelecida');
+        console.log('Conexão WebSocket estabelecida com sucesso');
+        clearTimeout(connectionTimeout);
         resolve(ws!);
       };
 
@@ -54,6 +79,9 @@ export function initWebSocket(): Promise<WebSocket> {
           // Despachar para os handlers apropriados
           if (data.type && messageHandlers[data.type]) {
             messageHandlers[data.type].forEach(handler => handler(data));
+          } else if (data.event && messageHandlers[data.event]) {
+            // Suporte para formato alternativo de mensagem
+            messageHandlers[data.event].forEach(handler => handler(data));
           }
         } catch (error) {
           console.error('Erro ao processar mensagem WebSocket:', error);
@@ -62,21 +90,37 @@ export function initWebSocket(): Promise<WebSocket> {
 
       ws.onerror = (error) => {
         console.error('Erro na conexão WebSocket:', error);
+        clearTimeout(connectionTimeout);
         reject(error);
       };
 
-      ws.onclose = () => {
-        console.log('Conexão WebSocket fechada');
+      ws.onclose = (event) => {
+        console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason}`);
         
-        // Tentar reconectar após 3 segundos
+        // Tentar reconectar após um tempo variável (entre 2-5 segundos)
+        const reconnectDelay = 2000 + Math.random() * 3000;
+        
         setTimeout(() => {
           if (document.visibilityState !== 'hidden') {
-            console.log('Tentando reconectar WebSocket...');
+            console.log(`Tentando reconectar WebSocket após ${Math.round(reconnectDelay/1000)}s...`);
             initWebSocket()
               .then(() => console.log('WebSocket reconectado com sucesso'))
               .catch(err => console.error('Falha ao reconectar WebSocket:', err));
+          } else {
+            console.log('Página em segundo plano, adiando reconexão do WebSocket');
+            // Registrar um handler para reconectar quando a página voltar a ser visível
+            const onVisibilityChange = () => {
+              if (document.visibilityState === 'visible') {
+                console.log('Página visível novamente, reconectando WebSocket...');
+                document.removeEventListener('visibilitychange', onVisibilityChange);
+                initWebSocket()
+                  .then(() => console.log('WebSocket reconectado após página ficar visível'))
+                  .catch(err => console.error('Falha ao reconectar WebSocket após visibilidade:', err));
+              }
+            };
+            document.addEventListener('visibilitychange', onVisibilityChange);
           }
-        }, 3000);
+        }, reconnectDelay);
       };
 
     } catch (error) {
@@ -87,7 +131,8 @@ export function initWebSocket(): Promise<WebSocket> {
 }
 
 /**
- * Registra um handler para um tipo específico de mensagem
+ * Registra um handler para um tipo específico de mensagem e
+ * garante que a conexão WebSocket esteja ativa
  */
 export function onWebSocketMessage(
   type: string,
@@ -99,9 +144,22 @@ export function onWebSocketMessage(
 
   messageHandlers[type].push(handler);
 
+  // Garantir que a conexão WebSocket esteja ativa
+  if (!ws || (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING)) {
+    console.log(`Inicializando WebSocket para manipular mensagens do tipo: ${type}`);
+    
+    // Inicializar a conexão WebSocket
+    initWebSocket()
+      .then(() => console.log(`WebSocket inicializado com sucesso para mensagens do tipo: ${type}`))
+      .catch(error => console.error(`Erro ao inicializar WebSocket para mensagens do tipo: ${type}`, error));
+  }
+
   // Retorna uma função para desregistrar este handler
   return () => {
-    messageHandlers[type] = messageHandlers[type].filter(h => h !== handler);
+    if (messageHandlers[type]) {
+      messageHandlers[type] = messageHandlers[type].filter(h => h !== handler);
+      console.log(`Handler removido para mensagens do tipo: ${type}. Restantes: ${messageHandlers[type].length}`);
+    }
   };
 }
 
