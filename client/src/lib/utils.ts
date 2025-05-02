@@ -21,20 +21,12 @@ export function cn(...inputs: ClassValue[]) {
 
 // Função getInitials foi movida para baixo no arquivo
 
-export function formatCurrency(value: number | null | undefined, showSymbol: boolean = true): string {
-  if (value === null || value === undefined) return showSymbol ? "R$ 0,00" : "0,00";
-  
-  if (showSymbol) {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  } else {
-    return new Intl.NumberFormat("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  }
+export function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "R$ 0,00";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 }
 
 export function formatDate(date: Date | string | null | undefined): string {

@@ -91,40 +91,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      try {
-        await apiRequest("POST", "/api/auth/logout");
-      } catch (error) {
-        console.error("Erro no logout, continuando com limpeza local:", error);
-      } finally {
-        // Remover o token do localStorage independentemente do resultado da API
-        localStorage.removeItem("authToken");
-      }
+      await apiRequest("POST", "/api/auth/logout");
+      // Remover o token do localStorage
+      localStorage.removeItem("authToken");
     },
     onSuccess: () => {
-      // Limpar todas as queries do cache
-      queryClient.clear();
       queryClient.setQueryData(["/api/auth/me"], null);
-      
+      // Limpar outras queries do cache para evitar dados antigos
+      queryClient.clear();
       toast({
         title: "Logout bem-sucedido",
         description: "Você foi desconectado com sucesso.",
         variant: "default",
       });
-      
       // Redirecionar para a página de login
       window.location.href = "/auth";
     },
     onError: (error: Error) => {
-      // Limpar o cache de qualquer forma
-      queryClient.clear();
-      queryClient.setQueryData(["/api/auth/me"], null);
-      
       toast({
         title: "Falha no logout",
-        description: "Sessão finalizada com avisos. Redirecionando para login...",
+        description: error.message || "Não foi possível desconectar",
         variant: "destructive",
       });
-      
       // Mesmo com erro, redirecionar para a página de login para evitar estado inconsistente
       window.location.href = "/auth";
     },

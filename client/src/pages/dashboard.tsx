@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatCurrency, calculatePercentChange, formatDate, cn, calculateDaysRemaining } from "@/lib/utils";
+import { formatCurrency, calculatePercentChange } from "@/lib/utils";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -36,12 +36,8 @@ import {
   PlusCircle,
   FolderOpen,
   ListTodo,
-  Users,
-  MoreHorizontal
+  Users
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ProjectProgress } from "@/components/ProjectProgress";
 import { MONTHS } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
 
@@ -101,98 +97,126 @@ const StatCard = ({
 );
 
 export default function Dashboard() {
-  const [period, setPeriod] = useState("Abril 2025");
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    return format(new Date(), "MMMM yyyy", { locale: ptBR });
-  });
-  
-  // Formatação do título do mês com primeira letra maiúscula
-  const formattedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
-  
+  const [period, setPeriod] = useState("Q2 2025");
   const { openProjectForm } = useProjectForm();
   
-  // Queries para obter dados
-  const { data: projects = [] } = useQuery({
+  const { data: projects } = useQuery({
     queryKey: ['/api/projects']
   });
   
-  const { data: tasks = [] } = useQuery({
+  const { data: tasks } = useQuery({
     queryKey: ['/api/tasks']
   });
   
-  const { data: clients = [] } = useQuery({
-    queryKey: ['/api/clients']
-  });
-  
-  const { data: financialDocuments = [] } = useQuery({
+  const { data: financialDocuments } = useQuery({
     queryKey: ['/api/financial-documents']
   });
   
-  const { data: expenses = [] } = useQuery({
+  const { data: expenses } = useQuery({
     queryKey: ['/api/expenses']
   });
+  
+  const { data: clients } = useQuery({
+    queryKey: ['/api/clients']
+  });
+  
+  // Removemos o listener de evento desnecessário que pode causar aberturas inadvertidas do formulário
 
-  // Cálculos das métricas do dashboard
-  const activeProjects = projects.filter(p => 
+  // Calculate dashboard metrics using actual data
+  const activeProjects = projects?.filter(p => 
     p.status !== 'concluido' && p.status !== 'cancelado'
   ).length || 0;
   
-  const totalProjects = projects.length || 0;
+  const activeProjectsChange = 12; // For now leaving this hardcoded as 12%
   
-  // Tarefas pendentes e atrasadas
-  const pendingTasks = tasks.filter(t => !t.completed).length || 0;
-  const overdueTasks = tasks.filter(t => {
-    if (!t.completed && t.due_date) {
-      const dueDate = new Date(t.due_date);
-      return dueDate < new Date();
-    }
-    return false;
-  }).length || 0;
+  const completedProjects = projects?.filter(p => 
+    p.status === 'concluido'
+  ).length || 0;
   
-  // Clientes ativos (com projetos ativos)
-  const activeClients = clients.length || 0;
-  const newClientsThisMonth = clients.filter(c => {
-    if (c.since) {
-      const sinceDate = new Date(c.since);
-      const today = new Date();
-      return sinceDate.getMonth() === today.getMonth() && 
-             sinceDate.getFullYear() === today.getFullYear();
-    }
-    return false;
-  }).length || 0;
+  const pendingTasks = tasks?.filter(t => 
+    !t.completed
+  ).length || 0;
   
-  // Cálculos financeiros
-  const currentMonthIncome = financialDocuments.reduce((sum, doc) => {
+  const pendingTasksChange = -8; // For now leaving this hardcoded as -8%
+  
+  const activeClients = clients?.length || 0;
+  const activeClientsChange = 20; // For now leaving this hardcoded as 20%
+  
+  // Financial calculations
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  
+  // Calculate monthly revenue for current month
+  const currentMonthRevenue = financialDocuments?.reduce((sum, doc) => {
     const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
-    const today = new Date();
-    if (docDate && docDate.getMonth() === today.getMonth() && 
-        docDate.getFullYear() === today.getFullYear()) {
+    if (docDate && docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear) {
       return sum + (doc.amount || 0);
     }
     return sum;
-  }, 0);
+  }, 0) || 0;
   
-  const lastMonthIncome = financialDocuments.reduce((sum, doc) => {
+  // Calculate monthly revenue for previous month
+  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const previousMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  const previousMonthRevenue = financialDocuments?.reduce((sum, doc) => {
     const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
-    const today = new Date();
-    const lastMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
-    const lastMonthYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
-    if (docDate && docDate.getMonth() === lastMonth && 
-        docDate.getFullYear() === lastMonthYear) {
+    if (docDate && docDate.getMonth() === previousMonth && docDate.getFullYear() === previousMonthYear) {
       return sum + (doc.amount || 0);
     }
     return sum;
-  }, 0);
+  }, 0) || 0;
   
-  // Calcular percentuais de mudança
-  const projectsGrowth = 12; // Percentual de exemplo
-  const tasksChange = -5; // Percentual de exemplo
-  const clientsGrowth = 8; // Percentual de exemplo
-  const incomeGrowth = lastMonthIncome ? Math.round((currentMonthIncome - lastMonthIncome) / lastMonthIncome * 100) : 15;
+  // Calculate current quarter revenue
+  const currentQuarter = Math.floor(currentMonth / 3);
+  const currentQuarterStart = currentQuarter * 3;
+  const currentQuarterEnd = currentQuarterStart + 2;
   
-  // Valores absolutos para o faturamento (valores a receber)
-  const totalMonthlyIncome = currentMonthIncome || 48500; // Valor de exemplo se não houver dados
-  const positiveIncome = 6300; // Valor de exemplo para o incremento
+  const currentQuarterRevenue = financialDocuments?.reduce((sum, doc) => {
+    const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
+    if (docDate && docDate.getMonth() >= currentQuarterStart && docDate.getMonth() <= currentQuarterEnd && docDate.getFullYear() === currentYear) {
+      return sum + (doc.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Calculate previous quarter revenue
+  const previousQuarter = currentQuarter === 0 ? 3 : currentQuarter - 1;
+  const previousQuarterYear = currentQuarter === 0 ? currentYear - 1 : currentYear;
+  const previousQuarterStart = previousQuarter * 3;
+  const previousQuarterEnd = previousQuarterStart + 2;
+  
+  const previousQuarterRevenue = financialDocuments?.reduce((sum, doc) => {
+    const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
+    if (docDate && docDate.getMonth() >= previousQuarterStart && docDate.getMonth() <= previousQuarterEnd && docDate.getFullYear() === previousQuarterYear) {
+      return sum + (doc.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Calculate current quarter expenses
+  const currentQuarterExpenses = expenses?.reduce((sum, exp) => {
+    const expDate = exp.date ? new Date(exp.date) : null;
+    if (expDate && expDate.getMonth() >= currentQuarterStart && expDate.getMonth() <= currentQuarterEnd && expDate.getFullYear() === currentYear) {
+      return sum + (exp.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Calculate previous quarter expenses
+  const previousQuarterExpenses = expenses?.reduce((sum, exp) => {
+    const expDate = exp.date ? new Date(exp.date) : null;
+    if (expDate && expDate.getMonth() >= previousQuarterStart && expDate.getMonth() <= previousQuarterEnd && expDate.getFullYear() === previousQuarterYear) {
+      return sum + (exp.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Calculate percent changes
+  const revenueChange = calculatePercentChange(currentMonthRevenue, previousMonthRevenue);
+  const quarterRevenueChange = calculatePercentChange(currentQuarterRevenue, previousQuarterRevenue);
+  const expensesChange = calculatePercentChange(currentQuarterExpenses, previousQuarterExpenses);
   
   // Chart data
   const monthlyData = [
@@ -247,115 +271,96 @@ export default function Dashboard() {
         </div>
       </div>
       
-      {/* Cards de estatísticas - seguindo o layout de referência */}
+      {/* Stats Cards */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Projetos Ativos */}
-        <Card className="overflow-hidden shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Projetos Ativos</h3>
-                <div className="mt-1 flex items-baseline">
+                <div className="flex items-end space-x-2 mt-1">
                   <span className="text-3xl font-bold">{activeProjects}</span>
-                  <span className="text-sm text-muted-foreground ml-2">de {totalProjects} total</span>
                 </div>
               </div>
               <div className="bg-indigo-100 rounded-md p-2">
                 <FolderOpen className="h-5 w-5 text-indigo-600" />
               </div>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3">
-              <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${Math.round((activeProjects / Math.max(totalProjects, 1)) * 100)}%` }}></div>
-            </div>
             <div className="flex items-center mt-3 text-sm">
               <div className="flex items-center text-green-600">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+{projectsGrowth}%</span>
+                <span>+12%</span>
               </div>
               <span className="text-muted-foreground ml-1.5">desde o mês passado</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tarefas Pendentes */}
-        <Card className="overflow-hidden shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Tarefas Pendentes</h3>
-                <div className="mt-1 flex items-baseline">
+                <div className="flex items-end space-x-2 mt-1">
                   <span className="text-3xl font-bold">{pendingTasks}</span>
-                  <span className="text-sm text-red-500 ml-2">{overdueTasks ? `${overdueTasks} atrasadas` : ''}</span>
                 </div>
               </div>
               <div className="bg-amber-100 rounded-md p-2">
                 <ListTodo className="h-5 w-5 text-amber-600" />
               </div>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3">
-              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${pendingTasks ? Math.min(pendingTasks * 10, 100) : 0}%` }}></div>
-            </div>
             <div className="flex items-center mt-3 text-sm">
               <div className="flex items-center text-red-600">
                 <ArrowDownRight className="h-3 w-3 mr-1" />
-                <span>{tasksChange}%</span>
+                <span>-8%</span>
               </div>
               <span className="text-muted-foreground ml-1.5">desde a semana passada</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Clientes Ativos */}
-        <Card className="overflow-hidden shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Clientes Ativos</h3>
-                <div className="mt-1 flex items-baseline">
+                <div className="flex items-end space-x-2 mt-1">
                   <span className="text-3xl font-bold">{activeClients}</span>
-                  <span className="text-sm text-green-500 ml-2">{newClientsThisMonth ? `${newClientsThisMonth} novos este mês` : ''}</span>
                 </div>
               </div>
-              <div className="bg-blue-100 rounded-md p-2">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="bg-green-100 rounded-md p-2">
+                <Users className="h-5 w-5 text-green-600" />
               </div>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3">
-              <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${Math.min(activeClients * 8, 100)}%` }}></div>
             </div>
             <div className="flex items-center mt-3 text-sm">
               <div className="flex items-center text-green-600">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+{clientsGrowth}%</span>
+                <span>+20%</span>
               </div>
               <span className="text-muted-foreground ml-1.5">desde o trimestre passado</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Faturamento Mensal */}
-        <Card className="overflow-hidden shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
+        <Card className="dashboard-card">
+          <CardContent className="pt-6">
+            <div className="flex justify-between">
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Faturamento Mensal</h3>
-                <div className="mt-1">
-                  <span className="text-3xl font-bold">R$ {formatCurrency(totalMonthlyIncome, false)}</span>
+                <h3 className="text-sm font-medium text-muted-foreground">Receita Mensal</h3>
+                <div className="flex items-end space-x-2 mt-1">
+                  <span className="text-3xl font-bold">{formatCurrency(currentMonthRevenue)}</span>
                 </div>
               </div>
-              <div className="bg-purple-100 rounded-md p-2">
-                <CircleDollarSign className="h-5 w-5 text-purple-600" />
+              <div className="bg-blue-100 rounded-md p-2">
+                <CircleDollarSign className="h-5 w-5 text-blue-600" />
               </div>
             </div>
             <div className="flex items-center mt-3 text-sm">
-              <div className="flex items-center text-green-600">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+{incomeGrowth}%</span>
+              <div className={`flex items-center ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {revenueChange >= 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                <span>{revenueChange > 0 ? `+${revenueChange.toFixed(0)}%` : `${revenueChange.toFixed(0)}%`}</span>
               </div>
               <span className="text-muted-foreground ml-1.5">comparado ao mês anterior</span>
-            </div>
-            <div className="mt-2 text-sm text-green-600">
-              <span>R$ {formatCurrency(positiveIncome, false)}</span>
             </div>
           </CardContent>
         </Card>
@@ -382,286 +387,339 @@ export default function Dashboard() {
         />
       </div>
       
-      {/* Projetos em Andamento e Despesas */}
+      {/* Project Performance & Expense Breakdown */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        {/* Lista de Projetos Ativos */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Projetos em Andamento</CardTitle>
-              <Link href="/projects">
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-indigo-600">
-                  Ver todos
-                </Button>
-              </Link>
+              <CardTitle className="text-base font-medium">Desempenho de Projetos</CardTitle>
+              <Button variant="ghost" size="sm" className="h-8 text-xs">
+                Ver todos os projetos
+              </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            {Array.isArray(projects) && projects.length > 0 ? (
-              <div className="divide-y">
-                {projects
-                  .filter(p => p.status !== 'concluido' && p.status !== 'cancelado')
-                  .slice(0, 4)
-                  .map((project) => {
-                    // Calcular progresso do projeto
-                    const progress = project.progress || 0;
-                    const daysRemaining = project.endDate ? calculateDaysRemaining(new Date(project.endDate)) : 0;
-                    
-                    return (
-                      <div key={project.id} className="p-4 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center">
-                              <StatusBadge status={project.status} small={true} minimal={true} />
-                              <Link href={`/projects/${project.id}`}>
-                                <p className="font-medium hover:text-primary cursor-pointer">{project.name}</p>
-                              </Link>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-xs text-muted-foreground">
-                                {daysRemaining > 0 
-                                  ? `${daysRemaining} dias restantes` 
-                                  : daysRemaining === 0 
-                                    ? "Vence hoje" 
-                                    : `Atrasado em ${Math.abs(daysRemaining)} dias`
-                                }
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatCurrency(project.budget || 0)}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="ml-4 flex-shrink-0">
-                            <div className="flex flex-col items-end">
-                              <div className="mb-1">
-                                <ProjectProgress project={project} compact={true} showPercent={true} />
-                              </div>
-                              <div className="flex items-center mt-1">
-                                <MoreHorizontal className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            ) : (
-              <div className="p-6 text-center">
-                <p className="text-muted-foreground">Nenhum projeto ativo no momento</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={openProjectForm}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Criar Novo Projeto
-                </Button>
-              </div>
-            )}
+          <CardContent>
+            <div className="space-y-4">
+              {projects?.slice(0, 4).map((project) => (
+                <div key={project.id} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <StatusBadge status={project.status} small={true} minimal={true} />
+                    <div>
+                      <Link href={`/projects/${project.id}`}>
+                        <p className="font-medium hover:text-primary cursor-pointer">{project.name}</p>
+                      </Link>
+                      <p className="text-sm text-muted-foreground">{project.client_id ? `Cliente #${project.client_id}` : ''}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrency(project.budget || 0)}</p>
+                    <div className="flex items-center justify-end text-sm">
+                      <Badge variant={project.progress > 80 ? "success" : project.progress > 40 ? "warning" : "outline"}>
+                        {project.progress}% concluído
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
         
-        {/* Lista de Tarefas Próximas */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Detalhamento de Despesas</CardTitle>
+            <CardDescription>{formatCurrency(currentQuarterExpenses)}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center mb-2">
+              <ResponsiveContainer width={200} height={200}>
+                <PieChart>
+                  <Pie
+                    data={expenseCategories}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {expenseCategories.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              {expenseCategories.map((category, index) => (
+                <div key={index} className="flex items-center">
+                  <div 
+                    className="w-3 h-3 rounded-full mr-2" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  ></div>
+                  <div>
+                    <p className="text-sm font-medium">{category.name}</p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <span>{formatCurrency(category.value)}</span>
+                      <span className="ml-1">({category.percent}%)</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Tarefas Próximas */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-1">
+        <Card className="dashboard-card">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium">Tarefas Próximas</CardTitle>
               <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-amber-600">
+                <Button variant="ghost" size="sm" className="h-8 text-xs text-indigo-600">
                   Ver todas
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {Array.isArray(tasks) && tasks.length > 0 ? (
-              <div className="divide-y">
-                {tasks
-                  .filter(t => !t.completed)
-                  .sort((a, b) => {
-                    // Primeiro ordenar por tarefas atrasadas
-                    const aIsOverdue = a.due_date && new Date(a.due_date) < new Date();
-                    const bIsOverdue = b.due_date && new Date(b.due_date) < new Date();
-                    
-                    if (aIsOverdue && !bIsOverdue) return -1;
-                    if (!aIsOverdue && bIsOverdue) return 1;
-                    
-                    // Depois ordenar por data de vencimento
-                    if (a.due_date && b.due_date) {
-                      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-                    }
-                    
-                    return 0;
-                  })
-                  .slice(0, 4)
-                  .map((task) => {
-                    // Verificar se está atrasada
-                    const dueDate = task.due_date ? new Date(task.due_date) : null;
-                    const isOverdue = dueDate && dueDate < new Date();
-                    const daysRemaining = dueDate ? calculateDaysRemaining(dueDate) : null;
-                    
-                    // Determinar cor da prioridade
-                    const priorityColor = {
-                      baixa: "bg-emerald-50 text-emerald-800 border-emerald-200",
-                      media: "bg-amber-50 text-amber-800 border-amber-200",
-                      alta: "bg-orange-50 text-orange-800 border-orange-200",
-                      critica: "bg-red-50 text-red-800 border-red-200"
-                    };
-                    
-                    return (
-                      <div key={task.id} className="p-4 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                            <div className={cn(
-                              "w-5 h-5 rounded-full flex items-center justify-center",
-                              isOverdue ? "bg-red-100" : "bg-amber-100"
-                            )}>
-                              <div className={cn(
-                                "w-2 h-2 rounded-full",
-                                isOverdue ? "bg-red-500" : "bg-amber-500"
-                              )}></div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <Link href={`/tasks/${task.id}`}>
-                              <p className="font-medium hover:text-primary cursor-pointer">{task.title}</p>
-                            </Link>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {isOverdue 
-                                ? `Atrasada em ${Math.abs(daysRemaining || 0)} dias` 
-                                : daysRemaining === 0 
-                                  ? "Vence hoje" 
-                                  : daysRemaining === 1 
-                                    ? "Vence amanhã" 
-                                    : `Vence em ${daysRemaining} dias`
-                              }
-                            </p>
-                          </div>
-                          
-                          <div className="flex-shrink-0">
-                            <Badge 
-                              variant="outline" 
-                              className={priorityColor[task.priority || 'media']}
-                            >
-                              {task.priority === 'baixa' ? 'Baixa' : 
-                               task.priority === 'media' ? 'Média' : 
-                               task.priority === 'alta' ? 'Alta' : 
-                               task.priority === 'critica' ? 'Crítica' : 'Média'}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                }
+            <div>
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Finalizar edição do teaser - Banco Azul</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 2 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/32.jpg" 
+                    alt="Bruno Silva" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
               </div>
-            ) : (
-              <div className="p-6 text-center">
-                <p className="text-muted-foreground">Nenhuma tarefa pendente</p>
+
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Aprovar storyboard - Documentário Natureza</p>
+                    <p className="text-xs text-red-600 mt-1">Vence hoje</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Alta</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/women/44.jpg" 
+                    alt="Ana Oliveira" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
               </div>
-            )}
+
+              <div className="border-b p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Reunião de pré-produção - Curso Online Tech</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">Baixa</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/67.jpg" 
+                    alt="Carlos Mendes" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
+                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Revisar orçamento - Projeto Marca X</p>
+                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <img 
+                    src="https://randomuser.me/api/portraits/men/32.jpg" 
+                    alt="Bruno Silva" 
+                    className="h-6 w-6 rounded-full border-2 border-white"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 flex justify-center">
+                <Button variant="ghost" size="sm" className="text-indigo-600">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar nova tarefa
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* Visão Financeira */}
-      <div className="grid gap-6 grid-cols-1">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Visão Financeira - {formattedMonth}</CardTitle>
-              <Link href="/financial">
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-purple-600">
-                  Ver detalhes
-                </Button>
-              </Link>
-            </div>
+        
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Financeiro</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-              {/* Faturamento por Projeto */}
+            <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium mb-3">Faturamento por Projeto</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-medium">Próximos Pagamentos</h4>
+                  <span className="text-xs text-muted-foreground">Abril 2025</span>
+                </div>
                 <div className="space-y-2">
-                  {Array.isArray(financialDocuments) && financialDocuments.length > 0 ? (
-                    <div className="space-y-2">
-                      {financialDocuments.slice(0, 4).map((doc, index) => (
-                        <div key={doc.id} className="flex items-center justify-between py-2 border-b border-gray-100">
-                          <div className="flex items-center">
-                            <div className={cn(
-                              "w-2 h-2 rounded-full mr-3",
-                              index % 4 === 0 ? "bg-indigo-500" :
-                              index % 4 === 1 ? "bg-green-500" :
-                              index % 4 === 2 ? "bg-amber-500" : 
-                              "bg-blue-500"
-                            )}></div>
-                            <span className="text-sm font-medium">
-                              {doc.description ? 
-                                doc.description.length > 25 ? 
-                                  doc.description.substring(0, 25) + '...' : 
-                                  doc.description 
-                                : 'Fatura ' + doc.id}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {formatCurrency(doc.amount || 0)}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="flex justify-between items-center">
+                    <div className="flex">
+                      <div className="p-1.5 bg-green-100 text-green-600 rounded mr-2">
+                        <Building className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Banco Azul</p>
+                        <p className="text-xs text-muted-foreground">Fatura 23</p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">Nenhum documento financeiro</p>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(18000)}</p>
+                      <p className="text-xs text-muted-foreground">05/04/2025</p>
                     </div>
-                  )}
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="flex">
+                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
+                        <Building className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Tech Courses Inc.</p>
+                        <p className="text-xs text-muted-foreground">Pagamento Julho</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(12500)}</p>
+                      <p className="text-xs text-muted-foreground">15/04/2025</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              {/* Gráfico de Receitas */}
               <div>
-                <h3 className="text-sm font-medium mb-3">Receitas x Despesas (2025)</h3>
-                <div>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart
-                      data={monthlyData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                      <YAxis 
-                        tickFormatter={(value) => `R$ ${value/1000}k`}
-                        tickLine={false}
-                        axisLine={false}
-                        width={60}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`R$ ${formatCurrency(value as number, false)}`, '']}
-                        labelFormatter={(label) => `${label}`}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        fill="#5046E5" 
-                        stroke="#5046E5"
-                        fillOpacity={0.1}
-                        name="Receitas"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="expenses" 
-                        fill="#EF4444" 
-                        stroke="#EF4444"
-                        fillOpacity={0.1}
-                        name="Despesas"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-medium">Próximas Despesas</h4>
+                  <span className="text-xs text-muted-foreground">Abril 2025</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex">
+                      <div className="p-1.5 bg-red-100 text-red-600 rounded mr-2">
+                        <CircleDollarSign className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Aluguel de Equipamentos</p>
+                        <p className="text-xs text-muted-foreground">20/04/2025</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(3500)}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+              
+              <Button variant="outline" size="sm" className="w-full">
+                <CircleDollarSign className="mr-2 h-4 w-4" />
+                Gerenciar Finanças
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Próximas Reuniões</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-medium">Hoje, 10:30</h4>
+                  <Badge variant="outline" className="text-xs">1h</Badge>
+                </div>
+                <div className="flex">
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Daily Standup</p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <User className="h-3 w-3 mr-1" />
+                      <span>Equipe de Produção</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-medium">Amanhã, 14:00</h4>
+                  <Badge variant="outline" className="text-xs">1h 30m</Badge>
+                </div>
+                <div className="flex">
+                  <div className="p-1.5 bg-yellow-100 text-yellow-600 rounded mr-2">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Revisão do Projeto</p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Building className="h-3 w-3 mr-1" />
+                      <span>Marca X</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <Button variant="outline" size="sm" className="w-full">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                Ver Calendário
+              </Button>
             </div>
           </CardContent>
         </Card>
