@@ -47,9 +47,19 @@ export default function QuickActions() {
     priority: string;
     due_date: string;
     project_id?: number;
+    project?: {
+      id: number;
+      name: string;
+      client_id: number;
+    };
+    assigned_to?: number;
+    assignedUser?: {
+      id: number;
+      name: string;
+    };
+    // Campos mapeados do projeto e responsável
     projectName?: string;
     assigneeName?: string;
-    assignee_id?: number;
   }
   
   // Buscar as próximas tarefas a vencer
@@ -63,6 +73,13 @@ export default function QuickActions() {
         const dateA = new Date(a.due_date);
         const dateB = new Date(b.due_date);
         return dateA.getTime() - dateB.getTime();
+      }).map(task => {
+        // Adicionar informações de projeto e responsável a partir dos dados detalhados
+        return {
+          ...task,
+          projectName: task.project?.name || 'Sem projeto',
+          assigneeName: task.assignedUser?.name || 'Não atribuído'
+        };
       });
       
       // Retornar apenas as 5 primeiras tarefas
