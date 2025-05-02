@@ -4,8 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard-new-v2";
-// import DashboardOriginal from "@/pages/dashboard"; // Mantendo o original comentado
+import Dashboard from "@/pages/dashboard";
+import DashboardNew from "@/pages/dashboard-new";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients";
@@ -41,7 +41,7 @@ function App() {
                       <Switch>
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
-                        {/* Rota para dashboard antigo removida */}
+                        <Route path="/dashboard-new" component={DashboardNew} />
                         <Route path="/projects" component={Projects} />
                         <Route path="/projects/:id" component={Projects} />
                         <Route path="/tasks" component={Tasks} />
