@@ -548,6 +548,7 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
  * Sincroniza eventos do calendário com base em datas financeiras importantes
  * - Datas de vencimento de faturas
  * - Datas de pagamento programadas
+ * - Datas de despesas
  */
 export async function syncFinancialEvents(): Promise<{ success: boolean, message: string, count: number }> {
   try {
@@ -564,18 +565,35 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
         )
       );
     
+    // Busca despesas não pagas e com data futura
+    const expensesList = await db
+      .select()
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.paid, false),
+          gte(expenses.date, new Date())
+        )
+      );
+    
+    console.log(`[Automação] Encontradas ${expensesList.length} despesas para sincronizar`);
+    
     let eventsCreated = 0;
     
-    // Primeiro, vamos limpar quaisquer eventos antigos (sem financial_document_id)
+    // Primeiro, vamos limpar quaisquer eventos antigos (sem financial_document_id e expense_id)
     // para evitar duplicações com o formato antigo
-    await db.delete(events)
+    const deletedEvents = await db.delete(events)
       .where(
         and(
           eq(events.type, 'financeiro'),
           isNull(events.financial_document_id),
+          isNull(events.expense_id),
           gte(events.start_date, new Date())
         )
-      );
+      )
+      .returning();
+    
+    console.log(`[Automação] Removidos ${deletedEvents.length} eventos financeiros antigos (sem referência a documento)`);
       
     // Cria eventos para datas de vencimento financeiro
     for (const doc of financialDocs) {
@@ -684,6 +702,75 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
           
           eventsCreated++;
           console.log(`[Automação] Evento financeiro criado para documento #${doc.id}: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+    }
+    
+    // Cria eventos para as despesas
+    for (const expense of expensesList) {
+      if (expense.date) {
+        // Verifica se já existe um evento para esta despesa
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.type, 'financeiro'),
+              eq(events.expense_id, expense.id)
+            )
+          );
+          
+        // Busca informações do projeto relacionado se existir
+        let projectName = '';
+        if (expense.project_id) {
+          const [project] = await db.select().from(projects).where(eq(projects.id, expense.project_id));
+          if (project) {
+            projectName = project.name;
+          }
+        }
+        
+        // Prepara os dados do evento
+        const title = `Despesa: ${projectName || expense.category || `#${expense.id}`}`;
+        const color = '#ef4444'; // Vermelho para despesas
+        const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(expense.amount);
+        const tooltipDescription = `Despesa - ${valorFormatado}
+        ${projectName ? `Projeto: ${projectName}` : ''}
+        Categoria: ${expense.category}
+        ${expense.description ? `Descrição: ${expense.description}` : ''}
+        Data: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`;
+        
+        // Se já existe um evento, atualiza em vez de criar um novo
+        if (existingEvents.length > 0) {
+          const existingEvent = existingEvents[0];
+          
+          await db.update(events)
+            .set({
+              title,
+              description: tooltipDescription,
+              start_date: expense.date,
+              end_date: expense.date,
+              project_id: expense.project_id || null,
+              color
+            })
+            .where(eq(events.id, existingEvent.id));
+            
+          console.log(`[Automação] Evento financeiro atualizado para despesa #${expense.id}: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        } else {
+          // Criar novo evento para a despesa
+          await db.insert(events).values({
+            title,
+            description: tooltipDescription,
+            user_id: 1, // ID do usuário admin/sistema
+            project_id: expense.project_id || null,
+            expense_id: expense.id, // Armazena referência à despesa
+            type: 'financeiro',
+            start_date: expense.date,
+            end_date: expense.date,
+            all_day: true,
+            color,
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento financeiro criado para despesa #${expense.id}: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`);
         }
       }
     }
