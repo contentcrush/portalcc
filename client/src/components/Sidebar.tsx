@@ -93,12 +93,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="p-4 flex items-center justify-center border-b border-gray-200">
+      <div className="p-4 flex items-center border-b border-gray-200">
         <img 
           src={logoImage} 
           alt="Content Crush Logo" 
-          className="h-8 object-contain" 
+          className="h-8 mr-2 object-contain" 
         />
+        <span className="font-semibold text-gray-800">Content Crush</span>
       </div>
       
       {/* Navigation */}
