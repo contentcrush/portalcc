@@ -280,3 +280,40 @@ export async function removeExpenseEvents(expenseId: number) {
     return 0;
   }
 }
+
+/**
+ * Limpa eventos de despesas que já foram pagas
+ * @returns Número de eventos removidos
+ */
+export async function cleanupPaidExpenseEvents() {
+  try {
+    // Busca as despesas que estão marcadas como pagas
+    const paidExpenses = await db
+      .select({ id: expenses.id })
+      .from(expenses)
+      .where(eq(expenses.paid, true));
+    
+    if (paidExpenses.length === 0) {
+      return 0;
+    }
+    
+    // Extrai os IDs de despesas pagas
+    const paidExpenseIds = paidExpenses.map(expense => expense.id);
+    
+    // Remove eventos associados a despesas pagas
+    const deletedEvents = await db.delete(events)
+      .where(
+        and(
+          inArray(events.expense_id, paidExpenseIds),
+          eq(events.type, 'financeiro')
+        )
+      )
+      .returning();
+    
+    console.log(`[CalendarSync] Cleanup: removidos ${deletedEvents.length} eventos de despesas pagas`);
+    return deletedEvents.length;
+  } catch (error) {
+    console.error('[CalendarSync] Erro ao limpar eventos de despesas pagas:', error);
+    return 0;
+  }
+}

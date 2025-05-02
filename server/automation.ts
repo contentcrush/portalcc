@@ -778,13 +778,18 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
     }
     
     // 3. Remover eventos financeiros antigos (sem financial_document_id) 
-    // e eventos de documentos pagos
-    const { cleanupPaidDocumentEvents } = await import('./utils/calendarSync');
+    // e eventos de documentos e despesas pagas
+    const { cleanupPaidDocumentEvents, cleanupPaidExpenseEvents } = await import('./utils/calendarSync');
     
     // Usar a função especializada para limpeza de eventos financeiros pagos
     const removedPaidDocsEvents = await cleanupPaidDocumentEvents();
     eventsRemoved += removedPaidDocsEvents;
     console.log(`[Automação] Removidos ${removedPaidDocsEvents} eventos financeiros de documentos pagos`);
+    
+    // Usar a função especializada para limpeza de eventos de despesas pagas
+    const removedPaidExpensesEvents = await cleanupPaidExpenseEvents();
+    eventsRemoved += removedPaidExpensesEvents;
+    console.log(`[Automação] Removidos ${removedPaidExpensesEvents} eventos de despesas pagas`);
     
     // Limpar eventos antigos sem referência a documento (formato legado)
     const removedOrphanFinancialEvents = await db
