@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, Loader2, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { useMutationWithFeedback } from "@/hooks/use-mutation-with-feedback";
 import { insertProjectSchema } from "@shared/schema";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -78,12 +79,12 @@ export function ProjectFormDialog() {
   const { toast } = useToast();
 
   // Fetch clients para o dropdown
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ['/api/clients']
   });
 
   // Fetch users para seleção de membros da equipe
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
     queryKey: ['/api/users']
   });
 
@@ -126,9 +127,9 @@ export function ProjectFormDialog() {
     }
   }, [projectToEdit, form]);
 
-  // Mutation para criar projeto
-  const createProjectMutation = useMutation({
-    mutationFn: async (data: ProjectFormValues) => {
+  // Mutation para criar projeto utilizando o hook personalizado
+  const createProjectMutation = useMutationWithFeedback(
+    async (data: ProjectFormValues) => {
       // Formatação de alguns campos se necessário
       const formatted = {
         ...data,
@@ -140,36 +141,26 @@ export function ProjectFormDialog() {
       const res = await apiRequest("POST", "/api/projects", formatted);
       return await res.json();
     },
-    onSuccess: (newProject) => {
-      // Atualizar a cache após criação bem-sucedida
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      
-      // Importante: Invalidar cache de documentos financeiros também
-      // já que a criação do projeto gera automaticamente uma fatura
-      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
-      
-      // Mostrar uma mensagem de sucesso
-      toast({
+    {
+      // Mensagem de sucesso
+      successMessage: (newProject: any) => ({
         title: "Projeto criado com sucesso",
-        description: `${newProject.name} foi adicionado aos seus projetos.`,
-        variant: "default",
-      });
+        message: `${newProject.name} foi adicionado aos seus projetos.`
+      }),
       
-      // Fechar o diálogo
-      closeProjectForm();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao criar projeto",
-        description: error.message || "Não foi possível criar o projeto. Tente novamente.",
-        variant: "destructive",
-      });
+      // Queries a serem invalidadas
+      invalidateQueries: ['/api/projects', '/api/financial-documents'],
+      
+      // Callback após sucesso
+      onSuccess: () => {
+        closeProjectForm();
+      }
     }
-  });
+  );
 
   // Mutation para atualizar projeto existente
-  const updateProjectMutation = useMutation({
-    mutationFn: async (data: ProjectFormValues) => {
+  const updateProjectMutation = useMutationWithFeedback(
+    async (data: ProjectFormValues) => {
       if (!projectToEdit?.id) {
         throw new Error("ID do projeto não encontrado");
       }
@@ -185,33 +176,26 @@ export function ProjectFormDialog() {
       const res = await apiRequest("PUT", `/api/projects/${projectToEdit.id}`, formatted);
       return await res.json();
     },
-    onSuccess: (updatedProject) => {
-      // Invalidar cache de projetos
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      if (projectToEdit?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectToEdit.id}`] });
-      }
-      
-      // Importante: Invalidar cache de documentos financeiros também
-      // já que a alteração do projeto pode ter criado ou atualizado uma fatura
-      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
-      
-      toast({
+    {
+      // Mensagem de sucesso
+      successMessage: (updatedProject: any) => ({
         title: "Projeto atualizado",
-        description: `As alterações em ${updatedProject.name} foram salvas.`,
-        variant: "default",
-      });
+        message: `As alterações em ${updatedProject.name} foram salvas.`
+      }),
       
-      closeProjectForm();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar projeto",
-        description: error.message || "Não foi possível atualizar o projeto. Tente novamente.",
-        variant: "destructive",
-      });
+      // Queries a serem invalidadas
+      invalidateQueries: [
+        '/api/projects', 
+        '/api/financial-documents',
+        projectToEdit?.id ? `/api/projects/${projectToEdit.id}` : ''
+      ].filter(Boolean),
+      
+      // Callback após sucesso
+      onSuccess: () => {
+        closeProjectForm();
+      }
     }
-  });
+  );
 
   // Função para processar upload de imagem
   const handleImageUpload = async (file: File): Promise<string> => {
