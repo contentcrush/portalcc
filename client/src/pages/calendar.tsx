@@ -66,15 +66,7 @@ export default function CalendarPage() {
       .slice(0, 5);
   }, [events]);
   
-  // Obter contador de eventos por tipo
-  const eventCounts = React.useMemo(() => {
-    if (!events) return {};
-    
-    return events.reduce((acc: Record<string, number>, event) => {
-      acc[event.type] = (acc[event.type] || 0) + 1;
-      return acc;
-    }, {});
-  }, [events]);
+  // Removido contador de eventos por tipo
   
   // Renderizar badge de tipo de evento
   const renderTypeBadge = (type: string) => {
@@ -146,38 +138,6 @@ export default function CalendarPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Event Counts */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Resumo</CardTitle>
-              <CardDescription>Eventos por tipo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Reuniões</span>
-                  <Badge variant="secondary">{eventCounts['reuniao'] || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Prazos</span>
-                  <Badge variant="secondary">{eventCounts['prazo'] || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Gravações</span>
-                  <Badge variant="secondary">{eventCounts['gravacao'] || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Edições</span>
-                  <Badge variant="secondary">{eventCounts['edicao'] || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Entregas</span>
-                  <Badge variant="secondary">{eventCounts['entrega'] || 0}</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
           {/* Upcoming Events */}
           <Card>
             <CardHeader className="pb-2">
