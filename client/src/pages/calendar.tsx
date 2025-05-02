@@ -30,6 +30,8 @@ export default function CalendarPage() {
   const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
     staleTime: 1000 * 60 * 5, // 5 minutos
+    retry: 1,
+    refetchOnWindowFocus: true
   });
 
   // Filtragem de eventos com base no filtro selecionado
@@ -39,15 +41,15 @@ export default function CalendarPage() {
     if (selectedFilter === 'all') {
       return events;
     } else if (selectedFilter === 'meetings') {
-      return events.filter(event => event.type === 'meeting');
+      return events.filter(event => event.type === 'reuniao');
     } else if (selectedFilter === 'deadlines') {
-      return events.filter(event => event.type === 'deadline');
+      return events.filter(event => event.type === 'prazo');
     } else if (selectedFilter === 'tasks') {
-      return events.filter(event => event.type === 'task');
+      return events.filter(event => event.type === 'gravacao' || event.type === 'edicao');
     } else if (selectedFilter === 'appointments') {
-      return events.filter(event => event.type === 'appointment');
+      return events.filter(event => event.type === 'externo');
     } else if (selectedFilter === 'reminders') {
-      return events.filter(event => event.type === 'reminder');
+      return events.filter(event => event.type === 'financeiro' || event.type === 'entrega');
     }
     
     return events;
@@ -77,20 +79,30 @@ export default function CalendarPage() {
   // Renderizar badge de tipo de evento
   const renderTypeBadge = (type: string) => {
     const typeColors: Record<string, string> = {
-      meeting: 'bg-blue-100 text-blue-800',
-      deadline: 'bg-red-100 text-red-800',
-      task: 'bg-green-100 text-green-800',
-      appointment: 'bg-purple-100 text-purple-800',
-      reminder: 'bg-amber-100 text-amber-800',
+      reuniao: 'bg-blue-100 text-blue-800',
+      prazo: 'bg-red-100 text-red-800',
+      gravacao: 'bg-green-100 text-green-800',
+      edicao: 'bg-emerald-100 text-emerald-800',
+      entrega: 'bg-violet-100 text-violet-800',
+      externo: 'bg-purple-100 text-purple-800',
+      financeiro: 'bg-amber-100 text-amber-800',
+      projeto: 'bg-indigo-100 text-indigo-800',
+      planejamento: 'bg-sky-100 text-sky-800',
+      capacitacao: 'bg-teal-100 text-teal-800',
       other: 'bg-gray-100 text-gray-800',
     };
     
     const typeLabels: Record<string, string> = {
-      meeting: 'Reunião',
-      deadline: 'Prazo',
-      task: 'Tarefa',
-      appointment: 'Compromisso',
-      reminder: 'Lembrete',
+      reuniao: 'Reunião',
+      prazo: 'Prazo',
+      gravacao: 'Gravação',
+      edicao: 'Edição',
+      entrega: 'Entrega',
+      externo: 'Evento Externo',
+      financeiro: 'Financeiro',
+      projeto: 'Projeto',
+      planejamento: 'Planejamento',
+      capacitacao: 'Capacitação',
       other: 'Outro',
     };
     
@@ -144,23 +156,23 @@ export default function CalendarPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Reuniões</span>
-                  <Badge variant="secondary">{eventCounts['meeting'] || 0}</Badge>
+                  <Badge variant="secondary">{eventCounts['reuniao'] || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Prazos</span>
-                  <Badge variant="secondary">{eventCounts['deadline'] || 0}</Badge>
+                  <Badge variant="secondary">{eventCounts['prazo'] || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Tarefas</span>
-                  <Badge variant="secondary">{eventCounts['task'] || 0}</Badge>
+                  <span className="text-sm">Gravações</span>
+                  <Badge variant="secondary">{eventCounts['gravacao'] || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Compromissos</span>
-                  <Badge variant="secondary">{eventCounts['appointment'] || 0}</Badge>
+                  <span className="text-sm">Edições</span>
+                  <Badge variant="secondary">{eventCounts['edicao'] || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Lembretes</span>
-                  <Badge variant="secondary">{eventCounts['reminder'] || 0}</Badge>
+                  <span className="text-sm">Entregas</span>
+                  <Badge variant="secondary">{eventCounts['entrega'] || 0}</Badge>
                 </div>
               </div>
             </CardContent>
