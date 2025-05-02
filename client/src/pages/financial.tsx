@@ -494,7 +494,7 @@ export default function Financial() {
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
           <p className="text-muted-foreground">Gerenciamento financeiro e análise de performance</p>
@@ -539,9 +539,9 @@ export default function Financial() {
       
       {/* Navigation Tabs */}
       <Tabs defaultValue="dashboard" className="w-full" onValueChange={setSelectedTab}>
-        <div className="border-b">
-          <div className="flex justify-between items-center">
-            <TabsList className="h-10">
+        <div className="border-b mb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <TabsList className="h-10 mb-2 sm:mb-0">
               <TabsTrigger value="dashboard" className="rounded-none data-[state=active]:border-primary data-[state=active]:border-b-2 data-[state=active]:shadow-none">
                 Dashboard
               </TabsTrigger>
