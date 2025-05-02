@@ -84,8 +84,8 @@ export default function DashboardNovo() {
   const { openProjectForm } = useProjectForm();
   
   // Data atual e nome do mês
-  const currentDate = new Date();
-  const currentMonthDisplay = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
+  const today = new Date();
+  const currentMonthDisplay = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(today);
   
   // Buscar dados da API
   const { data: projects = [] } = useQuery<any[]>({
@@ -125,53 +125,141 @@ export default function DashboardNovo() {
   const projectClientIds = new Set(activeProjects.map((p: any) => p.client_id).filter(Boolean));
   const activeClients = clients.filter((c: any) => projectClientIds.has(c.id));
   
-  // Cálculo dados financeiros atuais e anteriores
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-  const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  // Configurações de período
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const currentWeek = getWeekNumber(today);
+  
+  // Função para obter o número da semana de uma data
+  function getWeekNumber(date: Date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  }
+  
+  // Determinar data inicial e final com base no período selecionado
+  const getPeriodDates = () => {
+    const now = new Date();
+    
+    if (currentPeriod === 'week') {
+      // Início da semana atual (domingo)
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      // Final da semana atual (sábado)
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      
+      // Período anterior (semana passada)
+      const startOfPreviousPeriod = new Date(startOfWeek);
+      startOfPreviousPeriod.setDate(startOfPreviousPeriod.getDate() - 7);
+      
+      const endOfPreviousPeriod = new Date(startOfPreviousPeriod);
+      endOfPreviousPeriod.setDate(startOfPreviousPeriod.getDate() + 6);
+      endOfPreviousPeriod.setHours(23, 59, 59, 999);
+      
+      return {
+        current: { start: startOfWeek, end: endOfWeek },
+        previous: { start: startOfPreviousPeriod, end: endOfPreviousPeriod },
+        displayText: `Semana ${currentWeek} de ${currentYear}`
+      };
+    } 
+    else if (currentPeriod === 'year') {
+      // Início do ano atual
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      startOfYear.setHours(0, 0, 0, 0);
+      
+      // Final do ano atual
+      const endOfYear = new Date(now.getFullYear(), 11, 31);
+      endOfYear.setHours(23, 59, 59, 999);
+      
+      // Período anterior (ano passado)
+      const startOfPreviousPeriod = new Date(now.getFullYear() - 1, 0, 1);
+      startOfPreviousPeriod.setHours(0, 0, 0, 0);
+      
+      const endOfPreviousPeriod = new Date(now.getFullYear() - 1, 11, 31);
+      endOfPreviousPeriod.setHours(23, 59, 59, 999);
+      
+      return {
+        current: { start: startOfYear, end: endOfYear },
+        previous: { start: startOfPreviousPeriod, end: endOfPreviousPeriod },
+        displayText: `${currentYear}`
+      };
+    } 
+    else { // month (default)
+      // Início do mês atual
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      // Final do mês atual
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+      
+      // Período anterior (mês passado)
+      const previousMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const previousYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      
+      const startOfPreviousPeriod = new Date(previousYear, previousMonth, 1);
+      startOfPreviousPeriod.setHours(0, 0, 0, 0);
+      
+      const endOfPreviousPeriod = new Date(previousYear, previousMonth + 1, 0);
+      endOfPreviousPeriod.setHours(23, 59, 59, 999);
+      
+      return {
+        current: { start: startOfMonth, end: endOfMonth },
+        previous: { start: startOfPreviousPeriod, end: endOfPreviousPeriod },
+        displayText: new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(now)
+      };
+    }
+  };
+  
+  const periodInfo = getPeriodDates();
+  const periodDisplay = periodInfo.displayText;
+
+  // Função para verificar se uma data está dentro de um período
+  const isDateInPeriod = (date: Date, period: { start: Date, end: Date }) => {
+    return date >= period.start && date <= period.end;
+  };
   
   // Receitas (financialDocuments)
-  const currentMonthIncome = financialDocuments
+  const currentPeriodIncome = financialDocuments
     .filter((doc: any) => {
       const date = new Date(doc.due_date || doc.issue_date);
-      return date.getMonth() === currentMonth && 
-             date.getFullYear() === currentYear && 
+      return isDateInPeriod(date, periodInfo.current) && 
              doc.type === 'invoice' &&
              (doc.status === 'pago' || doc.status === 'pendente');
     })
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
-  const previousMonthIncome = financialDocuments
+  const previousPeriodIncome = financialDocuments
     .filter((doc: any) => {
       const date = new Date(doc.due_date || doc.issue_date);
-      return date.getMonth() === previousMonth && 
-             date.getFullYear() === previousYear && 
+      return isDateInPeriod(date, periodInfo.previous) && 
              doc.type === 'invoice' &&
              (doc.status === 'pago' || doc.status === 'pendente');
     })
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
   // Despesas
-  const currentMonthExpenses = expenses
+  const currentPeriodExpenses = expenses
     .filter((exp: any) => {
       const date = new Date(exp.date);
-      return date.getMonth() === currentMonth && 
-             date.getFullYear() === currentYear;
+      return isDateInPeriod(date, periodInfo.current);
     })
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  const previousMonthExpenses = expenses
+  const previousPeriodExpenses = expenses
     .filter((exp: any) => {
       const date = new Date(exp.date);
-      return date.getMonth() === previousMonth && 
-             date.getFullYear() === previousYear;
+      return isDateInPeriod(date, periodInfo.previous);
     })
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
   // Lucro
-  const currentMonthProfit = currentMonthIncome - currentMonthExpenses;
-  const previousMonthProfit = previousMonthIncome - previousMonthExpenses;
+  const currentPeriodProfit = currentPeriodIncome - currentPeriodExpenses;
+  const previousPeriodProfit = previousPeriodIncome - previousPeriodExpenses;
   
   // Cálculo das variações percentuais
   const calculatePercentChange = (current: number, previous: number) => {
@@ -179,17 +267,19 @@ export default function DashboardNovo() {
     return Math.round(((current - previous) / previous) * 100);
   };
   
-  const incomePercentChange = calculatePercentChange(currentMonthIncome, previousMonthIncome);
-  const expensesPercentChange = calculatePercentChange(currentMonthExpenses, previousMonthExpenses);
-  const profitPercentChange = calculatePercentChange(currentMonthProfit, previousMonthProfit);
+  const incomePercentChange = calculatePercentChange(currentPeriodIncome, previousPeriodIncome);
+  const expensesPercentChange = calculatePercentChange(currentPeriodExpenses, previousPeriodExpenses);
+  const profitPercentChange = calculatePercentChange(currentPeriodProfit, previousPeriodProfit);
   
-  // Calcular faturamento por projeto
+  // Calcular faturamento por projeto no período atual
   const projectIncome = projects.map((project: any) => {
-    const projectDocs = financialDocuments.filter((doc: any) => 
-      doc.project_id === project.id && 
-      doc.type === 'invoice' &&
-      (doc.status === 'pago' || doc.status === 'pendente')
-    );
+    const projectDocs = financialDocuments.filter((doc: any) => {
+      const date = new Date(doc.due_date || doc.issue_date);
+      return doc.project_id === project.id && 
+             isDateInPeriod(date, periodInfo.current) &&
+             doc.type === 'invoice' &&
+             (doc.status === 'pago' || doc.status === 'pendente');
+    });
     
     const income = projectDocs.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
@@ -262,10 +352,10 @@ export default function DashboardNovo() {
         />
         
         <KPICard 
-          title="Faturamento Mensal" 
-          value={formatCurrency(monthlyRevenue)}
-          subtext={`R$ 6.300 acima da meta`}
-          change={15}
+          title={`Faturamento ${currentPeriod === 'week' ? 'Semanal' : currentPeriod === 'year' ? 'Anual' : 'Mensal'}`}
+          value={formatCurrency(currentPeriodIncome)}
+          subtext={`Valor total do período`}
+          change={incomePercentChange}
           color="purple"
         />
       </div>
@@ -377,9 +467,30 @@ export default function DashboardNovo() {
             <div className="flex justify-between items-center">
               <CardTitle className="text-base font-medium">Visão Financeira</CardTitle>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="h-8 text-xs">Semana</Button>
-                <Button variant="default" size="sm" className="h-8 text-xs">Mês</Button>
-                <Button variant="outline" size="sm" className="h-8 text-xs">Ano</Button>
+                <Button 
+                  variant={currentPeriod === 'week' ? "default" : "outline"} 
+                  size="sm" 
+                  className="h-8 text-xs"
+                  onClick={() => setCurrentPeriod('week')}
+                >
+                  Semana
+                </Button>
+                <Button 
+                  variant={currentPeriod === 'month' ? "default" : "outline"}
+                  size="sm" 
+                  className="h-8 text-xs"
+                  onClick={() => setCurrentPeriod('month')}
+                >
+                  Mês
+                </Button>
+                <Button 
+                  variant={currentPeriod === 'year' ? "default" : "outline"}
+                  size="sm" 
+                  className="h-8 text-xs"
+                  onClick={() => setCurrentPeriod('year')}
+                >
+                  Ano
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -388,78 +499,65 @@ export default function DashboardNovo() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <h4 className="text-sm text-muted-foreground">Receita</h4>
-                  <p className="text-xl font-bold mt-1">R$ 48.500</p>
-                  <div className="flex items-center text-xs text-green-600 mt-1">
+                  <p className="text-xl font-bold mt-1">{formatCurrency(currentPeriodIncome)}</p>
+                  <div className={`flex items-center text-xs ${incomePercentChange >= 0 ? 'text-green-600' : 'text-red-600'} mt-1`}>
                     <ArrowUpRight className="h-3 w-3 mr-1" />
-                    <span>15% vs. último mês</span>
+                    <span>{incomePercentChange}% vs. período anterior</span>
                   </div>
                 </div>
                 
                 <div>
                   <h4 className="text-sm text-muted-foreground">Despesas</h4>
-                  <p className="text-xl font-bold mt-1">R$ 23.120</p>
-                  <div className="flex items-center text-xs text-red-600 mt-1">
+                  <p className="text-xl font-bold mt-1">{formatCurrency(currentPeriodExpenses)}</p>
+                  <div className={`flex items-center text-xs ${expensesPercentChange <= 0 ? 'text-green-600' : 'text-red-600'} mt-1`}>
                     <ArrowUpRight className="h-3 w-3 mr-1" />
-                    <span>8% vs. último mês</span>
+                    <span>{expensesPercentChange}% vs. período anterior</span>
                   </div>
                 </div>
                 
                 <div>
                   <h4 className="text-sm text-muted-foreground">Lucro</h4>
-                  <p className="text-xl font-bold mt-1">R$ 25.380</p>
-                  <div className="flex items-center text-xs text-green-600 mt-1">
+                  <p className="text-xl font-bold mt-1">{formatCurrency(currentPeriodProfit)}</p>
+                  <div className={`flex items-center text-xs ${profitPercentChange >= 0 ? 'text-green-600' : 'text-red-600'} mt-1`}>
                     <ArrowUpRight className="h-3 w-3 mr-1" />
-                    <span>22% vs. último mês</span>
+                    <span>{profitPercentChange}% vs. período anterior</span>
                   </div>
                 </div>
               </div>
               
               <div>
-                <h4 className="text-sm font-medium mb-3">Faturamento por Projeto (Abril 2025)</h4>
+                <h4 className="text-sm font-medium mb-3">Faturamento por Projeto ({periodDisplay})</h4>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-sm bg-pink-400"></div>
-                      <span className="text-sm">TechBrand</span>
+                  {projectIncome.length > 0 ? (
+                    <>
+                      {projectIncome.map((project, index) => {
+                        // Calcular a porcentagem do maior valor
+                        const maxIncome = projectIncome[0].income;
+                        const percentWidth = Math.max(10, Math.round((project.income / maxIncome) * 100));
+                        const bgColor = `bg-${project.color}-400`;
+                        
+                        return (
+                          <div key={project.id} className="flex items-center justify-between gap-4">
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className={`h-4 w-4 rounded-sm ${bgColor}`}></div>
+                              <span className="text-sm">{project.name}</span>
+                            </div>
+                            <div className="flex-1 relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className={`absolute top-0 left-0 h-full ${bgColor}`} 
+                                style={{ width: `${percentWidth}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium">{formatCurrency(project.income)}</span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="py-3 text-center text-sm text-muted-foreground">
+                      Sem dados de faturamento no período atual
                     </div>
-                    <div className="flex-1 relative h-4 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full bg-pink-400" style={{ width: '80%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium">R$ 22.500</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-sm bg-blue-400"></div>
-                      <span className="text-sm">EcoVida</span>
-                    </div>
-                    <div className="flex-1 relative h-4 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full bg-blue-400" style={{ width: '60%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium">R$ 15.000</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-sm bg-purple-400"></div>
-                      <span className="text-sm">FashionNow</span>
-                    </div>
-                    <div className="flex-1 relative h-4 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full bg-purple-400" style={{ width: '25%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium">R$ 7.500</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="h-4 w-4 rounded-sm bg-gray-400"></div>
-                      <span className="text-sm">Outros</span>
-                    </div>
-                    <div className="flex-1 relative h-4 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full bg-gray-400" style={{ width: '15%' }}></div>
-                    </div>
-                    <span className="text-sm font-medium">R$ 3.500</span>
-                  </div>
+                  )}
                 </div>
               </div>
               
