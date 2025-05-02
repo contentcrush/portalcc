@@ -1688,11 +1688,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/expenses/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Importação aqui para evitar problemas de importação circular
+      const { removeExpenseEvents } = await import('./utils/calendarSync');
+      
+      // Remover eventos do calendário associados a esta despesa
+      await removeExpenseEvents(id);
+      
+      // Procede com a exclusão da despesa
       const deleted = await storage.deleteExpense(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Despesa não encontrada" });
       }
+      
+      // Notificar usuários sobre a atualização do calendário
+      io.emit('calendar_updated', {
+        type: 'calendar_updated',
+        timestamp: new Date().toISOString(),
+        message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+      });
       
       res.status(204).end();
     } catch (error) {
