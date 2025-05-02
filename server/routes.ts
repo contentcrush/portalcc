@@ -1572,7 +1572,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Notificar sobre pagamento do documento
-      io.emit('financial_update', { type: 'payment', document: updatedDocument });
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'payment', 
+        document: updatedDocument,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi atualizado para pago'
+      });
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1623,7 +1629,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Notificar sobre exclusão do documento
-      io.emit('financial_update', { type: 'delete', documentId: id });
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'delete', 
+        documentId: id,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi excluído'
+      });
       
       // Retornar 204 No Content para exclusão bem-sucedida
       res.status(204).end();

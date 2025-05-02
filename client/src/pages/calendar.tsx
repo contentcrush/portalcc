@@ -89,9 +89,24 @@ export default function CalendarPage() {
       });
     });
     
-    // Limpar listener quando o componente for desmontado
+    // Registrar listener para eventos financeiros (despesas e documentos)
+    const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
+      console.log('Recebida notificação de atualização financeira:', data);
+      
+      // Atualizar dados do calendário quando houver mudanças financeiras
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      
+      toast({
+        title: 'Registros financeiros atualizados',
+        description: 'O calendário foi atualizado com as mudanças financeiras',
+        variant: 'default',
+      });
+    });
+    
+    // Limpar listeners quando o componente for desmontado
     return () => {
       unregisterCalendarUpdateHandler();
+      unregisterFinancialUpdateHandler();
     };
   }, [queryClient, toast]);
 
