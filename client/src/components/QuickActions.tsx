@@ -66,15 +66,13 @@ export default function QuickActions() {
   const { data: tasks, isLoading, error } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
     select: (data: Task[]) => {
-      // Ordenar as tarefas por data de vencimento
-      const sortedTasks = [...data].filter(task => {
-        return task.due_date && new Date(task.due_date) >= new Date();
-      }).sort((a, b) => {
-        const dateA = new Date(a.due_date);
-        const dateB = new Date(b.due_date);
-        return dateA.getTime() - dateB.getTime();
-      }).map(task => {
-        // Adicionar informações de projeto e responsável a partir dos dados detalhados
+      // Incluir apenas tarefas não concluídas
+      const pendingTasks = [...data].filter(task => 
+        task.status !== 'concluído' && task.due_date
+      );
+      
+      // Mapear tarefas com informações de projeto e responsável
+      const tasksWithDetails = pendingTasks.map(task => {
         return {
           ...task,
           projectName: task.project?.name || 'Sem projeto',
@@ -82,7 +80,14 @@ export default function QuickActions() {
         };
       });
       
-      // Retornar apenas as 5 primeiras tarefas
+      // Ordenar por data de vencimento (tarefas atrasadas primeiro, depois as mais próximas)
+      const sortedTasks = tasksWithDetails.sort((a, b) => {
+        const dateA = new Date(a.due_date);
+        const dateB = new Date(b.due_date);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      // Retornar sempre as 5 primeiras tarefas
       return sortedTasks.slice(0, 5);
     }
   });
