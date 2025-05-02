@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Card, CardContent } from '@/components/ui/card';
+import EventDialog from './EventDialog';
 
 interface FullCalendarComponentProps {
   events?: Event[];
@@ -40,6 +41,9 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   // Converter eventos do backend para o formato do FullCalendar
   const calendarEvents: EventInput[] = events.map(event => ({
@@ -68,20 +72,72 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
     
     if (event) {
       setSelectedEvent(event);
-      toast({
-        title: event.title,
-        description: event.description || "Sem descrição adicional",
-      });
+      setIsCreateMode(false);
+      setIsEventDialogOpen(true);
     }
   };
 
   // Manipular seleção de data/hora
   const handleDateSelect = (selectInfo: DateSelectArg) => {
-    toast({
-      title: "Data selecionada",
-      description: `Início: ${selectInfo.startStr} - Fim: ${selectInfo.endStr}`,
-    });
-    // Aqui normalmente abriríamos um modal para criar um novo evento
+    const startDate = new Date(selectInfo.start);
+    setSelectedDate(startDate);
+    setIsCreateMode(true);
+    setSelectedEvent(null);
+    setIsEventDialogOpen(true);
+  };
+  
+  // Manipular salvamento de evento
+  const handleSaveEvent = async (eventData: Partial<Event>) => {
+    try {
+      if (isCreateMode) {
+        // Criar novo evento
+        await apiRequest('POST', '/api/events', eventData);
+        toast({
+          title: "Evento criado",
+          description: "O evento foi criado com sucesso",
+        });
+      } else {
+        // Atualizar evento existente
+        if (eventData.id) {
+          await apiRequest('PATCH', `/api/events/${eventData.id}`, eventData);
+          toast({
+            title: "Evento atualizado",
+            description: "O evento foi atualizado com sucesso",
+          });
+        }
+      }
+      
+      // Invalidar consulta para recarregar eventos
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setIsEventDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: `Ocorreu um erro ao salvar o evento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Manipular exclusão de evento
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      await apiRequest('DELETE', `/api/events/${eventId}`);
+      toast({
+        title: "Evento excluído",
+        description: "O evento foi excluído com sucesso",
+      });
+      
+      // Invalidar consulta para recarregar eventos
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setIsEventDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: `Ocorreu um erro ao excluir o evento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        variant: "destructive",
+      });
+    }
   };
 
   // Renderizar conteúdo personalizado para eventos
@@ -123,10 +179,10 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
       <div className="flex justify-between items-center">
         <Button
           onClick={() => {
-            toast({
-              title: "Novo evento",
-              description: "Funcionalidade de criação de eventos será implementada em breve.",
-            });
+            setIsCreateMode(true);
+            setSelectedEvent(null);
+            setSelectedDate(new Date());
+            setIsEventDialogOpen(true);
           }}
           className="ml-auto"
         >
@@ -177,6 +233,17 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
           }}
         />
       </div>
+      
+      {/* Componente de diálogo para criar/editar eventos */}
+      <EventDialog
+        isOpen={isEventDialogOpen}
+        onClose={() => setIsEventDialogOpen(false)}
+        event={selectedEvent}
+        isCreateMode={isCreateMode}
+        initialDate={selectedDate}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+      />
     </div>
   );
 };

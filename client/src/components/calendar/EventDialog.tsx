@@ -150,7 +150,7 @@ const EventDialog: React.FC<EventDialogProps> = ({
         type: event.type,
         start_date: new Date(event.start_date),
         end_date: new Date(event.end_date),
-        all_day: event.all_day,
+        all_day: event.all_day || false,
         location: event.location || '',
         color: event.color || '',
       });
