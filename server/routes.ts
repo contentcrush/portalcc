@@ -2040,8 +2040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sincronizar eventos financeiros
       const financialResult = await syncFinancialEvents();
       
-      // Usar módulo de utilitários para limpar eventos de documentos e despesas pagos
-      const { cleanupPaidDocumentEvents, cleanupPaidExpenseEvents } = await import('./utils/calendarSync');
+      // Usar módulo de utilitários para limpar eventos
+      const { 
+        cleanupPaidDocumentEvents, 
+        cleanupPaidExpenseEvents,
+        cleanupOrphanExpenseEvents 
+      } = await import('./utils/calendarSync');
       
       // Limpar eventos de documentos pagos
       const cleanupDocsResult = await cleanupPaidDocumentEvents();
@@ -2049,18 +2053,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Limpar eventos de despesas pagas
       const cleanupExpensesResult = await cleanupPaidExpenseEvents();
       
-      // Total de eventos limpos
-      const totalCleaned = cleanupDocsResult + cleanupExpensesResult;
+      // Limpar eventos órfãos de despesas (despesas que foram excluídas)
+      const cleanupOrphanResult = await cleanupOrphanExpenseEvents();
       
-      console.log(`[API] Sincronização manual do calendário concluída: ${financialResult.count} eventos financeiros sincronizados, ${cleanupDocsResult} eventos de documentos pagos removidos, ${cleanupExpensesResult} eventos de despesas pagas removidos`);
+      // Total de eventos limpos
+      const totalCleaned = cleanupDocsResult + cleanupExpensesResult + cleanupOrphanResult;
+      
+      console.log(`[API] Sincronização manual do calendário concluída: ${financialResult.count} eventos financeiros sincronizados, ${cleanupDocsResult} eventos de documentos pagos removidos, ${cleanupExpensesResult} eventos de despesas pagas removidos, ${cleanupOrphanResult} eventos órfãos de despesas removidos`);
       
       res.json({
         success: true,
-        message: `Sincronização concluída com sucesso. ${financialResult.count} eventos financeiros sincronizados. ${totalCleaned} eventos de registros pagos removidos.`,
+        message: `Sincronização concluída com sucesso. ${financialResult.count} eventos financeiros sincronizados. ${totalCleaned} eventos de registros removidos.`,
         financial: financialResult,
         cleanup: {
           documents: cleanupDocsResult,
           expenses: cleanupExpensesResult,
+          orphanExpenses: cleanupOrphanResult,
           total: totalCleaned
         }
       });

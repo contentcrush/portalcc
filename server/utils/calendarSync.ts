@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { events, projects, financialDocuments, expenses } from '@shared/schema';
-import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { eq, and, isNull, inArray, not } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -305,7 +305,7 @@ export async function cleanupPaidExpenseEvents() {
       .where(
         and(
           inArray(events.expense_id, paidExpenseIds),
-          eq(events.type, 'financeiro')
+          eq(events.type, 'despesa')
         )
       )
       .returning();
@@ -314,6 +314,59 @@ export async function cleanupPaidExpenseEvents() {
     return deletedEvents.length;
   } catch (error) {
     console.error('[CalendarSync] Erro ao limpar eventos de despesas pagas:', error);
+    return 0;
+  }
+}
+
+/**
+ * Limpa eventos de despesas que não existem mais no banco (órfãos)
+ * @returns Número de eventos removidos
+ */
+export async function cleanupOrphanExpenseEvents() {
+  try {
+    // Primeiro, obter todos os IDs de despesas existentes
+    const allExpenses = await db
+      .select({ id: expenses.id })
+      .from(expenses);
+    
+    const existingExpenseIds = allExpenses.map(expense => expense.id);
+    
+    // Obter todos os eventos com expense_id
+    const expenseEvents = await db
+      .select()
+      .from(events)
+      .where(
+        and(
+          not(isNull(events.expense_id)),
+          eq(events.type, 'despesa')
+        )
+      );
+    
+    if (expenseEvents.length === 0) {
+      return 0;
+    }
+    
+    // Identificar eventos órfãos (cujo expense_id não existe mais no banco)
+    const orphanEvents = expenseEvents.filter(event => 
+      !existingExpenseIds.includes(event.expense_id!)
+    );
+    
+    if (orphanEvents.length === 0) {
+      return 0;
+    }
+    
+    // Extrair IDs dos eventos órfãos
+    const orphanEventIds = orphanEvents.map(event => event.id);
+    
+    // Remover eventos órfãos
+    const deletedEvents = await db.delete(events)
+      .where(inArray(events.id, orphanEventIds))
+      .returning();
+    
+    console.log(`[CalendarSync] Cleanup: removidos ${deletedEvents.length} eventos órfãos de despesas`);
+    return deletedEvents.length;
+  } catch (error) {
+    console.error('[CalendarSync] Erro ao limpar eventos órfãos de despesas:', error);
     return 0;
   }
 }
