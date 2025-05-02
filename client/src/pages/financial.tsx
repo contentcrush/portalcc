@@ -936,7 +936,6 @@ export default function Financial() {
                 Exportar
               </Button>
               
-              <NewFinancialRecordDialog />
             </div>
           </div>
           
@@ -1246,7 +1245,6 @@ export default function Financial() {
                 Exportar
               </Button>
               
-              <NewFinancialRecordDialog />
             </div>
           </div>
           
