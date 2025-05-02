@@ -3,9 +3,11 @@ import { useLocation } from "wouter";
 import { cn, getNormalizedProjectStatus } from "@/lib/utils";
 import { SIDEBAR_ITEMS } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
-import { LucideIcon, LucideProps } from "lucide-react";
+import { LucideIcon, LucideProps, LogOut } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { ProjectProgress } from "@/components/ProjectProgress";
+import { UserAvatar } from "@/components/UserAvatar";
+import { useAuth } from "@/hooks/use-auth";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
@@ -78,6 +80,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       case 'pre_producao': return 'bg-blue-500';
       default: return 'bg-gray-500';
     }
+  };
+
+  const { user, logoutMutation } = useAuth();
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    logoutMutation.mutate();
   };
 
   return (
@@ -161,7 +170,20 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
       
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 space-y-3">
+        {/* Informações do usuário */}
+        <div className="flex items-center gap-3 px-2 py-2">
+          <UserAvatar user={user} className="h-10 w-10" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
+          </div>
+          <a href="#" onClick={handleLogout} className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-gray-100">
+            <LogOut className="h-4 w-4" />
+          </a>
+        </div>
+
+        {/* Link para configurações */}
         <a
           href="/settings"
           onClick={(e) => {
