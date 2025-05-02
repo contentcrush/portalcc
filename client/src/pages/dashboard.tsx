@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatCurrency, calculatePercentChange } from "@/lib/utils";
+import { formatCurrency, calculatePercentChange, formatDate, cn } from "@/lib/utils";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,12 @@ import {
   PlusCircle,
   FolderOpen,
   ListTodo,
-  Users
+  Users,
+  MoreHorizontal
 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ProjectProgress } from "@/components/ProjectProgress";
 import { MONTHS } from "@/lib/constants";
 import FinancialChart from "@/components/FinancialChart";
 
@@ -98,6 +102,9 @@ const StatCard = ({
 
 export default function Dashboard() {
   const [period, setPeriod] = useState("Q2 2025");
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    return format(new Date(), "MMMM yyyy", { locale: ptBR });
+  });
   const { openProjectForm } = useProjectForm();
   
   const { data: projects } = useQuery({
@@ -108,6 +115,10 @@ export default function Dashboard() {
     queryKey: ['/api/tasks']
   });
   
+  const { data: clients } = useQuery({
+    queryKey: ['/api/clients']
+  });
+  
   const { data: financialDocuments } = useQuery({
     queryKey: ['/api/financial-documents']
   });
@@ -116,7 +127,15 @@ export default function Dashboard() {
     queryKey: ['/api/expenses']
   });
   
-  // Removemos o listener de evento desnecessário que pode causar aberturas inadvertidas do formulário
+  // Debug data for development - will display data in console
+  useEffect(() => {
+    console.log("Dashboard data:");
+    console.log("Projects:", projects);
+    console.log("Tasks:", tasks);
+    console.log("Clients:", clients);
+    console.log("Financial Documents:", financialDocuments);
+    console.log("Expenses:", expenses);
+  }, [projects, tasks, clients, financialDocuments, expenses]);
 
   // Calculate dashboard metrics
   const activeProjects = projects?.filter(p => 
