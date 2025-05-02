@@ -240,6 +240,7 @@ export const expenses = pgTable("expenses", {
   reimbursement: boolean("reimbursement").default(false),
   receipt: text("receipt"),
   approved: boolean("approved").default(false),
+  paid: boolean("paid").default(false),
   creation_date: timestamp("creation_date").defaultNow(),
 });
 
@@ -252,6 +253,7 @@ export const events = pgTable("events", {
   client_id: integer("client_id"),
   task_id: integer("task_id"),
   financial_document_id: integer("financial_document_id"), // Adiciona referência ao documento financeiro
+  expense_id: integer("expense_id"), // Adiciona referência à despesa
   type: text("type").notNull(),
   start_date: timestamp("start_date").notNull(),
   end_date: timestamp("end_date").notNull(),
@@ -638,6 +640,18 @@ export const eventsRelations = relations(events, ({ one }) => ({
   task: one(tasks, {
     fields: [events.task_id],
     references: [tasks.id],
+    onDelete: "cascade"
+  }),
+  financialDocument: one(financialDocuments, {
+    fields: [events.financial_document_id],
+    references: [financialDocuments.id],
+    relationName: "financial_document_events",
+    onDelete: "cascade"
+  }),
+  expense: one(expenses, {
+    fields: [events.expense_id],
+    references: [expenses.id],
+    relationName: "expense_events",
     onDelete: "cascade"
   })
 }));

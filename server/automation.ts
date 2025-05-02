@@ -593,7 +593,7 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
       )
       .returning();
     
-    console.log(`[Automação] Removidos ${deletedEvents.length} eventos financeiros antigos (sem referência a documento)`);
+    console.log(`[Automação] Removidos ${deletedEvents.length} eventos financeiros antigos (sem referência a documento/despesa)`);
       
     // Cria eventos para datas de vencimento financeiro
     for (const doc of financialDocs) {
@@ -840,25 +840,31 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
       eventsRemoved += removedProjectEvents.length;
     }
     
-    // 3. Remover eventos financeiros antigos (sem financial_document_id) 
-    // e eventos de documentos pagos
+    // 3. Remover eventos financeiros antigos (sem financial_document_id e sem expense_id) 
+    // e eventos de documentos/despesas pagos
     const paidDocsIds = (await db
       .select({ id: financialDocuments.id })
       .from(financialDocuments)
       .where(eq(financialDocuments.paid, true))).map(doc => doc.id);
     
-    // Primeiro remover eventos antigos (sem financial_document_id)
+    const paidExpenseIds = (await db
+      .select({ id: expenses.id })
+      .from(expenses)
+      .where(eq(expenses.paid, true))).map(expense => expense.id);
+    
+    // Primeiro remover eventos antigos (sem financial_document_id e sem expense_id)
     const removedOldEvents = await db.delete(events)
       .where(
         and(
           eq(events.type, 'financeiro'),
           isNull(events.financial_document_id),
+          isNull(events.expense_id),
           gte(events.start_date, new Date()) // Manter eventos históricos
         )
       )
       .returning();
     
-    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento)`);
+    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento/despesa)`);
     eventsRemoved += removedOldEvents.length;
     
     // Agora remover eventos de documentos pagos
@@ -873,7 +879,24 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
         )
         .returning();
       
+      console.log(`[Automação] Removidos ${removedFinancialEvents.length} eventos de documentos financeiros pagos`);
       eventsRemoved += removedFinancialEvents.length;
+    }
+    
+    // Remover eventos de despesas pagas
+    if (paidExpenseIds.length > 0) {
+      const removedExpenseEvents = await db.delete(events)
+        .where(
+          and(
+            eq(events.type, 'financeiro'),
+            gte(events.start_date, new Date()), // Manter eventos históricos
+            inArray(events.expense_id, paidExpenseIds)
+          )
+        )
+        .returning();
+      
+      console.log(`[Automação] Removidos ${removedExpenseEvents.length} eventos de despesas pagas`);
+      eventsRemoved += removedExpenseEvents.length;
     }
     
     console.log(`[Automação] ${eventsRemoved} eventos antigos removidos do calendário`);
