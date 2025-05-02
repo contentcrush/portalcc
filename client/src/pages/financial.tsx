@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { initWebSocket, onWebSocketMessage } from "@/lib/socket";
+import { useToast } from "@/hooks/use-toast";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -108,10 +110,50 @@ export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
   const [period, setPeriod] = useState<string>("month");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Estados para controlar os diálogos de detalhes e pagamento
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  
+  // Efeito para escutar eventos financeiros via WebSocket
+  useEffect(() => {
+    // Inicializar WebSocket se ainda não estiver conectado
+    initWebSocket().catch(error => {
+      console.error('Erro ao inicializar WebSocket na página financeira:', error);
+    });
+    
+    // Registrar listeners para eventos financeiros
+    const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
+      console.log('Recebida notificação de atualização financeira:', data);
+      
+      // Invalidar consultas financeiras para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      
+      // Notificar o usuário
+      toast({
+        title: 'Dados financeiros atualizados',
+        description: data.message || 'Os registros financeiros foram atualizados',
+        variant: 'default',
+      });
+    });
+    
+    const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
+      console.log('Recebida notificação de atualização do calendário:', data);
+      
+      // Invalidar consultas financeiras para garantir sincronização
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+    });
+    
+    // Limpar listeners quando o componente for desmontado
+    return () => {
+      unregisterFinancialUpdateHandler();
+      unregisterCalendarUpdateHandler();
+    };
+  }, [queryClient, toast]);
 
   // Fetch financial data
   const { data: financialDocuments, isLoading: isLoadingDocuments } = useQuery({
