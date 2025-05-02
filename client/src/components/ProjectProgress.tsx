@@ -2,7 +2,7 @@ import { cn, getNormalizedProjectStatus } from "@/lib/utils";
 import { ProjectWithClient, ProjectStageStatus, ProjectSpecialStatus } from "@/lib/types";
 
 interface ProjectProgressProps {
-  project: ProjectWithClient;
+  project: ProjectWithClient | any;  // Aceita qualquer estrutura para tolerância a erros
   showLabel?: boolean;
   showStages?: boolean;
   className?: string;
@@ -12,6 +12,7 @@ interface ProjectProgressProps {
 /**
  * Componente reutilizável para exibir a barra de progresso de um projeto
  * Implementa as regras de negócio específicas para cálculo e exibição visual
+ * Agora com validações de segurança para evitar erros com dados ausentes
  */
 export function ProjectProgress({ 
   project, 
@@ -20,8 +21,20 @@ export function ProjectProgress({
   className = "",
   size = 'md'
 }: ProjectProgressProps) {
+  // Verificação de segurança para projeto indefinido ou nulo
+  if (!project) {
+    return (
+      <div className={cn("w-full", className)}>
+        <div className={cn("w-full bg-gray-100 rounded-full overflow-hidden", 
+          size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2.5')}>
+          <div className="bg-gray-300 h-full rounded-full" style={{ width: "0%" }} />
+        </div>
+      </div>
+    );
+  }
+
   // Cálculo de progresso baseado em várias regras de negócio
-  let progressValue = project.progress || 0;
+  let progressValue = (project?.progress ?? 0);
   
   // Primeiro obtém o status do projeto (normalizado)
   const { stageStatus, specialStatus } = getNormalizedProjectStatus(project);
@@ -61,7 +74,8 @@ export function ProjectProgress({
     return "bg-orange-500";
   };
   
-  const isPaused = project.status === 'pausado';
+  // Usar nullish coalescing para evitar erros com project.status
+  const isPaused = (project?.status ?? '') === 'pausado';
   
   // Classes para o tamanho da barra
   const heightClass = size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2.5';
