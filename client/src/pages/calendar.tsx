@@ -28,6 +28,7 @@ import { queryClient } from '@/lib/queryClient';
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const { toast } = useToast();
   
   // Buscar eventos
@@ -47,6 +48,18 @@ export default function CalendarPage() {
     const initConnection = async () => {
       try {
         wsConnection = await initWebSocket();
+        setWsStatus('connected');
+        
+        // Adicionar event listeners para status da conexão
+        wsConnection.addEventListener('close', () => {
+          setWsStatus('disconnected');
+          console.log('WebSocket connection closed');
+        });
+        
+        wsConnection.addEventListener('error', () => {
+          setWsStatus('disconnected');
+          console.error('WebSocket connection error');
+        });
         
         // Registrar handler para notificações específicas de calendário
         const calendarHandler = onWebSocketMessage('calendar_updated', (data) => {
@@ -68,10 +81,33 @@ export default function CalendarPage() {
           refetch();
         });
         
+        // Registrar handler genérico para capturar qualquer tipo de mensagem relacionada a calendário
+        const genericHandler = (event: MessageEvent) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Verificar se a mensagem está relacionada ao calendário de alguma forma
+            if (data && (
+              data.type?.includes('calendar') || 
+              data.type?.includes('event') || 
+              data.message?.includes('calendário') || 
+              data.message?.includes('evento')
+            )) {
+              console.log('Mensagem genérica relacionada ao calendário recebida:', data);
+              refetch();
+            }
+          } catch (error) {
+            console.error('Erro ao processar mensagem WebSocket:', error);
+          }
+        };
+        
+        wsConnection.addEventListener('message', genericHandler);
+        
         // Combinar os handlers para limpeza
         unsubscribeHandler = () => {
-          calendarHandler();
-          eventHandler();
+          if (typeof calendarHandler === 'function') calendarHandler();
+          if (typeof eventHandler === 'function') eventHandler();
+          wsConnection?.removeEventListener('message', genericHandler);
         };
       } catch (error) {
         console.error('Erro ao conectar WebSocket:', error);
@@ -184,6 +220,26 @@ export default function CalendarPage() {
         </div>
         
         <div className="flex items-center space-x-2">
+          {/* Indicador de status do WebSocket */}
+          <div className="flex items-center mr-2">
+            <div 
+              className={`w-2 h-2 rounded-full mr-1.5 ${
+                wsStatus === 'connected' 
+                  ? 'bg-green-500' 
+                  : wsStatus === 'connecting' 
+                    ? 'bg-amber-500 animate-pulse' 
+                    : 'bg-red-500'
+              }`} 
+            />
+            <span className="text-xs text-muted-foreground">
+              {wsStatus === 'connected' 
+                ? 'Tempo real ativo' 
+                : wsStatus === 'connecting' 
+                  ? 'Conectando...' 
+                  : 'Desconectado'}
+            </span>
+          </div>
+          
           <Select value={selectedFilter} onValueChange={setSelectedFilter}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filtrar por tipo" />
