@@ -1457,7 +1457,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   }, validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
+      // Criar o documento financeiro
       const document = await storage.createFinancialDocument(req.body);
+      
+      // Importação aqui para evitar problemas de importação circular
+      const { syncFinancialDocumentToCalendar } = await import('./utils/calendarSync');
+      
+      // Sincronizar com o calendário automaticamente
+      if (document.due_date && !document.paid) {
+        const calendarEvent = await syncFinancialDocumentToCalendar(document, req.user?.id || 1);
+        
+        if (calendarEvent) {
+          // Notificar usuários sobre a atualização do calendário
+          io.emit('calendar_updated', {
+            type: 'calendar_updated',
+            timestamp: new Date().toISOString(),
+            message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+          });
+        }
+      }
+      
+      // Notificar sobre criação do documento
+      io.emit('financial_update', { type: 'create', document });
+      
       res.status(201).json(document);
     } catch (error) {
       console.error("Erro ao criar documento financeiro:", error);
@@ -1474,8 +1496,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Financial document not found" });
       }
       
+      // Importação aqui para evitar problemas de importação circular
+      const { syncFinancialDocumentToCalendar, removeFinancialDocumentEvents } = await import('./utils/calendarSync');
+      
+      // Se for marcado como pago, remover evento do calendário
+      if (updatedDocument.paid) {
+        await removeFinancialDocumentEvents(updatedDocument.id);
+        // Notificar usuários sobre a atualização do calendário
+        io.emit('calendar_updated', {
+          type: 'calendar_updated',
+          timestamp: new Date().toISOString(),
+          message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+        });
+      } else if (updatedDocument.due_date) {
+        // Se não for pago e tiver data de vencimento, atualizar evento no calendário
+        const calendarEvent = await syncFinancialDocumentToCalendar(updatedDocument, req.user?.id || 1);
+        
+        if (calendarEvent) {
+          // Notificar usuários sobre a atualização do calendário
+          io.emit('calendar_updated', {
+            type: 'calendar_updated',
+            timestamp: new Date().toISOString(),
+            message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+          });
+        }
+      }
+      
+      // Notificar sobre atualização do documento
+      io.emit('financial_update', { type: 'update', document: updatedDocument });
+      
       res.json(updatedDocument);
     } catch (error) {
+      console.error("Erro ao atualizar documento financeiro:", error);
       res.status(500).json({ message: "Failed to update financial document" });
     }
   });
@@ -1506,6 +1558,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payment_notes: notes || null
       });
       
+      // Importação aqui para evitar problemas de importação circular
+      const { removeFinancialDocumentEvents } = await import('./utils/calendarSync');
+      
+      // Remover eventos do calendário para este documento pago
+      await removeFinancialDocumentEvents(id);
+      
+      // Notificar usuários sobre a atualização do calendário
+      io.emit('calendar_updated', {
+        type: 'calendar_updated',
+        timestamp: new Date().toISOString(),
+        message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+      });
+      
+      // Notificar sobre pagamento do documento
+      io.emit('financial_update', { type: 'payment', document: updatedDocument });
+      
       res.json(updatedDocument);
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
@@ -1533,6 +1601,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           detail: "Documentos financeiros gerados automaticamente pelos projetos não podem ser excluídos. Para remover este documento, você precisa remover o projeto associado ou alterar seu orçamento para 0."
         });
       }
+
+      // Importação aqui para evitar problemas de importação circular
+      const { removeFinancialDocumentEvents } = await import('./utils/calendarSync');
+      
+      // Remover eventos do calendário associados a este documento
+      await removeFinancialDocumentEvents(id);
       
       // Se não estiver vinculado a um projeto, prossegue com a exclusão
       const deleted = await storage.deleteFinancialDocument(id);
@@ -1540,6 +1614,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Falha ao excluir o documento financeiro" });
       }
+      
+      // Notificar usuários sobre a atualização do calendário
+      io.emit('calendar_updated', {
+        type: 'calendar_updated',
+        timestamp: new Date().toISOString(),
+        message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+      });
+      
+      // Notificar sobre exclusão do documento
+      io.emit('financial_update', { type: 'delete', documentId: id });
       
       // Retornar 204 No Content para exclusão bem-sucedida
       res.status(204).end();
