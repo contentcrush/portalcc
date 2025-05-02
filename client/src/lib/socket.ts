@@ -20,7 +20,11 @@ const messageHandlers: { [key: string]: MessageHandler[] } = {
   notification: [],
   system: [],
   financial_updated: [],
+  financial_update: [], // Suporte para o formato antigo
+  financial: [],        // Suporte para correspondência parcial
   calendar_updated: [],
+  calendar_update: [],  // Suporte para o formato antigo
+  calendar: [],         // Suporte para correspondência parcial
 };
 
 /**
@@ -76,12 +80,32 @@ export function initWebSocket(): Promise<WebSocket> {
           const data = JSON.parse(event.data);
           console.log('Mensagem WebSocket recebida:', data);
 
-          // Despachar para os handlers apropriados
-          if (data.type && messageHandlers[data.type]) {
-            messageHandlers[data.type].forEach(handler => handler(data));
-          } else if (data.event && messageHandlers[data.event]) {
-            // Suporte para formato alternativo de mensagem
-            messageHandlers[data.event].forEach(handler => handler(data));
+          // Despachar para os handlers apropriados com mais opções de propriedades
+          // Verifica múltiplos campos possíveis para determinar o tipo de mensagem
+          let messageType = null;
+          
+          // Ordem de verificação: type, event, action
+          if (data.type && typeof data.type === 'string') {
+            messageType = data.type;
+          } else if (data.event && typeof data.event === 'string') {
+            messageType = data.event;
+          } else if (data.action && typeof data.action === 'string') {
+            messageType = data.action;
+          }
+          
+          // Se encontramos um tipo de mensagem e temos handlers para ele
+          if (messageType && messageHandlers[messageType]) {
+            console.log(`Processando mensagem do tipo: ${messageType}`);
+            messageHandlers[messageType].forEach(handler => handler(data));
+          } else {
+            // Se não encontramos o tipo ou não temos handlers, procurar correspondência parcial
+            // Isso é útil quando o servidor envia 'financial_updated' mas o cliente espera apenas 'financial'
+            Object.keys(messageHandlers).forEach(handlerType => {
+              if (messageType && messageType.includes(handlerType)) {
+                console.log(`Correspondência parcial: '${messageType}' corresponde a '${handlerType}'`);
+                messageHandlers[handlerType].forEach(handler => handler(data));
+              }
+            });
           }
         } catch (error) {
           console.error('Erro ao processar mensagem WebSocket:', error);

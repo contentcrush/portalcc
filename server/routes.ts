@@ -1478,7 +1478,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Notificar sobre criação do documento
-      io.emit('financial_update', { type: 'create', document });
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'create', 
+        document,
+        timestamp: new Date().toISOString(),
+        message: 'Um novo documento financeiro foi criado'
+      });
       
       res.status(201).json(document);
     } catch (error) {
@@ -1523,7 +1529,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Notificar sobre atualização do documento
-      io.emit('financial_update', { type: 'update', document: updatedDocument });
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'update', 
+        document: updatedDocument,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi atualizado'
+      });
       
       res.json(updatedDocument);
     } catch (error) {

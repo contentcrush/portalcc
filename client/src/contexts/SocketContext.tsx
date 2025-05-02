@@ -115,10 +115,40 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       });
     });
     
+    // Registrar handlers para eventos financeiros e de calendário no nível global
+    const unregisterFinancialHandler = onWebSocketMessage('financial_updated', (data) => {
+      console.log('Evento global financial_updated recebido:', data);
+      // Não precisamos fazer nada aqui, apenas garantir que o socket está registrado
+    });
+    
+    const unregisterCalendarHandler = onWebSocketMessage('calendar_updated', (data) => {
+      console.log('Evento global calendar_updated recebido:', data);
+      // Não precisamos fazer nada aqui, apenas garantir que o socket está registrado
+    });
+    
+    // Registrar também para os formatos antigos para compatibilidade
+    const unregisterOldFinancialHandler = onWebSocketMessage('financial_update', (data) => {
+      console.log('Evento global financial_update (formato antigo) recebido:', data);
+      // Reenviar como financial_updated para manter compatibilidade
+      if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+        const newEvent = { ...data, type: 'financial_updated' };
+        try {
+          // Processar manualmente a mensagem como se tivesse vindo do servidor
+          const handlers = messageHandlers['financial_updated'] || [];
+          handlers.forEach(handler => handler(newEvent));
+        } catch (error) {
+          console.error('Erro ao processar evento financial_update para financial_updated:', error);
+        }
+      }
+    });
+    
     // Limpar conexões quando o componente desmontar
     return () => {
       mounted = false;
       unregisterNotifHandler();
+      unregisterFinancialHandler();
+      unregisterCalendarHandler();
+      unregisterOldFinancialHandler();
       closeConnections();
     };
   }, [user, toast]);
