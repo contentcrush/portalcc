@@ -28,14 +28,77 @@ import { queryClient } from '@/lib/queryClient';
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const { toast } = useToast();
   
   // Buscar eventos
-  const { data: events, isLoading, error } = useQuery<Event[]>({
+  const { data: events, isLoading, error, refetch } = useQuery<Event[]>({
     queryKey: ['/api/events'],
     staleTime: 1000 * 60 * 5, // 5 minutos
     retry: 1,
     refetchOnWindowFocus: true
   });
+  
+  // Configurar WebSocket
+  useEffect(() => {
+    // Inicializar conexão WebSocket
+    let wsConnection: WebSocket | null = null;
+    let unsubscribeHandler: (() => void) | null = null;
+    
+    const initConnection = async () => {
+      try {
+        wsConnection = await initWebSocket();
+        
+        // Registrar handler para notificações específicas de calendário
+        const calendarHandler = onWebSocketMessage('calendar_updated', (data) => {
+          console.log('Recebida atualização de calendário via WebSocket:', data);
+          
+          // Atualizar os dados do calendário
+          refetch();
+          
+          // Notificar o usuário sobre a atualização
+          toast({
+            title: 'Calendário atualizado',
+            description: data.message || 'Novos eventos foram sincronizados',
+          });
+        });
+        
+        // Registrar handler de fallback para qualquer atualização de eventos
+        const eventHandler = onWebSocketMessage('event_updated', (data) => {
+          console.log('Evento atualizado via WebSocket:', data);
+          refetch();
+        });
+        
+        // Combinar os handlers para limpeza
+        unsubscribeHandler = () => {
+          calendarHandler();
+          eventHandler();
+        };
+      } catch (error) {
+        console.error('Erro ao conectar WebSocket:', error);
+        toast({
+          title: 'Erro de conexão',
+          description: 'Não foi possível conectar ao serviço de atualizações em tempo real',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    // Iniciar conexão
+    initConnection();
+    
+    // Função de limpeza do useEffect
+    return () => {
+      // Limpar os handlers ao desmontar o componente
+      if (unsubscribeHandler) {
+        unsubscribeHandler();
+      }
+      
+      // Fechar a conexão WebSocket
+      if (wsConnection) {
+        wsConnection.close();
+      }
+    };
+  }, [refetch, toast]);
 
   // Filtragem de eventos com base no filtro selecionado
   const filteredEvents = React.useMemo(() => {

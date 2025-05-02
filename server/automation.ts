@@ -5,7 +5,7 @@ import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, add
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
-import { WebSocket } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 
 /**
  * Verifica projetos atrasados e atualiza o status automaticamente
@@ -994,7 +994,6 @@ export async function createReminderEvents(): Promise<{ success: boolean, messag
 /**
  * Notifica os clientes conectados via WebSocket sobre as mudanças no calendário
  */
-import WebSocket, { WebSocketServer } from 'ws';
 
 export function notifyCalendarUpdates(wss?: WebSocketServer) {
   if (!wss) return;
