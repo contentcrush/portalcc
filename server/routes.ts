@@ -1468,6 +1468,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sincroniza eventos do calendário para o novo documento financeiro
       await syncFinancialEvents();
       
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
+      
       res.status(201).json(document);
     } catch (error) {
       console.error("Erro ao criar documento financeiro:", error);
@@ -1486,6 +1489,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sincroniza eventos do calendário após atualização
       await syncFinancialEvents();
+      
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1521,6 +1527,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sincroniza eventos do calendário após pagamento
       await syncFinancialEvents();
+      
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
       
       res.json(updatedDocument);
     } catch (error) {
@@ -1559,6 +1568,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sincroniza eventos do calendário após exclusão do documento
       await syncFinancialEvents();
+      
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
       
       // Retornar 204 No Content para exclusão bem-sucedida
       res.status(204).end();
@@ -1645,6 +1657,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sincroniza eventos do calendário após excluir despesa
       await syncFinancialEvents();
       
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
+      
       res.status(204).end();
     } catch (error) {
       console.error("Erro ao excluir despesa:", error);
@@ -1672,6 +1687,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sincroniza eventos do calendário após aprovar despesa
       await syncFinancialEvents();
+      
+      // Notifica clientes sobre atualização do calendário
+      notifyCalendarUpdates(wss);
       
       res.json(updatedExpense);
     } catch (error) {

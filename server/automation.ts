@@ -994,6 +994,8 @@ export async function createReminderEvents(): Promise<{ success: boolean, messag
 /**
  * Notifica os clientes conectados via WebSocket sobre as mudanças no calendário
  */
+import WebSocket, { WebSocketServer } from 'ws';
+
 export function notifyCalendarUpdates(wss?: WebSocketServer) {
   if (!wss) return;
 
