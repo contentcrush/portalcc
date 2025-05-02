@@ -36,7 +36,7 @@ function App() {
                 <TooltipProvider>
                 <Switch>
                   <Route path="/auth" component={AuthPage} />
-                  <Route>
+                  <ProtectedRoute path="/" component={() => (
                     <Layout>
                       <Switch>
                         <Route path="/" component={Dashboard} />
@@ -56,7 +56,7 @@ function App() {
                         <Route component={NotFound} />
                       </Switch>
                     </Layout>
-                  </Route>
+                  )} />
                 </Switch>
                 {/* Renderizar o diálogo de formulário de projeto globalmente */}
                 <ProjectFormDialog />
