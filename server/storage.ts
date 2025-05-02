@@ -79,6 +79,7 @@ export interface IStorage {
   getProjectsByClient(clientId: number): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
+  updateProjectStatus(id: number, status: string): Promise<Project | undefined>;
   duplicateProject(id: number): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
   
@@ -873,6 +874,15 @@ export class MemStorage implements IStorage {
     if (!existingProject) return undefined;
     
     const updatedProject = { ...existingProject, ...project };
+    this.projectsData.set(id, updatedProject);
+    return updatedProject;
+  }
+  
+  async updateProjectStatus(id: number, status: string): Promise<Project | undefined> {
+    const existingProject = this.projectsData.get(id);
+    if (!existingProject) return undefined;
+    
+    const updatedProject = { ...existingProject, status };
     this.projectsData.set(id, updatedProject);
     return updatedProject;
   }
@@ -1691,6 +1701,14 @@ export class DatabaseStorage implements IStorage {
   async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
     const [updated] = await db.update(projects)
       .set(project)
+      .where(eq(projects.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async updateProjectStatus(id: number, status: string): Promise<Project | undefined> {
+    const [updated] = await db.update(projects)
+      .set({ status })
       .where(eq(projects.id, id))
       .returning();
     return updated;
