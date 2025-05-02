@@ -45,10 +45,16 @@ export async function checkOverdueProjects() {
     const updatePromises = overdueProjects.map(async (project) => {
       console.log(`[Automação] Atualizando projeto ${project.id} - ${project.name} para status 'atrasado'`);
       
-      return db
-        .update(projects)
-        .set({ status: 'atrasado' })
-        .where(eq(projects.id, project.id));
+      // Usa a implementação de updateProjectStatus para garantir consistência
+      if (storage && typeof storage.updateProjectStatus === 'function') {
+        return storage.updateProjectStatus(project.id, 'atrasado');
+      } else {
+        // Fallback caso storage não esteja disponível
+        return db
+          .update(projects)
+          .set({ status: 'atrasado' })
+          .where(eq(projects.id, project.id));
+      }
     });
     
     await Promise.all(updatePromises);
@@ -95,13 +101,13 @@ export async function findNextDeadline(): Promise<{ nextDate: Date | null, proje
     
     // Ordena os projetos por data de entrega (mais próxima primeiro)
     upcomingProjects.sort((a, b) => {
-      const dateA = new Date(a.endDate);
-      const dateB = new Date(b.endDate);
+      const dateA = a.endDate ? new Date(a.endDate) : new Date();
+      const dateB = b.endDate ? new Date(b.endDate) : new Date();
       return dateA.getTime() - dateB.getTime();
     });
     
     const nextProject = upcomingProjects[0];
-    const nextDate = new Date(nextProject.endDate);
+    const nextDate = nextProject.endDate ? new Date(nextProject.endDate) : new Date();
     
     // Define a hora para 00:01 do dia da data de entrega
     nextDate.setHours(0, 1, 0, 0);
