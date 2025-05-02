@@ -251,6 +251,7 @@ export const events = pgTable("events", {
   project_id: integer("project_id"),
   client_id: integer("client_id"),
   task_id: integer("task_id"),
+  financial_document_id: integer("financial_document_id"), // Adiciona referência ao documento financeiro
   type: text("type").notNull(),
   start_date: timestamp("start_date").notNull(),
   end_date: timestamp("end_date").notNull(),

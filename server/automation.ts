@@ -579,31 +579,47 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
                 gte(events.start_date, startOfDay(doc.due_date)),
                 lte(events.end_date, endOfDay(doc.due_date))
               ),
-              or(
-                eq(events.description, `Vencimento da fatura #${doc.id}: ${doc.description}`),
-                eq(events.description, `Vencimento da fatura #${doc.id}`)
-              )
+              eq(events.financial_document_id, doc.id) // Usa ID do documento para identificar exatamente
             )
           );
         
         if (existingEvents.length === 0) {
+          // Busca informações do projeto relacionado se existir
+          let projectName = '';
+          if (doc.project_id) {
+            const [project] = await db.select().from(projects).where(eq(projects.id, doc.project_id));
+            if (project) {
+              projectName = project.name;
+            }
+          }
+          
           // Decide o título e cor com base no tipo de documento
           const isPagamento = doc.document_type === 'payment' || doc.document_type === 'expense';
+          
+          // Usa nome do projeto se disponível, caso contrário usa o número do documento
           const title = isPagamento 
-            ? `Pagamento: ${doc.document_number || `#${doc.id}`}` 
-            : `Recebimento: ${doc.document_number || `#${doc.id}`}`;
+            ? `Pagamento: ${projectName || doc.document_number || `#${doc.id}`}` 
+            : `Recebimento: ${projectName || doc.document_number || `#${doc.id}`}`;
           
           const color = isPagamento 
             ? '#ef4444' // Vermelho para pagamentos
             : '#10b981'; // Verde para recebimentos
+          
+          // Cria descrição detalhada para tooltip
+          const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(doc.amount);
+          const tooltipDescription = `${isPagamento ? 'Pagamento' : 'Recebimento'} - ${valorFormatado}
+          ${projectName ? `Projeto: ${projectName}` : ''}
+          ${doc.description ? `Descrição: ${doc.description}` : ''}
+          Vencimento: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`;
             
           // Criar novo evento para a data de vencimento
           await db.insert(events).values({
             title,
-            description: `Vencimento da fatura #${doc.id}${doc.description ? ': ' + doc.description : ''}`,
+            description: tooltipDescription,
             user_id: 1, // ID do usuário admin/sistema
             project_id: doc.project_id || null,
             client_id: doc.client_id,
+            financial_document_id: doc.id, // Armazena referência ao documento
             type: 'financeiro',
             start_date: doc.due_date,
             end_date: doc.due_date,
