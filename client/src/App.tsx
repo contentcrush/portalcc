@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
-import DashboardNew from "@/pages/dashboard-new";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients";
@@ -36,23 +35,22 @@ function App() {
                 <TooltipProvider>
                 <Switch>
                   <Route path="/auth" component={AuthPage} />
-                  <Route path="/">
+                  <Route>
                     <Layout>
                       <Switch>
-                        <ProtectedRoute path="/" exact component={Dashboard} />
-                        <ProtectedRoute path="/dashboard" component={Dashboard} />
-                        <ProtectedRoute path="/dashboard-new" component={DashboardNew} />
-                        <ProtectedRoute path="/projects" exact component={Projects} />
-                        <ProtectedRoute path="/projects/:id" component={Projects} />
-                        <ProtectedRoute path="/tasks" exact component={Tasks} />
-                        <ProtectedRoute path="/tasks/:id" component={Tasks} />
-                        <ProtectedRoute path="/clients" exact component={Clients} />
-                        <ProtectedRoute path="/clients/:id" component={ClientDetail} />
-                        <ProtectedRoute path="/financial" component={Financial} />
-                        <ProtectedRoute path="/calendar" component={Calendar} />
-                        <ProtectedRoute path="/team" exact component={Team} />
-                        <ProtectedRoute path="/team/user/:id" component={UserProfile} />
-                        <ProtectedRoute path="/settings" component={Settings} />
+                        <Route path="/" component={Dashboard} />
+                        <Route path="/dashboard" component={Dashboard} />
+                        <Route path="/projects" component={Projects} />
+                        <Route path="/projects/:id" component={Projects} />
+                        <Route path="/tasks" component={Tasks} />
+                        <Route path="/tasks/:id" component={Tasks} />
+                        <Route path="/clients" component={Clients} />
+                        <Route path="/clients/:id" component={ClientDetail} />
+                        <Route path="/financial" component={Financial} />
+                        <Route path="/calendar" component={Calendar} />
+                        <Route path="/team" component={Team} />
+                        <Route path="/team/user/:id" component={UserProfile} />
+                        <Route path="/settings" component={Settings} />
                         <Route component={NotFound} />
                       </Switch>
                     </Layout>
