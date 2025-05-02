@@ -1662,6 +1662,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, validateBody(insertExpenseSchema), async (req, res) => {
     try {
       const expense = await storage.createExpense(req.body);
+      
+      // Importação aqui para evitar problemas de importação circular
+      const { syncExpenseToCalendar } = await import('./utils/calendarSync');
+      
+      // Sincronizar com o calendário automaticamente se não estiver paga
+      if (expense.date && !expense.paid) {
+        const calendarEvent = await syncExpenseToCalendar(expense, req.user?.id || 1);
+        
+        if (calendarEvent) {
+          // Notificar usuários sobre a atualização do calendário
+          io.emit('calendar_updated', {
+            type: 'calendar_updated',
+            timestamp: new Date().toISOString(),
+            message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+          });
+        }
+      }
+      
       res.status(201).json(expense);
     } catch (error) {
       console.error("Erro ao criar despesa:", error);
@@ -1672,14 +1690,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/expenses/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Obter a despesa antes da atualização para verificar alterações no status de pagamento
+      const oldExpense = await storage.getExpense(id);
+      if (!oldExpense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      // Atualizar a despesa
       const updatedExpense = await storage.updateExpense(id, req.body);
       
       if (!updatedExpense) {
-        return res.status(404).json({ message: "Expense not found" });
+        return res.status(404).json({ message: "Failed to update expense" });
+      }
+      
+      // Importação aqui para evitar problemas de importação circular
+      const { syncExpenseToCalendar, removeExpenseEvents } = await import('./utils/calendarSync');
+      
+      // Se a despesa foi marcada como paga, remover do calendário
+      if (updatedExpense.paid && !oldExpense.paid) {
+        await removeExpenseEvents(id);
+        // Notificar usuários sobre a atualização do calendário
+        io.emit('calendar_updated', {
+          type: 'calendar_updated',
+          timestamp: new Date().toISOString(),
+          message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+        });
+      } 
+      // Se a despesa não está paga e a data foi alterada, atualizar evento no calendário
+      else if (!updatedExpense.paid && updatedExpense.date) {
+        const calendarEvent = await syncExpenseToCalendar(updatedExpense, req.user?.id || 1);
+        
+        if (calendarEvent) {
+          // Notificar usuários sobre a atualização do calendário
+          io.emit('calendar_updated', {
+            type: 'calendar_updated',
+            timestamp: new Date().toISOString(),
+            message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+          });
+        }
       }
       
       res.json(updatedExpense);
     } catch (error) {
+      console.error("Erro ao atualizar despesa:", error);
       res.status(500).json({ message: "Failed to update expense" });
     }
   });
