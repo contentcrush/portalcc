@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,13 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     params?.id ? parseInt(params.id) : null
   );
+  
+  // Efeito para atualizar o projeto selecionado quando o ID na URL mudar
+  useEffect(() => {
+    if (params?.id) {
+      setSelectedProjectId(parseInt(params.id));
+    }
+  }, [params?.id]);
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
@@ -169,10 +176,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
+    // Atualizar a URL para refletir o projeto que está sendo visualizado
+    window.history.pushState(null, '', `/projects/${projectId}`);
   };
 
   const handleCloseProjectDetails = () => {
+    // Limpar o ID selecionado e atualizar a URL para a página principal de projetos
     setSelectedProjectId(null);
+    window.history.pushState(null, '', '/projects');
   };
   
   const handleDuplicateProject = (projectId: number) => {
