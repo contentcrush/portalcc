@@ -80,8 +80,12 @@ const KPICard = ({
 
 // Componente principal do Dashboard
 export default function DashboardNovo() {
-  const [currentMonthDisplay] = useState("Abril 2025");
+  const [currentPeriod, setCurrentPeriod] = useState<'week' | 'month' | 'year'>('month');
   const { openProjectForm } = useProjectForm();
+  
+  // Data atual e nome do mês
+  const currentDate = new Date();
+  const currentMonthDisplay = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
   
   // Buscar dados da API
   const { data: projects = [] } = useQuery<any[]>({
@@ -98,6 +102,10 @@ export default function DashboardNovo() {
   
   const { data: financialDocuments = [] } = useQuery<any[]>({
     queryKey: ['/api/financial-documents']
+  });
+  
+  const { data: expenses = [] } = useQuery<any[]>({
+    queryKey: ['/api/expenses']
   });
   
   // Filtrar projetos ativos (não concluídos ou cancelados)
@@ -117,15 +125,85 @@ export default function DashboardNovo() {
   const projectClientIds = new Set(activeProjects.map((p: any) => p.client_id).filter(Boolean));
   const activeClients = clients.filter((c: any) => projectClientIds.has(c.id));
   
-  // Cálculo do faturamento mensal
-  const currentMonthNum = new Date().getMonth();
-  const monthlyRevenue = financialDocuments.reduce((sum: number, doc: any) => {
-    const docDate = doc.due_date ? new Date(doc.due_date) : null;
-    if (docDate && docDate.getMonth() === currentMonthNum) {
-      return sum + (doc.amount || 0);
-    }
-    return sum;
-  }, 0);
+  // Cálculo dados financeiros atuais e anteriores
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  // Receitas (financialDocuments)
+  const currentMonthIncome = financialDocuments
+    .filter((doc: any) => {
+      const date = new Date(doc.due_date || doc.issue_date);
+      return date.getMonth() === currentMonth && 
+             date.getFullYear() === currentYear && 
+             doc.type === 'invoice' &&
+             (doc.status === 'pago' || doc.status === 'pendente');
+    })
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  
+  const previousMonthIncome = financialDocuments
+    .filter((doc: any) => {
+      const date = new Date(doc.due_date || doc.issue_date);
+      return date.getMonth() === previousMonth && 
+             date.getFullYear() === previousYear && 
+             doc.type === 'invoice' &&
+             (doc.status === 'pago' || doc.status === 'pendente');
+    })
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  
+  // Despesas
+  const currentMonthExpenses = expenses
+    .filter((exp: any) => {
+      const date = new Date(exp.date);
+      return date.getMonth() === currentMonth && 
+             date.getFullYear() === currentYear;
+    })
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+  
+  const previousMonthExpenses = expenses
+    .filter((exp: any) => {
+      const date = new Date(exp.date);
+      return date.getMonth() === previousMonth && 
+             date.getFullYear() === previousYear;
+    })
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+  
+  // Lucro
+  const currentMonthProfit = currentMonthIncome - currentMonthExpenses;
+  const previousMonthProfit = previousMonthIncome - previousMonthExpenses;
+  
+  // Cálculo das variações percentuais
+  const calculatePercentChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+  
+  const incomePercentChange = calculatePercentChange(currentMonthIncome, previousMonthIncome);
+  const expensesPercentChange = calculatePercentChange(currentMonthExpenses, previousMonthExpenses);
+  const profitPercentChange = calculatePercentChange(currentMonthProfit, previousMonthProfit);
+  
+  // Calcular faturamento por projeto
+  const projectIncome = projects.map((project: any) => {
+    const projectDocs = financialDocuments.filter((doc: any) => 
+      doc.project_id === project.id && 
+      doc.type === 'invoice' &&
+      (doc.status === 'pago' || doc.status === 'pendente')
+    );
+    
+    const income = projectDocs.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+    
+    return {
+      id: project.id,
+      name: project.name,
+      client_id: project.client_id,
+      color: ['pink', 'blue', 'purple', 'green', 'amber'][Math.floor(Math.random() * 5)],
+      income
+    };
+  })
+  .filter((p: any) => p.income > 0)
+  .sort((a: any, b: any) => b.income - a.income)
+  .slice(0, 4);
   
   // Dados para tarefas próximas
   const upcomingTasks = [...(pendingTasks || [])]
