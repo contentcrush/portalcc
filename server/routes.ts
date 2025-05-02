@@ -1839,6 +1839,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Rotas para Eventos de Calendário =====
+  
+  // Obter todos os eventos
+  app.get("/api/events", authenticateJWT, async (_req, res) => {
+    try {
+      const events = await storage.getEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Erro ao buscar eventos:", error);
+      res.status(500).json({ message: "Falha ao buscar eventos" });
+    }
+  });
+  
+  // Obter um evento específico
+  app.get("/api/events/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Erro ao buscar evento:", error);
+      res.status(500).json({ message: "Falha ao buscar evento" });
+    }
+  });
+  
+  // Criar um novo evento
+  app.post("/api/events", authenticateJWT, validateBody(insertEventSchema), async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const event = await storage.createEvent({
+        ...req.body,
+        user_id: userId
+      });
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Erro ao criar evento:", error);
+      res.status(500).json({ message: "Falha ao criar evento" });
+    }
+  });
+  
+  // Atualizar um evento
+  app.patch("/api/events/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o evento existe
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Verificar se o usuário tem permissão
+      if (event.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'manager') {
+        return res.status(403).json({ message: "Sem permissão para editar este evento" });
+      }
+      
+      const updatedEvent = await storage.updateEvent(id, req.body);
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error("Erro ao atualizar evento:", error);
+      res.status(500).json({ message: "Falha ao atualizar evento" });
+    }
+  });
+  
+  // Excluir um evento
+  app.delete("/api/events/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o evento existe
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Evento não encontrado" });
+      }
+      
+      // Verificar se o usuário tem permissão
+      if (event.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'manager') {
+        return res.status(403).json({ message: "Sem permissão para excluir este evento" });
+      }
+      
+      await storage.deleteEvent(id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Erro ao excluir evento:", error);
+      res.status(500).json({ message: "Falha ao excluir evento" });
+    }
+  });
+  
   // ===== Rotas para Comentários de Projetos =====
   
   // Obter todos os comentários de um projeto
