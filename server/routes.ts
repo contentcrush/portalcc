@@ -2040,17 +2040,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sincronizar eventos financeiros
       const financialResult = await syncFinancialEvents();
       
-      // Usar módulo de utilitários para limpar eventos de documentos pagos
-      const { cleanupPaidDocumentEvents } = await import('./utils/calendarSync');
-      const cleanupResult = await cleanupPaidDocumentEvents();
+      // Usar módulo de utilitários para limpar eventos de documentos e despesas pagos
+      const { cleanupPaidDocumentEvents, cleanupPaidExpenseEvents } = await import('./utils/calendarSync');
       
-      console.log(`[API] Sincronização manual do calendário concluída: ${financialResult.count} eventos financeiros sincronizados, ${cleanupResult} eventos de documentos pagos removidos`);
+      // Limpar eventos de documentos pagos
+      const cleanupDocsResult = await cleanupPaidDocumentEvents();
+      
+      // Limpar eventos de despesas pagas
+      const cleanupExpensesResult = await cleanupPaidExpenseEvents();
+      
+      // Total de eventos limpos
+      const totalCleaned = cleanupDocsResult + cleanupExpensesResult;
+      
+      console.log(`[API] Sincronização manual do calendário concluída: ${financialResult.count} eventos financeiros sincronizados, ${cleanupDocsResult} eventos de documentos pagos removidos, ${cleanupExpensesResult} eventos de despesas pagas removidos`);
       
       res.json({
         success: true,
-        message: `Sincronização concluída com sucesso. ${financialResult.count} eventos financeiros sincronizados.`,
+        message: `Sincronização concluída com sucesso. ${financialResult.count} eventos financeiros sincronizados. ${totalCleaned} eventos de registros pagos removidos.`,
         financial: financialResult,
-        cleanup: cleanupResult
+        cleanup: {
+          documents: cleanupDocsResult,
+          expenses: cleanupExpensesResult,
+          total: totalCleaned
+        }
       });
     } catch (error: any) {
       console.error('[API] Erro na sincronização manual do calendário:', error);
