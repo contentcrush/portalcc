@@ -218,10 +218,19 @@ export default function Financial() {
     
   const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
   
-  // Due alerts (next 7 days)
-  const dueAlerts = receivablesData
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow))
-    .length;
+  // Due alerts (next 7 days) - valor total em vez da contagem
+  const dueFaturas = receivablesData
+    .filter((doc: any) => 
+      doc.due_date && 
+      isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
+      !doc.paid // Mostrar apenas faturas pendentes
+    );
+  
+  const dueAlertsCount = dueFaturas.length;
+  
+  // Total financeiro dos alertas
+  const dueAlerts = dueFaturas
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
   // Payables next 7 days
   const payablesNext7Days = payablesData
