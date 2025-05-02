@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Event } from '@shared/schema';
 import FullCalendarComponent from '@/components/calendar/FullCalendarComponent';
 import {
@@ -18,13 +18,18 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin, RefreshCw } from 'lucide-react';
 
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Buscar eventos
   const { data: events, isLoading, error } = useQuery<Event[]>({
@@ -32,6 +37,31 @@ export default function CalendarPage() {
     staleTime: 1000 * 60 * 5, // 5 minutos
     retry: 1,
     refetchOnWindowFocus: true
+  });
+  
+  // Mutation para sincronizar calendário
+  const syncCalendarMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/calendar/sync');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidar a query de eventos para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      
+      toast({
+        title: 'Calendário sincronizado',
+        description: data.message,
+        variant: 'default',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao sincronizar',
+        description: error.message || 'Ocorreu um erro ao sincronizar o calendário',
+        variant: 'destructive',
+      });
+    }
   });
 
   // Filtragem de eventos com base no filtro selecionado
@@ -118,6 +148,17 @@ export default function CalendarPage() {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => syncCalendarMutation.mutate()}
+            disabled={syncCalendarMutation.isPending}
+            className="mr-2"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncCalendarMutation.isPending ? 'animate-spin' : ''}`} />
+            {syncCalendarMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}
+          </Button>
+        
           <Select value={selectedFilter} onValueChange={setSelectedFilter}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filtrar por tipo" />
