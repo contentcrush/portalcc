@@ -565,25 +565,80 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
       );
     
     let eventsCreated = 0;
-
+    
+    // Primeiro, vamos limpar quaisquer eventos antigos (sem financial_document_id)
+    // para evitar duplicações com o formato antigo
+    await db.delete(events)
+      .where(
+        and(
+          eq(events.type, 'financeiro'),
+          isNull(events.financial_document_id),
+          gte(events.start_date, new Date())
+        )
+      );
+      
     // Cria eventos para datas de vencimento financeiro
     for (const doc of financialDocs) {
       if (doc.due_date) {
-        // Verifica se já existe um evento para esta data de vencimento
+        // Verifica se já existe um evento para este documento financeiro
+        // Independente da data (caso a data de vencimento tenha sido atualizada)
         const existingEvents = await db.select()
           .from(events)
           .where(
             and(
               eq(events.type, 'financeiro'),
-              and(
-                gte(events.start_date, startOfDay(doc.due_date)),
-                lte(events.end_date, endOfDay(doc.due_date))
-              ),
-              eq(events.financial_document_id, doc.id) // Usa ID do documento para identificar exatamente
+              eq(events.financial_document_id, doc.id)
             )
           );
         
-        if (existingEvents.length === 0) {
+        // Se já existe um evento, atualiza a data em vez de criar um novo
+        if (existingEvents.length > 0) {
+          // Atualizar evento existente com informações atualizadas
+          const existingEvent = existingEvents[0];
+          
+          // Busca informações do projeto relacionado se existir
+          let projectName = '';
+          if (doc.project_id) {
+            const [project] = await db.select().from(projects).where(eq(projects.id, doc.project_id));
+            if (project) {
+              projectName = project.name;
+            }
+          }
+          
+          // Decide o título e cor com base no tipo de documento
+          const isPagamento = doc.document_type === 'payment' || doc.document_type === 'expense';
+          
+          // Usa nome do projeto se disponível, caso contrário usa o número do documento
+          const title = isPagamento 
+            ? `Pagamento: ${projectName || doc.document_number || `#${doc.id}`}` 
+            : `Recebimento: ${projectName || doc.document_number || `#${doc.id}`}`;
+          
+          const color = isPagamento 
+            ? '#ef4444' // Vermelho para pagamentos
+            : '#10b981'; // Verde para recebimentos
+          
+          // Cria descrição detalhada para tooltip
+          const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(doc.amount);
+          const tooltipDescription = `${isPagamento ? 'Pagamento' : 'Recebimento'} - ${valorFormatado}
+          ${projectName ? `Projeto: ${projectName}` : ''}
+          ${doc.description ? `Descrição: ${doc.description}` : ''}
+          Vencimento: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`;
+          
+          // Atualizar evento com novas informações
+          await db.update(events)
+            .set({
+              title,
+              description: tooltipDescription,
+              start_date: doc.due_date,
+              end_date: doc.due_date,
+              project_id: doc.project_id || null,
+              client_id: doc.client_id,
+              color
+            })
+            .where(eq(events.id, existingEvent.id));
+            
+          console.log(`[Automação] Evento financeiro atualizado para documento #${doc.id}: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        } else {
           // Busca informações do projeto relacionado se existir
           let projectName = '';
           if (doc.project_id) {
@@ -698,25 +753,35 @@ export async function cleanupOldEvents(): Promise<{ success: boolean, message: s
       eventsRemoved += removedProjectEvents.length;
     }
     
-    // 3. Remover eventos de documentos financeiros pagos
-    const paidDocs = await db
-      .select()
+    // 3. Remover eventos financeiros antigos (sem financial_document_id) 
+    // e eventos de documentos pagos
+    const paidDocsIds = (await db
+      .select({ id: financialDocuments.id })
       .from(financialDocuments)
-      .where(eq(financialDocuments.paid, true));
+      .where(eq(financialDocuments.paid, true))).map(doc => doc.id);
     
-    // Lista de descrições para buscar eventos correspondentes
-    const paidDocsDescriptions = paidDocs.map(doc => [
-      `Vencimento da fatura #${doc.id}: ${doc.description}`,
-      `Vencimento da fatura #${doc.id}`
-    ]).flat();
+    // Primeiro remover eventos antigos (sem financial_document_id)
+    const removedOldEvents = await db.delete(events)
+      .where(
+        and(
+          eq(events.type, 'financeiro'),
+          isNull(events.financial_document_id),
+          gte(events.start_date, new Date()) // Manter eventos históricos
+        )
+      )
+      .returning();
     
-    if (paidDocsDescriptions.length > 0) {
+    console.log(`[Automação] Removidos ${removedOldEvents.length} eventos financeiros antigos (sem referência a documento)`);
+    eventsRemoved += removedOldEvents.length;
+    
+    // Agora remover eventos de documentos pagos
+    if (paidDocsIds.length > 0) {
       const removedFinancialEvents = await db.delete(events)
         .where(
           and(
             eq(events.type, 'financeiro'),
             gte(events.start_date, new Date()), // Manter eventos históricos
-            or(...paidDocsDescriptions.map(desc => eq(events.description, desc)))
+            inArray(events.financial_document_id, paidDocsIds)
           )
         )
         .returning();
