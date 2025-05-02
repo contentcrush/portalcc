@@ -149,21 +149,29 @@ export default function Dashboard() {
   const pendingTasks = tasks?.filter(t => !t.completed)?.length || 0;
   const lateTasksCount = tasks?.filter(t => !t.completed && new Date(t.due_date) < new Date())?.length || 0;
   
-  const activeClientsCount = clients?.length || 0;
-  const newClientsThisMonth = 3; // Para demonstração, mas deve usar dados reais
+  // Calcular clientes ativos (com pelo menos um projeto ativo)
+  const activeClientsCount = clients?.filter(client => 
+    projects?.some(p => p.client_id === client.id && p.status !== 'concluido' && p.status !== 'cancelado')
+  )?.length || 0;
   
-  // Calcular receita mensal
+  // Clientes novos no mês atual
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
   
+  const newClientsThisMonth = clients?.filter(client => {
+    const creationDate = client.created_at ? new Date(client.created_at) : null;
+    return creationDate && creationDate.getMonth() === currentMonth && creationDate.getFullYear() === currentYear;
+  })?.length || 0;
+  
+  // Calcular receita mensal com dados reais
   const monthlyRevenue = financialDocuments?.reduce((sum, doc) => {
     const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
     if (docDate && docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear) {
       return sum + (doc.amount || 0);
     }
     return sum;
-  }, 0) || 48500; // Valor padrão para demonstração
+  }, 0) || 0;
 
   // Projetos mais recentes ou em andamento (limitados a 3)
   const ongoingProjects = projects
@@ -182,20 +190,57 @@ export default function Dashboard() {
     ?.sort((a, b) => (b.id || 0) - (a.id || 0))
     ?.slice(0, 5) || [];
 
-  // Dados financeiros para o gráfico (exemplo)
+  // Calcular dados financeiros reais
+  // Receita total (documentos financeiros)
+  const totalRevenue = financialDocuments?.reduce((sum, doc) => sum + (doc.amount || 0), 0) || 0;
+  
+  // Despesas totais
+  const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+  
+  // Lucro (receita - despesas)
+  const totalProfit = totalRevenue - totalExpenses;
+  
   const financialData = {
-    receita: 48500,
-    despesas: 23120,
-    lucro: 25380
+    receita: totalRevenue,
+    despesas: totalExpenses,
+    lucro: totalProfit
   };
 
-  // Dados de faturamento por projeto
+  // Calcular receita por projeto
+  const projectRevenue = projects?.map(project => {
+    // Filtrar documentos financeiros relacionados a este projeto
+    const projectDocs = financialDocuments?.filter(doc => doc.project_id === project.id) || [];
+    const revenue = projectDocs.reduce((sum, doc) => sum + (doc.amount || 0), 0);
+    
+    return {
+      id: project.id,
+      name: project.name,
+      value: revenue,
+      color: project.id % 4 === 0 ? "bg-rose-400" :
+             project.id % 4 === 1 ? "bg-blue-400" :
+             project.id % 4 === 2 ? "bg-indigo-400" : "bg-emerald-400"
+    };
+  }).filter(project => project.value > 0).sort((a, b) => b.value - a.value) || [];
+  
+  // Pegar os top 3 projetos por receita e agrupar o resto como "Outros"
+  const topProjects = projectRevenue.slice(0, 3);
+  const otherProjects = projectRevenue.slice(3);
+  const otherRevenue = otherProjects.reduce((sum, project) => sum + project.value, 0);
+  
   const billingByProject = [
-    { id: 1, name: "TechBrand", value: 22500, color: "bg-rose-400" },
-    { id: 2, name: "EcoVida", value: 15000, color: "bg-blue-400" },
-    { id: 3, name: "FashionNow", value: 7500, color: "bg-indigo-400" },
-    { id: 4, name: "Outros", value: 3500, color: "bg-gray-400" }
-  ];
+    ...topProjects,
+    otherRevenue > 0 ? { id: 0, name: "Outros", value: otherRevenue, color: "bg-gray-400" } : null
+  ].filter(Boolean); // Remove null items
+  
+  // Se não houver dados reais suficientes, use placeholder para demo visual
+  if (billingByProject.length === 0) {
+    billingByProject.push(
+      { id: 1, name: "TechBrand", value: 22500, color: "bg-rose-400" },
+      { id: 2, name: "EcoVida", value: 15000, color: "bg-blue-400" },
+      { id: 3, name: "FashionNow", value: 7500, color: "bg-indigo-400" },
+      { id: 4, name: "Outros", value: 3500, color: "bg-gray-400" }
+    );
+  }
 
   // Formatando a data atual
   const currentDateFormatted = format(new Date(), "MMMM yyyy", { locale: ptBR });
@@ -401,7 +446,7 @@ export default function Dashboard() {
             </div>
 
             {/* Faturamento por projeto */}
-            <p className="font-medium mb-3">Faturamento por Projeto (Abril 2025)</p>
+            <p className="font-medium mb-3">Faturamento por Projeto ({capitalizedDate})</p>
             <div className="space-y-4">
               {billingByProject.map(project => (
                 <div key={project.id} className="flex items-center">
