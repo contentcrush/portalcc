@@ -1692,6 +1692,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Notificar sobre a criação da despesa
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'create_expense', 
+        expense: expense,
+        timestamp: new Date().toISOString(),
+        message: 'Uma nova despesa foi registrada'
+      });
+      
       res.status(201).json(expense);
     } catch (error) {
       console.error("Erro ao criar despesa:", error);
@@ -1743,6 +1752,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Notificar sobre a atualização da despesa
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'update_expense', 
+        expense: updatedExpense,
+        timestamp: new Date().toISOString(),
+        message: updatedExpense.paid && !oldExpense.paid 
+          ? 'Uma despesa foi marcada como paga' 
+          : 'Uma despesa foi atualizada'
+      });
+      
       res.json(updatedExpense);
     } catch (error) {
       console.error("Erro ao atualizar despesa:", error);
@@ -1775,6 +1795,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
       });
       
+      // Notificar sobre a exclusão da despesa
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'delete_expense', 
+        expenseId: id,
+        timestamp: new Date().toISOString(),
+        message: 'Uma despesa foi excluída'
+      });
+      
       res.status(204).end();
     } catch (error) {
       console.error("Erro ao excluir despesa:", error);
@@ -1798,6 +1827,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedExpense = await storage.updateExpense(id, {
         approved: true,
         notes: notes || null
+      });
+      
+      // Notificar sobre a aprovação da despesa
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'approve_expense', 
+        expense: updatedExpense,
+        timestamp: new Date().toISOString(),
+        message: 'Uma despesa foi aprovada'
       });
       
       res.json(updatedExpense);
