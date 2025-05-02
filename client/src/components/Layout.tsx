@@ -102,6 +102,7 @@ export default function Layout({ children }: LayoutProps) {
                 alt="Content Crush Logo" 
                 className="h-8 object-contain" 
               />
+              <span className="ml-2 font-semibold text-gray-800">Content Crush</span>
             </div>
 
             {/* Search bar */}
