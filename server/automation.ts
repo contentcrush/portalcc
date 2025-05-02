@@ -1,7 +1,9 @@
 import { db } from './db';
-import { projects } from '@shared/schema';
-import { eq, and, lt, inArray, gte } from 'drizzle-orm';
-import { format, addDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { projects, clients, tasks, events, financialDocuments } from '@shared/schema';
+import { eq, and, lt, inArray, gte, or, isNull, lte, sql } from 'drizzle-orm';
+import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, addHours, 
+         startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
 
 /**
@@ -226,6 +228,572 @@ export async function checkProjectsWithUpdatedDates() {
 }
 
 /**
+ * Sincroniza eventos do calendário com base em datas importantes de clientes
+ * - Aniversários de início de relacionamento com clientes
+ */
+export async function syncClientEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Sincronizando eventos de calendário para clientes...');
+
+    const allClients = await db.select().from(clients);
+    let eventsCreated = 0;
+
+    // Cria eventos para aniversários de clientes
+    for (const client of allClients) {
+      if (client.since) {
+        // Procura se já existe um evento para o aniversário do cliente no ano atual
+        const clientAnniversary = new Date(client.since);
+        const currentYear = new Date().getFullYear();
+        
+        // Define uma data de aniversário para o ano atual
+        const anniversaryThisYear = new Date(currentYear, clientAnniversary.getMonth(), clientAnniversary.getDate());
+        
+        // Se a data já passou este ano, criar para o próximo ano
+        const targetYear = isBefore(anniversaryThisYear, new Date()) ? currentYear + 1 : currentYear;
+        const targetDate = new Date(targetYear, clientAnniversary.getMonth(), clientAnniversary.getDate());
+        
+        // Verifica se já existe um evento para este aniversário
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.client_id, client.id),
+              eq(events.type, 'aniversario'),
+              and(
+                gte(events.start_date, startOfDay(targetDate)),
+                lte(events.end_date, endOfDay(targetDate))
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0) {
+          // Criar novo evento para o aniversário
+          const anos = targetYear - clientAnniversary.getFullYear();
+          await db.insert(events).values({
+            title: `${anos}º Aniversário - ${client.name}`,
+            description: `Celebração de ${anos} anos de parceria com ${client.name}`,
+            user_id: 1, // ID do usuário admin ou sistema
+            client_id: client.id,
+            type: 'aniversario',
+            start_date: targetDate,
+            end_date: targetDate,
+            all_day: true,
+            color: '#4f46e5', // Indigo para aniversários
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento de aniversário criado para cliente ${client.name}: ${format(targetDate, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${eventsCreated} eventos de clientes sincronizados com sucesso`,
+      count: eventsCreated
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao sincronizar eventos de clientes:', error);
+    return {
+      success: false,
+      message: `Erro ao sincronizar eventos de clientes: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
+ * Sincroniza eventos do calendário com base em datas importantes de projetos
+ * - Datas de entrega
+ * - Marcos importantes
+ */
+export async function syncProjectEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Sincronizando eventos de calendário para projetos...');
+
+    const allProjects = await db.select().from(projects);
+    let eventsCreated = 0;
+
+    // Cria eventos para datas de entrega de projetos
+    for (const project of allProjects) {
+      if (project.endDate) {
+        // Verifica se já existe um evento para esta data de entrega
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.project_id, project.id),
+              eq(events.type, 'prazo'),
+              and(
+                gte(events.start_date, startOfDay(project.endDate)),
+                lte(events.end_date, endOfDay(project.endDate))
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0 && isAfter(project.endDate, new Date())) {
+          // Criar novo evento para a data de entrega
+          await db.insert(events).values({
+            title: `Entrega: ${project.name}`,
+            description: `Data de entrega para o projeto ${project.name}`,
+            user_id: 1, // ID do usuário admin ou sistema
+            project_id: project.id,
+            client_id: project.client_id,
+            type: 'prazo',
+            start_date: project.endDate,
+            end_date: project.endDate,
+            all_day: true,
+            color: '#ef4444', // Vermelho para prazos
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento de prazo criado para projeto ${project.name}: ${format(project.endDate, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+
+      // Poderia criar eventos para marcos de projeto, início de projeto, etc.
+      if (project.startDate) {
+        // Verifica se já existe um evento para data de início
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.project_id, project.id),
+              eq(events.type, 'projeto'),
+              and(
+                gte(events.start_date, startOfDay(project.startDate)),
+                lte(events.end_date, endOfDay(project.startDate))
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0 && isAfter(project.startDate, new Date())) {
+          // Criar novo evento para a data de início
+          await db.insert(events).values({
+            title: `Início: ${project.name}`,
+            description: `Data de início para o projeto ${project.name}`,
+            user_id: 1, // ID do usuário admin ou sistema
+            project_id: project.id,
+            client_id: project.client_id,
+            type: 'projeto',
+            start_date: project.startDate,
+            end_date: project.startDate,
+            all_day: true,
+            color: '#6366f1', // Indigo para eventos de projeto
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento de início criado para projeto ${project.name}: ${format(project.startDate, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${eventsCreated} eventos de projetos sincronizados com sucesso`,
+      count: eventsCreated
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao sincronizar eventos de projetos:', error);
+    return {
+      success: false,
+      message: `Erro ao sincronizar eventos de projetos: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
+ * Sincroniza eventos do calendário com base em datas importantes de tarefas
+ * - Prazos de tarefas
+ */
+export async function syncTaskEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Sincronizando eventos de calendário para tarefas...');
+
+    const allTasks = await db.select().from(tasks).where(eq(tasks.completed, false));
+    let eventsCreated = 0;
+
+    // Cria eventos para datas de vencimento de tarefas
+    for (const task of allTasks) {
+      if (task.due_date) {
+        // Verifica se já existe um evento para esta data de vencimento
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.task_id, task.id),
+              eq(events.type, 'prazo'),
+              and(
+                gte(events.start_date, startOfDay(task.due_date)),
+                lte(events.end_date, endOfDay(task.due_date))
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0 && isAfter(task.due_date, new Date())) {
+          // Busca informações do projeto se existir
+          let clientId = null;
+          if (task.project_id) {
+            const projectInfo = await db.select().from(projects).where(eq(projects.id, task.project_id));
+            if (projectInfo.length > 0) {
+              clientId = projectInfo[0].client_id;
+            }
+          }
+          
+          // Definir cor com base na prioridade
+          let color = '#84cc16'; // Verde padrão (baixa)
+          if (task.priority === 'alta') {
+            color = '#f97316'; // Laranja para alta prioridade
+          } else if (task.priority === 'critica') {
+            color = '#dc2626'; // Vermelho para crítica
+          } else if (task.priority === 'media') {
+            color = '#f59e0b'; // Âmbar para média
+          }
+          
+          // Criar novo evento para a data de vencimento
+          await db.insert(events).values({
+            title: `Tarefa: ${task.title}`,
+            description: task.description || `Prazo para conclusão da tarefa`,
+            user_id: task.assigned_to || 1, // ID do usuário responsável ou admin
+            project_id: task.project_id || null,
+            client_id: clientId,
+            task_id: task.id,
+            type: 'prazo',
+            start_date: task.due_date,
+            end_date: task.due_date,
+            all_day: true,
+            color,
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+
+      // Poderia criar eventos para início de tarefas também
+      if (task.start_date) {
+        // Verifica se já existe um evento para data de início
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.task_id, task.id),
+              or(eq(events.type, 'gravacao'), eq(events.type, 'edicao')),
+              and(
+                gte(events.start_date, startOfDay(task.start_date)),
+                lte(events.end_date, endOfDay(task.start_date))
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0 && isAfter(task.start_date, new Date())) {
+          // Busca informações do projeto se existir
+          let clientId = null;
+          if (task.project_id) {
+            const projectInfo = await db.select().from(projects).where(eq(projects.id, task.project_id));
+            if (projectInfo.length > 0) {
+              clientId = projectInfo[0].client_id;
+            }
+          }
+          
+          // Criar novo evento para a data de início
+          // Decidir o tipo com base no título/descrição da tarefa (simplificado)
+          const taskType = task.title.toLowerCase().includes('grava') || 
+                           (task.description && task.description.toLowerCase().includes('grava')) ? 
+                           'gravacao' : 'edicao';
+          
+          await db.insert(events).values({
+            title: `Início: ${task.title}`,
+            description: task.description || `Início da tarefa`,
+            user_id: task.assigned_to || 1, // ID do usuário responsável ou admin
+            project_id: task.project_id || null,
+            client_id: clientId,
+            task_id: task.id,
+            type: taskType,
+            start_date: task.start_date,
+            end_date: task.start_date,
+            all_day: true,
+            color: taskType === 'gravacao' ? '#10b981' : '#14b8a6', // Verde para gravação, teal para edição
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento de início criado para tarefa ${task.title}: ${format(task.start_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${eventsCreated} eventos de tarefas sincronizados com sucesso`,
+      count: eventsCreated
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao sincronizar eventos de tarefas:', error);
+    return {
+      success: false,
+      message: `Erro ao sincronizar eventos de tarefas: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
+ * Sincroniza eventos do calendário com base em datas financeiras importantes
+ * - Datas de vencimento de faturas
+ * - Datas de pagamento programadas
+ */
+export async function syncFinancialEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Sincronizando eventos de calendário para registros financeiros...');
+    
+    // Busca documentos financeiros não pagos e com data de vencimento futura
+    const financialDocs = await db
+      .select()
+      .from(financialDocuments)
+      .where(
+        and(
+          eq(financialDocuments.paid, false),
+          gte(financialDocuments.due_date, new Date())
+        )
+      );
+    
+    let eventsCreated = 0;
+
+    // Cria eventos para datas de vencimento financeiro
+    for (const doc of financialDocs) {
+      if (doc.due_date) {
+        // Verifica se já existe um evento para esta data de vencimento
+        const existingEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.type, 'financeiro'),
+              and(
+                gte(events.start_date, startOfDay(doc.due_date)),
+                lte(events.end_date, endOfDay(doc.due_date))
+              ),
+              or(
+                eq(events.description, `Vencimento da fatura #${doc.id}: ${doc.description}`),
+                eq(events.description, `Vencimento da fatura #${doc.id}`)
+              )
+            )
+          );
+        
+        if (existingEvents.length === 0) {
+          // Decide o título e cor com base no tipo de documento
+          const isPagamento = doc.document_type === 'payment' || doc.document_type === 'expense';
+          const title = isPagamento 
+            ? `Pagamento: ${doc.document_number || `#${doc.id}`}` 
+            : `Recebimento: ${doc.document_number || `#${doc.id}`}`;
+          
+          const color = isPagamento 
+            ? '#ef4444' // Vermelho para pagamentos
+            : '#10b981'; // Verde para recebimentos
+            
+          // Criar novo evento para a data de vencimento
+          await db.insert(events).values({
+            title,
+            description: `Vencimento da fatura #${doc.id}${doc.description ? ': ' + doc.description : ''}`,
+            user_id: 1, // ID do usuário admin/sistema
+            project_id: doc.project_id || null,
+            client_id: doc.client_id,
+            type: 'financeiro',
+            start_date: doc.due_date,
+            end_date: doc.due_date,
+            all_day: true,
+            color,
+          });
+          
+          eventsCreated++;
+          console.log(`[Automação] Evento financeiro criado para documento #${doc.id}: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${eventsCreated} eventos financeiros sincronizados com sucesso`,
+      count: eventsCreated
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao sincronizar eventos financeiros:', error);
+    return {
+      success: false,
+      message: `Erro ao sincronizar eventos financeiros: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
+ * Limpa eventos antigos automaticamente gerados que não são mais necessários
+ * - Eventos de tarefas concluídas
+ * - Eventos de projetos concluídos/cancelados
+ * - Eventos de faturas pagas
+ */
+export async function cleanupOldEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Limpando eventos antigos do calendário...');
+    let eventsRemoved = 0;
+    
+    // 1. Remover eventos de tarefas concluídas
+    const completedTasks = await db.select().from(tasks).where(eq(tasks.completed, true));
+    const completedTaskIds = completedTasks.map(task => task.id);
+    
+    if (completedTaskIds.length > 0) {
+      const removedTaskEvents = await db.delete(events)
+        .where(
+          and(
+            inArray(events.task_id, completedTaskIds),
+            gte(events.start_date, new Date()) // Manter eventos históricos
+          )
+        )
+        .returning();
+      
+      eventsRemoved += removedTaskEvents.length;
+    }
+    
+    // 2. Remover eventos de projetos concluídos/cancelados
+    const finishedProjects = await db.select()
+      .from(projects)
+      .where(
+        inArray(projects.status, ['concluido', 'cancelado'])
+      );
+    
+    const finishedProjectIds = finishedProjects.map(project => project.id);
+    
+    if (finishedProjectIds.length > 0) {
+      const removedProjectEvents = await db.delete(events)
+        .where(
+          and(
+            inArray(events.project_id, finishedProjectIds),
+            gte(events.start_date, new Date()) // Manter eventos históricos
+          )
+        )
+        .returning();
+      
+      eventsRemoved += removedProjectEvents.length;
+    }
+    
+    // 3. Remover eventos de documentos financeiros pagos
+    const paidDocs = await db
+      .select()
+      .from(financialDocuments)
+      .where(eq(financialDocuments.paid, true));
+    
+    // Lista de descrições para buscar eventos correspondentes
+    const paidDocsDescriptions = paidDocs.map(doc => [
+      `Vencimento da fatura #${doc.id}: ${doc.description}`,
+      `Vencimento da fatura #${doc.id}`
+    ]).flat();
+    
+    if (paidDocsDescriptions.length > 0) {
+      const removedFinancialEvents = await db.delete(events)
+        .where(
+          and(
+            eq(events.type, 'financeiro'),
+            gte(events.start_date, new Date()), // Manter eventos históricos
+            or(...paidDocsDescriptions.map(desc => eq(events.description, desc)))
+          )
+        )
+        .returning();
+      
+      eventsRemoved += removedFinancialEvents.length;
+    }
+    
+    console.log(`[Automação] ${eventsRemoved} eventos antigos removidos do calendário`);
+    return {
+      success: true,
+      message: `${eventsRemoved} eventos antigos removidos do calendário`,
+      count: eventsRemoved
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao limpar eventos antigos:', error);
+    return {
+      success: false,
+      message: `Erro ao limpar eventos antigos: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
+ * Verifica e cria eventos de lembrete 1 semana antes de datas importantes
+ */
+export async function createReminderEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Criando eventos de lembrete...');
+    let eventsCreated = 0;
+    
+    // 1. Encontrar eventos de prazo que não possuam lembretes
+    const nextWeek = addDays(new Date(), 7);
+    const twoWeeks = addDays(new Date(), 14);
+    
+    const deadlineEvents = await db.select()
+      .from(events)
+      .where(
+        and(
+          eq(events.type, 'prazo'),
+          gte(events.start_date, nextWeek),
+          lte(events.start_date, twoWeeks)
+        )
+      );
+    
+    // 2. Criar eventos de lembrete para cada evento de prazo
+    for (const deadline of deadlineEvents) {
+      // Calcular a data 1 semana antes do prazo
+      const reminderDate = subDays(deadline.start_date, 7);
+      
+      // Verificar se já existe um lembrete
+      const existingReminders = await db.select()
+        .from(events)
+        .where(
+          and(
+            eq(events.type, 'lembrete'),
+            gte(events.start_date, startOfDay(reminderDate)),
+            lte(events.end_date, endOfDay(reminderDate)),
+            eq(events.description, `Lembrete: ${deadline.title} ocorrerá em uma semana`)
+          )
+        );
+      
+      if (existingReminders.length === 0 && isAfter(reminderDate, new Date())) {
+        // Criar lembrete
+        await db.insert(events).values({
+          title: `Lembrete: ${deadline.title}`,
+          description: `Lembrete: ${deadline.title} ocorrerá em uma semana`,
+          user_id: deadline.user_id,
+          project_id: deadline.project_id,
+          client_id: deadline.client_id,
+          task_id: deadline.task_id,
+          type: 'lembrete',
+          start_date: reminderDate,
+          end_date: reminderDate,
+          all_day: true,
+          color: '#a855f7', // Roxo para lembretes
+        });
+        
+        eventsCreated++;
+        console.log(`[Automação] Evento de lembrete criado para "${deadline.title}": ${format(reminderDate, 'dd/MM/yyyy', { locale: ptBR })}`);
+      }
+    }
+    
+    return {
+      success: true,
+      message: `${eventsCreated} eventos de lembrete criados com sucesso`,
+      count: eventsCreated
+    };
+  } catch (error: any) {
+    console.error('[Automação] Erro ao criar eventos de lembrete:', error);
+    return {
+      success: false, 
+      message: `Erro ao criar eventos de lembrete: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
+
+/**
  * Executa todas as automações do sistema
  */
 export async function runAutomations() {
@@ -240,13 +808,30 @@ export async function runAutomations() {
   // Agenda a próxima verificação baseada em datas de entrega
   scheduleNextDeadlineCheck();
   
-  // Aqui podemos adicionar mais automações no futuro
+  // Sincroniza eventos do calendário
+  const clientEventsResult = await syncClientEvents();
+  const projectEventsResult = await syncProjectEvents();
+  const taskEventsResult = await syncTaskEvents();
+  const financialEventsResult = await syncFinancialEvents();
+  
+  // Cria eventos de lembrete para datas importantes
+  const reminderEventsResult = await createReminderEvents();
+  
+  // Limpeza de eventos antigos
+  const cleanupResult = await cleanupOldEvents();
   
   console.log('[Automação] Verificações automáticas concluídas');
   
   return {
     updatedDates: updatedDatesResult,
     overdue: overdueResult,
-    // Outras automações podem ser adicionadas aqui
+    calendarEvents: {
+      clients: clientEventsResult,
+      projects: projectEventsResult,
+      tasks: taskEventsResult,
+      financial: financialEventsResult,
+      reminders: reminderEventsResult,
+      cleanup: cleanupResult
+    }
   };
 }
