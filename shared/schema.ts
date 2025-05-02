@@ -44,6 +44,13 @@ export const users = pgTable("users", {
   account_type: accountTypeEnum("account_type"),
   pix_key: text("pix_key"),
   
+  // Google Calendar
+  google_access_token: text("google_access_token"),
+  google_refresh_token: text("google_refresh_token"),
+  google_token_expiry: timestamp("google_token_expiry"),
+  google_calendar_connected: boolean("google_calendar_connected").default(false),
+  google_calendar_email: text("google_calendar_email"),
+  
   // Outros campos
   notes: text("notes"),
   permissions: json("permissions").$type<string[]>().default([]),
@@ -258,6 +265,9 @@ export const events = pgTable("events", {
   all_day: boolean("all_day").default(false),
   location: text("location"),
   color: text("color"),
+  google_calendar_id: text("google_calendar_id"), // ID do evento no Google Calendar
+  synced_with_google: boolean("synced_with_google").default(false), // Indica se o evento está sincronizado
+  last_sync: timestamp("last_sync"), // Data da última sincronização
   creation_date: timestamp("creation_date").defaultNow(),
 });
 
