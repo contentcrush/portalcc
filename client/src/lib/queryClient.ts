@@ -119,6 +119,14 @@ export const getQueryFn: <T>(options?: {
   (options) => {
     const unauthorizedBehavior = options?.on401 || "throw";
     return async ({ queryKey }) => {
+    // Verificar se existe token no localStorage antes de fazer a requisição
+    const token = getAuthToken();
+    if (!token && window.location.pathname !== '/auth' && unauthorizedBehavior === "throw") {
+      console.log("Token não encontrado no localStorage, redirecionando para /auth");
+      window.location.href = '/auth';
+      throw new Error('Sessão expirada. Por favor, faça login novamente.');
+    }
+      
     let res = await fetch(queryKey[0] as string, {
       credentials: "include",
       headers: getAuthHeaders(),

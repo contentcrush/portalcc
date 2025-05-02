@@ -24,6 +24,16 @@ import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 
+// Componente de fallback para quando os dados estão carregando
+const PageLoader = () => (
+  <div className="flex justify-center items-center min-h-screen">
+    <div className="flex flex-col items-center">
+      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <p className="mt-4 text-muted-foreground">Carregando...</p>
+    </div>
+  </div>
+);
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -38,19 +48,19 @@ function App() {
                   <Route>
                     <Layout>
                       <Switch>
-                        <Route path="/" component={Dashboard} />
-                        <Route path="/dashboard" component={Dashboard} />
-                        <Route path="/projects" component={Projects} />
-                        <Route path="/projects/:id" component={Projects} />
-                        <Route path="/tasks" component={Tasks} />
-                        <Route path="/tasks/:id" component={Tasks} />
-                        <Route path="/clients" component={Clients} />
-                        <Route path="/clients/:id" component={ClientDetail} />
-                        <Route path="/financial" component={Financial} />
-                        <Route path="/calendar" component={Calendar} />
-                        <Route path="/team" component={Team} />
-                        <Route path="/team/user/:id" component={UserProfile} />
-                        <Route path="/settings" component={Settings} />
+                        <Route path="/" component={(props) => <ProtectedRoute component={Dashboard} {...props} />} />
+                        <Route path="/dashboard" component={(props) => <ProtectedRoute component={Dashboard} {...props} />} />
+                        <Route path="/projects" component={(props) => <ProtectedRoute component={Projects} {...props} />} />
+                        <Route path="/projects/:id" component={(props) => <ProtectedRoute component={Projects} {...props} />} />
+                        <Route path="/tasks" component={(props) => <ProtectedRoute component={Tasks} {...props} />} />
+                        <Route path="/tasks/:id" component={(props) => <ProtectedRoute component={Tasks} {...props} />} />
+                        <Route path="/clients" component={(props) => <ProtectedRoute component={Clients} {...props} />} />
+                        <Route path="/clients/:id" component={(props) => <ProtectedRoute component={ClientDetail} {...props} />} />
+                        <Route path="/financial" component={(props) => <ProtectedRoute component={Financial} {...props} />} />
+                        <Route path="/calendar" component={(props) => <ProtectedRoute component={Calendar} {...props} />} />
+                        <Route path="/team" component={(props) => <ProtectedRoute component={Team} {...props} />} />
+                        <Route path="/team/user/:id" component={(props) => <ProtectedRoute component={UserProfile} {...props} />} />
+                        <Route path="/settings" component={(props) => <ProtectedRoute component={Settings} {...props} />} />
                         <Route component={NotFound} />
                       </Switch>
                     </Layout>
