@@ -1,103 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatCurrency, calculatePercentChange } from "@/lib/utils";
+import { formatCurrency, calculatePercentChange, cn } from "@/lib/utils";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { 
-  AreaChart, 
-  BarChart, 
-  Bar, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie
-} from "recharts";
-import { Link, useLocation } from "wouter";
-import { 
+  ChevronRight, 
+  MoreHorizontal,
+  Plus, 
   ArrowUpRight, 
   ArrowDownRight, 
-  ArrowRight, 
   CircleDollarSign, 
   Calendar, 
-  CheckCircle2,
-  AlertCircle,
-  Clock, 
-  Building,
-  Calendar as CalendarIcon,
   User,
-  PlusCircle,
-  FolderOpen,
-  ListTodo,
-  Users
+  Folder,
+  ListChecks,
+  Users,
+  CircleDot
 } from "lucide-react";
-import { MONTHS } from "@/lib/constants";
-import FinancialChart from "@/components/FinancialChart";
-
-// Custom components for dashboard
-const StatCard = ({ 
-  title, 
-  value, 
-  change, 
-  changeText, 
-  icon: Icon, 
-  iconColor, 
-  iconBg 
-}: {
-  title: string;
-  value: string;
-  change: number;
-  changeText?: string;
-  icon: any;
-  iconColor: string;
-  iconBg: string;
-}) => (
-  <Card>
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-          <h2 className="text-3xl font-bold">{value}</h2>
-        </div>
-        <div className={`p-2 rounded-full ${iconBg}`}>
-          <Icon className={`h-6 w-6 ${iconColor}`} />
-        </div>
-      </div>
-      
-      {typeof change !== 'undefined' && (
-        <div className="flex items-center mt-4 text-sm">
-          {change > 0 ? (
-            <div className="flex items-center text-green-600">
-              <ArrowUpRight className="h-4 w-4 mr-1" />
-              <span>+{change}%</span>
-            </div>
-          ) : change < 0 ? (
-            <div className="flex items-center text-red-600">
-              <ArrowDownRight className="h-4 w-4 mr-1" />
-              <span>{change}%</span>
-            </div>
-          ) : (
-            <div className="flex items-center text-gray-500">
-              <ArrowRight className="h-4 w-4 mr-1" />
-              <span>0%</span>
-            </div>
-          )}
-          <span className="text-muted-foreground ml-1.5">{changeText || 'vs período anterior'}</span>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-);
+import { Link } from "wouter";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ClientAvatar } from "@/components/ClientAvatar";
+import { ProjectProgress } from "@/components/ProjectProgress";
 
 export default function Dashboard() {
-  const [period, setPeriod] = useState("Q2 2025");
+  const [period, setPeriod] = useState("Abril 2025");
   const { openProjectForm } = useProjectForm();
   
   const { data: projects } = useQuery({
@@ -116,567 +48,483 @@ export default function Dashboard() {
     queryKey: ['/api/expenses']
   });
   
-  // Removemos o listener de evento desnecessário que pode causar aberturas inadvertidas do formulário
-
+  const { data: clients } = useQuery({
+    queryKey: ['/api/clients']
+  });
+  
   // Calculate dashboard metrics
   const activeProjects = projects?.filter(p => 
     p.status !== 'concluido' && p.status !== 'cancelado'
   ).length || 0;
   
-  const completedProjects = projects?.filter(p => 
-    p.status === 'concluido'
-  ).length || 0;
+  const totalProjects = projects?.length || 0;
   
   const pendingTasks = tasks?.filter(t => 
     !t.completed
   ).length || 0;
   
+  const totalTasks = tasks?.length || 0;
+  
+  // Calculate overdue tasks
+  const overdueTasksCount = tasks?.filter(task => {
+    if (task.completed) return false;
+    if (!task.due_date) return false;
+    const dueDate = new Date(task.due_date);
+    return dueDate < new Date();
+  }).length || 0;
+  
   // Financial calculations
-  const currentQuarterRevenue = financialDocuments?.reduce((sum, doc) => {
-    // Check if document is from current quarter
+  const currentMonthRevenue = financialDocuments?.reduce((sum, doc) => {
+    // Check if document is from current month
     const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
-    if (docDate && docDate.getMonth() >= 3 && docDate.getMonth() <= 5) { // Q2
+    const now = new Date();
+    if (docDate && docDate.getMonth() === now.getMonth() && 
+        docDate.getFullYear() === now.getFullYear()) {
       return sum + (doc.amount || 0);
     }
     return sum;
   }, 0) || 0;
   
-  const previousQuarterRevenue = financialDocuments?.reduce((sum, doc) => {
-    // Check if document is from previous quarter
+  const previousMonthRevenue = financialDocuments?.reduce((sum, doc) => {
+    // Check if document is from previous month
     const docDate = doc.creation_date ? new Date(doc.creation_date) : null;
-    if (docDate && docDate.getMonth() >= 0 && docDate.getMonth() <= 2) { // Q1
+    const now = new Date();
+    let prevMonth = now.getMonth() - 1;
+    let prevYear = now.getFullYear();
+    if (prevMonth < 0) {
+      prevMonth = 11;
+      prevYear--;
+    }
+    if (docDate && docDate.getMonth() === prevMonth && docDate.getFullYear() === prevYear) {
       return sum + (doc.amount || 0);
-    }
-    return sum;
-  }, 0) || 0;
-  
-  const currentQuarterExpenses = expenses?.reduce((sum, exp) => {
-    // Check if expense is from current quarter
-    const expDate = exp.date ? new Date(exp.date) : null;
-    if (expDate && expDate.getMonth() >= 3 && expDate.getMonth() <= 5) { // Q2
-      return sum + (exp.amount || 0);
-    }
-    return sum;
-  }, 0) || 0;
-  
-  const previousQuarterExpenses = expenses?.reduce((sum, exp) => {
-    // Check if expense is from previous quarter
-    const expDate = exp.date ? new Date(exp.date) : null;
-    if (expDate && expDate.getMonth() >= 0 && expDate.getMonth() <= 2) { // Q1
-      return sum + (exp.amount || 0);
     }
     return sum;
   }, 0) || 0;
   
   // Calculate percent changes
-  const revenueChange = calculatePercentChange(currentQuarterRevenue, previousQuarterRevenue);
-  const expensesChange = calculatePercentChange(currentQuarterExpenses, previousQuarterExpenses);
+  const revenueChange = calculatePercentChange(currentMonthRevenue, previousMonthRevenue);
   
-  // Chart data
-  const monthlyData = [
-    { month: 'Jan', revenue: 42000, expenses: 21000 },
-    { month: 'Fev', revenue: 48500, expenses: 22500 },
-    { month: 'Mar', revenue: 51000, expenses: 24000 },
-    { month: 'Abr', revenue: 61500, expenses: 26800 },
-    { month: 'Mai', revenue: 68500, expenses: 28000 },
-    { month: 'Jun', revenue: 80750, expenses: 29500 },
-  ];
+  // Count active clients and new clients this month
+  const activeClients = clients?.length || 0;
+  const newClientsThisMonth = clients?.filter(client => {
+    if (!client.created_at) return false;
+    const createdDate = new Date(client.created_at);
+    const now = new Date();
+    return createdDate.getMonth() === now.getMonth() && 
+           createdDate.getFullYear() === now.getFullYear();
+  }).length || 0;
   
-  const projectData = [
-    { name: 'Banco Azul', value: 34000 },
-    { name: 'Tech Courses', value: 12500 },
-    { name: 'Eco Preserve', value: 28750 },
-    { name: 'Marca X', value: 15000 },
-  ];
+  // Get upcoming tasks sorted by due date (closest first)
+  const upcomingTasks = tasks
+    ?.filter(task => !task.completed)
+    ?.sort((a, b) => {
+      const dateA = a.due_date ? new Date(a.due_date) : new Date(9999, 11, 31);
+      const dateB = b.due_date ? new Date(b.due_date) : new Date(9999, 11, 31);
+      return dateA.getTime() - dateB.getTime();
+    })
+    ?.slice(0, 5) || [];
   
-  const expenseCategories = [
-    { name: 'Equipamentos', value: 32034, percent: 38 },
-    { name: 'Pessoal', value: 25390, percent: 30 },
-    { name: 'Locação', value: 16880, percent: 20 },
-    { name: 'Software', value: 10116, percent: 12 },
-  ];
+  // Get active projects sorted by progress
+  const ongoingProjects = projects
+    ?.filter(p => p.status !== 'concluido' && p.status !== 'cancelado')
+    ?.sort((a, b) => b.progress - a.progress)
+    ?.slice(0, 3) || [];
   
-  const COLORS = ['#5046E5', '#10B981', '#6366F1', '#EF4444', '#F59E0B'];
+  // Get recent clients
+  const recentClients = clients
+    ?.sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    })
+    ?.slice(0, 5) || [];
+  
+  // Financial data by client for the current month
+  const financialByClient = {};
+  if (financialDocuments && projects && clients) {
+    financialDocuments.forEach(doc => {
+      if (doc.client_id && doc.amount) {
+        if (!financialByClient[doc.client_id]) {
+          financialByClient[doc.client_id] = 0;
+        }
+        financialByClient[doc.client_id] += doc.amount;
+      }
+    });
+  }
+  
+  // Calculate profit
+  const currentMonthExpenses = expenses?.reduce((sum, exp) => {
+    // Check if expense is from current month
+    const expDate = exp.date ? new Date(exp.date) : null;
+    const now = new Date();
+    if (expDate && expDate.getMonth() === now.getMonth() && 
+        expDate.getFullYear() === now.getFullYear()) {
+      return sum + (exp.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  const previousMonthExpenses = expenses?.reduce((sum, exp) => {
+    // Check if expense is from previous month
+    const expDate = exp.date ? new Date(exp.date) : null;
+    const now = new Date();
+    let prevMonth = now.getMonth() - 1;
+    let prevYear = now.getFullYear();
+    if (prevMonth < 0) {
+      prevMonth = 11;
+      prevYear--;
+    }
+    if (expDate && expDate.getMonth() === prevMonth && expDate.getFullYear() === prevYear) {
+      return sum + (exp.amount || 0);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  const expensesChange = calculatePercentChange(currentMonthExpenses, previousMonthExpenses);
+  
+  const profit = currentMonthRevenue - currentMonthExpenses;
+  const previousProfit = previousMonthRevenue - previousMonthExpenses;
+  const profitChange = calculatePercentChange(profit, previousProfit);
+  
+  // Priority badges
+  const getPriorityBadge = (priority) => {
+    switch(priority?.toLowerCase()) {
+      case 'baixa':
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600">Baixa</Badge>;
+      case 'media':
+        return <Badge className="bg-amber-500 hover:bg-amber-600">Média</Badge>;
+      case 'alta':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Alta</Badge>;
+      case 'critica':
+        return <Badge className="bg-red-600 hover:bg-red-700">Crítica</Badge>;
+      default:
+        return <Badge variant="outline">Normal</Badge>;
+    }
+  };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral do desempenho financeiro e progresso de projetos</p>
+          <p className="text-muted-foreground">Visão geral da produtora Content Crush</p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <div className="bg-white rounded-md border p-1">
-            <select 
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="text-sm border-none bg-transparent focus:ring-0"
-            >
-              <option value="Q1 2025">Q1 2025</option>
-              <option value="Q2 2025">Q2 2025</option>
-            </select>
+        <div className="flex items-center space-x-3 mt-4 md:mt-0">
+          <div className="bg-background border rounded-md px-3 py-1.5 text-sm font-medium">
+            {period}
           </div>
-          
-          <Button onClick={openProjectForm}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Projeto
+          <Button onClick={openProjectForm} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar
           </Button>
         </div>
       </div>
       
-      {/* Stats Cards */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="dashboard-card">
-          <CardContent className="pt-6">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Projetos Ativos</h3>
-                <div className="flex items-end space-x-2 mt-1">
-                  <span className="text-3xl font-bold">8</span>
-                </div>
-              </div>
-              <div className="bg-indigo-100 rounded-md p-2">
-                <FolderOpen className="h-5 w-5 text-indigo-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-3 text-sm">
-              <div className="flex items-center text-green-600">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+12%</span>
-              </div>
-              <span className="text-muted-foreground ml-1.5">desde o mês passado</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card">
-          <CardContent className="pt-6">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Tarefas Pendentes</h3>
-                <div className="flex items-end space-x-2 mt-1">
-                  <span className="text-3xl font-bold">24</span>
-                </div>
-              </div>
-              <div className="bg-amber-100 rounded-md p-2">
-                <ListTodo className="h-5 w-5 text-amber-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-3 text-sm">
-              <div className="flex items-center text-red-600">
-                <ArrowDownRight className="h-3 w-3 mr-1" />
-                <span>-8%</span>
-              </div>
-              <span className="text-muted-foreground ml-1.5">desde a semana passada</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card">
-          <CardContent className="pt-6">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Clientes Ativos</h3>
-                <div className="flex items-end space-x-2 mt-1">
-                  <span className="text-3xl font-bold">12</span>
-                </div>
-              </div>
-              <div className="bg-green-100 rounded-md p-2">
-                <Users className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-3 text-sm">
-              <div className="flex items-center text-green-600">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+20%</span>
-              </div>
-              <span className="text-muted-foreground ml-1.5">desde o trimestre passado</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card">
-          <CardContent className="pt-6">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Receita Mensal</h3>
-                <div className="flex items-end space-x-2 mt-1">
-                  <span className="text-3xl font-bold">R$ 42.500</span>
-                </div>
-              </div>
-              <div className="bg-blue-100 rounded-md p-2">
-                <CircleDollarSign className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-3 text-sm">
-              <div className="flex items-center text-green-600">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                <span>+15%</span>
-              </div>
-              <span className="text-muted-foreground ml-1.5">comparado ao mês anterior</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Charts */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <FinancialChart 
-          type="area"
-          title="Tendência Mensal"
-          data={monthlyData}
-          dataKeys={['revenue', 'expenses']}
-          xAxisDataKey="month"
-          colors={['#5046E5', '#EF4444']}
-        />
-        
-        <FinancialChart 
-          type="bar"
-          title="Receita por Projeto"
-          data={projectData}
-          dataKeys={['value']}
-          xAxisDataKey="name"
-          colors={['#5046E5']}
-        />
-      </div>
-      
-      {/* Project Performance & Expense Breakdown */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+      {/* KPI Cards */}
+      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Projetos Ativos */}
         <Card>
-          <CardHeader className="pb-2">
+          <CardContent className="p-5">
+            <div className="flex justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Projetos Ativos</p>
+              <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">+12%</Badge>
+            </div>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Desempenho de Projetos</CardTitle>
-              <Button variant="ghost" size="sm" className="h-8 text-xs">
-                Ver todos os projetos
+              <h3 className="text-2xl font-bold">{activeProjects}</h3>
+              <p className="text-xs text-muted-foreground">de {totalProjects} total</p>
+            </div>
+            <Progress className="h-1.5 mt-3 bg-emerald-100" value={(activeProjects / (totalProjects || 1)) * 100} indicatorClassName="bg-emerald-500" />
+          </CardContent>
+        </Card>
+        
+        {/* Tarefas Pendentes */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Tarefas Pendentes</p>
+              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">+5%</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold">{pendingTasks}</h3>
+              <p className="text-xs text-muted-foreground">{overdueTasksCount} atrasadas</p>
+            </div>
+            <Progress className="h-1.5 mt-3 bg-amber-100" value={(pendingTasks / (totalTasks || 1)) * 100} indicatorClassName="bg-amber-500" />
+          </CardContent>
+        </Card>
+        
+        {/* Clientes Ativos */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Clientes Ativos</p>
+              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">+8%</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold">{activeClients}</h3>
+              <p className="text-xs text-muted-foreground">{newClientsThisMonth} novos este mês</p>
+            </div>
+            <Progress className="h-1.5 mt-3 bg-blue-100" value={100} indicatorClassName="bg-blue-600" />
+          </CardContent>
+        </Card>
+        
+        {/* Faturamento Mensal */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">Faturamento Mensal</p>
+              <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">+15%</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold">{formatCurrency(currentMonthRevenue)}</h3>
+              <div className="flex items-center text-sm text-green-600">
+                <span className="text-xs">R$ 6.300</span>
+                <ArrowUpRight className="ml-1 h-3 w-3" />
+              </div>
+            </div>
+            <Progress className="h-1.5 mt-3 bg-purple-100" value={80} indicatorClassName="bg-purple-600" />
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Main Content Grid */}
+      <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
+        {/* Left Column */}
+        <div className="space-y-5">
+          {/* Projetos em Andamento */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">Projetos em Andamento</CardTitle>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {projects?.slice(0, 4).map((project) => (
-                <div key={project.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <StatusBadge status={project.status} small={true} minimal={true} />
-                    <div>
-                      <Link href={`/projects/${project.id}`}>
-                        <p className="font-medium hover:text-primary cursor-pointer">{project.name}</p>
-                      </Link>
-                      <p className="text-sm text-muted-foreground">{project.client_id ? `Cliente #${project.client_id}` : ''}</p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {ongoingProjects.map(project => {
+                const client = clients?.find(c => c.id === project.client_id);
+                return (
+                  <div key={project.id} className="space-y-3">
+                    <div className="flex justify-between">
+                      <div>
+                        <h3 className="font-medium">{project.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {client?.name ? client.name : `Cliente #${project.client_id}`}
+                        </p>
+                      </div>
+                      <StatusBadge status={project.status} />
                     </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(project.budget || 0)}</p>
-                    <div className="flex items-center justify-end text-sm">
-                      <Badge variant={project.progress > 80 ? "success" : project.progress > 40 ? "warning" : "outline"}>
-                        {project.progress}% concluído
-                      </Badge>
+                    
+                    <div className="flex justify-between items-center text-sm">
+                      <div>
+                        <span className="font-medium">Progresso</span>
+                        <span className="text-muted-foreground ml-1">({project.progress}%)</span>
+                      </div>
+                      <span className="font-medium">Prazo: {project.deadline ? format(new Date(project.deadline), 'dd/MM/yyyy') : 'Não definido'}</span>
                     </div>
+                    
+                    <ProjectProgress progress={project.progress} />
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Detalhamento de Despesas</CardTitle>
-            <CardDescription>{formatCurrency(currentQuarterExpenses)}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center mb-2">
-              <ResponsiveContainer width={200} height={200}>
-                <PieChart>
-                  <Pie
-                    data={expenseCategories}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {expenseCategories.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              {expenseCategories.map((category, index) => (
-                <div key={index} className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  ></div>
-                  <div>
-                    <p className="text-sm font-medium">{category.name}</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <span>{formatCurrency(category.value)}</span>
-                      <span className="ml-1">({category.percent}%)</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Tarefas Próximas */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-1">
-        <Card className="dashboard-card">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">Tarefas Próximas</CardTitle>
-              <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="h-8 text-xs text-indigo-600">
-                  Ver todas
+                );
+              })}
+              
+              <Link href="/projects">
+                <Button variant="outline" className="w-full mt-2 text-sm">
+                  Ver todos os projetos
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div>
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Finalizar edição do teaser - Banco Azul</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 2 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
+            </CardContent>
+          </Card>
+          
+          {/* Visão Financeira */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">Visão Financeira</CardTitle>
+              <div className="flex space-x-1">
+                <Button variant="outline" size="sm" className="h-8 text-xs">Semana</Button>
+                <Button variant="secondary" size="sm" className="h-8 text-xs">Mês</Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs">Ano</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Receita</p>
+                  <p className="text-xl font-bold mt-1">{formatCurrency(currentMonthRevenue)}</p>
+                  <div className="flex items-center text-xs text-green-600 mt-1">
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                    <span>{revenueChange}% vs. último mês</span>
                   </div>
                 </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Bruno Silva" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
+                <div>
+                  <p className="text-sm text-muted-foreground">Despesas</p>
+                  <p className="text-xl font-bold mt-1">{formatCurrency(currentMonthExpenses)}</p>
+                  <div className={cn(
+                    "flex items-center text-xs mt-1",
+                    expensesChange > 0 ? "text-red-600" : "text-green-600"
+                  )}>
+                    {expensesChange > 0 ? (
+                      <ArrowUpRight className="h-3 w-3 mr-1" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3 mr-1" />
+                    )}
+                    <span>{Math.abs(expensesChange)}% vs. último mês</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Lucro</p>
+                  <p className="text-xl font-bold mt-1">{formatCurrency(profit)}</p>
+                  <div className="flex items-center text-xs text-green-600 mt-1">
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                    <span>{profitChange}% vs. último mês</span>
+                  </div>
                 </div>
               </div>
-
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              
+              <Separator />
+              
+              <div>
+                <h3 className="font-medium mb-3">Faturamento por Projeto (Abril 2025)</h3>
+                <div className="space-y-3">
+                  {Object.entries(financialByClient).slice(0, 4).map(([clientId, amount], index) => {
+                    const client = clients?.find(c => c.id === parseInt(clientId));
+                    return (
+                      <div key={clientId} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <ClientAvatar client={client} size="sm" className="mr-2" />
+                          <div>
+                            <p className="text-sm font-medium">{client?.name || `Cliente #${clientId}`}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {projects?.filter(p => p.client_id === parseInt(clientId)).length || 0} projetos ativos
+                            </p>
+                          </div>
+                        </div>
+                        <p className="font-medium">{formatCurrency(amount)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <Link href="/financial">
+                  <Button variant="outline" className="w-full mt-4 text-sm">
+                    Ver relatório financeiro completo
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Right Column */}
+        <div className="space-y-5">
+          {/* Tarefas Próximas */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">Tarefas Próximas</CardTitle>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {upcomingTasks.map(task => {
+                const project = projects?.find(p => p.id === task.project_id);
+                const isOverdue = task.due_date && new Date(task.due_date) < new Date();
+                const isToday = task.due_date && 
+                  new Date(task.due_date).toDateString() === new Date().toDateString();
+                
+                return (
+                  <div key={task.id} className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      <CircleDot className={cn(
+                        "h-5 w-5",
+                        isOverdue ? "text-red-500" : 
+                        isToday ? "text-amber-500" : 
+                        "text-muted-foreground"
+                      )} />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium">{task.title}</h3>
+                        {getPriorityBadge(task.priority)}
+                      </div>
+                      {task.due_date && (
+                        <p className={cn(
+                          "text-xs mt-1",
+                          isOverdue ? "text-red-500 font-medium" : 
+                          isToday ? "text-amber-500 font-medium" : 
+                          "text-muted-foreground"
+                        )}>
+                          {isOverdue 
+                            ? `Atrasada: ${format(new Date(task.due_date), "dd/MM/yyyy")}` 
+                            : isToday 
+                              ? `Hoje, ${format(new Date(task.due_date), "HH:mm", { locale: ptBR })}`
+                              : format(new Date(task.due_date), "dd/MM/yyyy")}
+                        </p>
+                      )}
+                      {project && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Projeto: {project.name}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Aprovar storyboard - Documentário Natureza</p>
-                    <p className="text-xs text-red-600 mt-1">Vence hoje</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Alta</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/women/44.jpg" 
-                    alt="Ana Oliveira" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="border-b p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Reunião de pré-produção - Curso Online Tech</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">Baixa</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/67.jpg" 
-                    alt="Carlos Mendes" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 flex-shrink-0 mt-0.5">
-                    <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Revisar orçamento - Projeto Marca X</p>
-                    <p className="text-xs text-muted-foreground mt-1">Vence em 3 dias</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Média</Badge>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-2">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Bruno Silva" 
-                    className="h-6 w-6 rounded-full border-2 border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 flex justify-center">
-                <Button variant="ghost" size="sm" className="text-indigo-600">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar nova tarefa
+                );
+              })}
+              
+              <Link href="/tasks">
+                <Button variant="outline" className="w-full mt-2 text-sm">
+                  Ver todas as tarefas
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Financeiro</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Próximos Pagamentos</h4>
-                  <span className="text-xs text-muted-foreground">Abril 2025</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-green-100 text-green-600 rounded mr-2">
-                        <Building className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Banco Azul</p>
-                        <p className="text-xs text-muted-foreground">Fatura 23</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(18000)}</p>
-                      <p className="text-xs text-muted-foreground">05/04/2025</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
-                        <Building className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Tech Courses Inc.</p>
-                        <p className="text-xs text-muted-foreground">Pagamento Julho</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(12500)}</p>
-                      <p className="text-xs text-muted-foreground">15/04/2025</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Próximas Despesas</h4>
-                  <span className="text-xs text-muted-foreground">Abril 2025</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex">
-                      <div className="p-1.5 bg-red-100 text-red-600 rounded mr-2">
-                        <CircleDollarSign className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Aluguel de Equipamentos</p>
-                        <p className="text-xs text-muted-foreground">20/04/2025</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(3500)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full">
-                <CircleDollarSign className="mr-2 h-4 w-4" />
-                Gerenciar Finanças
+              </Link>
+            </CardContent>
+          </Card>
+          
+          {/* Clientes Recentes */}
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-medium">Clientes Recentes</CardTitle>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Próximas Reuniões</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Hoje, 10:30</h4>
-                  <Badge variant="outline" className="text-xs">1h</Badge>
-                </div>
-                <div className="flex">
-                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-2">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Daily Standup</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <User className="h-3 w-3 mr-1" />
-                      <span>Equipe de Produção</span>
+            </CardHeader>
+            <CardContent className="space-y-0">
+              {recentClients.map((client, index) => {
+                const clientProjects = projects?.filter(p => p.client_id === client.id) || [];
+                const activeClientProjects = clientProjects.filter(p => 
+                  p.status !== 'concluido' && p.status !== 'cancelado'
+                );
+                
+                return (
+                  <div key={client.id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <ClientAvatar client={client} size="sm" className="mr-3" />
+                        <div>
+                          <h3 className="font-medium">{client.name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {activeClientProjects.length} {activeClientProjects.length === 1 ? 'projeto ativo' : 'projetos ativos'}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
+                    {index < recentClients.length - 1 && <Separator className="mt-3" />}
                   </div>
-                </div>
-              </div>
+                );
+              })}
               
-              <div className="space-y-2">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-medium">Amanhã, 14:00</h4>
-                  <Badge variant="outline" className="text-xs">1h 30m</Badge>
-                </div>
-                <div className="flex">
-                  <div className="p-1.5 bg-yellow-100 text-yellow-600 rounded mr-2">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Revisão do Projeto</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Building className="h-3 w-3 mr-1" />
-                      <span>Marca X</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                Ver Calendário
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <Link href="/clients">
+                <Button variant="outline" className="w-full mt-4 text-sm">
+                  Ver todos os clientes
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
