@@ -8,6 +8,7 @@ import * as LucideIcons from "lucide-react";
 import { ProjectProgress } from "@/components/ProjectProgress";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
+import logoImage from "@/assets/CNTN_CRUSH_no_bg.png";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
@@ -93,9 +94,11 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     <aside className="sidebar">
       {/* Logo */}
       <div className="p-4 flex items-center border-b border-gray-200">
-        <div className="bg-indigo-600 text-white p-2 rounded-md mr-3">
-          <DynamicIcon name="video" />
-        </div>
+        <img 
+          src={logoImage} 
+          alt="Content Crush Logo" 
+          className="h-8 mr-2 object-contain" 
+        />
         <span className="font-semibold text-gray-800">Content Crush</span>
       </div>
       

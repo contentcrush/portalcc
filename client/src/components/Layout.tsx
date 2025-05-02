@@ -95,47 +95,25 @@ export default function Layout({ children }: LayoutProps) {
               </Button>
             )}
 
+            {/* Logo Content Crush */}
+            <div className="flex items-center">
+              <img 
+                src={logoImage} 
+                alt="Content Crush Logo" 
+                className="h-8 object-contain" 
+              />
+            </div>
+
             {/* Search bar */}
             <div className="relative flex-1 max-w-2xl mx-4">
               <SearchBar />
             </div>
 
-            {/* User navigation */}
-            <div className="flex items-center space-x-4">
+            {/* Notification button */}
+            <div className="flex items-center">
               <Button variant="ghost" size="icon" className="text-gray-500">
                 <Bell className="h-5 w-5" />
               </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                      {getUserInitials()}
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-                  <DropdownMenuLabel className="text-xs text-gray-500 font-normal">{user.email}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    <span>Perfil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Configurações</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleLogout}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </header>
