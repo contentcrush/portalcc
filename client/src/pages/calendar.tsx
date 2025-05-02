@@ -24,11 +24,14 @@ import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin, RefreshCw } from 'lucide-react';
+import { initWebSocket, onWebSocketMessage } from '@/lib/socket';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
   // Buscar eventos
@@ -64,6 +67,34 @@ export default function CalendarPage() {
     }
   });
 
+  // Efeito para escutar eventos de calendário via WebSocket
+  useEffect(() => {
+    // Inicializar WebSocket se ainda não estiver conectado
+    initWebSocket().catch(error => {
+      console.error('Erro ao inicializar WebSocket na página de calendário:', error);
+    });
+    
+    // Registrar listener para eventos do tipo "calendar_updated"
+    const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
+      console.log('Recebida notificação de atualização do calendário:', data);
+      
+      // Atualizar dados do calendário
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      
+      // Notificar o usuário (optional)
+      toast({
+        title: 'Calendário atualizado',
+        description: data.message || 'O calendário foi atualizado automaticamente',
+        variant: 'default',
+      });
+    });
+    
+    // Limpar listener quando o componente for desmontado
+    return () => {
+      unregisterCalendarUpdateHandler();
+    };
+  }, [queryClient, toast]);
+
   // Filtragem de eventos com base no filtro selecionado
   const filteredEvents = React.useMemo(() => {
     if (!events) return [];
@@ -79,7 +110,7 @@ export default function CalendarPage() {
     } else if (selectedFilter === 'appointments') {
       return events.filter(event => event.type === 'externo');
     } else if (selectedFilter === 'reminders') {
-      return events.filter(event => event.type === 'financeiro' || event.type === 'entrega');
+      return events.filter(event => event.type === 'financeiro' || event.type === 'entrega' || event.type === 'despesa');
     }
     
     return events;
