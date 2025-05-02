@@ -95,15 +95,6 @@ export default function Layout({ children }: LayoutProps) {
               </Button>
             )}
 
-            {/* Logo Content Crush */}
-            <div className="flex items-center">
-              <img 
-                src={logoImage} 
-                alt="Content Crush Logo" 
-                className="h-8 object-contain" 
-              />
-            </div>
-
             {/* Search bar */}
             <div className="relative flex-1 max-w-2xl mx-4">
               <SearchBar />
