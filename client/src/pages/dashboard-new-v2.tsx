@@ -137,6 +137,10 @@ export default function Dashboard() {
     queryKey: ['/api/financial-documents']
   });
   
+  const { data: expenses } = useQuery({
+    queryKey: ['/api/expenses']
+  });
+  
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
   });
