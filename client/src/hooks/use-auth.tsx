@@ -90,8 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/auth/logout");
-      // Remover o token do localStorage
-      localStorage.removeItem("authToken");
+      // Os cookies são removidos pelo servidor na resposta
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
@@ -116,10 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Se tivermos dados de autenticação, armazenar o token
-  if (authData?.token) {
-    localStorage.setItem("authToken", authData.token);
-  }
+  // Os tokens são gerenciados automaticamente via cookies HTTP-only pelo servidor
 
   return (
     <AuthContext.Provider

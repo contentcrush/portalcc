@@ -10,25 +10,14 @@ async function throwIfResNotOk(res: Response) {
 // Objeto global para armazenar listeners de websocket para invalidação de cache
 export const cacheInvalidationListeners: { [key: string]: (() => void)[] } = {};
 
-// Função para obter o token de autenticação
-function getAuthToken(): string | null {
-  return localStorage.getItem("authToken");
-}
-
-// Adicionar o token de autenticação às requisições
+// Adicionar os cabeçalhos necessários às requisições
 function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
   const headers: HeadersInit = hasContentType ? { "Content-Type": "application/json" } : {};
-  const token = getAuthToken();
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
   return headers;
 }
 
 // Função para renovar o token expirado
-async function refreshToken(): Promise<string | null> {
+async function refreshToken(): Promise<boolean> {
   try {
     const res = await fetch('/api/auth/refresh', {
       method: 'POST',
@@ -36,18 +25,15 @@ async function refreshToken(): Promise<string | null> {
     });
     
     if (!res.ok) {
-      // Se o refresh falhar, limpamos o token e redirecionamos para o login
-      localStorage.removeItem('authToken');
-      return null;
+      // Se o refresh falhar, redirecionamos para o login
+      return false;
     }
     
-    const data = await res.json();
-    localStorage.setItem('authToken', data.token);
-    return data.token;
+    // Se for bem-sucedido, o novo token estará nos cookies
+    return true;
   } catch (error) {
     console.error('Error refreshing token:', error);
-    localStorage.removeItem('authToken');
-    return null;
+    return false;
   }
 }
 
@@ -78,16 +64,13 @@ export async function apiRequest(
       const responseText = await res.text();
       if (responseText.includes('Token inválido ou expirado')) {
         // Tentar renovar o token
-        const newToken = await refreshToken();
+        const refreshSuccessful = await refreshToken();
         
-        if (newToken) {
-          // Retentar a requisição com o novo token
+        if (refreshSuccessful) {
+          // Retentar a requisição após renovar o token
           res = await fetch(url, {
             method,
-            headers: {
-              ...getAuthHeaders(!!data),
-              'Authorization': `Bearer ${newToken}`
-            },
+            headers: getAuthHeaders(!!data),
             body: data ? JSON.stringify(data) : undefined,
             credentials: "include",
           });
@@ -130,16 +113,13 @@ export const getQueryFn: <T>(options?: {
         const responseText = await res.text();
         if (responseText.includes('Token inválido ou expirado')) {
           // Tentar renovar o token
-          const newToken = await refreshToken();
+          const refreshSuccessful = await refreshToken();
           
-          if (newToken) {
-            // Retentar a query com o novo token
+          if (refreshSuccessful) {
+            // Retentar a query após renovar o token
             res = await fetch(queryKey[0] as string, {
               credentials: "include",
-              headers: {
-                ...getAuthHeaders(),
-                'Authorization': `Bearer ${newToken}`
-              }
+              headers: getAuthHeaders()
             });
           } else {
             // Se não conseguimos renovar, tratamos de acordo com unauthorizedBehavior
