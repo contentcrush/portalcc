@@ -553,6 +553,9 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
   try {
     console.log('[Automação] Sincronizando eventos de calendário para registros financeiros...');
     
+    // Import das funções de sincronização financeira
+    const { syncFinancialDocumentToCalendar, syncExpenseToCalendar } = await import('./utils/calendarSync');
+    
     // Busca documentos financeiros não pagos e com data de vencimento futura
     const financialDocs = await db
       .select()
@@ -561,6 +564,17 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
         and(
           eq(financialDocuments.paid, false),
           gte(financialDocuments.due_date, new Date())
+        )
+      );
+    
+    // Busca despesas não pagas e com data futura
+    const expensesList = await db
+      .select()
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.paid, false),
+          gte(expenses.date, new Date())
         )
       );
     
@@ -688,9 +702,19 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
       }
     }
 
+    // Sincronizar eventos de despesas
+    for (const expense of expensesList) {
+      // Utiliza a função especializada para sincronizar despesas ao calendário
+      const event = await syncExpenseToCalendar(expense, 1); // 1 = ID do sistema
+      if (event) {
+        eventsCreated++;
+        console.log(`[Automação] Evento de despesa criado/atualizado para despesa #${expense.id}: ${format(expense.date, 'dd/MM/yyyy', { locale: ptBR })}`);
+      }
+    }
+
     return {
       success: true,
-      message: `${eventsCreated} eventos financeiros sincronizados com sucesso`,
+      message: `${eventsCreated} eventos financeiros e de despesas sincronizados com sucesso`,
       count: eventsCreated
     };
   } catch (error: any) {
