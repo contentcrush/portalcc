@@ -83,7 +83,20 @@ export function initWebSocket(): Promise<WebSocket> {
 
       ws.onmessage = (event) => {
         try {
+          // Verifica se o evento tem dados e se não é uma string vazia
+          if (!event.data || (typeof event.data === 'string' && event.data.trim() === '')) {
+            console.warn('Mensagem WebSocket recebida vazia, ignorando');
+            return;
+          }
+
           const data = JSON.parse(event.data);
+          
+          // Verificar se o objeto data tem propriedades
+          if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+            console.warn('Mensagem WebSocket recebida como objeto vazio, ignorando');
+            return;
+          }
+          
           console.log('Mensagem WebSocket recebida:', data);
 
           // Despachar para os handlers apropriados com mais opções de propriedades
@@ -99,19 +112,31 @@ export function initWebSocket(): Promise<WebSocket> {
             messageType = data.action;
           }
           
+          // Se não encontramos um tipo válido, não prosseguir
+          if (!messageType) {
+            console.warn('Mensagem WebSocket sem tipo definido:', data);
+            return;
+          }
+          
           // Se encontramos um tipo de mensagem e temos handlers para ele
-          if (messageType && messageHandlers[messageType]) {
+          if (messageHandlers[messageType]) {
             console.log(`Processando mensagem do tipo: ${messageType}`);
             messageHandlers[messageType].forEach(handler => handler(data));
           } else {
             // Se não encontramos o tipo ou não temos handlers, procurar correspondência parcial
             // Isso é útil quando o servidor envia 'financial_updated' mas o cliente espera apenas 'financial'
+            let matchFound = false;
             Object.keys(messageHandlers).forEach(handlerType => {
-              if (messageType && messageType.includes(handlerType)) {
+              if (messageType.includes(handlerType)) {
                 console.log(`Correspondência parcial: '${messageType}' corresponde a '${handlerType}'`);
                 messageHandlers[handlerType].forEach(handler => handler(data));
+                matchFound = true;
               }
             });
+            
+            if (!matchFound) {
+              console.log(`Nenhum handler encontrado para mensagem do tipo: ${messageType}`);
+            }
           }
         } catch (error) {
           console.error('Erro ao processar mensagem WebSocket:', error);
@@ -424,7 +449,9 @@ export function onUpdatedProjectComment(callback: (comment: any) => void): () =>
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('updated-project-comment', callback);
+    if (socket) {
+      socket.off('updated-project-comment', callback);
+    }
   };
 }
 
@@ -441,7 +468,9 @@ export function onDeletedProjectComment(callback: (data: { id: number }) => void
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('deleted-project-comment', callback);
+    if (socket) {
+      socket.off('deleted-project-comment', callback);
+    }
   };
 }
 
@@ -458,7 +487,9 @@ export function onNewProjectCommentReaction(callback: (data: any) => void): () =
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('new-project-comment-reaction', callback);
+    if (socket) {
+      socket.off('new-project-comment-reaction', callback);
+    }
   };
 }
 
@@ -475,7 +506,9 @@ export function onDeletedProjectCommentReaction(callback: (data: { id: number, c
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('deleted-project-comment-reaction', callback);
+    if (socket) {
+      socket.off('deleted-project-comment-reaction', callback);
+    }
   };
 }
 

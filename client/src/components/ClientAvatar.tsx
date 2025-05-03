@@ -46,7 +46,10 @@ export function ClientAvatar({ name, logoUrl, client_id, className = "", size = 
     setError(false);
     
     if (!logo || typeof logo !== 'string' || !logo.trim()) {
-      console.log(`ClientAvatar: Sem logo definido para "${clientName}"`);
+      // Reduza o log excessivo
+      if (clientName) {
+        console.debug(`ClientAvatar: Sem logo definido para "${clientName}"`);
+      }
       setValidLogo(null);
       return;
     }
@@ -56,10 +59,13 @@ export function ClientAvatar({ name, logoUrl, client_id, className = "", size = 
     if (trimmedLogo.startsWith('data:image/') || 
         trimmedLogo.startsWith('http://') || 
         trimmedLogo.startsWith('https://')) {
-      console.log(`ClientAvatar: Logo válido encontrado para "${clientName}"`);
+      // Reduza o log excessivo
+      if (clientName) {
+        console.debug(`ClientAvatar: Logo válido encontrado para "${clientName}"`);
+      }
       setValidLogo(trimmedLogo);
     } else {
-      console.warn(`ClientAvatar: Formato de URL de logo inválido para "${clientName}"`);
+      console.warn(`ClientAvatar: Formato de URL de logo inválido para "${clientName || 'cliente desconhecido'}"`);
       setValidLogo(null);
     }
   };
