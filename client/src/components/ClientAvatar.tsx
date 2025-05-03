@@ -18,17 +18,20 @@ export function ClientAvatar({ name, logoUrl, client_id, className = "", size = 
   
   // Buscar dados do cliente se um ID for fornecido
   const { data: clientData } = useQuery({
-    queryKey: client_id ? [`/api/clients/${client_id}`] : null,
+    queryKey: client_id ? [`/api/clients/${client_id}`] : ['no-client'],
     enabled: !!client_id
   });
   
   // Atualizar dados do cliente quando estiverem disponíveis
   useEffect(() => {
-    if (clientData) {
-      setClientName(clientData.name || clientData.shortName || "");
+    if (clientData && typeof clientData === 'object') {
+      // Verificar se os campos necessários existem antes de acessá-los
+      const name = 'name' in clientData ? clientData.name as string : '';
+      const shortName = 'shortName' in clientData ? clientData.shortName as string : '';
+      setClientName(name || shortName || "");
       
-      if (clientData.logo) {
-        validateLogo(clientData.logo, clientData.name);
+      if ('logo' in clientData && clientData.logo) {
+        validateLogo(clientData.logo as string, name);
       }
     }
   }, [clientData]);

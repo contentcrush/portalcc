@@ -75,19 +75,80 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   // Inicializar conexões quando o componente montar
   useEffect(() => {
     let mounted = true;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     
-    // Iniciar WebSocket
-    initWebSocket()
-      .then(ws => {
-        if (mounted) {
+    // Função para iniciar ou reiniciar o WebSocket
+    const connectWebSocket = () => {
+      if (!mounted) return;
+      
+      console.log('Tentativa de conexão WebSocket via SocketContext...');
+      
+      initWebSocket()
+        .then(ws => {
+          if (!mounted) return;
+          
           setWebSocket(ws);
           setIsConnected(true);
           console.log('WebSocket conectado com sucesso via SocketContext');
-        }
-      })
-      .catch(error => {
-        console.error('Erro ao conectar WebSocket via SocketContext:', error);
-      });
+          
+          // Monitorar estado da conexão
+          const checkConnectionInterval = setInterval(() => {
+            if (!mounted) {
+              clearInterval(checkConnectionInterval);
+              return;
+            }
+            
+            if (ws.readyState !== WebSocket.OPEN) {
+              console.warn('Conexão WebSocket não está aberta, readyState:', ws.readyState);
+              setIsConnected(false);
+              
+              // Se a conexão foi fechada ou está com erro, tentar reconectar
+              if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                clearInterval(checkConnectionInterval);
+                
+                // Evitar múltiplas tentativas simultâneas
+                if (reconnectTimeout) {
+                  clearTimeout(reconnectTimeout);
+                }
+                
+                // Agendar nova tentativa após um atraso
+                const delay = 2000 + Math.random() * 3000;
+                reconnectTimeout = setTimeout(() => {
+                  console.log(`Tentando reconectar WebSocket após ${Math.round(delay/1000)}s...`);
+                  connectWebSocket();
+                }, delay);
+              }
+            } else if (!isConnected) {
+              // Atualizar estado se a conexão está aberta mas o estado não reflete isso
+              setIsConnected(true);
+            }
+          }, 5000); // Verificar a cada 5 segundos
+          
+          // Limpar intervalo quando o componente for desmontado
+          return () => {
+            clearInterval(checkConnectionInterval);
+          };
+        })
+        .catch(error => {
+          console.error('Erro ao conectar WebSocket via SocketContext:', error);
+          setIsConnected(false);
+          
+          // Tentar reconectar após um atraso
+          if (mounted) {
+            const delay = 3000 + Math.random() * 4000; // Usar delay maior para erros
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+            }
+            reconnectTimeout = setTimeout(() => {
+              console.log(`Tentando reconectar WebSocket após falha (${Math.round(delay/1000)}s)...`);
+              connectWebSocket();
+            }, delay);
+          }
+        });
+    };
+    
+    // Iniciar conexão
+    connectWebSocket();
       
     // Iniciar Socket.IO (passando o token se o usuário estiver autenticado)
     if (user) {
@@ -149,13 +210,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // Limpar conexões quando o componente desmontar
     return () => {
       mounted = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       unregisterNotifHandler();
       unregisterFinancialHandler();
       unregisterCalendarHandler();
       unregisterOldFinancialHandler();
       closeConnections();
     };
-  }, [user, toast]);
+  }, [user, toast, isConnected]);
   
   // Reconectar Socket.IO quando o usuário mudar
   useEffect(() => {
@@ -214,10 +278,19 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     },
     addProjectCommentReply: (projectId: number, comment: string, parentId: number) => {
-      if (user) {
-        addProjectCommentReply(projectId, user.id, comment, parentId);
+      if (user && socketIo) {
+        if (socketIo.connected) {
+          socketIo.emit('project-comment-reply', {
+            projectId,
+            userId: user.id,
+            comment,
+            parentId
+          });
+        } else {
+          console.warn('Socket.IO não está conectado para adicionar resposta a comentário');
+        }
       } else {
-        console.warn('Usuário não autenticado para adicionar resposta a comentário');
+        console.warn('Usuário não autenticado ou Socket.IO não inicializado para adicionar resposta a comentário');
       }
     },
     registerProjectCommentListener: (callback: (comment: any) => void) => onNewProjectComment(callback),
