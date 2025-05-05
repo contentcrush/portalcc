@@ -694,7 +694,7 @@ export default function Clients() {
       {sortedClients && sortedClients.length > 0 && viewMode === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {sortedClients.map(client => (
-            <Card key={client.id} className="group overflow-hidden border border-border/50 transition-all relative">
+            <Card key={client.id} className="group overflow-hidden border border-border/50 hover:border-primary/30 transition-all relative">
               <Link href={`/clients/${client.id}`} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Ver detalhes de ${client.name}`}></Link>
               
               <div className="absolute top-2 right-2 z-20">
@@ -730,18 +730,6 @@ export default function Clients() {
                 </DropdownMenu>
               </div>
               
-              <div className="absolute right-0 bottom-0 z-20">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="rounded-tl-md rounded-br-none rounded-tr-none bg-primary/10 hover:bg-primary/20 text-primary text-xs"
-                  onClick={() => navigate(`/clients/${client.id}`)}
-                >
-                  <FileText className="h-3.5 w-3.5 mr-1" />
-                  Detalhes
-                </Button>
-              </div>
-              
               <CardHeader className="p-4 pb-0 group-hover:bg-muted/10 transition-colors">
                 <div className="flex items-start gap-4">
                   <ClientAvatar 
@@ -751,9 +739,11 @@ export default function Clients() {
                     className="mt-1 relative z-20"
                   />
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base font-medium truncate group-hover:text-primary transition-colors">
-                      {client.name}
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base font-medium truncate group-hover:text-primary transition-colors">
+                        {client.name}
+                      </CardTitle>
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs relative z-20">
                         {client.type}
@@ -852,29 +842,43 @@ export default function Clients() {
               
               <Separator />
               
-              <CardFooter className="p-4 bg-muted/20 flex justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">
-                    {getClientProjectsCount(client.id)} {getClientProjectsCount(client.id) === 1 ? 'projeto' : 'projetos'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1.5">
-                  <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {formatCurrency(getClientRevenue(client.id))}
-                  </span>
-                </div>
-                
-                {client.since && (
+              <CardFooter className="p-4 bg-muted/20 flex flex-col gap-3">
+                <div className="flex justify-between gap-2 w-full">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(client.since)}
+                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm">
+                      {getClientProjectsCount(client.id)} {getClientProjectsCount(client.id) === 1 ? 'projeto' : 'projetos'}
                     </span>
                   </div>
-                )}
+                  
+                  <div className="flex items-center gap-1.5">
+                    <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {formatCurrency(getClientRevenue(client.id))}
+                    </span>
+                  </div>
+                  
+                  {client.since && (
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {formatDate(client.since)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="w-full">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="w-full bg-white/50 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all relative z-20"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-1.5" />
+                    Ver detalhes completos
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           ))}
