@@ -51,17 +51,17 @@ export default function SearchBar() {
   };
 
   // Filter results based on search query
-  const filteredProjects = projects?.filter(project => 
+  const filteredProjects = Array.isArray(projects) ? projects.filter(project => 
     project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
   
-  const filteredTasks = tasks?.filter(task => 
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => 
     task.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
   
-  const filteredClients = clients?.filter(client => 
+  const filteredClients = Array.isArray(clients) ? clients.filter(client => 
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
 
   return (
     <>

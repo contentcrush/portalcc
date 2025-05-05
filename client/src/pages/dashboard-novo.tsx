@@ -109,12 +109,12 @@ export default function DashboardNovo() {
   });
   
   // Filtrar projetos ativos (não concluídos ou cancelados)
-  const activeProjects = projects.filter((p: any) => 
+  const activeProjects = Array.isArray(projects) ? projects.filter((p: any) => 
     p.status !== 'concluido' && p.status !== 'cancelado'
-  );
+  ) : [];
   
   // Filtrar tarefas pendentes
-  const pendingTasks = tasks.filter((t: any) => !t.completed);
+  const pendingTasks = Array.isArray(tasks) ? tasks.filter((t: any) => !t.completed) : [];
   const overdueTasks = pendingTasks.filter((t: any) => {
     if (!t.due_date) return false;
     const dueDate = new Date(t.due_date);
@@ -123,7 +123,7 @@ export default function DashboardNovo() {
   
   // Clientes ativos (com projetos ativos)
   const projectClientIds = new Set(activeProjects.map((p: any) => p.client_id).filter(Boolean));
-  const activeClients = clients.filter((c: any) => projectClientIds.has(c.id));
+  const activeClients = Array.isArray(clients) ? clients.filter((c: any) => projectClientIds.has(c.id)) : [];
   
   // Configurações de período
   const currentMonth = today.getMonth();
@@ -224,38 +224,42 @@ export default function DashboardNovo() {
   };
   
   // Receitas (financialDocuments)
-  const currentPeriodIncome = financialDocuments
+  const currentPeriodIncome = Array.isArray(financialDocuments) ? financialDocuments
     .filter((doc: any) => {
+      if (!doc || !doc.due_date && !doc.issue_date) return false;
       const date = new Date(doc.due_date || doc.issue_date);
       return isDateInPeriod(date, periodInfo.current) && 
              doc.type === 'invoice' &&
              (doc.status === 'pago' || doc.status === 'pendente');
     })
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) : 0;
   
-  const previousPeriodIncome = financialDocuments
+  const previousPeriodIncome = Array.isArray(financialDocuments) ? financialDocuments
     .filter((doc: any) => {
+      if (!doc || !doc.due_date && !doc.issue_date) return false;
       const date = new Date(doc.due_date || doc.issue_date);
       return isDateInPeriod(date, periodInfo.previous) && 
              doc.type === 'invoice' &&
              (doc.status === 'pago' || doc.status === 'pendente');
     })
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) : 0;
   
   // Despesas
-  const currentPeriodExpenses = expenses
+  const currentPeriodExpenses = Array.isArray(expenses) ? expenses
     .filter((exp: any) => {
+      if (!exp || !exp.date) return false;
       const date = new Date(exp.date);
       return isDateInPeriod(date, periodInfo.current);
     })
-    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) : 0;
   
-  const previousPeriodExpenses = expenses
+  const previousPeriodExpenses = Array.isArray(expenses) ? expenses
     .filter((exp: any) => {
+      if (!exp || !exp.date) return false;
       const date = new Date(exp.date);
       return isDateInPeriod(date, periodInfo.previous);
     })
-    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) : 0;
   
   // Lucro
   const currentPeriodProfit = currentPeriodIncome - currentPeriodExpenses;
@@ -272,14 +276,15 @@ export default function DashboardNovo() {
   const profitPercentChange = calculatePercentChange(currentPeriodProfit, previousPeriodProfit);
   
   // Calcular faturamento por projeto no período atual
-  const projectIncome = projects.map((project: any) => {
-    const projectDocs = financialDocuments.filter((doc: any) => {
+  const projectIncome = Array.isArray(projects) ? projects.map((project: any) => {
+    const projectDocs = Array.isArray(financialDocuments) ? financialDocuments.filter((doc: any) => {
+      if (!doc || !doc.due_date && !doc.issue_date) return false;
       const date = new Date(doc.due_date || doc.issue_date);
       return doc.project_id === project.id && 
              isDateInPeriod(date, periodInfo.current) &&
              doc.type === 'invoice' &&
              (doc.status === 'pago' || doc.status === 'pendente');
-    });
+    }) : [];
     
     const income = projectDocs.reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
@@ -293,7 +298,7 @@ export default function DashboardNovo() {
   })
   .filter((p: any) => p.income > 0)
   .sort((a: any, b: any) => b.income - a.income)
-  .slice(0, 4);
+  .slice(0, 4) : [];
   
   // Dados para tarefas próximas
   const upcomingTasks = [...(pendingTasks || [])]
