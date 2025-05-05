@@ -2476,41 +2476,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ 
     server: httpServer, 
     path: '/ws',
+    // Configuração simplificada para maior compatibilidade
     verifyClient: (info, cb) => {
-      // Verificar se há token na URL
-      const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
-      const token = url.searchParams.get('token');
-      
-      console.log('Verificando token WebSocket:', token ? 'presente' : 'ausente');
-      
-      // Se não há token, aceitar a conexão mas não autenticar
-      if (!token) {
-        console.log('Conexão WebSocket sem autenticação permitida');
-        // Permitir conexão não autenticada mas marcar como tal
-        return cb(true);
-      }
-      
       try {
-        // Verificar token (usando função de auth.ts)
-        const { JWT_SECRET } = process.env;
-        const jwt = require('jsonwebtoken');
+        // Verificar se há token na URL
+        const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token');
         
-        // Verificar o token
-        jwt.verify(token, JWT_SECRET, (err: Error | null, decoded: any) => {
-          if (err) {
-            console.error('Token WebSocket inválido:', err.message);
-            // Aceitar conexão mas não como autenticada
-            return cb(true);
-          }
-          
-          console.log(`WebSocket autenticado para usuário ID: ${decoded.userId}`);
-          // Salvar informações do usuário no objeto info para usar depois
-          info.req.user = decoded;
+        console.log('Verificando token WebSocket:', token ? 'presente' : 'ausente');
+        
+        // Se não há token, aceitar a conexão mas não autenticar
+        if (!token) {
+          console.log('Conexão WebSocket sem autenticação permitida');
+          // Permitir conexão não autenticada
           return cb(true);
-        });
+        }
+        
+        try {
+          // Verificar token (usando função de auth.ts)
+          const { JWT_SECRET } = process.env;
+          const jwt = require('jsonwebtoken');
+          
+          // Verificar o token
+          jwt.verify(token, JWT_SECRET, (err: Error | null, decoded: any) => {
+            if (err) {
+              console.error('Token WebSocket inválido:', err.message);
+              // Aceitar conexão sem autenticação
+              return cb(true);
+            }
+            
+            console.log(`WebSocket autenticado para usuário ID: ${decoded.userId}`);
+            // Salvar informações do usuário para uso posterior
+            (info.req as any).authenticatedUser = decoded;
+            return cb(true);
+          });
+        } catch (error) {
+          console.error('Erro ao verificar token WebSocket:', error);
+          // Em caso de erro, permitir conexão sem autenticação 
+          return cb(true);
+        }
       } catch (error) {
-        console.error('Erro ao verificar token WebSocket:', error);
-        // Em caso de erro, permitir conexão sem autenticação 
+        console.error('Erro na verificação do cliente WebSocket:', error);
+        // Permitir conexão em caso de erro para evitar problemas
         return cb(true);
       }
     }
@@ -2518,7 +2525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   wss.on('connection', (ws, req) => {
     // Verificar se o usuário está autenticado a partir da verificação anterior
-    const user = (req as any).user;
+    const user = (req as any).authenticatedUser;
     if (user) {
       console.log(`Nova conexão WebSocket autenticada para usuário ID: ${user.userId}`);
       // Atribuir usuário ao objeto WebSocket para identificação futura
