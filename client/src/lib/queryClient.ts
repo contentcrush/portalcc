@@ -36,31 +36,75 @@ function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
   return headers;
 }
 
+// Detectar se é um dispositivo móvel
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         window.innerWidth < 768;
+}
+
 // Função para renovar o token expirado
 async function refreshToken(): Promise<boolean> {
   try {
     console.log('Tentando renovar token...');
-    const res = await fetch('/api/auth/refresh', {
+    
+    // Escolher o endpoint adequado com base no tipo de dispositivo
+    const endpoint = isMobileDevice() 
+      ? '/api/auth/mobile/refresh' 
+      : '/api/auth/refresh';
+    
+    console.log(`Usando endpoint para renovação: ${endpoint}`);
+    
+    // Para dispositivos móveis, enviamos o refreshToken no corpo
+    const refreshTokenFromStorage = localStorage.getItem('refresh_token');
+    const body = isMobileDevice() && refreshTokenFromStorage ? 
+      { refreshToken: refreshTokenFromStorage } : undefined;
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
       credentials: 'include',
-      headers: getAuthHeaders(), // Enviar token atual se existir
+      headers: {
+        ...getAuthHeaders(),
+        ...(body ? { 'Content-Type': 'application/json' } : {})
+      },
+      ...(body ? { body: JSON.stringify(body) } : {})
     });
     
     if (!res.ok) {
       console.log('Falha ao renovar token:', res.status);
       // Se o refresh falhar, limpamos o token em memória
       setAuthToken(null);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       return false;
     }
     
     // Se for bem-sucedido, extraímos o novo token da resposta
     try {
       const data = await res.json();
-      if (data.token) {
-        console.log('Token renovado com sucesso');
-        // Salvar o novo token em memória
-        setAuthToken(data.token);
-        return true;
+      
+      if (isMobileDevice()) {
+        // Formato de resposta móvel tem accessToken
+        if (data.accessToken) {
+          console.log('Token renovado com sucesso (mobile)');
+          setAuthToken(data.accessToken);
+          
+          // Atualizar também o refresh token armazenado
+          if (data.refreshToken) {
+            localStorage.setItem('refresh_token', data.refreshToken);
+          }
+          
+          // Atualizar o token para WebSocket também
+          localStorage.setItem('access_token', data.accessToken);
+          return true;
+        }
+      } else {
+        // Formato de resposta tradicional tem token
+        if (data.token) {
+          console.log('Token renovado com sucesso');
+          setAuthToken(data.token);
+          localStorage.setItem('access_token', data.token);
+          return true;
+        }
       }
     } catch (e) {
       console.error('Erro ao processar resposta de renovação de token:', e);
@@ -70,6 +114,8 @@ async function refreshToken(): Promise<boolean> {
   } catch (error) {
     console.error('Erro ao renovar token:', error);
     setAuthToken(null);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     return false;
   }
 }

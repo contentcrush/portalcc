@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
+import { setupMobileAuth } from "./mobile-auth";
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
@@ -18,8 +19,11 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configurar autenticação
+  // Configurar autenticação tradicional
   setupAuth(app);
+  
+  // Configurar autenticação móvel
+  setupMobileAuth(app);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {

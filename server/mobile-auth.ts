@@ -2,9 +2,10 @@ import { Request, Response, Express } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { db } from './db';
-import { users, refreshTokens } from '../shared/schema';
+import { users, refreshTokens, insertUserSchema } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { hashPassword, generateAccessToken, generateRefreshToken, saveRefreshToken } from './auth';
+import { z } from 'zod';
 
 // Definir secrets reais em variáveis de ambiente para produção
 const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-jwt-secret-key-2025';
@@ -172,6 +173,130 @@ export function setupMobileAuth(app: Express) {
     } catch (error) {
       console.error('[Mobile Auth] Erro ao atualizar token:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // Endpoint para registro de usuário via dispositivo móvel
+  app.post('/api/auth/mobile/register', async (req: Request, res: Response) => {
+    try {
+      console.log('[Mobile Auth] Tentativa de registro com dados:', { ...req.body, password: '***' });
+      
+      // Validar dados usando schema Zod
+      try {
+        const userData = insertUserSchema.parse(req.body);
+        console.log('[Mobile Auth] Dados validados para registro');
+        
+        // Verificar se username ou email já existem
+        const existingUser = await db.select()
+          .from(users)
+          .where(
+            sql`${users.username} = ${userData.username} OR ${users.email} = ${userData.email}`
+          );
+        
+        if (existingUser.length > 0) {
+          console.log('[Mobile Auth] Usuário ou email já existem');
+          return res.status(400).json({ 
+            message: 'Nome de usuário ou email já estão em uso' 
+          });
+        }
+        
+        // Hash da senha
+        const hashedPassword = await hashPassword(userData.password);
+        
+        // Preparar dados para inserção
+        const newUserData = {
+          ...userData,
+          password: hashedPassword,
+          created_at: new Date(),
+          last_login: new Date(),
+          is_active: true, // Usuários novos são ativados por padrão
+          role: 'viewer' // Papel padrão para novos usuários registrados pelo app
+        };
+        
+        // Inserir no banco de dados
+        const [createdUser] = await db.insert(users)
+          .values(newUserData)
+          .returning();
+        
+        if (!createdUser) {
+          console.error('[Mobile Auth] Falha ao criar usuário');
+          return res.status(500).json({ message: 'Erro ao criar usuário' });
+        }
+        
+        console.log(`[Mobile Auth] Usuário registrado com sucesso: ${createdUser.username}`);
+        
+        // Gerar tokens
+        const accessToken = generateAccessToken(createdUser);
+        const refreshToken = generateRefreshToken(
+          createdUser, 
+          req.ip, 
+          req.headers['user-agent']
+        );
+        
+        // Salvar refresh token
+        await saveRefreshToken(
+          createdUser.id, 
+          refreshToken,
+          req.ip,
+          req.headers['user-agent']
+        );
+        
+        // Retornar dados sem a senha
+        const { password: _, ...userWithoutPassword } = createdUser;
+        
+        return res.status(201).json({
+          user: userWithoutPassword,
+          accessToken,
+          refreshToken
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          console.error('[Mobile Auth] Erro de validação:', validationError.errors);
+          return res.status(400).json({ 
+            message: 'Dados de registro inválidos', 
+            errors: validationError.errors 
+          });
+        }
+        throw validationError;
+      }
+    } catch (error) {
+      console.error('[Mobile Auth] Erro ao registrar usuário:', error);
+      return res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // Endpoint para logout em dispositivos móveis (revogação de tokens)
+  app.post('/api/auth/mobile/logout', async (req: Request, res: Response) => {
+    try {
+      // Obter token do cabeçalho de autorização
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1];
+      
+      if (!token) {
+        console.log('[Mobile Auth] Tentativa de logout sem token');
+        return res.status(200).json({ message: 'Logout bem-sucedido' });
+      }
+      
+      try {
+        // Verificar se o token é válido
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+        
+        // Revogar todos os refresh tokens do usuário
+        await db.update(refreshTokens)
+          .set({ revoked: true })
+          .where(eq(refreshTokens.user_id, decoded.userId));
+        
+        console.log(`[Mobile Auth] Tokens revogados para usuário ID: ${decoded.userId}`);
+      } catch (jwtError) {
+        // Mesmo se o token for inválido, consideramos o logout bem-sucedido
+        console.log('[Mobile Auth] Token inválido durante logout:', jwtError.message);
+      }
+      
+      return res.status(200).json({ message: 'Logout bem-sucedido' });
+    } catch (error) {
+      console.error('[Mobile Auth] Erro durante logout:', error);
+      // Ainda retornamos sucesso mesmo em caso de erro, para garantir que o cliente saia
+      return res.status(200).json({ message: 'Logout processado' });
     }
   });
 }

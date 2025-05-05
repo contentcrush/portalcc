@@ -41,11 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: false,
   });
 
+  // Detectar se é um dispositivo móvel
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth < 768;
+  };
+
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       try {
         console.log('Iniciando requisição de login');
-        const res = await apiRequest("POST", "/api/auth/login", credentials);
+        
+        // Se for um dispositivo móvel, usar a API de autenticação móvel
+        const endpoint = isMobileDevice() 
+          ? "/api/auth/mobile/login" 
+          : "/api/auth/login";
+        
+        console.log(`Usando endpoint de login: ${endpoint} (mobile: ${isMobileDevice()})`);
+        
+        const res = await apiRequest("POST", endpoint, credentials);
         const data = await res.json();
         console.log('Login bem-sucedido:', { user: data.user ? data.user.username : 'unknown' });
         return data;
@@ -77,7 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: InsertUser) => {
-      const res = await apiRequest("POST", "/api/auth/register", userData);
+      // Se for um dispositivo móvel, usar a API de autenticação móvel
+      const endpoint = isMobileDevice() 
+        ? "/api/auth/mobile/register" 
+        : "/api/auth/register";
+      
+      console.log(`Usando endpoint de registro: ${endpoint} (mobile: ${isMobileDevice()})`);
+      
+      const res = await apiRequest("POST", endpoint, userData);
       return await res.json();
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
@@ -103,7 +124,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/auth/logout");
+      // Se for um dispositivo móvel, usar a API de autenticação móvel
+      const endpoint = isMobileDevice() 
+        ? "/api/auth/mobile/logout" 
+        : "/api/auth/logout";
+      
+      console.log(`Usando endpoint de logout: ${endpoint} (mobile: ${isMobileDevice()})`);
+      
+      await apiRequest("POST", endpoint);
       // Os cookies são removidos pelo servidor na resposta
     },
     onSuccess: () => {
