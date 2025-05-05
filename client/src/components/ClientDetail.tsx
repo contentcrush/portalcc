@@ -89,6 +89,9 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -109,6 +112,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
   const { data: financialDocuments } = useQuery({
     queryKey: [`/api/clients/${clientId}/financial-documents`],
+    enabled: !!clientId
+  });
+  
+  const { data: brandDocuments, refetch: refetchBrandDocuments } = useQuery({
+    queryKey: [`/api/clients/${clientId}/brand-documents`],
     enabled: !!clientId
   });
 
@@ -283,6 +291,135 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       client_id: clientId,
     };
     createProjectMutation.mutate(projectData);
+  };
+  
+  // Schema para o formulário de upload de documentos
+  const uploadDocumentSchema = z.object({
+    title: z.string().min(2, "Título deve ter pelo menos 2 caracteres"),
+    description: z.string().optional(),
+    file: z.any().refine(file => !!file, "Arquivo é obrigatório"),
+  });
+  
+  // Formulário para upload de documento
+  const documentForm = useForm<z.infer<typeof uploadDocumentSchema>>({
+    resolver: zodResolver(uploadDocumentSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      file: undefined,
+    },
+  });
+  
+  // Mutation para fazer upload de documento
+  const uploadDocumentMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const response = await fetch(`/api/clients/${clientId}/brand-documents`, {
+        method: "POST",
+        body: data,
+        // Não incluir o Content-Type para que o navegador defina o boundary do multipart/form-data
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao fazer upload do documento");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      setIsUploadDialogOpen(false);
+      setUploadFile(null);
+      setFilePreview(null);
+      documentForm.reset();
+      refetchBrandDocuments();
+      toast({
+        title: "Documento enviado com sucesso",
+        description: "O documento foi adicionado aos arquivos da marca do cliente.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao enviar documento",
+        description: error.message || "Ocorreu um erro ao enviar o documento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation para excluir documento
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (documentId: number) => {
+      const response = await apiRequest("DELETE", `/api/clients/${clientId}/brand-documents/${documentId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao excluir documento");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      refetchBrandDocuments();
+      toast({
+        title: "Documento excluído com sucesso",
+        description: "O documento foi removido dos arquivos da marca do cliente.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir documento",
+        description: error.message || "Ocorreu um erro ao excluir o documento. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Função para lidar com o upload de arquivos
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      setUploadFile(file);
+      documentForm.setValue("file", file);
+      
+      // Criar preview para imagens
+      if (file.type.includes('image')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+  
+  // Função para submeter o formulário de upload de documento
+  const onDocumentSubmit = (data: z.infer<typeof uploadDocumentSchema>) => {
+    if (!uploadFile) {
+      toast({
+        title: "Arquivo não selecionado",
+        description: "Selecione um arquivo para fazer upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append("title", data.title);
+    if (data.description) formData.append("description", data.description);
+    formData.append("file", uploadFile);
+    formData.append("client_id", clientId.toString());
+    
+    uploadDocumentMutation.mutate(formData);
+  };
+  
+  // Função para excluir um documento
+  const handleDeleteDocument = (documentId: number) => {
+    if (confirm("Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita.")) {
+      deleteDocumentMutation.mutate(documentId);
+    }
   };
   
   // Função para abrir o dialog de edição preenchendo os valores do formulário
@@ -573,9 +710,10 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-4">
+            <TabsList className="grid grid-cols-3 mb-4">
               <TabsTrigger value="interactions">Histórico de Interações</TabsTrigger>
               <TabsTrigger value="financial">Documentos Financeiros</TabsTrigger>
+              <TabsTrigger value="brand">Documentos da Marca</TabsTrigger>
             </TabsList>
             
             <TabsContent value="interactions" className="space-y-4">
@@ -717,6 +855,110 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   )}
                 </TableBody>
               </Table>
+            </TabsContent>
+            
+            <TabsContent value="brand">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Documentos da Marca</h3>
+                <Button 
+                  onClick={() => setIsUploadDialogOpen(true)}
+                  variant="default" 
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Fazer Upload
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {brandDocuments?.length > 0 ? (
+                  brandDocuments.map(doc => (
+                    <Card key={doc.id} className="overflow-hidden">
+                      <div className="relative group">
+                        <div className="aspect-[4/3] w-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                          {doc.file_type?.includes('image') ? (
+                            <img 
+                              src={doc.file_url} 
+                              alt={doc.title}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="p-4 flex flex-col items-center justify-center h-full w-full">
+                              <div className={`p-3 rounded-full mb-2 ${
+                                doc.file_type?.includes('pdf') ? 'bg-red-100 text-red-600' : 
+                                doc.file_type?.includes('word') ? 'bg-blue-100 text-blue-600' : 
+                                doc.file_type?.includes('excel') ? 'bg-green-100 text-green-600' : 
+                                'bg-slate-100 text-slate-600'
+                              }`}>
+                                <FileText className="h-10 w-10" />
+                              </div>
+                              <span className="text-sm text-slate-600 text-center overflow-hidden text-ellipsis max-w-full">
+                                {doc.file_type?.split('/')[1]?.toUpperCase() || 'Documento'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full" onClick={() => window.open(doc.file_url, '_blank')}>
+                            <Eye className="h-5 w-5" />
+                          </Button>
+                          <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full" onClick={() => window.open(doc.file_url, '_blank')}>
+                            <Download className="h-5 w-5" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="icon" 
+                            className="h-9 w-9 rounded-full"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-medium truncate">{doc.title || 'Documento sem título'}</h4>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(doc.upload_date)}
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <UserAvatar 
+                              user={users?.find(u => u.id === doc.uploaded_by)} 
+                              className="h-5 w-5 mr-1" 
+                            />
+                            {users?.find(u => u.id === doc.uploaded_by)?.name || 'Usuário'}
+                          </div>
+                        </div>
+                        {doc.description && (
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {doc.description}
+                          </p>
+                        )}
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full bg-slate-50 rounded-lg p-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                      <FileText className="h-6 w-6 text-slate-600" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-medium text-slate-900">Nenhum documento da marca</h3>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Comece fazendo upload dos documentos relacionados à identidade visual, logos, e outros ativos da marca do cliente.
+                    </p>
+                    <div className="mt-6">
+                      <Button
+                        onClick={() => setIsUploadDialogOpen(true)}
+                        variant="default"
+                        size="sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Fazer Upload
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </div>
