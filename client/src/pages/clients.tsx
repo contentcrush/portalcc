@@ -63,7 +63,7 @@ import {
   Image,
   Tag,
   ArrowRight,
-  Calendar as CalendarIcon2,
+  Calendar as CalendarIcon,
   User,
   UserPlus,
   Settings,
@@ -759,18 +759,22 @@ export default function Clients() {
               </CardHeader>
               
               <CardContent className="p-4 pt-3">
-                <div className="space-y-1.5 text-sm mt-1">
-                  {client.contactName && (
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <User className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                <div className="grid grid-rows-3 gap-1.5 text-sm mt-1 h-[5.5rem]">
+                  {/* Informação de contato - sempre mostra, mesmo se vazio */}
+                  <div className="flex items-center text-muted-foreground overflow-hidden">
+                    <User className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                    {client.contactName ? (
                       <span className="truncate">
                         {client.contactName}
                         {client.contactPosition && <span className="ml-1 opacity-70">({client.contactPosition})</span>}
                       </span>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-muted-foreground/50 italic text-xs">Nenhum contato definido</span>
+                    )}
+                  </div>
                   
-                  {client.contactEmail && (
+                  {/* Email - sempre mostra, mesmo se vazio */}
+                  {client.contactEmail ? (
                     <HoverCard>
                       <HoverCardTrigger asChild>
                         <div className="flex items-center text-muted-foreground overflow-hidden cursor-pointer">
@@ -789,16 +793,15 @@ export default function Clients() {
                         </a>
                       </HoverCardContent>
                     </HoverCard>
-                  )}
-                  
-                  {client.contactPhone && (
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <Phone className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      <span className="truncate">{client.contactPhone}</span>
+                  ) : (
+                    <div className="flex items-center text-muted-foreground/50 overflow-hidden">
+                      <Mail className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      <span className="italic text-xs">Sem email cadastrado</span>
                     </div>
                   )}
                   
-                  {client.address && (
+                  {/* Endereço - sempre mostra, mesmo se vazio */}
+                  {client.address ? (
                     <HoverCard>
                       <HoverCardTrigger asChild>
                         <div className="flex items-center text-muted-foreground overflow-hidden cursor-pointer">
@@ -816,6 +819,19 @@ export default function Clients() {
                         </p>
                       </HoverCardContent>
                     </HoverCard>
+                  ) : (
+                    <div className="flex items-center text-muted-foreground/50 overflow-hidden">
+                      <MapPin className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      <span className="italic text-xs">Sem endereço cadastrado</span>
+                    </div>
+                  )}
+                  
+                  {/* Telefone - escondido mas mantendo o espaço do layout quando necessário */}
+                  {client.contactPhone && (
+                    <div className="flex items-center text-muted-foreground overflow-hidden absolute opacity-0">
+                      <Phone className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      <span className="truncate">{client.contactPhone}</span>
+                    </div>
                   )}
                 </div>
               </CardContent>
