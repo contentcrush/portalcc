@@ -124,16 +124,10 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Formulário - Versão mobile-first */}
-      <div className="flex items-center justify-center w-full lg:w-1/2 px-4 sm:px-6 py-6 sm:py-8">
+      {/* Formulário */}
+      <div className="flex items-center justify-center w-full lg:w-1/2 px-6 py-8">
         <div className="w-full max-w-md">
-          {/* Cabeçalho com logo para mobile */}
-          <div className="text-center mb-6 sm:mb-8">
-            <div className="flex justify-center items-center mb-4 lg:hidden">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 via-rose-500 to-blue-500 flex items-center justify-center text-white font-bold text-xl mb-2">
-                CC
-              </div>
-            </div>
+          <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">Entrar</h2>
             <p className="text-gray-500">Faça login com suas credenciais</p>
           </div>
@@ -154,7 +148,7 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Username</FormLabel>
+                          <FormLabel>Username</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -162,14 +156,12 @@ export default function AuthPage() {
                               </div>
                               <Input 
                                 placeholder="Seu username" 
-                                className="pl-10 h-12 text-base" 
-                                autoComplete="username"
-                                inputMode="text"
+                                className="pl-10" 
                                 {...field} 
                               />
                             </div>
                           </FormControl>
-                          <FormMessage className="text-sm" />
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -178,7 +170,7 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Senha</FormLabel>
+                          <FormLabel>Senha</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -187,41 +179,33 @@ export default function AuthPage() {
                               <Input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Sua senha"
-                                className="pl-10 pr-12 h-12 text-base"
-                                autoComplete="current-password"
+                                className="pl-10 pr-10"
                                 {...field}
                               />
                               <button
                                 type="button"
                                 onClick={togglePasswordVisibility}
-                                className="absolute inset-y-0 right-0 flex items-center pr-3 focus:outline-none focus:ring-0"
-                                aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+                                className="absolute inset-y-0 right-0 flex items-center pr-3"
                               >
                                 {showPassword ? (
-                                  <EyeOffIcon className="h-6 w-6 text-gray-400" />
+                                  <EyeOffIcon className="h-5 w-5 text-gray-400" />
                                 ) : (
-                                  <EyeIcon className="h-6 w-6 text-gray-400" />
+                                  <EyeIcon className="h-5 w-5 text-gray-400" />
                                 )}
                               </button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-sm" />
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
 
                     <Button 
                       type="submit" 
-                      className="w-full h-12 text-base font-medium bg-rose-500 hover:bg-rose-600 mt-4" 
+                      className="w-full bg-rose-500 hover:bg-rose-600" 
                       disabled={loginMutation.isPending}
                     >
-                      {loginMutation.isPending ? 
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="h-5 w-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-                          <span>Entrando...</span>
-                        </div> : 
-                        "Entrar"
-                      }
+                      {loginMutation.isPending ? "Entrando..." : "Entrar"}
                     </Button>
                   </form>
                 </Form>
@@ -284,10 +268,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Departamento</FormLabel>
                             <FormControl>
-                              <Input placeholder="Seu departamento" 
-                                {...field} 
-                                value={field.value || ""}
-                              />
+                              <Input placeholder="Seu departamento" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -300,10 +281,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Cargo</FormLabel>
                             <FormControl>
-                              <Input placeholder="Seu cargo" 
-                                {...field} 
-                                value={field.value || ""}
-                              />
+                              <Input placeholder="Seu cargo" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -346,16 +324,10 @@ export default function AuthPage() {
                     />
                     <Button 
                       type="submit" 
-                      className="w-full h-12 text-base font-medium bg-rose-500 hover:bg-rose-600 mt-4" 
+                      className="w-full bg-rose-500 hover:bg-rose-600" 
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? 
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="h-5 w-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-                          <span>Registrando...</span>
-                        </div> : 
-                        "Registrar"
-                      }
+                      {registerMutation.isPending ? "Registrando..." : "Registrar"}
                     </Button>
                   </form>
                 </Form>

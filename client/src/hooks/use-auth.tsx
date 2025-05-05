@@ -1,11 +1,11 @@
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient, setAuthToken, getAuthToken } from "../lib/queryClient";
+import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthResponse = {
@@ -30,25 +30,12 @@ type LoginData = {
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  // Detectar se é um dispositivo móvel
-  const isMobileDevice = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth < 768;
-  };
-
-  // Escolher o endpoint correto com base no tipo de dispositivo
-  const authEndpoint = isMobileDevice() 
-    ? "/api/auth/mobile/validate" 
-    : "/api/auth/me";
-
-  console.log(`Usando endpoint de validação: ${authEndpoint} (mobile: ${isMobileDevice()})`);
-
   const {
     data: authData,
     error,
     isLoading,
   } = useQuery<{ user: SelectUser, token: string } | null, Error>({
-    queryKey: [authEndpoint],
+    queryKey: ["/api/auth/me"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
     refetchOnWindowFocus: false,
@@ -56,36 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      try {
-        console.log('Iniciando requisição de login');
-        
-        // Se for um dispositivo móvel, usar a API de autenticação móvel
-        const endpoint = isMobileDevice() 
-          ? "/api/auth/mobile/login" 
-          : "/api/auth/login";
-        
-        console.log(`Usando endpoint de login: ${endpoint} (mobile: ${isMobileDevice()})`);
-        
-        const res = await apiRequest("POST", endpoint, credentials);
-        const data = await res.json();
-        console.log('Login bem-sucedido:', { user: data.user ? data.user.username : 'unknown' });
-        return data;
-      } catch (error) {
-        console.error('Erro na requisição de login:', error);
-        throw error;
-      }
+      const res = await apiRequest("POST", "/api/auth/login", credentials);
+      return await res.json();
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
-      // Atualizar no cache usando o endpoint correto
-      const endpoint = isMobileDevice() 
-        ? "/api/auth/mobile/validate" 
-        : "/api/auth/me";
-      queryClient.setQueryData([endpoint], data);
-      
-      // Armazenar o token em memória além de nos cookies para dispositivos móveis
-      setAuthToken(data.token);
-      // Salvar token no localStorage para uso pelo WebSocket
-      localStorage.setItem('access_token', data.token);
+      queryClient.setQueryData(["/api/auth/me"], data);
+      // O token agora é armazenado em cookies HTTP-only pelo servidor
       toast({
         title: "Login bem-sucedido",
         description: `Bem-vindo de volta, ${data.user.name}!`,
@@ -103,27 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: InsertUser) => {
-      // Se for um dispositivo móvel, usar a API de autenticação móvel
-      const endpoint = isMobileDevice() 
-        ? "/api/auth/mobile/register" 
-        : "/api/auth/register";
-      
-      console.log(`Usando endpoint de registro: ${endpoint} (mobile: ${isMobileDevice()})`);
-      
-      const res = await apiRequest("POST", endpoint, userData);
+      const res = await apiRequest("POST", "/api/auth/register", userData);
       return await res.json();
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
-      // Atualizar no cache usando o endpoint correto
-      const endpoint = isMobileDevice() 
-        ? "/api/auth/mobile/validate" 
-        : "/api/auth/me";
-      queryClient.setQueryData([endpoint], data);
-      
-      // Armazenar o token em memória além de nos cookies para dispositivos móveis
-      setAuthToken(data.token);
-      // Salvar token no localStorage para uso pelo WebSocket
-      localStorage.setItem('access_token', data.token);
+      queryClient.setQueryData(["/api/auth/me"], data);
+      // O token agora é armazenado em cookies HTTP-only pelo servidor
       toast({
         title: "Registro bem-sucedido",
         description: `Bem-vindo, ${data.user.name}!`,
@@ -141,41 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // Se for um dispositivo móvel, usar a API de autenticação móvel
-      const endpoint = isMobileDevice() 
-        ? "/api/auth/mobile/logout" 
-        : "/api/auth/logout";
-      
-      console.log(`Usando endpoint de logout: ${endpoint} (mobile: ${isMobileDevice()})`);
-      
-      await apiRequest("POST", endpoint);
+      await apiRequest("POST", "/api/auth/logout");
       // Os cookies são removidos pelo servidor na resposta
     },
     onSuccess: () => {
-      // Limpar token em memória e dados do usuário
-      setAuthToken(null);
-      // Remover token do localStorage usado pelo WebSocket
-      localStorage.removeItem('access_token');
-      
-      // Limpar dados do usuário em ambos os endpoints
       queryClient.setQueryData(["/api/auth/me"], null);
-      queryClient.setQueryData(["/api/auth/mobile/validate"], null);
-      
       // Limpar outras queries do cache para evitar dados antigos
       queryClient.clear();
-      
       toast({
         title: "Logout bem-sucedido",
         description: "Você foi desconectado com sucesso.",
         variant: "default",
       });
-      
       // Redirecionar para a página de login
       window.location.href = "/auth";
     },
     onError: (error: Error) => {
-      // Ainda assim, limpar token em memória por segurança
-      setAuthToken(null);
       toast({
         title: "Falha no logout",
         description: error.message || "Não foi possível desconectar",
@@ -186,12 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Extrair e salvar o token em memória quando o usuário for carregado ou alterado
-  useEffect(() => {
-    if (authData?.token) {
-      setAuthToken(authData.token);
-    }
-  }, [authData]);
+  // Os tokens são gerenciados automaticamente via cookies HTTP-only pelo servidor
 
   return (
     <AuthContext.Provider

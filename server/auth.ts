@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction, Express, CookieOptions } from 'express';
+import { Request, Response, NextFunction, Express } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
@@ -11,29 +11,6 @@ import { eq, and, sql } from 'drizzle-orm';
 const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-jwt-secret-key-2025';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'content-crush-refresh-secret-key-2025';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-key-32chars!';
-
-/**
- * Configurações de cookie otimizadas para funcionar em dispositivos móveis
- */
-function getAccessTokenCookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: true, // Sempre seguro para suportar SameSite=none
-    sameSite: 'none', // Importante para contextos mobile e WebViews
-    maxAge: 15 * 60 * 1000, // 15 minutos
-    path: '/'
-  };
-}
-
-function getRefreshTokenCookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: true, // Sempre secure para suportar SameSite=none
-    sameSite: 'none', // Importante para dispositivos móveis
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-    path: '/api/auth/refresh'
-  };
-}
 
 // Constantes para tokens
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos

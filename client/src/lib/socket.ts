@@ -1,17 +1,11 @@
 import { Socket, io } from 'socket.io-client';
 
-// Função para determinar a URL base para conexão
-function getWebSocketUrl() {
-  // Determinar protocolo com base na URL atual
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  
-  // URL para WebSocket nativo
-  return `${protocol}//${host}/ws`;
-}
+// Determinar a URL base para conexão
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const host = window.location.host;
 
-// Exportar a função ao invés da URL estática
-export const getWsUrl = getWebSocketUrl;
+// URL para WebSocket nativo
+export const wsUrl = `${protocol}//${host}/ws`;
 
 // Referência ao socket nativo
 let ws: WebSocket | null = null;
@@ -40,14 +34,9 @@ export function getMessageHandlersForType(type: string): MessageHandler[] {
 }
 
 /**
- * Inicializa a conexão WebSocket com tratamento de erro aprimorado e renovação automática de token
- * @param retryCount Contador interno de tentativas para evitar loops infinitos
- * @param afterTokenRefresh Indica se estamos retentando após renovar o token
+ * Inicializa a conexão WebSocket
  */
-export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean = false): Promise<WebSocket> {
-  // Constantes para configuração
-  const MAX_RETRIES = 2; // Número máximo de tentativas de renovação
-  
+export function initWebSocket(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     // Se já estiver conectado, apenas retorne a conexão existente
     if (ws instanceof WebSocket && ws.readyState === WebSocket.OPEN) {
@@ -59,122 +48,41 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
     // Se estiver conectando, aguarde a conexão
     if (ws instanceof WebSocket && ws.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket está conectando...');
-      const originalOnOpen = ws.onopen;
-      ws.onopen = (event) => {
-        // Armazenar referência local para evitar problemas com nulo
-        const currentWs = ws;
-        
-        if (originalOnOpen && currentWs) {
-          try {
-            // TypeScript não consegue inferir que ws não é nulo dentro do callback
-            // Então usamos a variável local que sabemos que é do tipo WebSocket
-            originalOnOpen.call(currentWs, event);
-          } catch (err) {
-            console.error('Erro ao chamar handler original de onopen:', err);
-          }
-        }
+      ws.onopen = () => {
         console.log('WebSocket conexão completada');
-        if (ws) {
-          resolve(ws);
-        } else {
-          reject(new Error('WebSocket se tornou nulo durante a conexão'));
-        }
+        resolve(ws!);
       };
       return;
     }
 
-    // Fechar conexão existente de forma segura se houver
+    // Fechar conexão existente se houver e estiver em outro estado
     if (ws) {
-      try {
-        console.log('Fechando conexão WebSocket existente...');
-        ws.onclose = null; // Remover handler de close para evitar reconexão automática
-        ws.onerror = null; // Remover handler de erro
-        ws.close();
-      } catch (err) {
-        console.warn('Erro ao fechar conexão WebSocket existente:', err);
-      } finally {
-        ws = null;
-      }
+      console.log('Fechando conexão WebSocket existente...');
+      ws.close();
+      ws = null;
     }
 
     try {
-      // Obter token de autenticação para WebSocket se disponível
-      const token = localStorage.getItem('access_token');
-      
-      // Obter URL atual e adicionar token como parâmetro de consulta se disponível
-      const wsUrl = getWsUrl();
-      let wsUrlWithAuth = wsUrl;
-      if (token) {
-        wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token)}`;
-        console.log(`Iniciando nova conexão WebSocket com token de autenticação (tentativa ${retryCount + 1})`);
-      } else {
-        console.log(`Iniciando nova conexão WebSocket sem autenticação (tentativa ${retryCount + 1}): ${wsUrl}`);
-      }
-      
-      // Criar nova conexão
-      ws = new WebSocket(wsUrlWithAuth);
+      console.log('Iniciando nova conexão WebSocket:', wsUrl);
+      ws = new WebSocket(wsUrl);
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
         if (ws && ws.readyState !== WebSocket.OPEN) {
           console.warn('Timeout ao conectar WebSocket');
-          if (ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-            try {
-              ws.close();
-            } catch (err) {
-              console.warn('Erro ao fechar conexão WebSocket após timeout:', err);
-            }
-          }
-          ws = null;
+          ws.close();
           reject(new Error('Timeout de conexão WebSocket'));
         }
       }, 10000); // 10 segundos de timeout
 
-      // Tratamento de abertura de conexão
       ws.onopen = () => {
         console.log('Conexão WebSocket estabelecida com sucesso');
         clearTimeout(connectionTimeout);
-        
-        // Verificar autenticação após conexão
-        setTimeout(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            // Enviar uma mensagem de verificação de autenticação
-            try {
-              ws.send(JSON.stringify({ 
-                type: 'auth_check', 
-                timestamp: Date.now() 
-              }));
-            } catch (error) {
-              console.warn('Erro ao enviar verificação de autenticação:', error);
-            }
-          }
-        }, 1000);
-        
-        // Enviar ping para manter a conexão viva
-        const keepAliveInterval = setInterval(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            try {
-              ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-            } catch (error) {
-              console.warn('Erro ao enviar ping WebSocket:', error);
-              clearInterval(keepAliveInterval);
-            }
-          } else {
-            clearInterval(keepAliveInterval);
-          }
-        }, 30000); // A cada 30 segundos
-        
         resolve(ws!);
       };
 
-      // Processamento de mensagens recebidas
       ws.onmessage = (event) => {
         try {
-          // Verificar mensagem de pong (resposta ao nosso ping)
-          if (event.data === '{"type":"pong"}') {
-            return; // Ignorar silenciosamente mensagens de pong
-          }
-          
           // Verifica se o evento tem dados e se não é uma string vazia
           if (!event.data || (typeof event.data === 'string' && event.data.trim() === '')) {
             console.warn('Mensagem WebSocket recebida vazia, ignorando');
@@ -191,16 +99,8 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
           
           console.log('Mensagem WebSocket recebida:', data);
 
-          // Verificar se é uma mensagem de ping do servidor
-          if (data.type === 'ping') {
-            // Responder com pong
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'pong' }));
-            }
-            return;
-          }
-
-          // Determinar o tipo de mensagem
+          // Despachar para os handlers apropriados com mais opções de propriedades
+          // Verifica múltiplos campos possíveis para determinar o tipo de mensagem
           let messageType = null;
           
           // Ordem de verificação: type, event, action
@@ -218,12 +118,13 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
             return;
           }
           
-          // Despachar para handlers apropriados
+          // Se encontramos um tipo de mensagem e temos handlers para ele
           if (messageHandlers[messageType]) {
             console.log(`Processando mensagem do tipo: ${messageType}`);
             messageHandlers[messageType].forEach(handler => handler(data));
           } else {
-            // Tentar correspondência parcial para compatibilidade
+            // Se não encontramos o tipo ou não temos handlers, procurar correspondência parcial
+            // Isso é útil quando o servidor envia 'financial_updated' mas o cliente espera apenas 'financial'
             let matchFound = false;
             Object.keys(messageHandlers).forEach(handlerType => {
               if (messageType.includes(handlerType)) {
@@ -242,64 +143,24 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
         }
       };
 
-      // Tratamento de erro da conexão
       ws.onerror = (error) => {
         console.error('Erro na conexão WebSocket:', error);
         clearTimeout(connectionTimeout);
-        // Não rejeitar a promessa aqui, deixar o evento onclose lidar com isso
+        reject(error);
       };
 
-      // Tratamento de fechamento da conexão
       ws.onclose = (event) => {
-        console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason || ''}`);
+        console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason}`);
         
-        // Limpar qualquer timeout pendente
-        clearTimeout(connectionTimeout);
-        
-        // Se o código for 1000 (fechamento normal) ou 1001 (indo embora), não reconectar
-        if (event.code === 1000 || event.code === 1001) {
-          console.log('Conexão WebSocket fechada normalmente, não reconectando');
-          ws = null;
-          reject(new Error(`Conexão WebSocket fechada: ${event.code}`));
-          return;
-        }
-        
-        // Para todos os outros códigos, tentar reconexão com backoff exponencial
-        const maxReconnectDelay = 30000; // 30 segundos máximo
-        const baseDelay = 2000; // 2 segundos base
-        
-        // Aumentar o delay exponencialmente até o máximo
-        // Armazenar o número de tentativas em uma variável do módulo
-        const reconnectAttempt = (ws as any)._reconnectAttempt || 0;
-        const reconnectDelay = Math.min(
-          baseDelay * Math.pow(1.5, reconnectAttempt),
-          maxReconnectDelay
-        );
-        
-        console.log(`Tentativa de reconexão ${reconnectAttempt + 1} em ${Math.round(reconnectDelay/1000)}s`);
+        // Tentar reconectar após um tempo variável (entre 2-5 segundos)
+        const reconnectDelay = 2000 + Math.random() * 3000;
         
         setTimeout(() => {
-          // Só reconectar se a página estiver visível
           if (document.visibilityState !== 'hidden') {
             console.log(`Tentando reconectar WebSocket após ${Math.round(reconnectDelay/1000)}s...`);
-            try {
-              // Obter URL atual e atualizar contador de tentativas para a próxima reconexão
-              const currentWsUrl = getWsUrl();
-              const newWs = new WebSocket(currentWsUrl);
-              (newWs as any)._reconnectAttempt = reconnectAttempt + 1;
-              ws = newWs;
-              
-              // Configurar evento de abertura
-              ws.onopen = () => {
-                console.log('WebSocket reconectado com sucesso');
-                (ws as any)._reconnectAttempt = 0; // Resetar contador ao conectar com sucesso
-              };
-              
-              // Configurar eventos de erro e fechamento
-              configureWebSocketEvents(ws);
-            } catch (err) {
-              console.error('Falha ao reconectar WebSocket:', err);
-            }
+            initWebSocket()
+              .then(() => console.log('WebSocket reconectado com sucesso'))
+              .catch(err => console.error('Falha ao reconectar WebSocket:', err));
           } else {
             console.log('Página em segundo plano, adiando reconexão do WebSocket');
             // Registrar um handler para reconectar quando a página voltar a ser visível
@@ -315,8 +176,6 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
             document.addEventListener('visibilitychange', onVisibilityChange);
           }
         }, reconnectDelay);
-        
-        reject(new Error(`Conexão WebSocket fechada: ${event.code}`));
       };
 
     } catch (error) {
@@ -324,56 +183,6 @@ export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean
       reject(error);
     }
   });
-}
-
-/**
- * Configura os eventos padrão do WebSocket (mensagem, erro, fechamento)
- */
-function configureWebSocketEvents(socket: WebSocket): void {
-  if (!socket) return;
-  
-  // Redefina apenas se não tiver manipuladores existentes
-  if (!socket.onmessage) {
-    socket.onmessage = (event) => {
-      try {
-        if (!event.data) return;
-        const data = JSON.parse(event.data);
-        console.log('Mensagem WebSocket recebida:', data);
-        
-        // Processar por tipo
-        let messageType = data.type || data.event || data.action;
-        if (!messageType) return;
-        
-        // Despachar para handlers
-        if (messageHandlers[messageType]) {
-          messageHandlers[messageType].forEach(handler => handler(data));
-        }
-      } catch (error) {
-        console.error('Erro ao processar mensagem WebSocket:', error);
-      }
-    };
-  }
-  
-  // Sempre reconfigure os manipuladores de erro e fechamento
-  socket.onerror = (error) => {
-    console.error('Erro na conexão WebSocket:', error);
-  };
-  
-  if (!socket.onclose) {
-    socket.onclose = (event) => {
-      console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason || ''}`);
-      
-      // Iniciar reconexão automática em 3 segundos
-      setTimeout(() => {
-        if (document.visibilityState !== 'hidden') {
-          console.log('Tentando reconectar WebSocket após 3s...');
-          initWebSocket()
-            .then(() => console.log('WebSocket reconectado com sucesso'))
-            .catch(err => console.error('Falha ao reconectar WebSocket:', err));
-        }
-      }, 3000);
-    };
-  }
 }
 
 /**
@@ -444,29 +253,15 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
         socket.disconnect();
       }
 
-      // Obter token de autenticação do localStorage
-      const storedToken = localStorage.getItem('access_token') || token;
-      
-      // Configurar parâmetros de conexão
-      const connectionOptions: any = {
+      // Iniciar nova conexão
+      socket = io({
         path: '/socket.io',
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-      };
-      
-      // Adicionar token como parâmetro de consulta se disponível
-      if (storedToken) {
-        console.log('Iniciando Socket.IO com token de autenticação');
-        connectionOptions.query = { token: storedToken };
-      } else {
-        console.log('Iniciando Socket.IO sem autenticação');
-      }
-      
-      // Iniciar nova conexão
-      socket = io(connectionOptions);
+      });
 
       socket.on('connect', () => {
         console.log('Socket.IO conectado:', socket!.id);
@@ -620,9 +415,7 @@ export function onNewComment(callback: (comment: any) => void): () => void {
   
   // Retorna função para remover o listener
   return () => {
-    if (socket) {
-      socket.off('new-comment', callback);
-    }
+    socket.off('new-comment', callback);
   };
 }
 
@@ -639,9 +432,7 @@ export function onNewProjectComment(callback: (comment: any) => void): () => voi
   
   // Retorna função para remover o listener
   return () => {
-    if (socket) {
-      socket.off('new-project-comment', callback);
-    }
+    socket.off('new-project-comment', callback);
   };
 }
 
