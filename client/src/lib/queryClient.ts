@@ -124,106 +124,77 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  retryCount: number = 0
 ): Promise<Response> {
-  console.log('API Request:', method, url, 'Com token:', !!getAuthToken());
+  // Constantes para configuração
+  const MAX_RETRIES = 2; // Número máximo de tentativas de renovação
+  
+  console.log('API Request:', method, url, 'Com token:', !!getAuthToken(), 'Tentativa:', retryCount + 1);
   
   // Para dispositivos móveis, a prioridade é o token no cabeçalho
   const headers = getAuthHeaders(!!data);
   console.log('Enviando cabeçalhos:', Object.keys(headers).join(', '));
   
-  let res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Ainda mantém cookies como fallback
-  });
-
-  // Log para debug da resposta
-  console.log('API Response status:', res.status, 'para', url);
-  
-  // Se recebemos um erro 401 (não autorizado), verificamos se já estamos na página de autenticação
-  if (res.status === 401) {
-    // Verifica se já estamos na página de autenticação para evitar ciclos de redirecionamento
-    if (!window.location.pathname.includes('/auth')) {
-      window.location.href = '/auth';
-    }
-    throw new Error('Sessão expirada. Por favor, faça login novamente.');
-  }
-  
-  // Se recebemos um erro 403 com "Token inválido ou expirado", tentamos renovar o token
-  if (res.status === 403) {
-    try {
-      const responseText = await res.text();
-      if (responseText.includes('Token inválido ou expirado')) {
-        // Tentar renovar o token
-        const refreshSuccessful = await refreshToken();
-        
-        if (refreshSuccessful) {
-          // Retentar a requisição após renovar o token
-          res = await fetch(url, {
-            method,
-            headers: getAuthHeaders(!!data),
-            body: data ? JSON.stringify(data) : undefined,
-            credentials: "include",
-          });
-        } else {
-          // Se não conseguimos renovar o token, redirecionamos para login
-          window.location.href = '/auth';
-          throw new Error('Sessão expirada. Por favor, faça login novamente.');
-        }
-      } else {
-        // Se for outro erro 403, lançamos o erro original
-        throw new Error(`${res.status}: ${responseText}`);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Erro ao processar a requisição');
-    }
-  }
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options?: {
-  on401?: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  (options) => {
-    const unauthorizedBehavior = options?.on401 || "throw";
-    return async ({ queryKey }) => {
-    console.log('Executando query:', queryKey[0], 'Com token:', !!getAuthToken());
-    const headers = getAuthHeaders();
-    console.log('Query headers:', Object.keys(headers).join(', '));
-      
-    let res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+  try {
+    let res = await fetch(url, {
+      method,
       headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include", // Ainda mantém cookies como fallback
     });
 
-    // Tratar token expirado em queries também
-    if (res.status === 403) {
+    // Log para debug da resposta
+    console.log('API Response status:', res.status, 'para', url);
+    
+    // Se recebemos um erro 401 (não autorizado), tentamos renovar o token primeiro
+    if (res.status === 401 && retryCount < MAX_RETRIES) {
+      console.log('Recebido 401 Unauthorized, tentando renovar token automaticamente...');
+      const refreshSuccessful = await refreshToken();
+      
+      if (refreshSuccessful) {
+        console.log('Token renovado com sucesso, retentando requisição original');
+        // Retentar a requisição após renovar o token, incrementando o contador
+        return apiRequest(method, url, data, retryCount + 1);
+      } else {
+        console.log('Falha ao renovar token, redirecionando para login');
+        // Se não estamos já na página de autenticação, redirecionar
+        if (!window.location.pathname.includes('/auth')) {
+          window.location.href = '/auth';
+        }
+        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      }
+    }
+    
+    // Se chegamos ao limite de tentativas de renovação
+    if (res.status === 401 && retryCount >= MAX_RETRIES) {
+      console.log('Máximo de tentativas de renovação de token excedido');
+      // Se não estamos já na página de autenticação, redirecionar
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth';
+      }
+      throw new Error('Sessão expirada. Por favor, faça login novamente.');
+    }
+    
+    // Se recebemos um erro 403 com "Token inválido ou expirado", tentamos renovar o token
+    if (res.status === 403 && retryCount < MAX_RETRIES) {
       try {
         const responseText = await res.text();
         if (responseText.includes('Token inválido ou expirado')) {
+          console.log('Token inválido ou expirado (403), tentando renovar...');
           // Tentar renovar o token
           const refreshSuccessful = await refreshToken();
           
           if (refreshSuccessful) {
-            // Retentar a query após renovar o token
-            res = await fetch(queryKey[0] as string, {
-              credentials: "include",
-              headers: getAuthHeaders()
-            });
+            console.log('Token renovado com sucesso, retentando requisição original');
+            // Retentar a requisição após renovar o token, incrementando o contador
+            return apiRequest(method, url, data, retryCount + 1);
           } else {
-            // Se não conseguimos renovar, tratamos de acordo com unauthorizedBehavior
-            if (unauthorizedBehavior === "returnNull") {
-              return null;
-            } else {
-              throw new Error('Sessão expirada. Por favor, faça login novamente.');
+            console.log('Falha ao renovar token, redirecionando para login');
+            // Se não estamos já na página de autenticação, redirecionar
+            if (!window.location.pathname.includes('/auth')) {
+              window.location.href = '/auth';
             }
+            throw new Error('Sessão expirada. Por favor, faça login novamente.');
           }
         } else {
           // Se for outro erro 403, lançamos o erro original
@@ -237,22 +208,183 @@ export const getQueryFn: <T>(options?: {
       }
     }
 
-    if (res.status === 401) {
-      if (unauthorizedBehavior === "returnNull") {
-        return null;
-      } else {
-        // Redirecionar para a página de login quando não autorizado
-        // Verificar se já estamos na página de autenticação para evitar ciclos
-        if (!window.location.pathname.includes('/auth')) {
-          window.location.href = '/auth';
+    // Se chegamos ao limite de tentativas e ainda temos erro 403
+    if (res.status === 403 && retryCount >= MAX_RETRIES) {
+      try {
+        const responseText = await res.text();
+        if (responseText.includes('Token inválido ou expirado')) {
+          console.log('Máximo de tentativas excedido para renovação de token (403)');
+          // Se não estamos já na página de autenticação, redirecionar
+          if (!window.location.pathname.includes('/auth')) {
+            window.location.href = '/auth';
+          }
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        } else {
+          throw new Error(`${res.status}: ${responseText}`);
         }
-        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Erro ao processar a requisição');
       }
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
-  };
+    return res;
+  } catch (error) {
+    // Capturar erros de rede (falha na conexão)
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      console.error('Erro de conexão na requisição:', error);
+      throw new Error('Falha na conexão com o servidor. Verifique sua conexão de internet.');
+    }
+    
+    // Repassar outros erros
+    throw error;
+  }
+}
+
+type UnauthorizedBehavior = "returnNull" | "throw";
+export const getQueryFn = <T>(options?: {
+  on401?: UnauthorizedBehavior;
+}): QueryFunction<T> =>
+  (options) => {
+    const unauthorizedBehavior = options?.on401 || "throw";
+    
+    // Função interna de execução de query com suporte a tentativas
+    const executeQueryWithRetry = async (
+      queryKey: string, 
+      retryCount: number = 0
+    ): Promise<any | null> => {
+      // Constantes para configuração
+      const MAX_RETRIES = 2; // Número máximo de tentativas de renovação
+      
+      console.log('Executando query:', queryKey, 'Com token:', !!getAuthToken(), 'Tentativa:', retryCount + 1);
+      const headers = getAuthHeaders();
+      console.log('Query headers:', Object.keys(headers).join(', '));
+      
+      try {
+        let res = await fetch(queryKey, {
+          credentials: "include",
+          headers,
+        });
+    
+        // Tentar renovar o token em caso de 401 Unauthorized
+        if (res.status === 401 && retryCount < MAX_RETRIES) {
+          console.log('Query recebeu 401 Unauthorized, tentando renovar token...');
+          const refreshSuccessful = await refreshToken();
+          
+          if (refreshSuccessful) {
+            console.log('Token renovado com sucesso, retentando query');
+            return executeQueryWithRetry(queryKey, retryCount + 1);
+          } else {
+            // Se não conseguimos renovar, tratamos de acordo com unauthorizedBehavior
+            if (unauthorizedBehavior === "returnNull") {
+              return null;
+            } else {
+              // Se não estamos na página de autenticação, redirecionar
+              if (!window.location.pathname.includes('/auth')) {
+                window.location.href = '/auth';
+              }
+              throw new Error('Sessão expirada. Por favor, faça login novamente.');
+            }
+          }
+        }
+        
+        // Se atingimos o limite de tentativas com 401
+        if (res.status === 401 && retryCount >= MAX_RETRIES) {
+          console.log('Máximo de tentativas de renovação de token excedido na query');
+          if (unauthorizedBehavior === "returnNull") {
+            return null;
+          } else {
+            // Se não estamos na página de autenticação, redirecionar
+            if (!window.location.pathname.includes('/auth')) {
+              window.location.href = '/auth';
+            }
+            throw new Error('Sessão expirada. Por favor, faça login novamente.');
+          }
+        }
+    
+        // Tratar token expirado em queries também (status 403)
+        if (res.status === 403 && retryCount < MAX_RETRIES) {
+          try {
+            const responseText = await res.text();
+            if (responseText.includes('Token inválido ou expirado')) {
+              console.log('Query recebeu token inválido (403), tentando renovar...');
+              // Tentar renovar o token
+              const refreshSuccessful = await refreshToken();
+              
+              if (refreshSuccessful) {
+                console.log('Token renovado com sucesso, retentando query');
+                return executeQueryWithRetry(queryKey, retryCount + 1);
+              } else {
+                // Se não conseguimos renovar, tratamos de acordo com unauthorizedBehavior
+                if (unauthorizedBehavior === "returnNull") {
+                  return null;
+                } else {
+                  // Se não estamos na página de autenticação, redirecionar
+                  if (!window.location.pathname.includes('/auth')) {
+                    window.location.href = '/auth';
+                  }
+                  throw new Error('Sessão expirada. Por favor, faça login novamente.');
+                }
+              }
+            } else {
+              // Se for outro erro 403, lançamos o erro original
+              throw new Error(`${res.status}: ${responseText}`);
+            }
+          } catch (error) {
+            if (error instanceof Error) {
+              throw error;
+            }
+            throw new Error('Erro ao processar a requisição');
+          }
+        }
+        
+        // Se atingimos o limite de tentativas com 403
+        if (res.status === 403 && retryCount >= MAX_RETRIES) {
+          try {
+            const responseText = await res.text();
+            if (responseText.includes('Token inválido ou expirado')) {
+              console.log('Máximo de tentativas de renovação de token excedido na query (403)');
+              if (unauthorizedBehavior === "returnNull") {
+                return null;
+              } else {
+                // Se não estamos na página de autenticação, redirecionar
+                if (!window.location.pathname.includes('/auth')) {
+                  window.location.href = '/auth';
+                }
+                throw new Error('Sessão expirada. Por favor, faça login novamente.');
+              }
+            } else {
+              throw new Error(`${res.status}: ${responseText}`);
+            }
+          } catch (error) {
+            if (error instanceof Error) {
+              throw error;
+            }
+            throw new Error('Erro ao processar a requisição');
+          }
+        }
+    
+        await throwIfResNotOk(res);
+        return await res.json();
+      } catch (error) {
+        // Capturar erros de rede (falha na conexão)
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          console.error('Erro de conexão na query:', error);
+          throw new Error('Falha na conexão com o servidor. Verifique sua conexão de internet.');
+        }
+        
+        // Repassar outros erros
+        throw error;
+      }
+    };
+    
+    // Função principal retornada pelo getQueryFn
+    return async ({ queryKey }) => {
+      return executeQueryWithRetry(queryKey[0] as string);
+    };
 };
 
 export const queryClient = new QueryClient({

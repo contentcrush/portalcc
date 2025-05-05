@@ -40,9 +40,14 @@ export function getMessageHandlersForType(type: string): MessageHandler[] {
 }
 
 /**
- * Inicializa a conexão WebSocket com tratamento de erro aprimorado
+ * Inicializa a conexão WebSocket com tratamento de erro aprimorado e renovação automática de token
+ * @param retryCount Contador interno de tentativas para evitar loops infinitos
+ * @param afterTokenRefresh Indica se estamos retentando após renovar o token
  */
-export function initWebSocket(): Promise<WebSocket> {
+export function initWebSocket(retryCount: number = 0, afterTokenRefresh: boolean = false): Promise<WebSocket> {
+  // Constantes para configuração
+  const MAX_RETRIES = 2; // Número máximo de tentativas de renovação
+  
   return new Promise((resolve, reject) => {
     // Se já estiver conectado, apenas retorne a conexão existente
     if (ws instanceof WebSocket && ws.readyState === WebSocket.OPEN) {
@@ -101,9 +106,9 @@ export function initWebSocket(): Promise<WebSocket> {
       let wsUrlWithAuth = wsUrl;
       if (token) {
         wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token)}`;
-        console.log('Iniciando nova conexão WebSocket com token de autenticação');
+        console.log(`Iniciando nova conexão WebSocket com token de autenticação (tentativa ${retryCount + 1})`);
       } else {
-        console.log('Iniciando nova conexão WebSocket sem autenticação:', wsUrl);
+        console.log(`Iniciando nova conexão WebSocket sem autenticação (tentativa ${retryCount + 1}): ${wsUrl}`);
       }
       
       // Criar nova conexão
@@ -129,6 +134,21 @@ export function initWebSocket(): Promise<WebSocket> {
       ws.onopen = () => {
         console.log('Conexão WebSocket estabelecida com sucesso');
         clearTimeout(connectionTimeout);
+        
+        // Verificar autenticação após conexão
+        setTimeout(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            // Enviar uma mensagem de verificação de autenticação
+            try {
+              ws.send(JSON.stringify({ 
+                type: 'auth_check', 
+                timestamp: Date.now() 
+              }));
+            } catch (error) {
+              console.warn('Erro ao enviar verificação de autenticação:', error);
+            }
+          }
+        }, 1000);
         
         // Enviar ping para manter a conexão viva
         const keepAliveInterval = setInterval(() => {
