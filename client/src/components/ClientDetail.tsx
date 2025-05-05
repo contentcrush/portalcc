@@ -20,7 +20,8 @@ import {
   Filter,
   ChevronLeft,
   ArrowLeft,
-  Trash2
+  Trash2,
+  User
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -340,29 +341,42 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
-          <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
+          <h1 className="text-2xl font-bold tracking-tight">Detalhes do Cliente</h1>
+          <p className="text-sm text-muted-foreground">Visualizando informações completas do cliente</p>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
-            variant="ghost" 
+            variant="outline" 
+            size="sm"
             onClick={() => navigate('/clients')}
             className="flex items-center"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
             Voltar
           </Button>
-          <Button variant="outline" onClick={handleEditClick}>
-            <FileText className="h-4 w-4 mr-2" />
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleEditClick}
+          >
+            <FileText className="h-4 w-4 mr-1.5" />
             Editar
           </Button>
-          <Button className="bg-primary" onClick={() => setIsNewProjectDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => setIsNewProjectDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
             Novo Projeto
           </Button>
-          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
             Excluir
           </Button>
         </div>
@@ -371,142 +385,177 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Client info section */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-                <Avatar className="w-16 h-16">
-                  {client.logo ? (
-                    <AvatarImage 
-                      src={client.logo} 
-                      alt={client.name}
-                      onError={(e) => {
-                        console.log("Erro ao carregar logo:", client.logo);
-                        e.currentTarget.style.display = 'none';
-                      }} 
-                    />
-                  ) : null}
-                  <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
-                    {getInitials(client.name)}
-                  </AvatarFallback>
-                </Avatar>
+          <Card className="overflow-hidden border-border/50">
+            <div className="bg-muted/30 px-6 py-5 border-b border-border/40">
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <ClientAvatar 
+                  name={client.name}
+                  logoUrl={client.logo}
+                  size="lg"
+                  className="border-2 border-background"
+                />
                 <div>
                   <h2 className="text-xl font-semibold">{client.name}</h2>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span>Cliente desde {formatDate(client.since)}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
+                      {client.type}
+                    </Badge>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <CalendarClock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+                      <span>Cliente desde {formatDate(client.since)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            
+            <CardContent className="p-6 pt-5">
 
-              <h3 className="text-sm font-semibold uppercase text-gray-500 mb-3">
+              <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80 mb-4">
                 INFORMAÇÕES DE CONTATO
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Building className="h-5 w-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <User className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Contato Principal</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Contato Principal</p>
                     <p className="font-medium">{client.contactName || 'Não informado'}</p>
-                    <p className="text-sm text-gray-500">{client.contactPosition || ''}</p>
+                    {client.contactPosition && (
+                      <p className="text-sm text-muted-foreground mt-0.5">{client.contactPosition}</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Mail className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Mail className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{client.contactEmail || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Email</p>
+                    {client.contactEmail ? (
+                      <a href={`mailto:${client.contactEmail}`} className="font-medium hover:text-primary hover:underline transition-colors">
+                        {client.contactEmail}
+                      </a>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Phone className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Phone className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Telefone</p>
-                    <p className="font-medium">{client.contactPhone || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Telefone</p>
+                    {client.contactPhone ? (
+                      <p className="font-medium">{client.contactPhone}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <MapPin className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <MapPin className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Endereço</p>
-                    <p className="font-medium">{client.address || 'Não informado'}</p>
-                    <p className="text-sm text-gray-500">{client.city || ''}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Endereço</p>
+                    {client.address ? (
+                      <>
+                        <p className="font-medium">{client.address}</p>
+                        {client.city && <p className="text-sm text-muted-foreground mt-0.5">{client.city}</p>}
+                      </>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <h3 className="text-sm font-semibold uppercase text-gray-500 mb-3">
+              <Separator className="my-5" />
+
+              <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80 mb-4">
                 DADOS ADICIONAIS
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Building className="h-5 w-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Building className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Tipo de Cliente</p>
-                    <p className="font-medium">{client.type || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Tipo de Cliente</p>
+                    <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="mt-0.5">
+                      {client.type || 'Não informado'}
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <CalendarClock className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <CalendarClock className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Cliente desde</p>
-                    <p className="font-medium">
-                      {client.since 
-                        ? formatDate(client.since) 
-                        : 'Não informado'}
-                    </p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Cliente desde</p>
+                    {client.since ? (
+                      <p className="font-medium">{formatDate(client.since)}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <FileText className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <FileText className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">CNPJ</p>
-                    <p className="font-medium">{client.cnpj || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">CNPJ</p>
+                    {client.cnpj ? (
+                      <p className="font-medium">{client.cnpj}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Globe className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Globe className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Website</p>
-                    <p className="font-medium">
-                      {client.website ? (
-                        <a href={`https://${client.website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {client.website}
-                        </a>
-                      ) : 'Não informado'}
-                    </p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Website</p>
+                    {client.website ? (
+                      <a 
+                        href={`https://${client.website}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {client.website}
+                      </a>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {client.notes && (
                 <>
-                  <h3 className="text-sm font-semibold uppercase text-gray-500 mb-2">
-                    NOTAS
-                  </h3>
-                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md border border-gray-200">
-                    {client.notes}
-                  </p>
+                  <Separator className="my-5" />
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80">
+                      NOTAS
+                    </h3>
+                    <div className="bg-muted/30 p-4 rounded-lg border border-border/50 text-sm">
+                      {client.notes}
+                    </div>
+                  </div>
                 </>
               )}
             </CardContent>
