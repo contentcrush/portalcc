@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getInitials, generateAvatarColor, cn, formatDate } from "@/lib/utils";
+import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -64,6 +64,13 @@ import {
   Image,
   Tag,
   ArrowRight,
+  Calendar as CalendarIcon2,
+  User,
+  UserPlus,
+  Settings,
+  Briefcase,
+  ExternalLink,
+  BarChart,
 } from "lucide-react";
 import {
   Dialog,
@@ -110,6 +117,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
