@@ -1,11 +1,17 @@
 import { Socket, io } from 'socket.io-client';
 
-// Determinar a URL base para conexão
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const host = window.location.host;
+// Função para determinar a URL base para conexão
+function getWebSocketUrl() {
+  // Determinar protocolo com base na URL atual
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  
+  // URL para WebSocket nativo
+  return `${protocol}//${host}/ws`;
+}
 
-// URL para WebSocket nativo
-export const wsUrl = `${protocol}//${host}/ws`;
+// Exportar a função ao invés da URL estática
+export const getWsUrl = getWebSocketUrl;
 
 // Referência ao socket nativo
 let ws: WebSocket | null = null;
@@ -50,11 +56,24 @@ export function initWebSocket(): Promise<WebSocket> {
       console.log('WebSocket está conectando...');
       const originalOnOpen = ws.onopen;
       ws.onopen = (event) => {
-        if (originalOnOpen) {
-          originalOnOpen.call(ws, event);
+        // Armazenar referência local para evitar problemas com nulo
+        const currentWs = ws;
+        
+        if (originalOnOpen && currentWs) {
+          try {
+            // TypeScript não consegue inferir que ws não é nulo dentro do callback
+            // Então usamos a variável local que sabemos que é do tipo WebSocket
+            originalOnOpen.call(currentWs, event);
+          } catch (err) {
+            console.error('Erro ao chamar handler original de onopen:', err);
+          }
         }
         console.log('WebSocket conexão completada');
-        resolve(ws!);
+        if (ws) {
+          resolve(ws);
+        } else {
+          reject(new Error('WebSocket se tornou nulo durante a conexão'));
+        }
       };
       return;
     }
@@ -77,7 +96,8 @@ export function initWebSocket(): Promise<WebSocket> {
       // Obter token de autenticação para WebSocket se disponível
       const token = localStorage.getItem('access_token');
       
-      // Adicionar token como parâmetro de consulta se disponível
+      // Obter URL atual e adicionar token como parâmetro de consulta se disponível
+      const wsUrl = getWsUrl();
       let wsUrlWithAuth = wsUrl;
       if (token) {
         wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token)}`;
@@ -243,8 +263,9 @@ export function initWebSocket(): Promise<WebSocket> {
           if (document.visibilityState !== 'hidden') {
             console.log(`Tentando reconectar WebSocket após ${Math.round(reconnectDelay/1000)}s...`);
             try {
-              // Atualizar contador de tentativas para a próxima reconexão
-              const newWs = new WebSocket(wsUrl);
+              // Obter URL atual e atualizar contador de tentativas para a próxima reconexão
+              const currentWsUrl = getWsUrl();
+              const newWs = new WebSocket(currentWsUrl);
               (newWs as any)._reconnectAttempt = reconnectAttempt + 1;
               ws = newWs;
               
