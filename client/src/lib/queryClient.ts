@@ -62,13 +62,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  console.log('API Request:', method, url, 'Com token:', !!getAuthToken());
+  
   let res = await fetch(url, {
     method,
     headers: getAuthHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Mantém cookies para navegadores que suportam bem
   });
 
+  // Log para debug da resposta
+  console.log('API Response status:', res.status, 'para', url);
+  
   // Se recebemos um erro 401 (não autorizado), verificamos se já estamos na página de autenticação
   if (res.status === 401) {
     // Verifica se já estamos na página de autenticação para evitar ciclos de redirecionamento

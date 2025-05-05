@@ -284,7 +284,10 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Departamento</FormLabel>
                             <FormControl>
-                              <Input placeholder="Seu departamento" {...field} />
+                              <Input placeholder="Seu departamento" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -297,7 +300,10 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Cargo</FormLabel>
                             <FormControl>
-                              <Input placeholder="Seu cargo" {...field} />
+                              <Input placeholder="Seu cargo" 
+                                {...field} 
+                                value={field.value || ""}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
