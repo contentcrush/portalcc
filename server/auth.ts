@@ -18,9 +18,9 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-k
 function getAccessTokenCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Sempre secure para suportar SameSite=none
     maxAge: 15 * 60 * 1000, // 15 minutos
-    sameSite: 'lax',
+    sameSite: 'none', // Importante para dispositivos móveis
     path: '/'
   };
 }
@@ -28,10 +28,10 @@ function getAccessTokenCookieOptions(): CookieOptions {
 function getRefreshTokenCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Sempre secure para suportar SameSite=none
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-    sameSite: 'lax',
-    path: '/api/auth/refresh'
+    sameSite: 'none', // Importante para dispositivos móveis
+    path: '/'
   };
 }
 
