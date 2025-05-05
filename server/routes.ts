@@ -7,7 +7,7 @@ import {
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
   insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema,
   insertCommentReactionSchema, insertProjectCommentSchema, insertProjectCommentReactionSchema,
-  financialDocuments
+  insertBrandDocumentSchema, financialDocuments
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
@@ -2467,6 +2467,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing reaction:", error);
       res.status(500).json({ message: "Failed to remove reaction" });
+    }
+  });
+
+  // Brand Documents API Routes
+  // Get all brand documents for a client
+  app.get("/api/clients/:id/brand-documents", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      const documents = await storage.getBrandDocuments(clientId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Erro ao buscar documentos da marca:", error);
+      res.status(500).json({ message: "Falha ao buscar documentos da marca" });
+    }
+  });
+
+  // Get a specific brand document by ID
+  app.get("/api/brand-documents/:id", authenticateJWT, async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getBrandDocument(documentId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Documento não encontrado" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Erro ao buscar documento da marca:", error);
+      res.status(500).json({ message: "Falha ao buscar documento da marca" });
+    }
+  });
+
+  // Create a new brand document
+  app.post("/api/clients/:id/brand-documents", authenticateJWT, validateBody(insertBrandDocumentSchema), async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      // Adicionar clientId e userId ao documento
+      const document = await storage.createBrandDocument({
+        ...req.body,
+        client_id: clientId,
+        uploaded_by: req.user!.id
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Erro ao criar documento da marca:", error);
+      res.status(500).json({ message: "Falha ao criar documento da marca" });
+    }
+  });
+
+  // Update a brand document
+  app.patch("/api/brand-documents/:id", authenticateJWT, async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      
+      // Verificar se o documento existe
+      const existingDocument = await storage.getBrandDocument(documentId);
+      if (!existingDocument) {
+        return res.status(404).json({ message: "Documento não encontrado" });
+      }
+      
+      // Verificar se o usuário tem permissão (somente o uploader ou admin pode atualizar)
+      if (existingDocument.uploaded_by !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ 
+          message: "Acesso negado. Apenas o criador do documento ou um administrador pode atualizar este documento."
+        });
+      }
+      
+      const updatedDocument = await storage.updateBrandDocument(documentId, req.body);
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Erro ao atualizar documento da marca:", error);
+      res.status(500).json({ message: "Falha ao atualizar documento da marca" });
+    }
+  });
+
+  // Delete a brand document
+  app.delete("/api/brand-documents/:id", authenticateJWT, async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      
+      // Verificar se o documento existe
+      const existingDocument = await storage.getBrandDocument(documentId);
+      if (!existingDocument) {
+        return res.status(404).json({ message: "Documento não encontrado" });
+      }
+      
+      // Verificar se o usuário tem permissão (somente o uploader ou admin pode excluir)
+      if (existingDocument.uploaded_by !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ 
+          message: "Acesso negado. Apenas o criador do documento ou um administrador pode excluir este documento."
+        });
+      }
+      
+      await storage.deleteBrandDocument(documentId);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Erro ao excluir documento da marca:", error);
+      res.status(500).json({ message: "Falha ao excluir documento da marca" });
     }
   });
 
