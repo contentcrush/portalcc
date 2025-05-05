@@ -203,6 +203,19 @@ export const taskAttachments = pgTable("task_attachments", {
   encryption_key_id: text("encryption_key_id"), // Identificador da chave usada
 });
 
+export const brandDocuments = pgTable("brand_documents", {
+  id: serial("id").primaryKey(),
+  client_id: integer("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  file_name: text("file_name").notNull(),
+  file_size: integer("file_size"),
+  file_type: text("file_type"),
+  file_url: text("file_url").notNull(),
+  category: text("category"), // Tipo de documento: Contrato, Proposta, Orçamento, Storyboard, etc.
+  description: text("description"),
+  uploaded_by: integer("uploaded_by").references(() => users.id),
+  upload_date: timestamp("upload_date").defaultNow(),
+});
+
 export const clientInteractions = pgTable("client_interactions", {
   id: serial("id").primaryKey(),
   client_id: integer("client_id").notNull(),
@@ -348,6 +361,12 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
   encryption_iv: true,
   encryption_key_id: true
 });
+
+export const insertBrandDocumentSchema = createInsertSchema(brandDocuments).omit({ 
+  id: true, 
+  upload_date: true
+});
+
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
 // Schema base para documentos financeiros
 const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
