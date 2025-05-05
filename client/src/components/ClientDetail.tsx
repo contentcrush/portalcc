@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import { 
   Building, 
   Mail, 
@@ -20,7 +21,8 @@ import {
   Filter,
   ChevronLeft,
   ArrowLeft,
-  Trash2
+  Trash2,
+  User
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -89,9 +91,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -112,11 +111,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
   const { data: financialDocuments } = useQuery({
     queryKey: [`/api/clients/${clientId}/financial-documents`],
-    enabled: !!clientId
-  });
-  
-  const { data: brandDocuments, refetch: refetchBrandDocuments } = useQuery({
-    queryKey: [`/api/clients/${clientId}/brand-documents`],
     enabled: !!clientId
   });
 
@@ -293,135 +287,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     createProjectMutation.mutate(projectData);
   };
   
-  // Schema para o formulário de upload de documentos
-  const uploadDocumentSchema = z.object({
-    title: z.string().min(2, "Título deve ter pelo menos 2 caracteres"),
-    description: z.string().optional(),
-    file: z.any().refine(file => !!file, "Arquivo é obrigatório"),
-  });
-  
-  // Formulário para upload de documento
-  const documentForm = useForm<z.infer<typeof uploadDocumentSchema>>({
-    resolver: zodResolver(uploadDocumentSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      file: undefined,
-    },
-  });
-  
-  // Mutation para fazer upload de documento
-  const uploadDocumentMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      const response = await fetch(`/api/clients/${clientId}/brand-documents`, {
-        method: "POST",
-        body: data,
-        // Não incluir o Content-Type para que o navegador defina o boundary do multipart/form-data
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erro ao fazer upload do documento");
-      }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      setIsUploadDialogOpen(false);
-      setUploadFile(null);
-      setFilePreview(null);
-      documentForm.reset();
-      refetchBrandDocuments();
-      toast({
-        title: "Documento enviado com sucesso",
-        description: "O documento foi adicionado aos arquivos da marca do cliente.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao enviar documento",
-        description: error.message || "Ocorreu um erro ao enviar o documento. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Mutation para excluir documento
-  const deleteDocumentMutation = useMutation({
-    mutationFn: async (documentId: number) => {
-      const response = await apiRequest("DELETE", `/api/clients/${clientId}/brand-documents/${documentId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erro ao excluir documento");
-      }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      refetchBrandDocuments();
-      toast({
-        title: "Documento excluído com sucesso",
-        description: "O documento foi removido dos arquivos da marca do cliente.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao excluir documento",
-        description: error.message || "Ocorreu um erro ao excluir o documento. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Função para lidar com o upload de arquivos
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (file) {
-      setUploadFile(file);
-      documentForm.setValue("file", file);
-      
-      // Criar preview para imagens
-      if (file.type.includes('image')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setFilePreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setFilePreview(null);
-      }
-    }
-  };
-  
-  // Função para submeter o formulário de upload de documento
-  const onDocumentSubmit = (data: z.infer<typeof uploadDocumentSchema>) => {
-    if (!uploadFile) {
-      toast({
-        title: "Arquivo não selecionado",
-        description: "Selecione um arquivo para fazer upload.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const formData = new FormData();
-    formData.append("title", data.title);
-    if (data.description) formData.append("description", data.description);
-    formData.append("file", uploadFile);
-    formData.append("client_id", clientId.toString());
-    
-    uploadDocumentMutation.mutate(formData);
-  };
-  
-  // Função para excluir um documento
-  const handleDeleteDocument = (documentId: number) => {
-    if (confirm("Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita.")) {
-      deleteDocumentMutation.mutate(documentId);
-    }
-  };
-  
   // Função para abrir o dialog de edição preenchendo os valores do formulário
   const handleEditClick = () => {
     if (client) {
@@ -477,29 +342,42 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
-          <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
+          <h1 className="text-2xl font-bold tracking-tight">Detalhes do Cliente</h1>
+          <p className="text-sm text-muted-foreground">Visualizando informações completas do cliente</p>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
-            variant="ghost" 
+            variant="outline" 
+            size="sm"
             onClick={() => navigate('/clients')}
             className="flex items-center"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
             Voltar
           </Button>
-          <Button variant="outline" onClick={handleEditClick}>
-            <FileText className="h-4 w-4 mr-2" />
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleEditClick}
+          >
+            <FileText className="h-4 w-4 mr-1.5" />
             Editar
           </Button>
-          <Button className="bg-primary" onClick={() => setIsNewProjectDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => setIsNewProjectDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
             Novo Projeto
           </Button>
-          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
             Excluir
           </Button>
         </div>
@@ -508,142 +386,177 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Client info section */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-                <Avatar className="w-16 h-16">
-                  {client.logo ? (
-                    <AvatarImage 
-                      src={client.logo} 
-                      alt={client.name}
-                      onError={(e) => {
-                        console.log("Erro ao carregar logo:", client.logo);
-                        e.currentTarget.style.display = 'none';
-                      }} 
-                    />
-                  ) : null}
-                  <AvatarFallback className="bg-blue-100 text-blue-600 text-2xl font-semibold">
-                    {getInitials(client.name)}
-                  </AvatarFallback>
-                </Avatar>
+          <Card className="overflow-hidden border-border/50">
+            <div className="bg-muted/30 px-6 py-5 border-b border-border/40">
+              <div className="flex flex-col md:flex-row gap-4 md:items-center">
+                <ClientAvatar 
+                  name={client.name}
+                  logoUrl={client.logo}
+                  size="lg"
+                  className="border-2 border-background"
+                />
                 <div>
                   <h2 className="text-xl font-semibold">{client.name}</h2>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <span>Cliente desde {formatDate(client.since)}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
+                      {client.type}
+                    </Badge>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <CalendarClock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+                      <span>Cliente desde {formatDate(client.since)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            
+            <CardContent className="p-6 pt-5">
 
-              <h3 className="text-sm font-semibold uppercase text-gray-500 mb-3">
+              <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80 mb-4">
                 INFORMAÇÕES DE CONTATO
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Building className="h-5 w-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <User className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Contato Principal</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Contato Principal</p>
                     <p className="font-medium">{client.contactName || 'Não informado'}</p>
-                    <p className="text-sm text-gray-500">{client.contactPosition || ''}</p>
+                    {client.contactPosition && (
+                      <p className="text-sm text-muted-foreground mt-0.5">{client.contactPosition}</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Mail className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Mail className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{client.contactEmail || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Email</p>
+                    {client.contactEmail ? (
+                      <a href={`mailto:${client.contactEmail}`} className="font-medium hover:text-primary hover:underline transition-colors">
+                        {client.contactEmail}
+                      </a>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Phone className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Phone className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Telefone</p>
-                    <p className="font-medium">{client.contactPhone || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Telefone</p>
+                    {client.contactPhone ? (
+                      <p className="font-medium">{client.contactPhone}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <MapPin className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <MapPin className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Endereço</p>
-                    <p className="font-medium">{client.address || 'Não informado'}</p>
-                    <p className="text-sm text-gray-500">{client.city || ''}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Endereço</p>
+                    {client.address ? (
+                      <>
+                        <p className="font-medium">{client.address}</p>
+                        {client.city && <p className="text-sm text-muted-foreground mt-0.5">{client.city}</p>}
+                      </>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <h3 className="text-sm font-semibold uppercase text-gray-500 mb-3">
+              <Separator className="my-5" />
+
+              <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80 mb-4">
                 DADOS ADICIONAIS
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Building className="h-5 w-5" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Building className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Tipo de Cliente</p>
-                    <p className="font-medium">{client.type || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Tipo de Cliente</p>
+                    <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="mt-0.5">
+                      {client.type || 'Não informado'}
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <CalendarClock className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <CalendarClock className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Cliente desde</p>
-                    <p className="font-medium">
-                      {client.since 
-                        ? formatDate(client.since) 
-                        : 'Não informado'}
-                    </p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Cliente desde</p>
+                    {client.since ? (
+                      <p className="font-medium">{formatDate(client.since)}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <FileText className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <FileText className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">CNPJ</p>
-                    <p className="font-medium">{client.cnpj || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">CNPJ</p>
+                    {client.cnpj ? (
+                      <p className="font-medium">{client.cnpj}</p>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="mr-3 mt-1 text-gray-400">
-                    <Globe className="h-5 w-5" />
+                <div className="flex items-start group">
+                  <div className="mr-3 mt-0.5 text-muted-foreground/70 bg-muted/60 p-1.5 rounded-md group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Globe className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Website</p>
-                    <p className="font-medium">
-                      {client.website ? (
-                        <a href={`https://${client.website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {client.website}
-                        </a>
-                      ) : 'Não informado'}
-                    </p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Website</p>
+                    {client.website ? (
+                      <a 
+                        href={`https://${client.website}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {client.website}
+                      </a>
+                    ) : (
+                      <p className="font-medium">Não informado</p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {client.notes && (
                 <>
-                  <h3 className="text-sm font-semibold uppercase text-gray-500 mb-2">
-                    NOTAS
-                  </h3>
-                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md border border-gray-200">
-                    {client.notes}
-                  </p>
+                  <Separator className="my-5" />
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold tracking-wider text-muted-foreground/80">
+                      NOTAS
+                    </h3>
+                    <div className="bg-muted/30 p-4 rounded-lg border border-border/50 text-sm">
+                      {client.notes}
+                    </div>
+                  </div>
                 </>
               )}
             </CardContent>
@@ -710,255 +623,260 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="interactions">Histórico de Interações</TabsTrigger>
               <TabsTrigger value="financial">Documentos Financeiros</TabsTrigger>
-              <TabsTrigger value="brand">Documentos da Marca</TabsTrigger>
             </TabsList>
             
             <TabsContent value="interactions" className="space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium">Histórico de Interações</h3>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Interação
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {interactions?.length > 0 ? (
-                  interactions.map(interaction => {
-                    const user = users?.find(u => u.id === interaction.user_id);
-                    const iconName = getInteractionIcon(interaction.type as any);
-                    
-                    return (
-                      <div key={interaction.id} className="flex gap-3">
-                        <div className={`mt-1 p-2 rounded-full bg-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-100 text-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-600`}>
-                          <div className="h-4 w-4" dangerouslySetInnerHTML={{ __html: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="${iconName === 'video' ? 'M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z' : iconName === 'mail' ? 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75' : iconName === 'message-square' ? 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z' : 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'}" /></svg>` }} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <div>
-                              <span className="font-medium">{interaction.title}</span>
-                              <Badge variant={interaction.type === 'reuniao' ? 'blue' : interaction.type === 'feedback' ? 'warning' : 'success'} className="ml-2 capitalize">
-                                {interaction.type === 'reuniao' ? 'Reunião' : 
-                                  interaction.type === 'email' ? 'Email' : 
-                                  interaction.type === 'feedback' ? 'Feedback' : 
-                                  'Documento'}
-                              </Badge>
+              <Card className="border-border/40">
+                <CardHeader className="pb-2 flex flex-row justify-between items-center">
+                  <CardTitle className="text-lg font-medium">Histórico de Interações</CardTitle>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Nova Interação
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {interactions?.length > 0 ? (
+                      interactions.map(interaction => {
+                        const user = users?.find(u => u.id === interaction.user_id);
+                        const iconName = getInteractionIcon(interaction.type as any);
+                        
+                        // Determinando as cores baseadas no tipo de interação
+                        let iconBgClass = "bg-blue-100/70";
+                        let iconTextClass = "text-blue-600";
+                        let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "default";
+                        
+                        if (interaction.type === 'feedback') {
+                          iconBgClass = "bg-amber-100/70";
+                          iconTextClass = "text-amber-600";
+                          badgeVariant = "secondary";
+                        } else if (interaction.type === 'documento') {
+                          iconBgClass = "bg-green-100/70";
+                          iconTextClass = "text-green-600";
+                          badgeVariant = "outline";
+                        }
+                        
+                        return (
+                          <div key={interaction.id} className="flex gap-3 p-3 border border-border/30 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className={`shrink-0 mt-1 p-2 rounded-md ${iconBgClass} ${iconTextClass}`}>
+                              {iconName === 'video' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z" />
+                                </svg>
+                              )}
+                              {iconName === 'mail' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                              )}
+                              {iconName === 'message-square' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                                </svg>
+                              )}
+                              {(iconName === 'file' || !iconName) && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                </svg>
+                              )}
                             </div>
-                            <span className="text-sm text-gray-500">
-                              {formatDate(interaction.date)}
-                            </span>
+                            
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">{interaction.title}</h4>
+                                  <Badge variant={badgeVariant} className="mt-1 capitalize text-xs">
+                                    {interaction.type === 'reuniao' ? 'Reunião' : 
+                                      interaction.type === 'email' ? 'Email' : 
+                                      interaction.type === 'feedback' ? 'Feedback' : 
+                                      'Documento'}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                  <CalendarClock className="h-3.5 w-3.5" />
+                                  {formatDate(interaction.date)}
+                                </div>
+                              </div>
+                              
+                              <div className="mt-2 text-sm text-muted-foreground bg-muted/40 p-2.5 rounded-md">
+                                {interaction.description}
+                              </div>
+                              
+                              <div className="flex items-center mt-3 pt-2 border-t border-border/30">
+                                <UserAvatar user={user} className="h-5 w-5 mr-2" />
+                                <span className="text-xs text-muted-foreground">{user?.name || 'Usuário'}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {interaction.description}
-                          </p>
-                          <div className="flex items-center mt-2">
-                            <UserAvatar user={user} className="h-5 w-5 mr-2" />
-                            <span className="text-xs text-gray-500">{user?.name || 'Usuário'}</span>
-                          </div>
-                        </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Nenhuma interação registrada para este cliente.
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Nenhuma interação registrada para este cliente.
-                  </div>
-                )}
+                    )}
+                  
               </div>
               
               <Button variant="ghost" size="sm" className="w-full mt-4">
                 Ver histórico completo
               </Button>
+              </CardContent>
+              </Card>
             </TabsContent>
             
-            <TabsContent value="financial">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Documentos Financeiros</h3>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filtrar
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>DOCUMENTO</TableHead>
-                    <TableHead>PROJETO</TableHead>
-                    <TableHead>DATA</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead className="text-right">VALOR</TableHead>
-                    <TableHead className="text-right">AÇÕES</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {financialDocuments?.length > 0 ? (
-                    financialDocuments.map(doc => (
-                      <TableRow key={doc.id}>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <div className={`p-1 rounded mr-2 ${doc.document_type === 'invoice' ? 'bg-red-100 text-red-600' : doc.document_type === 'contract' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
-                              <FileText className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <div className="font-medium">{doc.document_number}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {doc.document_type === 'invoice' ? 'Fatura' : 
-                                 doc.document_type === 'contract' ? 'Contrato' : 
-                                 doc.document_type === 'proposal' ? 'Proposta' : 'Recibo'}
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{projects?.find(p => p.id === doc.project_id)?.name || '-'}</TableCell>
-                        <TableCell>{formatDate(doc.due_date)}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              doc.status === 'pago' ? 'success' : 
-                              doc.status === 'pendente' ? 'warning' : 
-                              'secondary'
-                            }
-                            className="capitalize"
-                          >
-                            {doc.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(doc.amount)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                        Nenhum documento financeiro encontrado para este cliente.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
-            
-            <TabsContent value="brand">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Documentos da Marca</h3>
-                <Button 
-                  onClick={() => setIsUploadDialogOpen(true)}
-                  variant="default" 
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Fazer Upload
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {brandDocuments?.length > 0 ? (
-                  brandDocuments.map(doc => (
-                    <Card key={doc.id} className="overflow-hidden">
-                      <div className="relative group">
-                        <div className="aspect-[4/3] w-full bg-slate-100 flex items-center justify-center overflow-hidden">
-                          {doc.file_type?.includes('image') ? (
-                            <img 
-                              src={doc.file_url} 
-                              alt={doc.title}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="p-4 flex flex-col items-center justify-center h-full w-full">
-                              <div className={`p-3 rounded-full mb-2 ${
-                                doc.file_type?.includes('pdf') ? 'bg-red-100 text-red-600' : 
-                                doc.file_type?.includes('word') ? 'bg-blue-100 text-blue-600' : 
-                                doc.file_type?.includes('excel') ? 'bg-green-100 text-green-600' : 
-                                'bg-slate-100 text-slate-600'
-                              }`}>
-                                <FileText className="h-10 w-10" />
-                              </div>
-                              <span className="text-sm text-slate-600 text-center overflow-hidden text-ellipsis max-w-full">
-                                {doc.file_type?.split('/')[1]?.toUpperCase() || 'Documento'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full" onClick={() => window.open(doc.file_url, '_blank')}>
-                            <Eye className="h-5 w-5" />
-                          </Button>
-                          <Button variant="secondary" size="icon" className="h-9 w-9 rounded-full" onClick={() => window.open(doc.file_url, '_blank')}>
-                            <Download className="h-5 w-5" />
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-full"
-                            onClick={() => handleDeleteDocument(doc.id)}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-3">
-                        <h4 className="font-medium truncate">{doc.title || 'Documento sem título'}</h4>
-                        <div className="flex items-center justify-between mt-1">
-                          <div className="text-sm text-muted-foreground">
-                            {formatDate(doc.upload_date)}
-                          </div>
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <UserAvatar 
-                              user={users?.find(u => u.id === doc.uploaded_by)} 
-                              className="h-5 w-5 mr-1" 
-                            />
-                            {users?.find(u => u.id === doc.uploaded_by)?.name || 'Usuário'}
-                          </div>
-                        </div>
-                        {doc.description && (
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {doc.description}
-                          </p>
-                        )}
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-full bg-slate-50 rounded-lg p-8 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                      <FileText className="h-6 w-6 text-slate-600" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-medium text-slate-900">Nenhum documento da marca</h3>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Comece fazendo upload dos documentos relacionados à identidade visual, logos, e outros ativos da marca do cliente.
-                    </p>
-                    <div className="mt-6">
-                      <Button
-                        onClick={() => setIsUploadDialogOpen(true)}
-                        variant="default"
-                        size="sm"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Fazer Upload
-                      </Button>
-                    </div>
+            <TabsContent value="financial" className="space-y-4">
+              <Card className="border-border/40">
+                <CardHeader className="pb-2 flex flex-row justify-between items-center">
+                  <CardTitle className="text-lg font-medium">Documentos Financeiros</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-8">
+                      <Filter className="h-3.5 w-3.5 mr-1.5" />
+                      Filtrar
+                    </Button>
+                    <Button variant="default" size="sm" className="h-8">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Adicionar
+                    </Button>
                   </div>
-                )}
-              </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-xs">DOCUMENTO</TableHead>
+                        <TableHead className="text-xs">PROJETO</TableHead>
+                        <TableHead className="text-xs">DATA</TableHead>
+                        <TableHead className="text-xs">STATUS</TableHead>
+                        <TableHead className="text-xs text-right">VALOR</TableHead>
+                        <TableHead className="text-xs text-right">AÇÕES</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {financialDocuments?.length > 0 ? (
+                        financialDocuments.map(doc => (
+                          <TableRow key={doc.id} className="hover:bg-muted/40">
+                            <TableCell>
+                              <div className="flex items-center gap-2.5">
+                                <div className={`p-1.5 rounded-md ${
+                                  doc.document_type === 'invoice' ? 'bg-red-100/80 text-red-600' : 
+                                  doc.document_type === 'contract' ? 'bg-amber-100/80 text-amber-600' : 
+                                  'bg-blue-100/80 text-blue-600'
+                                }`}>
+                                  <FileText className="h-3.5 w-3.5" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-sm">{doc.document_number}</div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {doc.document_type === 'invoice' ? 'Fatura' : 
+                                    doc.document_type === 'contract' ? 'Contrato' : 
+                                    doc.document_type === 'proposal' ? 'Proposta' : 'Recibo'}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">{projects?.find(p => p.id === doc.project_id)?.name || '-'}</TableCell>
+                            <TableCell className="text-sm">
+                              <div className="flex items-center gap-1.5">
+                                <CalendarClock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                {formatDate(doc.due_date)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  doc.status === 'pago' ? 'outline' : 
+                                  doc.status === 'pendente' ? 'secondary' : 
+                                  'default'
+                                }
+                                className={`capitalize text-xs ${
+                                  doc.status === 'pago' ? 'border-green-200 bg-green-50 text-green-700' : 
+                                  doc.status === 'pendente' ? 'border-amber-200 bg-amber-50 text-amber-700' : 
+                                  ''
+                                }`}
+                              >
+                                {doc.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(doc.amount)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted">
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <FileText className="h-8 w-8 text-muted-foreground/40" />
+                              <p>Nenhum documento financeiro encontrado para este cliente.</p>
+                              <Button variant="link" size="sm" className="h-8 mt-1">
+                                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                Adicionar documento
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              
+              {/* Resumo Financeiro */}
+              {financialDocuments?.length > 0 && (
+                <Card className="border-border/40">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-medium">Resumo Financeiro</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Total Faturado</p>
+                        <p className="text-2xl font-bold mt-1">{formatCurrency(totalRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Valor dos projetos:</p>
+                          <p className="text-sm font-medium">{formatCurrency(projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Valor Pago</p>
+                        <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(paidRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Percentual:</p>
+                          <p className="text-sm font-medium">{percentPaidRevenue}% do total</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Pendente de Pagamento</p>
+                        <p className="text-2xl font-bold text-amber-600 mt-1">{formatCurrency(pendingRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Vencidos:</p>
+                          <p className="text-sm font-medium">
+                            {formatCurrency(
+                              financialDocuments.filter(doc => 
+                                !doc.paid && doc.due_date && new Date(doc.due_date) < new Date()
+                              ).reduce((sum, doc) => sum + (doc.amount || 0), 0)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -966,9 +884,12 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         {/* Right sidebar */}
         <div className="space-y-6">
           {/* KPIs */}
-          <Card className="bg-white">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-6">
+          <Card className="border-border/40 overflow-hidden">
+            <CardHeader className="pb-2 border-b border-border/30 bg-muted/30">
+              <CardTitle className="text-base font-medium">Resumo do Cliente</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-2 divide-x divide-border/30">
                 <div>
                   <p className="text-sm text-gray-500">Projetos Totais</p>
                   <div className="mt-1 flex items-center">
@@ -1815,121 +1736,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Dialog de upload de documentos */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload de Documento da Marca</DialogTitle>
-            <DialogDescription>
-              Faça upload de logotipos, manuais de identidade visual, e outros documentos relacionados à marca.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={documentForm.handleSubmit(onDocumentSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Título do Documento</Label>
-                <Input
-                  id="title"
-                  placeholder="Ex: Logo Principal, Manual de Marca, etc."
-                  {...documentForm.register("title")}
-                />
-                {documentForm.formState.errors.title && (
-                  <p className="text-sm text-red-500">{documentForm.formState.errors.title.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição (opcional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descreva brevemente o documento..."
-                  className="resize-none"
-                  {...documentForm.register("description")}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="file">Arquivo</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    {filePreview ? (
-                      <div className="w-full relative">
-                        <img 
-                          src={filePreview} 
-                          alt="Preview" 
-                          className="w-full h-48 object-contain rounded-md"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => {
-                            setUploadFile(null);
-                            setFilePreview(null);
-                            documentForm.setValue("file", undefined);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="p-3 rounded-full bg-slate-100">
-                          <FileText className="h-6 w-6 text-slate-600" />
-                        </div>
-                        <div className="flex flex-col items-center text-center">
-                          <p className="text-sm font-medium">
-                            Arraste e solte ou clique para selecionar
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Arquivos suportados: PDF, JPG, PNG, SVG, etc.
-                          </p>
-                        </div>
-                        <Input
-                          id="file"
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileChange}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={() => document.getElementById("file")?.click()}
-                        >
-                          Selecionar arquivo
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {documentForm.formState.errors.file && (
-                  <p className="text-sm text-red-500">{documentForm.formState.errors.file.message}</p>
-                )}
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={uploadDocumentMutation.isPending || !uploadFile}
-              >
-                {uploadDocumentMutation.isPending && (
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
-                Upload
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

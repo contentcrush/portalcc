@@ -4,16 +4,16 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
-  projectComments, projectCommentReactions, brandDocuments,
+  projectComments, projectCommentReactions,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
-  type ProjectComment, type ProjectCommentReaction, type BrandDocument,
+  type ProjectComment, type ProjectCommentReaction,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
-  type InsertProjectComment, type InsertProjectCommentReaction, type InsertBrandDocument
+  type InsertProjectComment, type InsertProjectCommentReaction
 } from "../shared/schema";
 
 export interface IStorage {
@@ -114,13 +114,6 @@ export interface IStorage {
   getTaskAttachment(id: number): Promise<TaskAttachment | undefined>;
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
-  
-  // Brand Documents
-  getBrandDocuments(clientId: number): Promise<BrandDocument[]>;
-  getBrandDocument(id: number): Promise<BrandDocument | undefined>;
-  createBrandDocument(document: InsertBrandDocument): Promise<BrandDocument>;
-  updateBrandDocument(id: number, document: Partial<InsertBrandDocument>): Promise<BrandDocument | undefined>;
-  deleteBrandDocument(id: number): Promise<boolean>;
   
   // Client Interactions
   getClientInteractions(clientId: number): Promise<ClientInteraction[]>;
@@ -1513,44 +1506,6 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Brand Documents
-  async getBrandDocuments(clientId: number): Promise<BrandDocument[]> {
-    return await db.select()
-      .from(brandDocuments)
-      .where(eq(brandDocuments.client_id, clientId))
-      .orderBy(asc(brandDocuments.upload_date));
-  }
-  
-  async getBrandDocument(id: number): Promise<BrandDocument | undefined> {
-    const [document] = await db.select()
-      .from(brandDocuments)
-      .where(eq(brandDocuments.id, id));
-    return document || undefined;
-  }
-  
-  async createBrandDocument(document: InsertBrandDocument): Promise<BrandDocument> {
-    const [brandDocument] = await db.insert(brandDocuments)
-      .values({
-        ...document,
-        upload_date: new Date()
-      })
-      .returning();
-    return brandDocument;
-  }
-  
-  async updateBrandDocument(id: number, document: Partial<InsertBrandDocument>): Promise<BrandDocument | undefined> {
-    const [updated] = await db.update(brandDocuments)
-      .set(document)
-      .where(eq(brandDocuments.id, id))
-      .returning();
-    return updated;
-  }
-  
-  async deleteBrandDocument(id: number): Promise<boolean> {
-    await db.delete(brandDocuments).where(eq(brandDocuments.id, id));
-    return true;
-  }
-
   // Users
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
