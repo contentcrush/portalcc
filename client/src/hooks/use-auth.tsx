@@ -58,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/auth/me"], data);
       // Armazenar o token em memória além de nos cookies para dispositivos móveis
       setAuthToken(data.token);
+      // Salvar token no localStorage para uso pelo WebSocket
+      localStorage.setItem('access_token', data.token);
       toast({
         title: "Login bem-sucedido",
         description: `Bem-vindo de volta, ${data.user.name}!`,
@@ -82,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/auth/me"], data);
       // Armazenar o token em memória além de nos cookies para dispositivos móveis
       setAuthToken(data.token);
+      // Salvar token no localStorage para uso pelo WebSocket
+      localStorage.setItem('access_token', data.token);
       toast({
         title: "Registro bem-sucedido",
         description: `Bem-vindo, ${data.user.name}!`,
@@ -105,6 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       // Limpar token em memória e dados do usuário
       setAuthToken(null);
+      // Remover token do localStorage usado pelo WebSocket
+      localStorage.removeItem('access_token');
       queryClient.setQueryData(["/api/auth/me"], null);
       // Limpar outras queries do cache para evitar dados antigos
       queryClient.clear();

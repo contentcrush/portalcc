@@ -63,8 +63,19 @@ export function initWebSocket(): Promise<WebSocket> {
     }
 
     try {
-      console.log('Iniciando nova conexão WebSocket:', wsUrl);
-      ws = new WebSocket(wsUrl);
+      // Obter token de autenticação para WebSocket se disponível
+      const token = localStorage.getItem('access_token');
+      
+      // Adicionar token como parâmetro de consulta se disponível
+      let wsUrlWithAuth = wsUrl;
+      if (token) {
+        wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token)}`;
+        console.log('Iniciando nova conexão WebSocket com token de autenticação');
+      } else {
+        console.log('Iniciando nova conexão WebSocket sem autenticação:', wsUrl);
+      }
+      
+      ws = new WebSocket(wsUrlWithAuth);
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
