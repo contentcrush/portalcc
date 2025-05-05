@@ -4,16 +4,16 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
-  projectComments, projectCommentReactions,
+  projectComments, projectCommentReactions, brandDocuments,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
-  type ProjectComment, type ProjectCommentReaction,
+  type ProjectComment, type ProjectCommentReaction, type BrandDocument,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
-  type InsertProjectComment, type InsertProjectCommentReaction
+  type InsertProjectComment, type InsertProjectCommentReaction, type InsertBrandDocument
 } from "../shared/schema";
 
 export interface IStorage {
@@ -114,6 +114,13 @@ export interface IStorage {
   getTaskAttachment(id: number): Promise<TaskAttachment | undefined>;
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
+  
+  // Brand Documents
+  getBrandDocuments(clientId: number): Promise<BrandDocument[]>;
+  getBrandDocument(id: number): Promise<BrandDocument | undefined>;
+  createBrandDocument(document: InsertBrandDocument): Promise<BrandDocument>;
+  updateBrandDocument(id: number, document: Partial<InsertBrandDocument>): Promise<BrandDocument | undefined>;
+  deleteBrandDocument(id: number): Promise<boolean>;
   
   // Client Interactions
   getClientInteractions(clientId: number): Promise<ClientInteraction[]>;

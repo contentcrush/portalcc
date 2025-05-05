@@ -417,6 +417,7 @@ export type ProjectComment = typeof projectComments.$inferSelect & {
 };
 export type ProjectCommentReaction = typeof projectCommentReactions.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
+export type BrandDocument = typeof brandDocuments.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
@@ -436,6 +437,7 @@ export type InsertCommentReaction = z.infer<typeof insertCommentReactionSchema>;
 export type InsertProjectComment = z.infer<typeof insertProjectCommentSchema>;
 export type InsertProjectCommentReaction = z.infer<typeof insertProjectCommentReactionSchema>;
 export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
+export type InsertBrandDocument = z.infer<typeof insertBrandDocumentSchema>;
 export type InsertClientInteraction = z.infer<typeof insertClientInteractionSchema>;
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
@@ -476,7 +478,8 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   projects: many(projects),
   clientInteractions: many(clientInteractions),
   financialDocuments: many(financialDocuments),
-  events: many(events)
+  events: many(events),
+  brandDocuments: many(brandDocuments)
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -601,6 +604,17 @@ export const taskAttachmentsRelations = relations(taskAttachments, ({ one }) => 
   }),
   uploader: one(users, {
     fields: [taskAttachments.uploaded_by],
+    references: [users.id]
+  })
+}));
+
+export const brandDocumentsRelations = relations(brandDocuments, ({ one }) => ({
+  client: one(clients, {
+    fields: [brandDocuments.client_id],
+    references: [clients.id]
+  }),
+  uploader: one(users, {
+    fields: [brandDocuments.uploaded_by],
     references: [users.id]
   })
 }));
