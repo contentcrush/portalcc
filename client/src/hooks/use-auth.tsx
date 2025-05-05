@@ -1,11 +1,11 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { getQueryFn, apiRequest, queryClient, setAuthToken, getAuthToken } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthResponse = {
@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
-      // O token agora é armazenado em cookies HTTP-only pelo servidor
+      // Armazenar o token em memória além de nos cookies para dispositivos móveis
+      setAuthToken(data.token);
       toast({
         title: "Login bem-sucedido",
         description: `Bem-vindo de volta, ${data.user.name}!`,
@@ -71,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
-      // O token agora é armazenado em cookies HTTP-only pelo servidor
+      // Armazenar o token em memória além de nos cookies para dispositivos móveis
+      setAuthToken(data.token);
       toast({
         title: "Registro bem-sucedido",
         description: `Bem-vindo, ${data.user.name}!`,
@@ -93,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Os cookies são removidos pelo servidor na resposta
     },
     onSuccess: () => {
+      // Limpar token em memória e dados do usuário
+      setAuthToken(null);
       queryClient.setQueryData(["/api/auth/me"], null);
       // Limpar outras queries do cache para evitar dados antigos
       queryClient.clear();
@@ -105,6 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.href = "/auth";
     },
     onError: (error: Error) => {
+      // Ainda assim, limpar token em memória por segurança
+      setAuthToken(null);
       toast({
         title: "Falha no logout",
         description: error.message || "Não foi possível desconectar",
@@ -115,7 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Os tokens são gerenciados automaticamente via cookies HTTP-only pelo servidor
+  // Extrair e salvar o token em memória quando o usuário for carregado ou alterado
+  useEffect(() => {
+    if (authData?.token) {
+      setAuthToken(authData.token);
+    }
+  }, [authData]);
 
   return (
     <AuthContext.Provider

@@ -10,9 +10,29 @@ async function throwIfResNotOk(res: Response) {
 // Objeto global para armazenar listeners de websocket para invalidação de cache
 export const cacheInvalidationListeners: { [key: string]: (() => void)[] } = {};
 
-// Adicionar os cabeçalhos necessários às requisições
+// Token armazenado na memória (usado como fallback para dispositivos que não suportam bem cookies)
+let inMemoryToken: string | null = null;
+
+// Função para salvar o token na memória
+export function setAuthToken(token: string | null) {
+  inMemoryToken = token;
+}
+
+// Função para obter o token atual
+export function getAuthToken(): string | null {
+  return inMemoryToken;
+}
+
+// Adicionar os cabeçalhos necessários às requisições, incluindo autorização se disponível
 function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
   const headers: HeadersInit = hasContentType ? { "Content-Type": "application/json" } : {};
+  
+  // Adicionar o token de autenticação ao cabeçalho se disponível
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   return headers;
 }
 
