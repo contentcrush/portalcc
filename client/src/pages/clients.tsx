@@ -694,67 +694,81 @@ export default function Clients() {
       {sortedClients && sortedClients.length > 0 && viewMode === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {sortedClients.map(client => (
-            <Card key={client.id} className="overflow-hidden hover:shadow-md transition-shadow border border-border/50">
-              <CardHeader className="p-4 pb-0">
+            <Card key={client.id} className="group overflow-hidden border border-border/50 transition-all relative">
+              <Link href={`/clients/${client.id}`} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Ver detalhes de ${client.name}`}></Link>
+              
+              <div className="absolute top-2 right-2 z-20">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-60 group-hover:opacity-100 transition-opacity">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Ver detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Novo projeto
+                    </DropdownMenuItem>
+                    {client.website && (
+                      <DropdownMenuItem asChild>
+                        <a href={client.website} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Visitar site
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleDeleteClientClick(client)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir cliente
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              <div className="absolute right-0 bottom-0 z-20">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="rounded-tl-md rounded-br-none rounded-tr-none bg-primary/10 hover:bg-primary/20 text-primary text-xs"
+                  onClick={() => navigate(`/clients/${client.id}`)}
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1" />
+                  Detalhes
+                </Button>
+              </div>
+              
+              <CardHeader className="p-4 pb-0 group-hover:bg-muted/10 transition-colors">
                 <div className="flex items-start gap-4">
                   <ClientAvatar 
                     name={client.name}
                     logoUrl={client.logo}
                     size="md"
-                    className="mt-1"
+                    className="mt-1 relative z-20"
                   />
                   <div className="flex-1 min-w-0">
-                    <Link href={`/clients/${client.id}`} className="hover:underline inline-block">
-                      <CardTitle className="text-base font-medium truncate">
-                        {client.name}
-                      </CardTitle>
-                    </Link>
+                    <CardTitle className="text-base font-medium truncate group-hover:text-primary transition-colors">
+                      {client.name}
+                    </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
+                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs relative z-20">
                         {client.type}
                       </Badge>
                       {isClientActive(client.id) ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200 relative z-20">
                           Ativo
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs relative z-20">
                           Inativo
                         </Badge>
                       )}
                     </div>
                   </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-3 h-8 w-8 text-muted-foreground">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
-                        <Briefcase className="h-4 w-4 mr-2" />
-                        Novo projeto
-                      </DropdownMenuItem>
-                      {client.website && (
-                        <DropdownMenuItem asChild>
-                          <a href={client.website} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Visitar site
-                          </a>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteClientClick(client)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir cliente
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </CardHeader>
               
@@ -895,12 +909,23 @@ export default function Clients() {
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <Link 
-                            href={`/clients/${client.id}`}
-                            className="font-medium hover:text-primary transition-colors truncate block"
-                          >
-                            {client.name}
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link 
+                              href={`/clients/${client.id}`}
+                              className="font-medium hover:text-primary transition-colors truncate block"
+                            >
+                              {client.name}
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="h-5 px-1.5 rounded-sm text-xs font-normal text-primary bg-primary/5 hover:bg-primary/10 hidden sm:flex"
+                              onClick={() => navigate(`/clients/${client.id}`)}
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              Detalhes
+                            </Button>
+                          </div>
                           {isClientActive(client.id) ? (
                             <span className="text-xs text-green-600">● Ativo</span>
                           ) : (
@@ -1361,7 +1386,7 @@ export default function Clients() {
                                     ) : (
                                       <span>Selecione uma data</span>
                                     )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
                                   </Button>
                                 </FormControl>
                               </PopoverTrigger>
