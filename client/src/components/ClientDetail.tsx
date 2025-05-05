@@ -1815,6 +1815,121 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de upload de documentos */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload de Documento da Marca</DialogTitle>
+            <DialogDescription>
+              Faça upload de logotipos, manuais de identidade visual, e outros documentos relacionados à marca.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={documentForm.handleSubmit(onDocumentSubmit)} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Título do Documento</Label>
+                <Input
+                  id="title"
+                  placeholder="Ex: Logo Principal, Manual de Marca, etc."
+                  {...documentForm.register("title")}
+                />
+                {documentForm.formState.errors.title && (
+                  <p className="text-sm text-red-500">{documentForm.formState.errors.title.message}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Descreva brevemente o documento..."
+                  className="resize-none"
+                  {...documentForm.register("description")}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="file">Arquivo</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    {filePreview ? (
+                      <div className="w-full relative">
+                        <img 
+                          src={filePreview} 
+                          alt="Preview" 
+                          className="w-full h-48 object-contain rounded-md"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            setUploadFile(null);
+                            setFilePreview(null);
+                            documentForm.setValue("file", undefined);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-3 rounded-full bg-slate-100">
+                          <FileText className="h-6 w-6 text-slate-600" />
+                        </div>
+                        <div className="flex flex-col items-center text-center">
+                          <p className="text-sm font-medium">
+                            Arraste e solte ou clique para selecionar
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Arquivos suportados: PDF, JPG, PNG, SVG, etc.
+                          </p>
+                        </div>
+                        <Input
+                          id="file"
+                          type="file"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => document.getElementById("file")?.click()}
+                        >
+                          Selecionar arquivo
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {documentForm.formState.errors.file && (
+                  <p className="text-sm text-red-500">{documentForm.formState.errors.file.message}</p>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={uploadDocumentMutation.isPending || !uploadFile}
+              >
+                {uploadDocumentMutation.isPending && (
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                Upload
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
