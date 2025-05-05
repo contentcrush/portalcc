@@ -264,15 +264,29 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
         socket.disconnect();
       }
 
-      // Iniciar nova conexão
-      socket = io({
+      // Obter token de autenticação do localStorage
+      const storedToken = localStorage.getItem('access_token') || token;
+      
+      // Configurar parâmetros de conexão
+      const connectionOptions: any = {
         path: '/socket.io',
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-      });
+      };
+      
+      // Adicionar token como parâmetro de consulta se disponível
+      if (storedToken) {
+        console.log('Iniciando Socket.IO com token de autenticação');
+        connectionOptions.query = { token: storedToken };
+      } else {
+        console.log('Iniciando Socket.IO sem autenticação');
+      }
+      
+      // Iniciar nova conexão
+      socket = io(connectionOptions);
 
       socket.on('connect', () => {
         console.log('Socket.IO conectado:', socket!.id);
@@ -426,7 +440,9 @@ export function onNewComment(callback: (comment: any) => void): () => void {
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('new-comment', callback);
+    if (socket) {
+      socket.off('new-comment', callback);
+    }
   };
 }
 
@@ -443,7 +459,9 @@ export function onNewProjectComment(callback: (comment: any) => void): () => voi
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('new-project-comment', callback);
+    if (socket) {
+      socket.off('new-project-comment', callback);
+    }
   };
 }
 
