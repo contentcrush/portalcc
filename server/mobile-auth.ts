@@ -203,19 +203,27 @@ export function setupMobileAuth(app: Express) {
         // Hash da senha
         const hashedPassword = await hashPassword(userData.password);
         
-        // Preparar dados para inserção
-        const newUserData = {
-          ...userData,
-          password: hashedPassword,
-          created_at: new Date(),
-          last_login: new Date(),
-          is_active: true, // Usuários novos são ativados por padrão
-          role: "viewer" as const // Papel padrão para novos usuários registrados pelo app
-        };
-        
-        // Inserir no banco de dados
+        // Inserir no banco de dados com valores específicos
         const [createdUser] = await db.insert(users)
-          .values([newUserData])
+          .values({
+            username: userData.username,
+            email: userData.email,
+            password: hashedPassword,
+            name: userData.name,
+            role: "viewer", // Papel padrão para novos usuários
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            last_login: new Date(),
+            // Outros campos opcionais
+            user_type: userData.user_type || null,
+            document: userData.document || null,
+            phone: userData.phone || null,
+            mobile_phone: userData.mobile_phone || null,
+            website: userData.website || null,
+            address: userData.address || null,
+            area: userData.area || null
+          })
           .returning();
         
         if (!createdUser) {
