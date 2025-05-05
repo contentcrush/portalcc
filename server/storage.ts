@@ -1513,6 +1513,44 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Brand Documents
+  async getBrandDocuments(clientId: number): Promise<BrandDocument[]> {
+    return await db.select()
+      .from(brandDocuments)
+      .where(eq(brandDocuments.client_id, clientId))
+      .orderBy(asc(brandDocuments.upload_date));
+  }
+  
+  async getBrandDocument(id: number): Promise<BrandDocument | undefined> {
+    const [document] = await db.select()
+      .from(brandDocuments)
+      .where(eq(brandDocuments.id, id));
+    return document || undefined;
+  }
+  
+  async createBrandDocument(document: InsertBrandDocument): Promise<BrandDocument> {
+    const [brandDocument] = await db.insert(brandDocuments)
+      .values({
+        ...document,
+        upload_date: new Date()
+      })
+      .returning();
+    return brandDocument;
+  }
+  
+  async updateBrandDocument(id: number, document: Partial<InsertBrandDocument>): Promise<BrandDocument | undefined> {
+    const [updated] = await db.update(brandDocuments)
+      .set(document)
+      .where(eq(brandDocuments.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteBrandDocument(id: number): Promise<boolean> {
+    await db.delete(brandDocuments).where(eq(brandDocuments.id, id));
+    return true;
+  }
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
