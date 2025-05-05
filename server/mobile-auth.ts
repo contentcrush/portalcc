@@ -210,12 +210,12 @@ export function setupMobileAuth(app: Express) {
           created_at: new Date(),
           last_login: new Date(),
           is_active: true, // Usuários novos são ativados por padrão
-          role: 'viewer' // Papel padrão para novos usuários registrados pelo app
+          role: "viewer" as const // Papel padrão para novos usuários registrados pelo app
         };
         
         // Inserir no banco de dados
         const [createdUser] = await db.insert(users)
-          .values(newUserData)
+          .values([newUserData])
           .returning();
         
         if (!createdUser) {
@@ -287,8 +287,9 @@ export function setupMobileAuth(app: Express) {
           .where(eq(refreshTokens.user_id, decoded.userId));
         
         console.log(`[Mobile Auth] Tokens revogados para usuário ID: ${decoded.userId}`);
-      } catch (jwtError) {
+      } catch (error) {
         // Mesmo se o token for inválido, consideramos o logout bem-sucedido
+        const jwtError = error as Error;
         console.log('[Mobile Auth] Token inválido durante logout:', jwtError.message);
       }
       
