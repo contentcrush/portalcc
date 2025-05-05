@@ -39,20 +39,37 @@ function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
 // Função para renovar o token expirado
 async function refreshToken(): Promise<boolean> {
   try {
+    console.log('Tentando renovar token...');
     const res = await fetch('/api/auth/refresh', {
       method: 'POST',
       credentials: 'include',
+      headers: getAuthHeaders(), // Enviar token atual se existir
     });
     
     if (!res.ok) {
-      // Se o refresh falhar, redirecionamos para o login
+      console.log('Falha ao renovar token:', res.status);
+      // Se o refresh falhar, limpamos o token em memória
+      setAuthToken(null);
       return false;
     }
     
-    // Se for bem-sucedido, o novo token estará nos cookies
-    return true;
+    // Se for bem-sucedido, extraímos o novo token da resposta
+    try {
+      const data = await res.json();
+      if (data.token) {
+        console.log('Token renovado com sucesso');
+        // Salvar o novo token em memória
+        setAuthToken(data.token);
+        return true;
+      }
+    } catch (e) {
+      console.error('Erro ao processar resposta de renovação de token:', e);
+    }
+    
+    return false;
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    console.error('Erro ao renovar token:', error);
+    setAuthToken(null);
     return false;
   }
 }
@@ -64,11 +81,15 @@ export async function apiRequest(
 ): Promise<Response> {
   console.log('API Request:', method, url, 'Com token:', !!getAuthToken());
   
+  // Para dispositivos móveis, a prioridade é o token no cabeçalho
+  const headers = getAuthHeaders(!!data);
+  console.log('Enviando cabeçalhos:', Object.keys(headers).join(', '));
+  
   let res = await fetch(url, {
     method,
-    headers: getAuthHeaders(!!data),
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Mantém cookies para navegadores que suportam bem
+    credentials: "include", // Ainda mantém cookies como fallback
   });
 
   // Log para debug da resposta
@@ -127,9 +148,13 @@ export const getQueryFn: <T>(options?: {
   (options) => {
     const unauthorizedBehavior = options?.on401 || "throw";
     return async ({ queryKey }) => {
+    console.log('Executando query:', queryKey[0], 'Com token:', !!getAuthToken());
+    const headers = getAuthHeaders();
+    console.log('Query headers:', Object.keys(headers).join(', '));
+      
     let res = await fetch(queryKey[0] as string, {
       credentials: "include",
-      headers: getAuthHeaders(),
+      headers,
     });
 
     // Tratar token expirado em queries também
