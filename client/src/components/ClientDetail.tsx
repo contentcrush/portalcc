@@ -628,144 +628,254 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             </TabsList>
             
             <TabsContent value="interactions" className="space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium">Histórico de Interações</h3>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Interação
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {interactions?.length > 0 ? (
-                  interactions.map(interaction => {
-                    const user = users?.find(u => u.id === interaction.user_id);
-                    const iconName = getInteractionIcon(interaction.type as any);
-                    
-                    return (
-                      <div key={interaction.id} className="flex gap-3">
-                        <div className={`mt-1 p-2 rounded-full bg-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-100 text-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-600`}>
-                          <div className="h-4 w-4" dangerouslySetInnerHTML={{ __html: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="${iconName === 'video' ? 'M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z' : iconName === 'mail' ? 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75' : iconName === 'message-square' ? 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z' : 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'}" /></svg>` }} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <div>
-                              <span className="font-medium">{interaction.title}</span>
-                              <Badge variant={interaction.type === 'reuniao' ? 'blue' : interaction.type === 'feedback' ? 'warning' : 'success'} className="ml-2 capitalize">
-                                {interaction.type === 'reuniao' ? 'Reunião' : 
-                                  interaction.type === 'email' ? 'Email' : 
-                                  interaction.type === 'feedback' ? 'Feedback' : 
-                                  'Documento'}
-                              </Badge>
+              <Card className="border-border/40">
+                <CardHeader className="pb-2 flex flex-row justify-between items-center">
+                  <CardTitle className="text-lg font-medium">Histórico de Interações</CardTitle>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Nova Interação
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {interactions?.length > 0 ? (
+                      interactions.map(interaction => {
+                        const user = users?.find(u => u.id === interaction.user_id);
+                        const iconName = getInteractionIcon(interaction.type as any);
+                        
+                        // Determinando as cores baseadas no tipo de interação
+                        let iconBgClass = "bg-blue-100/70";
+                        let iconTextClass = "text-blue-600";
+                        let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "default";
+                        
+                        if (interaction.type === 'feedback') {
+                          iconBgClass = "bg-amber-100/70";
+                          iconTextClass = "text-amber-600";
+                          badgeVariant = "secondary";
+                        } else if (interaction.type === 'documento') {
+                          iconBgClass = "bg-green-100/70";
+                          iconTextClass = "text-green-600";
+                          badgeVariant = "outline";
+                        }
+                        
+                        return (
+                          <div key={interaction.id} className="flex gap-3 p-3 border border-border/30 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className={`shrink-0 mt-1 p-2 rounded-md ${iconBgClass} ${iconTextClass}`}>
+                              {iconName === 'video' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z" />
+                                </svg>
+                              )}
+                              {iconName === 'mail' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                              )}
+                              {iconName === 'message-square' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                                </svg>
+                              )}
+                              {(iconName === 'file' || !iconName) && (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                </svg>
+                              )}
                             </div>
-                            <span className="text-sm text-gray-500">
-                              {formatDate(interaction.date)}
-                            </span>
+                            
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">{interaction.title}</h4>
+                                  <Badge variant={badgeVariant} className="mt-1 capitalize text-xs">
+                                    {interaction.type === 'reuniao' ? 'Reunião' : 
+                                      interaction.type === 'email' ? 'Email' : 
+                                      interaction.type === 'feedback' ? 'Feedback' : 
+                                      'Documento'}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                  <CalendarClock className="h-3.5 w-3.5" />
+                                  {formatDate(interaction.date)}
+                                </div>
+                              </div>
+                              
+                              <div className="mt-2 text-sm text-muted-foreground bg-muted/40 p-2.5 rounded-md">
+                                {interaction.description}
+                              </div>
+                              
+                              <div className="flex items-center mt-3 pt-2 border-t border-border/30">
+                                <UserAvatar user={user} className="h-5 w-5 mr-2" />
+                                <span className="text-xs text-muted-foreground">{user?.name || 'Usuário'}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {interaction.description}
-                          </p>
-                          <div className="flex items-center mt-2">
-                            <UserAvatar user={user} className="h-5 w-5 mr-2" />
-                            <span className="text-xs text-gray-500">{user?.name || 'Usuário'}</span>
-                          </div>
-                        </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Nenhuma interação registrada para este cliente.
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Nenhuma interação registrada para este cliente.
-                  </div>
-                )}
+                    )}
+                  
               </div>
               
               <Button variant="ghost" size="sm" className="w-full mt-4">
                 Ver histórico completo
               </Button>
+              </CardContent>
+              </Card>
             </TabsContent>
             
-            <TabsContent value="financial">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Documentos Financeiros</h3>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filtrar
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>DOCUMENTO</TableHead>
-                    <TableHead>PROJETO</TableHead>
-                    <TableHead>DATA</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead className="text-right">VALOR</TableHead>
-                    <TableHead className="text-right">AÇÕES</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {financialDocuments?.length > 0 ? (
-                    financialDocuments.map(doc => (
-                      <TableRow key={doc.id}>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <div className={`p-1 rounded mr-2 ${doc.document_type === 'invoice' ? 'bg-red-100 text-red-600' : doc.document_type === 'contract' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
-                              <FileText className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <div className="font-medium">{doc.document_number}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {doc.document_type === 'invoice' ? 'Fatura' : 
-                                 doc.document_type === 'contract' ? 'Contrato' : 
-                                 doc.document_type === 'proposal' ? 'Proposta' : 'Recibo'}
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{projects?.find(p => p.id === doc.project_id)?.name || '-'}</TableCell>
-                        <TableCell>{formatDate(doc.due_date)}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              doc.status === 'pago' ? 'success' : 
-                              doc.status === 'pendente' ? 'warning' : 
-                              'secondary'
-                            }
-                            className="capitalize"
-                          >
-                            {doc.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(doc.amount)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+            <TabsContent value="financial" className="space-y-4">
+              <Card className="border-border/40">
+                <CardHeader className="pb-2 flex flex-row justify-between items-center">
+                  <CardTitle className="text-lg font-medium">Documentos Financeiros</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-8">
+                      <Filter className="h-3.5 w-3.5 mr-1.5" />
+                      Filtrar
+                    </Button>
+                    <Button variant="default" size="sm" className="h-8">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Adicionar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-xs">DOCUMENTO</TableHead>
+                        <TableHead className="text-xs">PROJETO</TableHead>
+                        <TableHead className="text-xs">DATA</TableHead>
+                        <TableHead className="text-xs">STATUS</TableHead>
+                        <TableHead className="text-xs text-right">VALOR</TableHead>
+                        <TableHead className="text-xs text-right">AÇÕES</TableHead>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                        Nenhum documento financeiro encontrado para este cliente.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {financialDocuments?.length > 0 ? (
+                        financialDocuments.map(doc => (
+                          <TableRow key={doc.id} className="hover:bg-muted/40">
+                            <TableCell>
+                              <div className="flex items-center gap-2.5">
+                                <div className={`p-1.5 rounded-md ${
+                                  doc.document_type === 'invoice' ? 'bg-red-100/80 text-red-600' : 
+                                  doc.document_type === 'contract' ? 'bg-amber-100/80 text-amber-600' : 
+                                  'bg-blue-100/80 text-blue-600'
+                                }`}>
+                                  <FileText className="h-3.5 w-3.5" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-sm">{doc.document_number}</div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {doc.document_type === 'invoice' ? 'Fatura' : 
+                                    doc.document_type === 'contract' ? 'Contrato' : 
+                                    doc.document_type === 'proposal' ? 'Proposta' : 'Recibo'}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">{projects?.find(p => p.id === doc.project_id)?.name || '-'}</TableCell>
+                            <TableCell className="text-sm">
+                              <div className="flex items-center gap-1.5">
+                                <CalendarClock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                {formatDate(doc.due_date)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  doc.status === 'pago' ? 'outline' : 
+                                  doc.status === 'pendente' ? 'secondary' : 
+                                  'default'
+                                }
+                                className={`capitalize text-xs ${
+                                  doc.status === 'pago' ? 'border-green-200 bg-green-50 text-green-700' : 
+                                  doc.status === 'pendente' ? 'border-amber-200 bg-amber-50 text-amber-700' : 
+                                  ''
+                                }`}
+                              >
+                                {doc.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(doc.amount)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted">
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-muted">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <FileText className="h-8 w-8 text-muted-foreground/40" />
+                              <p>Nenhum documento financeiro encontrado para este cliente.</p>
+                              <Button variant="link" size="sm" className="h-8 mt-1">
+                                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                Adicionar documento
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              
+              {/* Resumo Financeiro */}
+              {financialDocuments?.length > 0 && (
+                <Card className="border-border/40">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-medium">Resumo Financeiro</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Total Faturado</p>
+                        <p className="text-2xl font-bold mt-1">{formatCurrency(totalRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Valor dos projetos:</p>
+                          <p className="text-sm font-medium">{formatCurrency(projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Valor Pago</p>
+                        <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(paidRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Percentual:</p>
+                          <p className="text-sm font-medium">{percentPaidRevenue}% do total</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/30 rounded-lg p-4 border border-border/40">
+                        <p className="text-sm text-muted-foreground">Pendente de Pagamento</p>
+                        <p className="text-2xl font-bold text-amber-600 mt-1">{formatCurrency(pendingRevenue)}</p>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Vencidos:</p>
+                          <p className="text-sm font-medium">
+                            {formatCurrency(
+                              financialDocuments.filter(doc => 
+                                !doc.paid && doc.due_date && new Date(doc.due_date) < new Date()
+                              ).reduce((sum, doc) => sum + (doc.amount || 0), 0)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -773,9 +883,12 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         {/* Right sidebar */}
         <div className="space-y-6">
           {/* KPIs */}
-          <Card className="bg-white">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-6">
+          <Card className="border-border/40 overflow-hidden">
+            <CardHeader className="pb-2 border-b border-border/30 bg-muted/30">
+              <CardTitle className="text-base font-medium">Resumo do Cliente</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-2 divide-x divide-border/30">
                 <div>
                   <p className="text-sm text-gray-500">Projetos Totais</p>
                   <div className="mt-1 flex items-center">
