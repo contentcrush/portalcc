@@ -1,4 +1,4 @@
-import { eq, and, inArray, or, count, asc } from "drizzle-orm";
+import { eq, and, inArray, or, count, asc, desc } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
