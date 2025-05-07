@@ -94,6 +94,7 @@ export const clients = pgTable("clients", {
   since: timestamp("since"),
   notes: text("notes"),
   logo: text("logo"),
+  active: boolean("active").default(true),
 });
 
 export const projects = pgTable("projects", {
@@ -285,7 +286,8 @@ export const insertClientSchema = clientBaseSchema.extend({
   since: z.union([z.string(), z.date(), z.null()]).transform(val => 
     val === null || val === undefined ? null : 
     typeof val === 'string' ? new Date(val) : val
-  ).nullable().optional()
+  ).nullable().optional(),
+  active: z.boolean().optional().default(true)
 });
 // Define schema base e customiza para adicionar transformação de strings para dates
 const projectBaseSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
