@@ -63,7 +63,7 @@ import {
   Image,
   Tag,
   ArrowRight,
-  Calendar as CalendarIcon2,
+  Calendar as CalendarIcon,
   User,
   UserPlus,
   Settings,
@@ -71,6 +71,7 @@ import {
   ExternalLink,
   BarChart,
   Trash2,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -507,106 +508,93 @@ export default function Clients() {
     
     // Usar a nova rota OPTIONS para obter informações relacionadas eficientemente
     fetch(`/api/clients/${client.id}`, { method: 'OPTIONS' })
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => {
         setDeleteItemsCount({
-          projects: data.relatedItems.projects || 0,
-          interactions: data.relatedItems.interactions || 0,
-          financialDocuments: data.relatedItems.financialDocuments || 0
+          projects: data.related?.projects || 0,
+          interactions: data.related?.interactions || 0,
+          financialDocuments: data.related?.financialDocuments || 0
         });
         setIsDeleteClientDialogOpen(true);
       })
-      .catch(error => {
-        console.error('Erro ao verificar itens relacionados:', error);
-        // Abrir diálogo mesmo se não conseguir verificar os itens relacionados
-        setDeleteItemsCount({
-          projects: 0,
-          interactions: 0,
-          financialDocuments: 0
-        });
+      .catch(err => {
+        console.error("Erro ao buscar informações relacionadas:", err);
+        setDeleteItemsCount({ projects: 0, interactions: 0, financialDocuments: 0 });
         setIsDeleteClientDialogOpen(true);
       });
   };
 
-  // Função para confirmar exclusão do cliente
-  const confirmDeleteClient = () => {
-    if (selectedClient) {
-      deleteClientMutation.mutate(selectedClient.id);
-    }
-  };
-
-  // Função para exportar dados dos clientes
-  const exportToCSV = () => {
-    // Código para exportar para CSV usando uma biblioteca como xlsx seria feita aqui
-    setIsExportDialogOpen(false);
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header com título e botão de ação principal */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerenciamento de clientes e relacionamentos comerciais
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
+          <p className="text-sm text-gray-500">Gerencie, visualize e adicione clientes</p>
         </div>
-        
-        <Button onClick={handleNewClientClick} size="sm" className="w-full sm:w-auto">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Novo Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleNewClientClick} className="shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
       
-      {/* Barra de filtros e pesquisa - design mobile-first */}
-      <Card className="border border-border/50">
+      {/* Filters and search */}
+      <Card className="border border-border/40 shadow-sm">
         <CardContent className="p-4 space-y-4">
-          <div className="w-full relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar clientes por nome, tipo ou contato..."
-              className="pl-10 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex-1 min-w-[140px]">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full">
-                  <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="Tipo de cliente" />
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar clientes..."
+                className="pl-8 bg-background"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-col xs:flex-row gap-2">
+              <Select
+                defaultValue="all"
+                value={typeFilter}
+                onValueChange={setTypeFilter}
+              >
+                <SelectTrigger className="w-[180px] bg-background border border-input">
+                  <SelectValue placeholder="Filtrar por tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
-                  {CLIENT_TYPE_OPTIONS.map((option) => (
+                  {CLIENT_TYPE_OPTIONS.map(option => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div className="flex-1 min-w-[140px]">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full">
-                  <ArrowRight className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+              
+              <Select
+                defaultValue="recent"
+                value={sortBy}
+                onValueChange={setSortBy}
+              >
+                <SelectTrigger className="w-[180px] bg-background border border-input">
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Mais recentes</SelectItem>
-                  <SelectItem value="name">Nome (A-Z)</SelectItem>
-                  <SelectItem value="revenue">Receita (maior)</SelectItem>
+                  <SelectItem value="name">Nome</SelectItem>
+                  <SelectItem value="revenue">Receita</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <ToggleGroup 
-              type="single" 
-              value={viewMode} 
-              onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value) => {
+                if (value) setViewMode(value as 'grid' | 'list');
+              }}
               className="border rounded-md p-0.5 justify-end ml-auto"
             >
               <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-9 px-0">
@@ -640,335 +628,275 @@ export default function Clients() {
                     <div className="h-3 bg-muted rounded animate-pulse w-1/3" />
                   </div>
                 </div>
-                <div className="space-y-2 mt-4">
-                  <div className="h-3 bg-muted rounded animate-pulse w-full" />
-                  <div className="h-3 bg-muted rounded animate-pulse w-4/5" />
-                  <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
-                </div>
-                <div className="flex justify-between mt-6">
-                  <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
-                  <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded animate-pulse" />
+                  <div className="h-3 bg-muted rounded animate-pulse" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-      
-      {/* Empty state */}
-      {!isLoading && (!filteredClients || filteredClients.length === 0) && (
-        <Card className="border border-dashed">
-          <CardContent className="p-8 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Building className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Nenhum cliente encontrado</h3>
-            <p className="text-muted-foreground max-w-md mb-6">
-              {searchTerm || typeFilter !== "all" 
-                ? "Tente ajustar seus filtros de busca ou limpar a pesquisa."
-                : "Comece adicionando seu primeiro cliente para gerenciar relacionamentos e projetos."}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              {(searchTerm || typeFilter !== "all") && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSearchTerm("");
-                    setTypeFilter("all");
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Limpar filtros
-                </Button>
-              )}
-              <Button onClick={handleNewClientClick}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                {filteredClients?.length === 0 ? "Adicionar cliente" : "Novo cliente"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Clients grid view - redesenhado para mobile first */}
-      {sortedClients && sortedClients.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {sortedClients.map(client => (
-            <Card key={client.id} className="overflow-hidden hover:shadow-md transition-shadow border border-border/50">
-              <CardHeader className="p-4 pb-0">
-                <div className="flex items-start gap-4">
-                  <ClientAvatar 
-                    name={client.name}
-                    logoUrl={client.logo}
-                    size="md"
-                    className="mt-1"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/clients/${client.id}`} className="hover:underline inline-block">
-                      <CardTitle className="text-base font-medium truncate">
-                        {client.name}
-                      </CardTitle>
-                    </Link>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
-                        {client.type}
-                      </Badge>
-                      {isClientActive(client.id) ? (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200">
-                          Ativo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          Inativo
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-3 h-8 w-8 text-muted-foreground">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
-                        <Briefcase className="h-4 w-4 mr-2" />
-                        Novo projeto
-                      </DropdownMenuItem>
-                      {client.website && (
-                        <DropdownMenuItem asChild>
-                          <a href={client.website} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Visitar site
-                          </a>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteClientClick(client)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir cliente
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-4 pt-3">
-                <div className="space-y-1.5 text-sm mt-1">
-                  {client.contactName && (
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <User className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      <span className="truncate">
-                        {client.contactName}
-                        {client.contactPosition && <span className="ml-1 opacity-70">({client.contactPosition})</span>}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {client.contactEmail && (
-                    <HoverCard>
-                      <HoverCardTrigger asChild>
-                        <div className="flex items-center text-muted-foreground overflow-hidden cursor-pointer">
-                          <Mail className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                          <span className="truncate hover:text-primary transition-colors">
-                            {client.contactEmail}
-                          </span>
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-auto p-2">
-                        <a 
-                          href={`mailto:${client.contactEmail}`} 
-                          className="text-sm hover:text-primary transition-colors"
-                        >
-                          {client.contactEmail}
-                        </a>
-                      </HoverCardContent>
-                    </HoverCard>
-                  )}
-                  
-                  {client.contactPhone && (
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <Phone className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      <span className="truncate">{client.contactPhone}</span>
-                    </div>
-                  )}
-                  
-                  {client.address && (
-                    <HoverCard>
-                      <HoverCardTrigger asChild>
-                        <div className="flex items-center text-muted-foreground overflow-hidden cursor-pointer">
-                          <MapPin className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                          <span className="truncate">
-                            {client.address}
-                            {client.city && <span className="ml-1">- {client.city}</span>}
-                          </span>
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-auto p-2">
-                        <p className="text-sm">
-                          {client.address}
-                          {client.city && <span>, {client.city}</span>}
-                        </p>
-                      </HoverCardContent>
-                    </HoverCard>
-                  )}
-                </div>
-              </CardContent>
-              
-              <Separator />
-              
-              <CardFooter className="p-4 bg-muted/20 flex justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">
-                    {getClientProjectsCount(client.id)} {getClientProjectsCount(client.id) === 1 ? 'projeto' : 'projetos'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1.5">
-                  <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {formatCurrency(getClientRevenue(client.id))}
-                  </span>
-                </div>
-                
-                {client.since && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(client.since)}
-                    </span>
-                  </div>
-                )}
+              <CardFooter className="flex justify-between bg-muted/20 border-t px-6 py-3">
+                <div className="h-4 bg-muted rounded animate-pulse w-16" />
+                <div className="h-4 bg-muted rounded animate-pulse w-24" />
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
       
-      {/* Clients list view - redesenhado para mobile first */}
-      {sortedClients && sortedClients.length > 0 && viewMode === 'list' && (
-        <Card className="border border-border/50 overflow-hidden">
-          <ScrollArea className="w-full max-w-full">
+      {/* Grid View */}
+      {!isLoading && viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedClients?.map(client => (
+            <div
+              key={client.id}
+              onClick={() => navigate(`/clients/${client.id}`)}
+              className="group cursor-pointer"
+            >
+              <Card className="overflow-hidden h-full transition-all border border-border/40 hover:border-primary/20 hover:shadow-md">
+                <div className="absolute top-2 right-2 z-30">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/clients/${client.id}`);
+                      }}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ver detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleNewProjectClick(client);
+                      }}>
+                        <Briefcase className="h-4 w-4 mr-2" />
+                        Novo projeto
+                      </DropdownMenuItem>
+                      {client.website && (
+                        <DropdownMenuItem asChild>
+                          <a 
+                            href={client.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Visitar site
+                          </a>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClientClick(client);
+                        }} 
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir cliente
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
+                <CardHeader className="p-4 pb-2 group-hover:bg-muted/5 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <ClientAvatar 
+                      name={client.name}
+                      logoUrl={client.logo}
+                      size="md"
+                      className="mt-1 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-medium truncate group-hover:text-primary transition-colors">
+                        {client.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
+                          {client.type}
+                        </Badge>
+                        {isClientActive(client.id) ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200">
+                            Ativo
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            Inativo
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="p-4 pt-2">
+                  <div className="space-y-2 mt-2 h-[5.5rem]">
+                    {/* Informação de contato - sempre mostra, mesmo se vazio */}
+                    <div className="flex items-center text-muted-foreground overflow-hidden">
+                      <User className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      {client.contactName ? (
+                        <span className="truncate">
+                          {client.contactName}
+                          {client.contactPosition && <span className="ml-1 opacity-70">({client.contactPosition})</span>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic text-xs">Nenhum contato definido</span>
+                      )}
+                    </div>
+                    
+                    {/* Email - sempre mostra, mesmo se vazio */}
+                    <div className="flex items-center text-muted-foreground overflow-hidden">
+                      <Mail className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      {client.contactEmail ? (
+                        <span className="truncate hover:text-primary transition-colors">
+                          {client.contactEmail}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic text-xs">Sem email cadastrado</span>
+                      )}
+                    </div>
+                    
+                    {/* Endereço - sempre mostra, mesmo se vazio */}
+                    <div className="flex items-center text-muted-foreground overflow-hidden">
+                      <MapPin className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
+                      {client.address ? (
+                        <span className="truncate">
+                          {client.address}
+                          {client.city && <span className="ml-1">- {client.city}</span>}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic text-xs">Sem endereço cadastrado</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+                
+                <Separator />
+                
+                <CardFooter className="p-4 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-row justify-between items-center">
+                  <div className="grid grid-cols-2 gap-4 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">
+                        {getClientProjectsCount(client.id)} projeto{getClientProjectsCount(client.id) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {formatCurrency(getClientRevenue(client.id))}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-shrink-0">
+                    <ArrowUpRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </CardFooter>
+              </Card>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* List View */}
+      {!isLoading && viewMode === 'list' && (
+        <Card className="border border-border/40 shadow-sm">
+          <ScrollArea className="h-[calc(100vh-270px)] w-full">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/20">
                 <TableRow>
-                  <TableHead className="w-[240px]">Cliente</TableHead>
-                  <TableHead className="w-[100px]">Tipo</TableHead>
-                  <TableHead className="hidden sm:table-cell w-[200px]">Contato</TableHead>
-                  <TableHead className="hidden md:table-cell">Endereço</TableHead>
-                  <TableHead className="text-center w-[90px]">Projetos</TableHead>
-                  <TableHead className="text-right w-[120px]">Faturamento</TableHead>
-                  <TableHead className="hidden lg:table-cell w-[100px]">Desde</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Projetos</TableHead>
+                  <TableHead>Receita</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedClients.map(client => (
-                  <TableRow key={client.id} className="hover:bg-muted/30">
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <ClientAvatar 
-                          name={client.name}
-                          logoUrl={client.logo}
-                          size="sm"
-                        />
-                        <div className="min-w-0">
-                          <Link 
-                            href={`/clients/${client.id}`}
-                            className="font-medium hover:text-primary transition-colors truncate block"
-                          >
+                {sortedClients?.map(client => (
+                  <TableRow 
+                    key={client.id}
+                    className="cursor-pointer hover:bg-muted/20"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                  >
+                    <TableCell className="font-medium min-w-[220px]">
+                      <div className="flex items-center gap-3">
+                        <ClientAvatar name={client.name} logoUrl={client.logo} size="sm" />
+                        <div className="flex flex-col">
+                          <span className="font-medium truncate max-w-[200px]">
                             {client.name}
-                          </Link>
-                          {isClientActive(client.id) ? (
-                            <span className="text-xs text-green-600">● Ativo</span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">● Inativo</span>
-                          )}
+                          </span>
+                          <Badge variant="outline" className="mt-1 w-fit text-xs">
+                            {client.type}
+                          </Badge>
                         </div>
                       </div>
                     </TableCell>
-                    
-                    <TableCell>
-                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="whitespace-nowrap">
-                        {client.type}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell className="max-w-[200px] min-w-[200px]">
                       {client.contactName ? (
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm truncate">{client.contactName}</span>
+                        <div className="flex flex-col">
+                          <span className="truncate">{client.contactName}</span>
                           {client.contactEmail && (
-                            <a 
-                              href={`mailto:${client.contactEmail}`} 
-                              className="text-xs text-muted-foreground hover:text-primary truncate block"
-                            >
+                            <span className="text-xs text-muted-foreground truncate">
                               {client.contactEmail}
-                            </a>
+                            </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">Não informado</span>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                      {client.address ? (
-                        <span className="truncate block max-w-[200px]">
-                          {client.address}
-                          {client.city && <span>, {client.city}</span>}
+                        <span className="text-muted-foreground/50 text-xs italic">
+                          Sem contato definido
                         </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/70">Não informado</span>
                       )}
                     </TableCell>
-                    
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="bg-muted/50">
-                        {getClientProjectsCount(client.id)}
-                      </Badge>
+                    <TableCell>
+                      {getClientProjectsCount(client.id)}
                     </TableCell>
-                    
-                    <TableCell className="text-right font-medium">
+                    <TableCell>
                       {formatCurrency(getClientRevenue(client.id))}
                     </TableCell>
-                    
-                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
-                      {client.since ? formatDate(client.since) : "—"}
-                    </TableCell>
-                    
-                    <TableCell>
+                    <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/clients/${client.id}`);
+                          }}>
                             <FileText className="h-4 w-4 mr-2" />
                             Ver detalhes
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleNewProjectClick(client)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleNewProjectClick(client);
+                          }}>
                             <Briefcase className="h-4 w-4 mr-2" />
                             Novo projeto
                           </DropdownMenuItem>
                           {client.website && (
                             <DropdownMenuItem asChild>
-                              <a href={client.website} target="_blank" rel="noopener noreferrer">
+                              <a href={client.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Visitar site
                               </a>
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteClientClick(client)} className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClientClick(client);
+                          }} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir cliente
                           </DropdownMenuItem>
@@ -985,124 +913,140 @@ export default function Clients() {
       
       {/* Dialog para novo cliente */}
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] p-0">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Adicionar novo cliente</DialogTitle>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Cliente</DialogTitle>
             <DialogDescription>
-              Preencha as informações abaixo para adicionar um novo cliente à sua base.
+              Preencha as informações do novo cliente abaixo.
             </DialogDescription>
           </DialogHeader>
           
-          {/* Formulário multi-etapas para novo cliente */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-4 p-1 h-auto">
-                  <TabsTrigger value="info" className="py-2">
-                    <Building className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Informações básicas</span>
-                    <span className="sm:hidden">Básico</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="contact" className="py-2">
-                    <User className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Contato e endereço</span>
-                    <span className="sm:hidden">Contato</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="extra" className="py-2">
-                    <Settings className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Configurações adicionais</span>
-                    <span className="sm:hidden">Adicional</span>
-                  </TabsTrigger>
-                </TabsList>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="relative">
+                {formStep > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute left-0 top-0 flex items-center p-0 h-auto font-normal"
+                    onClick={handlePrevStep}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Voltar
+                  </Button>
+                )}
                 
-                <div className="px-6">
-                  <TabsContent value="info" className="space-y-4 mt-0">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="md:w-2/3 space-y-4">
-                        {/* Nome do cliente */}
+                {formStep === 0 && (
+                  <>
+                    <div className="mb-4 flex justify-center">
+                      <div className="relative">
+                        <Avatar className="h-24 w-24">
+                          {avatarPreview ? (
+                            <AvatarImage src={avatarPreview} alt="Preview" />
+                          ) : (
+                            <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                              {getInitials(form.watch('name') || "NC")}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="absolute bottom-0 right-0">
+                          <label htmlFor="avatar-upload" className="cursor-pointer">
+                            <div className="bg-primary text-white p-1.5 rounded-full shadow-sm">
+                              <Upload className="h-4 w-4" />
+                            </div>
+                          </label>
+                          <input 
+                            id="avatar-upload" 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
                         <FormField
                           control={form.control}
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Nome do cliente</FormLabel>
+                              <FormLabel>Nome do Cliente*</FormLabel>
                               <FormControl>
-                                <Input placeholder="Digite o nome completo do cliente" {...field} />
+                                <Input placeholder="Ex: Empresa XYZ" {...field} />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        {/* Nome abreviado (opcional) */}
-                        <FormField
-                          control={form.control}
-                          name="shortName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nome abreviado (opcional)</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Versão curta do nome para exibição" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                Utilizado em relatórios e visualizações compactas
-                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
                       
-                      <div className="md:w-1/3 space-y-4">
-                        {/* Tipo de cliente */}
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o tipo" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {CLIENT_TYPE_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        {/* CNPJ */}
+                      <FormField
+                        control={form.control}
+                        name="shortName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome abreviado</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: XYZ" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de Cliente*</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione o tipo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {CLIENT_TYPE_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="col-span-2">
                         <FormField
                           control={form.control}
                           name="cnpj"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>CNPJ</FormLabel>
-                              <div className="flex space-x-2">
+                              <div className="flex gap-2">
                                 <FormControl>
-                                  <Input placeholder="00.000.000/0000-00" {...field} />
+                                  <Input placeholder="00.000.000/0001-00" {...field} />
                                 </FormControl>
                                 <Button 
                                   type="button" 
-                                  variant="outline" 
+                                  variant="outline"
                                   size="icon"
-                                  onClick={handleCnpjLookup}
                                   disabled={isLookupCnpj}
+                                  onClick={handleCnpjLookup}
+                                  className="flex-shrink-0"
                                 >
                                   {isLookupCnpj ? (
-                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                   ) : (
                                     <Search className="h-4 w-4" />
                                   )}
@@ -1113,309 +1057,213 @@ export default function Clients() {
                           )}
                         />
                       </div>
-                    </div>
-                    
-                    {/* Site */}
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Site</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://www.exemplo.com.br" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button 
-                      type="button" 
-                      onClick={() => form.trigger(['name', 'type']).then(valid => {
-                        if (valid) document.querySelector('[data-value="contact"]')?.click();
-                      })}
-                      className="w-full sm:w-auto"
-                    >
-                      Próxima etapa
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </TabsContent>
-                  
-                  <TabsContent value="contact" className="space-y-4 mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Nome do contato */}
-                      <FormField
-                        control={form.control}
-                        name="contactName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome do contato</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome do contato principal" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       
-                      {/* Cargo do contato */}
+                      <div className="col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="since"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                              <FormLabel>Data de início</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                      ) : (
+                                        <span>Selecione uma data</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <DatePickerWithYearNavigation
+                                    mode="single"
+                                    selected={field.value ?? undefined}
+                                    onSelect={field.onChange}
+                                    locale={ptBR}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {formStep === 1 && (
+                  <>
+                    <h3 className="font-medium text-center mb-4">Informações de Contato</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="contactName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nome do contato</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: João Silva" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
                       <FormField
                         control={form.control}
                         name="contactPosition"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cargo</FormLabel>
+                            <FormLabel>Cargo do contato</FormLabel>
                             <FormControl>
-                              <Input placeholder="Cargo ou função" {...field} />
+                              <Input placeholder="Ex: Gerente de Marketing" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {/* Email do contato */}
                       <FormField
                         control={form.control}
                         name="contactEmail"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
+                            <FormLabel>Email do contato</FormLabel>
                             <FormControl>
-                              <Input placeholder="email@exemplo.com" {...field} />
+                              <Input placeholder="Ex: joao@empresa.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {/* Telefone do contato */}
                       <FormField
                         control={form.control}
                         name="contactPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Telefone</FormLabel>
+                            <FormLabel>Telefone do contato</FormLabel>
                             <FormControl>
-                              <Input placeholder="(00) 00000-0000" {...field} />
+                              <Input placeholder="Ex: (11) 98765-4321" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="website"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Website</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: www.empresa.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
+                  </>
+                )}
+                
+                {formStep === 2 && (
+                  <>
+                    <h3 className="font-medium text-center mb-4">Endereço e Detalhes Adicionais</h3>
                     
-                    {/* Endereço */}
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Rua, número, complemento, bairro" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Cidade */}
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Cidade/UF" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={() => document.querySelector('[data-value="info"]')?.click()}
-                      >
-                        <ChevronRight className="mr-2 h-4 w-4 rotate-180" />
-                        Voltar
-                      </Button>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Endereço</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: Rua das Flores, 123" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       
-                      <Button 
-                        type="button"
-                        onClick={() => document.querySelector('[data-value="extra"]')?.click()}
-                      >
-                        Próxima etapa
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="extra" className="space-y-4 mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Logo */}
                       <FormField
                         control={form.control}
-                        name="logo"
+                        name="city"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Logo</FormLabel>
-                            <div className="flex items-start space-x-4">
-                              <div className="bg-muted p-2 rounded-md">
-                                {avatarPreview ? (
-                                  <div className="w-20 h-20 rounded-md overflow-hidden">
-                                    <img
-                                      src={avatarPreview}
-                                      alt="Logo Preview"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-20 h-20 flex items-center justify-center rounded-md border-2 border-dashed border-gray-300">
-                                    <Upload className="h-6 w-6 text-gray-400" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="space-y-2 flex-1">
-                                <FormControl>
-                                  <Input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    onChange={handleAvatarUpload}
-                                    className="hidden" 
-                                    id="logo-upload"
-                                  />
-                                </FormControl>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="w-full"
-                                  onClick={() => document.getElementById('logo-upload')?.click()}
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  {avatarPreview ? "Alterar logo" : "Fazer upload"}
-                                </Button>
-                                {avatarPreview && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="w-full text-destructive"
-                                    onClick={() => {
-                                      setAvatarPreview(null);
-                                      form.setValue('logo', '');
-                                    }}
-                                  >
-                                    <X className="h-4 w-4 mr-2" />
-                                    Remover logo
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                            <FormDescription>
-                              Faça upload de uma imagem JPG, PNG ou SVG (máx. 5MB)
-                            </FormDescription>
+                            <FormLabel>Cidade</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: São Paulo" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      {/* Data de início do relacionamento */}
-                      <FormField
-                        control={form.control}
-                        name="since"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Cliente desde</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "P", { locale: ptBR })
-                                    ) : (
-                                      <span>Selecione uma data</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <DatePickerWithYearNavigation
-                                  mode="single"
-                                  selected={field.value as Date}
-                                  onSelect={field.onChange}
-                                  initialFocus
+                      <div className="col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Observações</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Informações adicionais sobre o cliente..." 
+                                  className="min-h-[100px] resize-none"
+                                  {...field} 
                                 />
-                              </PopoverContent>
-                            </Popover>
-                            <FormDescription>
-                              Data de início do relacionamento com o cliente
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                    
-                    {/* Observações */}
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Observações</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Informações adicionais, anotações sobre o cliente..."
-                              className="resize-none min-h-[120px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={() => document.querySelector('[data-value="contact"]')?.click()}
-                      >
-                        <ChevronRight className="mr-2 h-4 w-4 rotate-180" />
-                        Voltar
-                      </Button>
-                      
-                      <Button 
-                        type="submit"
-                        disabled={createClientMutation.isPending}
-                      >
-                        {createClientMutation.isPending ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            Salvando...
-                          </>
-                        ) : (
-                          <>
-                            Adicionar cliente
-                            <UserPlus className="ml-2 h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
+                  </>
+                )}
+              </div>
+              
+              <DialogFooter>
+                {formStep < 2 ? (
+                  <Button type="button" onClick={handleNextStep}>
+                    Próximo
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    type="submit" 
+                    disabled={createClientMutation.isPending}
+                  >
+                    {createClientMutation.isPending ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Criando...
+                      </>
+                    ) : (
+                      "Adicionar Cliente"
+                    )}
+                  </Button>
+                )}
+              </DialogFooter>
             </form>
           </Form>
         </DialogContent>
@@ -1423,24 +1271,24 @@ export default function Clients() {
       
       {/* Dialog para novo projeto */}
       <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Criar novo projeto</DialogTitle>
+            <DialogTitle>Novo Projeto para {selectedClient?.name}</DialogTitle>
             <DialogDescription>
-              {selectedClient && `Adicionar projeto para o cliente ${selectedClient.name}`}
+              Adicione um novo projeto para este cliente.
             </DialogDescription>
           </DialogHeader>
           
           <Form {...projectForm}>
-            <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-6">
+            <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-4">
               <FormField
                 control={projectForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do projeto</FormLabel>
+                    <FormLabel>Nome do Projeto</FormLabel>
                     <FormControl>
-                      <Input placeholder="Digite o nome do projeto" {...field} />
+                      <Input placeholder="Ex: Campanha de Marketing" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1454,10 +1302,10 @@ export default function Clients() {
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Descreva os objetivos e escopo do projeto"
-                        className="resize-none min-h-[100px]"
-                        {...field}
+                      <Textarea 
+                        placeholder="Descreva o projeto..."
+                        className="min-h-[100px] resize-none"
+                        {...field} 
                       />
                     </FormControl>
                     <FormMessage />
@@ -1465,7 +1313,7 @@ export default function Clients() {
                 )}
               />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={projectForm.control}
                   name="status"
@@ -1473,8 +1321,8 @@ export default function Clients() {
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <Select
+                        value={field.value}
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -1483,10 +1331,9 @@ export default function Clients() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="draft">Rascunho</SelectItem>
-                          <SelectItem value="pending">Pendente</SelectItem>
                           <SelectItem value="active">Ativo</SelectItem>
                           <SelectItem value="completed">Concluído</SelectItem>
-                          <SelectItem value="canceled">Cancelado</SelectItem>
+                          <SelectItem value="on-hold">Em espera</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1499,16 +1346,15 @@ export default function Clients() {
                   name="budget"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Orçamento</FormLabel>
+                      <FormLabel>Orçamento (R$)</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          placeholder="Valor em reais (R$)" 
+                          type="number"
+                          placeholder="0,00"
                           {...field}
-                          onChange={(e) => {
-                            const value = e.target.value === "" ? undefined : parseFloat(e.target.value);
-                            field.onChange(value);
-                          }}
+                          onChange={event => field.onChange(
+                            event.target.value === '' ? undefined : Number(event.target.value)
+                          )}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1517,25 +1363,25 @@ export default function Clients() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={projectForm.control}
                   name="startDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Data de início</FormLabel>
+                      <FormLabel>Data de Início</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "P", { locale: ptBR })
+                                format(field.value, "PPP", { locale: ptBR })
                               ) : (
                                 <span>Selecione uma data</span>
                               )}
@@ -1544,10 +1390,11 @@ export default function Clients() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
+                          <DatePickerWithYearNavigation
                             mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
+                            selected={field.value ?? undefined}
                             onSelect={field.onChange}
+                            locale={ptBR}
                             initialFocus
                           />
                         </PopoverContent>
@@ -1562,19 +1409,19 @@ export default function Clients() {
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Data de entrega</FormLabel>
+                      <FormLabel>Data de Término</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "P", { locale: ptBR })
+                                format(field.value, "PPP", { locale: ptBR })
                               ) : (
                                 <span>Selecione uma data</span>
                               )}
@@ -1583,11 +1430,13 @@ export default function Clients() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
+                          <DatePickerWithYearNavigation
                             mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
+                            selected={field.value ?? undefined}
                             onSelect={field.onChange}
+                            locale={ptBR}
                             initialFocus
+                            fromDate={projectForm.watch('startDate') || undefined}
                           />
                         </PopoverContent>
                       </Popover>
@@ -1599,14 +1448,7 @@ export default function Clients() {
               
               <DialogFooter>
                 <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => setIsNewProjectDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit"
+                  type="submit" 
                   disabled={createProjectMutation.isPending}
                 >
                   {createProjectMutation.isPending ? (
@@ -1640,12 +1482,12 @@ export default function Clients() {
                 deleteItemsCount.financialDocuments > 0) && (
                 <div className="mt-4 p-3 bg-destructive/10 rounded-md text-destructive text-sm">
                   <p className="font-medium mb-1">Atenção: Os seguintes itens também serão excluídos:</p>
-                  <ul className="list-disc list-inside pl-1 space-y-1">
+                  <ul className="list-disc pl-5">
                     {deleteItemsCount.projects > 0 && (
                       <li>{deleteItemsCount.projects} projeto(s)</li>
                     )}
                     {deleteItemsCount.interactions > 0 && (
-                      <li>{deleteItemsCount.interactions} interação(ões)</li>  
+                      <li>{deleteItemsCount.interactions} interação(ões)</li>
                     )}
                     {deleteItemsCount.financialDocuments > 0 && (
                       <li>{deleteItemsCount.financialDocuments} documento(s) financeiro(s)</li>
@@ -1657,8 +1499,8 @@ export default function Clients() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteClient}
+            <AlertDialogAction
+              onClick={() => selectedClient && deleteClientMutation.mutate(selectedClient.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteClientMutation.isPending}
             >
