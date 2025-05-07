@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,6 +59,7 @@ import {
   Upload,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Info,
   Image,
   Tag,
@@ -1085,7 +1086,7 @@ export default function Clients() {
                                   </FormControl>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                  <DatePickerWithYearNavigation
+                                  <Calendar
                                     mode="single"
                                     selected={field.value ?? undefined}
                                     onSelect={field.onChange}
@@ -1390,7 +1391,7 @@ export default function Clients() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <DatePickerWithYearNavigation
+                          <Calendar
                             mode="single"
                             selected={field.value ?? undefined}
                             onSelect={field.onChange}
