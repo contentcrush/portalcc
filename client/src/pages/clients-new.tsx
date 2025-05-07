@@ -560,28 +560,28 @@ export default function Clients() {
       
       {/* Filters and search */}
       <Card className="border border-border/40 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Search - com largura reduzida e design mais compacto */}
-            <div className="relative w-full md:w-auto md:min-w-[280px] md:max-w-[320px] md:flex-auto">
+        <CardContent className="p-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-start">
+            {/* Campo de busca compacto */}
+            <div className="relative w-full sm:w-[280px] md:w-[320px] lg:w-[360px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Buscar clientes..."
-                className="pl-8 h-9 bg-background"
+                className="pl-8 h-9 bg-background w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
-            {/* Filtros em linha em dispositivos maiores */}
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-row flex-wrap gap-2 items-center">
+              {/* Filtro de tipo mais compacto */}
               <Select
                 defaultValue="all"
                 value={typeFilter}
                 onValueChange={setTypeFilter}
               >
-                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                <SelectTrigger className="h-9 w-[140px]">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -594,12 +594,13 @@ export default function Clients() {
                 </SelectContent>
               </Select>
               
+              {/* Ordenação mais compacta */}
               <Select
                 defaultValue="recent"
                 value={sortBy}
                 onValueChange={setSortBy}
               >
-                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                <SelectTrigger className="h-9 w-[140px]">
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent>
@@ -608,29 +609,29 @@ export default function Clients() {
                   <SelectItem value="revenue">Receita</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* Toggle de visualização à direita */}
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(value) => {
+                  if (value) setViewMode(value as 'grid' | 'list');
+                }}
+                className="border rounded-md p-0.5 ml-auto sm:ml-2"
+              >
+                <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-8 px-0">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-8 w-8 px-0">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
-            
-            {/* Toggle de visualização sempre à direita */}
-            <ToggleGroup
-              type="single"
-              value={viewMode}
-              onValueChange={(value) => {
-                if (value) setViewMode(value as 'grid' | 'list');
-              }}
-              className="border rounded-md p-0.5 ml-auto"
-            >
-              <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-9 px-0">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-8 w-9 px-0">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
           
           {/* Contador de resultados */}
           {!isLoading && filteredClients && (
-            <div className="text-sm text-muted-foreground mt-3">
+            <div className="text-sm text-muted-foreground mt-2">
               {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
             </div>
           )}
