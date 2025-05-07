@@ -469,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Interactions
+  // Client Interactions and Contacts
   // Obter projetos de um cliente específico
   app.get("/api/clients/:id/projects", authenticateJWT, async (req, res) => {
     try {
@@ -492,6 +492,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Contatos do cliente
+  app.get("/api/clients/:id/contacts", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const contacts = await storage.getClientContacts(clientId);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Erro ao buscar contatos do cliente:", error);
+      res.status(500).json({ message: "Falha ao buscar contatos do cliente" });
+    }
+  });
+
+  app.get("/api/client-contacts/:id", authenticateJWT, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      const contact = await storage.getClientContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contato não encontrado" });
+      }
+      
+      res.json(contact);
+    } catch (error) {
+      console.error("Erro ao buscar contato:", error);
+      res.status(500).json({ message: "Falha ao buscar contato" });
+    }
+  });
+
+  app.post("/api/clients/:id/contacts", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientContactSchema), async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      const contact = await storage.createClientContact({
+        ...req.body,
+        client_id: clientId
+      });
+      
+      // Emitir evento via WebSocket para notificar outros usuários
+      if (io) {
+        io.emit("client_updated", { 
+          type: "contact_created", 
+          clientId,
+          contact 
+        });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated",
+              action: "contact_created",
+              data: { clientId, contact } 
+            }));
+          }
+        });
+      }
+      
+      res.status(201).json(contact);
+    } catch (error) {
+      console.error("Erro ao criar contato do cliente:", error);
+      res.status(500).json({ message: "Falha ao criar contato do cliente" });
+    }
+  });
+
+  app.put("/api/client-contacts/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      
+      // Verificar se o contato existe
+      const existingContact = await storage.getClientContact(contactId);
+      if (!existingContact) {
+        return res.status(404).json({ message: "Contato não encontrado" });
+      }
+      
+      const updatedContact = await storage.updateClientContact(contactId, req.body);
+      
+      // Emitir evento via WebSocket para notificar outros usuários
+      if (io) {
+        io.emit("client_updated", { 
+          type: "contact_updated", 
+          clientId: existingContact.client_id,
+          contact: updatedContact
+        });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated",
+              action: "contact_updated",
+              data: { clientId: existingContact.client_id, contact: updatedContact } 
+            }));
+          }
+        });
+      }
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Erro ao atualizar contato do cliente:", error);
+      res.status(500).json({ message: "Falha ao atualizar contato do cliente" });
+    }
+  });
+
+  app.patch("/api/client-contacts/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      
+      // Verificar se o contato existe
+      const existingContact = await storage.getClientContact(contactId);
+      if (!existingContact) {
+        return res.status(404).json({ message: "Contato não encontrado" });
+      }
+      
+      const updatedContact = await storage.updateClientContact(contactId, req.body);
+      
+      // Emitir evento via WebSocket para notificar outros usuários
+      if (io) {
+        io.emit("client_updated", { 
+          type: "contact_updated", 
+          clientId: existingContact.client_id,
+          contact: updatedContact
+        });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated",
+              action: "contact_updated",
+              data: { clientId: existingContact.client_id, contact: updatedContact } 
+            }));
+          }
+        });
+      }
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Erro ao atualizar contato do cliente:", error);
+      res.status(500).json({ message: "Falha ao atualizar contato do cliente" });
+    }
+  });
+
+  app.delete("/api/client-contacts/:id", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      
+      // Obter dados do contato antes de excluí-lo, para usar no evento
+      const contact = await storage.getClientContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contato não encontrado" });
+      }
+      
+      const clientId = contact.client_id;
+      const success = await storage.deleteClientContact(contactId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Contato não encontrado ou não pôde ser excluído" });
+      }
+      
+      // Emitir evento via WebSocket para notificar outros usuários
+      if (io) {
+        io.emit("client_updated", { 
+          type: "contact_deleted", 
+          clientId,
+          contactId
+        });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated",
+              action: "contact_deleted",
+              data: { clientId, contactId } 
+            }));
+          }
+        });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Erro ao excluir contato do cliente:", error);
+      res.status(500).json({ message: "Falha ao excluir contato do cliente" });
+    }
+  });
+
+  app.post("/api/client-contacts/:id/set-primary", authenticateJWT, requirePermission('manage_clients'), async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      
+      // Verificar se o contato existe
+      const contact = await storage.getClientContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contato não encontrado" });
+      }
+      
+      const clientId = contact.client_id;
+      const updatedContact = await storage.setPrimaryClientContact(contactId, clientId);
+      
+      // Emitir evento via WebSocket para notificar outros usuários
+      if (io) {
+        io.emit("client_updated", { 
+          type: "contact_primary_changed", 
+          clientId,
+          contact: updatedContact
+        });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated",
+              action: "contact_primary_changed",
+              data: { clientId, contact: updatedContact } 
+            }));
+          }
+        });
+      }
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Erro ao definir contato como primário:", error);
+      res.status(500).json({ message: "Falha ao definir contato como primário" });
+    }
+  });
+  
+  // Interações do cliente
   app.get("/api/clients/:id/interactions", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);

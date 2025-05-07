@@ -70,8 +70,17 @@ export interface IStorage {
       projects: number; 
       interactions: number; 
       financialDocuments: number; 
+      contacts: number;
     } 
   }>;
+  
+  // Client Contacts
+  getClientContact(id: number): Promise<ClientContact | undefined>;
+  getClientContacts(clientId: number): Promise<ClientContact[]>;
+  createClientContact(contact: InsertClientContact): Promise<ClientContact>;
+  updateClientContact(id: number, contact: Partial<InsertClientContact>): Promise<ClientContact | undefined>;
+  deleteClientContact(id: number): Promise<boolean>;
+  setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined>;
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
@@ -115,13 +124,6 @@ export interface IStorage {
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
   
-  // Client Contacts
-  getClientContacts(clientId: number): Promise<ClientContact[]>;
-  getClientContact(id: number): Promise<ClientContact | undefined>;
-  createClientContact(contact: InsertClientContact): Promise<ClientContact>;
-  updateClientContact(id: number, contact: Partial<InsertClientContact>): Promise<ClientContact | undefined>;
-  deleteClientContact(id: number): Promise<boolean>;
-  setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined>;
   
   // Client Interactions
   getClientInteractions(clientId: number): Promise<ClientInteraction[]>;
@@ -166,6 +168,7 @@ export class MemStorage implements IStorage {
   private tasksData: Map<number, Task>;
   private taskCommentsData: Map<number, TaskComment>;
   private taskAttachmentsData: Map<number, TaskAttachment>;
+  private clientContactsData: Map<number, ClientContact>;
   private clientInteractionsData: Map<number, ClientInteraction>;
   private financialDocumentsData: Map<number, FinancialDocument>;
   private expensesData: Map<number, Expense>;
@@ -182,6 +185,7 @@ export class MemStorage implements IStorage {
   private taskId: number = 1;
   private taskCommentId: number = 1;
   private taskAttachmentId: number = 1;
+  private clientContactId: number = 1;
   private clientInteractionId: number = 1;
   private financialDocumentId: number = 1;
   private expenseId: number = 1;
@@ -199,6 +203,7 @@ export class MemStorage implements IStorage {
     this.tasksData = new Map();
     this.taskCommentsData = new Map();
     this.taskAttachmentsData = new Map();
+    this.clientContactsData = new Map();
     this.clientInteractionsData = new Map();
     this.financialDocumentsData = new Map();
     this.expensesData = new Map();
