@@ -1086,10 +1086,10 @@ export default function Clients() {
                                   </FormControl>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value ?? undefined}
-                                    onSelect={field.onChange}
+                                  <DatePickerWithYearNavigation
+                                    date={field.value ?? undefined}
+                                    setDate={field.onChange}
+                                    fromYear={1970}
                                     locale={ptBR}
                                     initialFocus
                                   />
