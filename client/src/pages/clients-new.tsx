@@ -361,22 +361,23 @@ export default function Clients() {
         form.trigger(['name', 'type']);
         return;
       }
+      // Se a validação passar, avança para a próxima etapa
+      setFormStep(1);
+      return;
     }
     
     // Validação para etapa 2 (informações de contato)
     if (formStep === 1) {
       // Aqui podemos adicionar validações para a segunda etapa se necessário
       // mas não vamos impedir a navegação para a terceira etapa
-    }
-    
-    // Verifica se estamos na última etapa para enviar o formulário
-    if (formStep === 2) {
-      // Se estamos na última etapa, deixamos o botão de submit fazer seu trabalho
+      
+      // Se a validação passar, avança para a próxima etapa
+      setFormStep(2);
       return;
     }
     
-    // Avança para a próxima etapa
-    setFormStep(formStep + 1);
+    // Se chegamos aqui e estamos na etapa 2, não fazemos nada
+    // O botão na última etapa deve ser de submit, não de "próximo"
   };
   
   const handlePrevStep = () => {
@@ -979,6 +980,17 @@ export default function Clients() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="relative">
+                {/* Indicador de etapas */}
+                <div className="mb-6 w-full flex items-center justify-center">
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formStep === 0 ? "bg-primary text-white" : "bg-muted"}`}>1</div>
+                    <div className={`w-16 h-1 ${formStep >= 1 ? "bg-primary" : "bg-muted"}`}></div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formStep === 1 ? "bg-primary text-white" : formStep > 1 ? "bg-primary/80 text-white" : "bg-muted"}`}>2</div>
+                    <div className={`w-16 h-1 ${formStep >= 2 ? "bg-primary" : "bg-muted"}`}></div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${formStep === 2 ? "bg-primary text-white" : "bg-muted"}`}>3</div>
+                  </div>
+                </div>
+                
                 {formStep > 0 && (
                   <Button
                     type="button"
@@ -1297,7 +1309,19 @@ export default function Clients() {
                 )}
               </div>
               
-              <DialogFooter>
+              <DialogFooter className="flex justify-between space-x-2">
+                {formStep > 0 && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handlePrevStep}
+                    className="mr-auto"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Voltar
+                  </Button>
+                )}
+                
                 {formStep < 2 ? (
                   <Button type="button" onClick={handleNextStep}>
                     Próximo
