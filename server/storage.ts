@@ -4,16 +4,16 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
-  projectComments, projectCommentReactions,
+  projectComments, projectCommentReactions, clientContacts,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
-  type ProjectComment, type ProjectCommentReaction,
+  type ProjectComment, type ProjectCommentReaction, type ClientContact,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
-  type InsertProjectComment, type InsertProjectCommentReaction
+  type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact
 } from "../shared/schema";
 
 export interface IStorage {
@@ -114,6 +114,14 @@ export interface IStorage {
   getTaskAttachment(id: number): Promise<TaskAttachment | undefined>;
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
+  
+  // Client Contacts
+  getClientContacts(clientId: number): Promise<ClientContact[]>;
+  getClientContact(id: number): Promise<ClientContact | undefined>;
+  createClientContact(contact: InsertClientContact): Promise<ClientContact>;
+  updateClientContact(id: number, contact: Partial<InsertClientContact>): Promise<ClientContact | undefined>;
+  deleteClientContact(id: number): Promise<boolean>;
+  setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined>;
   
   // Client Interactions
   getClientInteractions(clientId: number): Promise<ClientInteraction[]>;
@@ -2089,6 +2097,114 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
   
+  // Client Contacts
+  async getClientContacts(clientId: number): Promise<ClientContact[]> {
+    const contacts = await db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.client_id, clientId))
+      .orderBy(asc(clientContacts.name));
+    return contacts;
+  }
+
+  async getClientContact(id: number): Promise<ClientContact | undefined> {
+    const [contact] = await db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.id, id));
+    return contact;
+  }
+
+  async createClientContact(contact: InsertClientContact): Promise<ClientContact> {
+    // Se este contato for definido como primário, remova o status primário de outros contatos
+    if (contact.is_primary) {
+      await db.update(clientContacts)
+        .set({ is_primary: false })
+        .where(eq(clientContacts.client_id, contact.client_id));
+    }
+
+    const [result] = await db.insert(clientContacts).values({
+      ...contact,
+      created_at: new Date(),
+      updated_at: new Date()
+    }).returning();
+
+    return result;
+  }
+
+  async updateClientContact(id: number, contact: Partial<InsertClientContact>): Promise<ClientContact | undefined> {
+    // Se este contato for definido como primário, remova o status primário de outros contatos
+    if (contact.is_primary) {
+      const [currentContact] = await db.select()
+        .from(clientContacts)
+        .where(eq(clientContacts.id, id));
+      
+      if (currentContact) {
+        await db.update(clientContacts)
+          .set({ is_primary: false })
+          .where(and(
+            eq(clientContacts.client_id, currentContact.client_id),
+            inArray(clientContacts.id, [id], false)
+          ));
+      }
+    }
+
+    const [updatedContact] = await db.update(clientContacts)
+      .set({
+        ...contact,
+        updated_at: new Date()
+      })
+      .where(eq(clientContacts.id, id))
+      .returning();
+    
+    return updatedContact;
+  }
+
+  async deleteClientContact(id: number): Promise<boolean> {
+    // Verifique se o contato é primário antes de excluir
+    const [contact] = await db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.id, id));
+    
+    if (!contact) {
+      return false;
+    }
+
+    await db.delete(clientContacts).where(eq(clientContacts.id, id));
+    
+    // Se o contato excluído era primário, defina outro contato como primário
+    if (contact.is_primary) {
+      const [newPrimaryContact] = await db.select()
+        .from(clientContacts)
+        .where(eq(clientContacts.client_id, contact.client_id))
+        .limit(1);
+      
+      if (newPrimaryContact) {
+        await db.update(clientContacts)
+          .set({ is_primary: true })
+          .where(eq(clientContacts.id, newPrimaryContact.id));
+      }
+    }
+    
+    return true;
+  }
+
+  async setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined> {
+    // Remova o status de primário de todos os contatos do cliente
+    await db.update(clientContacts)
+      .set({ is_primary: false })
+      .where(eq(clientContacts.client_id, clientId));
+    
+    // Defina o contato especificado como primário
+    const [updatedContact] = await db.update(clientContacts)
+      .set({ 
+        is_primary: true,
+        updated_at: new Date()
+      })
+      .where(eq(clientContacts.id, contactId))
+      .returning();
+    
+    return updatedContact;
+  }
+
   // Client Interactions
   async getClientInteractions(clientId: number): Promise<ClientInteraction[]> {
     return await db.select().from(clientInteractions).where(eq(clientInteractions.client_id, clientId));
