@@ -558,12 +558,12 @@ export default function Clients() {
         </Button>
       </div>
       
-      {/* Barra de filtros e pesquisa - design compacto e responsivo */}
+      {/* Barra de filtros e pesquisa - design compacto sem espaços em branco */}
       <Card className="border border-border/50">
-        <CardContent className="p-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-start">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
             {/* Campo de busca compacto */}
-            <div className="relative w-full sm:w-[280px] md:w-[320px] lg:w-[360px]">
+            <div className="relative sm:col-span-4 w-full">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar clientes..."
@@ -573,40 +573,42 @@ export default function Clients() {
               />
             </div>
             
-            <div className="flex flex-row flex-wrap gap-2 items-center">
-              {/* Filtro de tipo mais compacto */}
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-9 w-[140px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  {CLIENT_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Ordenação mais compacta */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-9 w-[140px]">
-                  <SelectValue placeholder="Ordenar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Mais recentes</SelectItem>
-                  <SelectItem value="name">Nome (A-Z)</SelectItem>
-                  <SelectItem value="revenue">Receita</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap sm:col-span-8 gap-2 items-center justify-between w-full">
+              <div className="flex flex-wrap gap-2 items-center">
+                {/* Filtro de tipo mais compacto */}
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-9 w-[120px] md:w-[140px]">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {CLIENT_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Ordenação mais compacta */}
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="h-9 w-[120px] md:w-[140px]">
+                    <SelectValue placeholder="Ordenar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Mais recentes</SelectItem>
+                    <SelectItem value="name">Nome (A-Z)</SelectItem>
+                    <SelectItem value="revenue">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               {/* Toggle de visualização à direita */}
               <ToggleGroup 
                 type="single" 
                 value={viewMode} 
                 onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}
-                className="border rounded-md p-0.5 ml-auto sm:ml-2"
+                className="border rounded-md p-0.5"
               >
                 <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-8 px-0">
                   <LayoutGrid className="h-4 w-4" />
@@ -620,7 +622,7 @@ export default function Clients() {
           
           {/* Contador de resultados */}
           {!isLoading && filteredClients && (
-            <div className="text-sm text-muted-foreground mt-2">
+            <div className="text-sm text-muted-foreground mt-1">
               {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
             </div>
           )}
