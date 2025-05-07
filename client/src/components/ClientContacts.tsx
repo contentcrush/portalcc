@@ -73,7 +73,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     isLoading: isLoadingContacts,
     error 
   } = useQuery<ClientContact[]>({
-    queryKey: ['/api/clients', clientId, 'contacts'],
+    queryKey: [`/api/clients/${clientId}/contacts`],
     enabled: !!clientId
   });
 
@@ -114,7 +114,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'contacts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
       toast({
         title: "Contato adicionado",
         description: "O contato foi adicionado com sucesso.",
@@ -143,7 +143,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'contacts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
       toast({
         title: "Contato atualizado",
         description: "O contato foi atualizado com sucesso.",
@@ -171,7 +171,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'contacts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
       toast({
         title: "Contato excluído",
         description: "O contato foi excluído com sucesso.",
@@ -198,7 +198,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'contacts'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
       toast({
         title: "Contato principal atualizado",
         description: "O contato principal foi atualizado com sucesso.",

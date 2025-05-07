@@ -87,7 +87,7 @@ interface ClientDetailProps {
 }
 
 export default function ClientDetail({ clientId }: ClientDetailProps) {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("contacts");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
