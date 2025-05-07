@@ -451,17 +451,35 @@ export default function Clients() {
     createProjectMutation.mutate(projectData);
   };
   
-  // Função para verificar se um cliente tem projetos ativos
-  const isClientActive = (clientId: number) => {
-    // Verifica se há projetos ativos nos últimos 6 meses
-    if (!projects) return false;
-    
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    return projects.some((project: any) => 
-      project.client_id === clientId && new Date(project.updated_at || project.created_at) > sixMonthsAgo
-    );
+  // Função para verificar se um cliente está ativo com base no campo 'active'
+  const isClientActive = (client: any) => {
+    return client.active !== false; // Se o campo for undefined ou null, considera como ativo
+  };
+  
+  // Função para alternar o status ativo/inativo de um cliente
+  const toggleClientActiveStatus = async (clientId: number, currentStatus: boolean) => {
+    try {
+      const response = await apiRequest('PATCH', `/api/clients/${clientId}`, {
+        active: !currentStatus,
+      });
+      
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+        toast({
+          title: `Cliente ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
+          description: `O cliente foi marcado como ${!currentStatus ? 'ativo' : 'inativo'}.`,
+        });
+      } else {
+        throw new Error('Falha ao atualizar status do cliente');
+      }
+    } catch (error) {
+      console.error('Erro ao alternar status do cliente:', error);
+      toast({
+        title: "Erro ao atualizar cliente",
+        description: "Não foi possível alterar o status do cliente. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Função para contar o número de projetos por cliente
@@ -721,15 +739,18 @@ export default function Clients() {
                         <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
                           {client.type}
                         </Badge>
-                        {isClientActive(client.id) ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200">
-                            Ativo
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">
-                            Inativo
-                          </Badge>
-                        )}
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 
+                            ? "bg-green-50 text-green-700 border-green-200" 
+                            : "bg-gray-50 text-gray-700 border-gray-200"}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleClientActiveStatus(client.id, isClientActive(client));
+                          }}
+                        >
+                          {isClientActive(client) ? "Ativo" : "Inativo"}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -834,9 +855,23 @@ export default function Clients() {
                           <span className="font-medium truncate max-w-[200px]">
                             {client.name}
                           </span>
-                          <Badge variant="outline" className="mt-1 w-fit text-xs">
-                            {client.type}
-                          </Badge>
+                          <div className="flex gap-1 mt-1">
+                            <Badge variant="outline" className="w-fit text-xs">
+                              {client.type}
+                            </Badge>
+                            <Badge 
+                              variant="outline" 
+                              className={`w-fit text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 
+                                ? "bg-green-50 text-green-700 border-green-200" 
+                                : "bg-gray-50 text-gray-700 border-gray-200"}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleClientActiveStatus(client.id, isClientActive(client));
+                              }}
+                            >
+                              {isClientActive(client) ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </TableCell>
