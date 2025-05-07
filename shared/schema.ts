@@ -204,6 +204,19 @@ export const taskAttachments = pgTable("task_attachments", {
   encryption_key_id: text("encryption_key_id"), // Identificador da chave usada
 });
 
+export const clientContacts = pgTable("client_contacts", {
+  id: serial("id").primaryKey(),
+  client_id: integer("client_id").notNull(),
+  name: text("name").notNull(),
+  position: text("position"),
+  email: text("email"),
+  phone: text("phone"),
+  is_primary: boolean("is_primary").default(false),
+  notes: text("notes"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
 export const clientInteractions = pgTable("client_interactions", {
   id: serial("id").primaryKey(),
   client_id: integer("client_id").notNull(),
@@ -350,6 +363,13 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
   encryption_iv: true,
   encryption_key_id: true
 });
+
+export const insertClientContactSchema = createInsertSchema(clientContacts).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
 // Schema base para documentos financeiros
 const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
@@ -400,6 +420,7 @@ export type ProjectComment = typeof projectComments.$inferSelect & {
 };
 export type ProjectCommentReaction = typeof projectCommentReactions.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
+export type ClientContact = typeof clientContacts.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
@@ -419,6 +440,7 @@ export type InsertCommentReaction = z.infer<typeof insertCommentReactionSchema>;
 export type InsertProjectComment = z.infer<typeof insertProjectCommentSchema>;
 export type InsertProjectCommentReaction = z.infer<typeof insertProjectCommentReactionSchema>;
 export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
+export type InsertClientContact = z.infer<typeof insertClientContactSchema>;
 export type InsertClientInteraction = z.infer<typeof insertClientInteractionSchema>;
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
@@ -458,6 +480,7 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
 export const clientsRelations = relations(clients, ({ many }) => ({
   projects: many(projects),
   clientInteractions: many(clientInteractions),
+  clientContacts: many(clientContacts),
   financialDocuments: many(financialDocuments),
   events: many(events)
 }));
@@ -585,6 +608,14 @@ export const taskAttachmentsRelations = relations(taskAttachments, ({ one }) => 
   uploader: one(users, {
     fields: [taskAttachments.uploaded_by],
     references: [users.id]
+  })
+}));
+
+export const clientContactsRelations = relations(clientContacts, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientContacts.client_id],
+    references: [clients.id],
+    onDelete: "cascade"
   })
 }));
 
