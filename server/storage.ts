@@ -810,6 +810,7 @@ export class MemStorage implements IStorage {
       projects: number; 
       interactions: number; 
       financialDocuments: number; 
+      contacts: number;
     } 
   }> {
     const projects = await this.getProjectsByClient(id);
@@ -825,6 +826,11 @@ export class MemStorage implements IStorage {
       .filter(doc => doc.client_id === id);
     const financialDocumentsCount = financialDocs.length;
     
+    // Contar contatos do cliente
+    const contacts = Array.from(this.clientContactsData.values())
+      .filter(contact => contact.client_id === id);
+    const contactsCount = contacts.length;
+    
     // Excluir projetos em cascata
     if (projectsCount > 0) {
       console.log(`Cliente #${id} possui ${projectsCount} projetos associados`);
@@ -836,6 +842,11 @@ export class MemStorage implements IStorage {
     // Excluir interações do cliente
     for (const interaction of interactions) {
       this.clientInteractionsData.delete(interaction.id);
+    }
+    
+    // Excluir contatos do cliente
+    for (const contact of contacts) {
+      this.clientContactsData.delete(contact.id);
     }
     
     // Excluir documentos financeiros do cliente
@@ -851,9 +862,126 @@ export class MemStorage implements IStorage {
       deletedItems: {
         projects: projectsCount,
         interactions: interactionsCount,
-        financialDocuments: financialDocumentsCount
+        financialDocuments: financialDocumentsCount,
+        contacts: contactsCount
       }
     };
+  }
+  
+  // Client Contacts
+  async getClientContact(id: number): Promise<ClientContact | undefined> {
+    return this.clientContactsData.get(id);
+  }
+
+  async getClientContacts(clientId: number): Promise<ClientContact[]> {
+    return Array.from(this.clientContactsData.values())
+      .filter(contact => contact.client_id === clientId)
+      .sort((a, b) => {
+        // Ordenar primeiro pelo campo is_primary (primário primeiro)
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        // Se ambos forem primários ou não primários, ordenar pelo nome
+        return a.name.localeCompare(b.name);
+      });
+  }
+
+  async createClientContact(contact: InsertClientContact): Promise<ClientContact> {
+    // Verificar se este é o primeiro contato do cliente
+    const existingContacts = await this.getClientContacts(contact.client_id);
+    const isPrimary = existingContacts.length === 0 ? true : contact.is_primary || false;
+    
+    // Se este contato estiver sendo definido como primário, remova essa flag de todos os outros
+    if (isPrimary) {
+      for (const existingContact of existingContacts) {
+        if (existingContact.is_primary) {
+          const updatedContact = { ...existingContact, is_primary: false };
+          this.clientContactsData.set(existingContact.id, updatedContact);
+        }
+      }
+    }
+    
+    const newContact: ClientContact = {
+      id: this.clientContactId++,
+      ...contact,
+      is_primary: isPrimary,
+      creation_date: new Date(),
+      updated_at: null
+    };
+    
+    this.clientContactsData.set(newContact.id, newContact);
+    return newContact;
+  }
+
+  async updateClientContact(id: number, contactData: Partial<InsertClientContact>): Promise<ClientContact | undefined> {
+    const contact = this.clientContactsData.get(id);
+    if (!contact) {
+      return undefined;
+    }
+    
+    // Se estiver sendo definido como primário, remova essa flag de todos os outros
+    if (contactData.is_primary) {
+      const otherContacts = await this.getClientContacts(contact.client_id);
+      for (const otherContact of otherContacts) {
+        if (otherContact.id !== id && otherContact.is_primary) {
+          const updatedContact = { ...otherContact, is_primary: false, updated_at: new Date() };
+          this.clientContactsData.set(otherContact.id, updatedContact);
+        }
+      }
+    }
+    
+    const updatedContact: ClientContact = {
+      ...contact,
+      ...contactData,
+      updated_at: new Date()
+    };
+    
+    this.clientContactsData.set(id, updatedContact);
+    return updatedContact;
+  }
+
+  async deleteClientContact(id: number): Promise<boolean> {
+    const contact = this.clientContactsData.get(id);
+    if (!contact) {
+      return false;
+    }
+    
+    // Se for um contato primário, defina outro contato como primário (se houver)
+    if (contact.is_primary) {
+      const clientContacts = await this.getClientContacts(contact.client_id);
+      const otherContact = clientContacts.find(c => c.id !== id);
+      if (otherContact) {
+        const updatedContact = { ...otherContact, is_primary: true, updated_at: new Date() };
+        this.clientContactsData.set(otherContact.id, updatedContact);
+      }
+    }
+    
+    return this.clientContactsData.delete(id);
+  }
+
+  async setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined> {
+    const contact = this.clientContactsData.get(contactId);
+    if (!contact || contact.client_id !== clientId) {
+      return undefined;
+    }
+    
+    // Remover status de primário de todos os outros contatos
+    const clientContacts = await this.getClientContacts(clientId);
+    for (const currentContact of clientContacts) {
+      if (currentContact.id !== contactId && currentContact.is_primary) {
+        const updatedContact = { ...currentContact, is_primary: false, updated_at: new Date() };
+        this.clientContactsData.set(currentContact.id, updatedContact);
+      }
+    }
+    
+    // Definir este contato como primário
+    const updatedContact: ClientContact = {
+      ...contact,
+      is_primary: true,
+      updated_at: new Date()
+    };
+    
+    this.clientContactsData.set(contactId, updatedContact);
+    return updatedContact;
   }
 
   // Projects
@@ -1634,6 +1762,7 @@ export class DatabaseStorage implements IStorage {
       projects: number; 
       interactions: number; 
       financialDocuments: number; 
+      contacts: number;
     } 
   }> {
     try {
@@ -1653,6 +1782,12 @@ export class DatabaseStorage implements IStorage {
         .where(eq(financialDocuments.client_id, id));
       const financialDocumentsCount = financialDocumentsResult[0]?.count || 0;
       
+      // Contar contatos do cliente
+      const clientContactsResult = await db.select({ count: count() })
+        .from(clientContacts)
+        .where(eq(clientContacts.client_id, id));
+      const contactsCount = clientContactsResult[0]?.count || 0;
+      
       // Excluir projetos em cascata
       if (projectsCount > 0) {
         console.log(`Cliente #${id} possui ${projectsCount} projetos associados`);
@@ -1665,6 +1800,9 @@ export class DatabaseStorage implements IStorage {
       // Excluir interações do cliente
       await db.delete(clientInteractions).where(eq(clientInteractions.client_id, id));
       
+      // Excluir contatos do cliente
+      await db.delete(clientContacts).where(eq(clientContacts.client_id, id));
+      
       // Excluir documentos financeiros do cliente
       await db.delete(financialDocuments).where(eq(financialDocuments.client_id, id));
       
@@ -1676,7 +1814,8 @@ export class DatabaseStorage implements IStorage {
         deletedItems: {
           projects: projectsCount,
           interactions: interactionsCount,
-          financialDocuments: financialDocumentsCount
+          financialDocuments: financialDocumentsCount,
+          contacts: contactsCount
         }
       };
     } catch (error) {
@@ -1686,7 +1825,8 @@ export class DatabaseStorage implements IStorage {
         deletedItems: {
           projects: 0,
           interactions: 0,
-          financialDocuments: 0
+          financialDocuments: 0,
+          contacts: 0
         }
       };
     }
@@ -2464,6 +2604,118 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projectCommentReactions.id, reactionId));
       
     return true;
+  }
+
+  // Client Contacts
+  async getClientContact(id: number): Promise<ClientContact | undefined> {
+    const [contact] = await db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.id, id));
+    
+    return contact || undefined;
+  }
+
+  async getClientContacts(clientId: number): Promise<ClientContact[]> {
+    return await db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.client_id, clientId))
+      .orderBy(desc(clientContacts.is_primary), asc(clientContacts.name));
+  }
+
+  async createClientContact(contact: InsertClientContact): Promise<ClientContact> {
+    // Se este for o primeiro contato para o cliente, defina como primário
+    const existingContacts = await this.getClientContacts(contact.client_id);
+    const isPrimary = existingContacts.length === 0 ? true : contact.is_primary || false;
+    
+    // Se este contato estiver sendo definido como primário, remova essa flag de todos os outros
+    if (isPrimary) {
+      await db.update(clientContacts)
+        .set({ is_primary: false })
+        .where(eq(clientContacts.client_id, contact.client_id));
+    }
+    
+    const [clientContact] = await db.insert(clientContacts)
+      .values({
+        ...contact,
+        is_primary: isPrimary,
+        creation_date: new Date()
+      })
+      .returning();
+    
+    return clientContact;
+  }
+
+  async updateClientContact(id: number, contactData: Partial<InsertClientContact>): Promise<ClientContact | undefined> {
+    // Busque o contato atual para obter o client_id e o status is_primary
+    const currentContact = await this.getClientContact(id);
+    if (!currentContact) {
+      return undefined;
+    }
+
+    // Se estiver sendo definido como primário, remova essa flag de todos os outros
+    if (contactData.is_primary) {
+      await db.update(clientContacts)
+        .set({ is_primary: false })
+        .where(eq(clientContacts.client_id, currentContact.client_id));
+    }
+    
+    // Atualize o contato
+    const [updatedContact] = await db.update(clientContacts)
+      .set({
+        ...contactData,
+        updated_at: new Date()
+      })
+      .where(eq(clientContacts.id, id))
+      .returning();
+    
+    return updatedContact;
+  }
+
+  async deleteClientContact(id: number): Promise<boolean> {
+    // Busque o contato para verificar se ele é primário
+    const contact = await this.getClientContact(id);
+    if (!contact) {
+      return false;
+    }
+    
+    // Se for um contato primário, tente encontrar outro contato para definir como primário
+    if (contact.is_primary) {
+      const otherContacts = await db.select()
+        .from(clientContacts)
+        .where(and(
+          eq(clientContacts.client_id, contact.client_id),
+          ne(clientContacts.id, id)
+        ))
+        .limit(1);
+      
+      // Se houver outro contato, defina-o como primário
+      if (otherContacts.length > 0) {
+        await db.update(clientContacts)
+          .set({ is_primary: true })
+          .where(eq(clientContacts.id, otherContacts[0].id));
+      }
+    }
+    
+    // Exclua o contato
+    await db.delete(clientContacts)
+      .where(eq(clientContacts.id, id));
+    
+    return true;
+  }
+
+  async setPrimaryClientContact(contactId: number, clientId: number): Promise<ClientContact | undefined> {
+    // Primeiro, remova o status primary de todos os contatos deste cliente
+    await db.update(clientContacts)
+      .set({ is_primary: false })
+      .where(eq(clientContacts.client_id, clientId));
+    
+    // Agora defina este contato como primário
+    const [updatedContact] = await db.update(clientContacts)
+      .set({ is_primary: true, updated_at: new Date() })
+      .where(eq(clientContacts.id, contactId))
+      .returning();
+    
+    return updatedContact;
   }
 }
 

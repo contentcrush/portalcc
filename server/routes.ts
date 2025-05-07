@@ -459,8 +459,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Não foi possível excluir o cliente" });
       }
       
+      // Construir uma mensagem detalhada
+      let detailMessage = `Cliente excluído com sucesso.`;
+      if (result.deletedItems.projects > 0) {
+        detailMessage += ` ${result.deletedItems.projects} projeto(s) removido(s).`;
+      }
+      if (result.deletedItems.interactions > 0) {
+        detailMessage += ` ${result.deletedItems.interactions} interação(ões) removida(s).`;
+      }
+      if (result.deletedItems.financialDocuments > 0) {
+        detailMessage += ` ${result.deletedItems.financialDocuments} documento(s) financeiro(s) removido(s).`;
+      }
+      if (result.deletedItems.contacts > 0) {
+        detailMessage += ` ${result.deletedItems.contacts} contato(s) removido(s).`;
+      }
+      
       res.status(200).json({ 
-        message: "Cliente excluído com sucesso",
+        message: detailMessage,
         deletedItems: result.deletedItems
       });
     } catch (error) {
