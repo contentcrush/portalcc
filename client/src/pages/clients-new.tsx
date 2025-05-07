@@ -560,27 +560,29 @@ export default function Clients() {
       
       {/* Filters and search */}
       <Card className="border border-border/40 shadow-sm">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Search - com largura reduzida e design mais compacto */}
+            <div className="relative w-full md:w-auto md:min-w-[280px] md:max-w-[320px] md:flex-auto">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Buscar clientes..."
-                className="pl-8 bg-background"
+                className="pl-8 h-9 bg-background"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
-            <div className="flex flex-col xs:flex-row gap-2">
+            {/* Filtros em linha em dispositivos maiores */}
+            <div className="flex flex-wrap gap-2 items-center">
               <Select
                 defaultValue="all"
                 value={typeFilter}
                 onValueChange={setTypeFilter}
               >
-                <SelectTrigger className="w-[180px] bg-background border border-input">
-                  <SelectValue placeholder="Filtrar por tipo" />
+                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                  <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
@@ -597,8 +599,8 @@ export default function Clients() {
                 value={sortBy}
                 onValueChange={setSortBy}
               >
-                <SelectTrigger className="w-[180px] bg-background border border-input">
-                  <SelectValue placeholder="Ordenar por" />
+                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                  <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Mais recentes</SelectItem>
@@ -608,13 +610,14 @@ export default function Clients() {
               </Select>
             </div>
             
+            {/* Toggle de visualização sempre à direita */}
             <ToggleGroup
               type="single"
               value={viewMode}
               onValueChange={(value) => {
                 if (value) setViewMode(value as 'grid' | 'list');
               }}
-              className="border rounded-md p-0.5 justify-end ml-auto"
+              className="border rounded-md p-0.5 ml-auto"
             >
               <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-9 px-0">
                 <LayoutGrid className="h-4 w-4" />
@@ -627,7 +630,7 @@ export default function Clients() {
           
           {/* Contador de resultados */}
           {!isLoading && filteredClients && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground mt-3">
               {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
             </div>
           )}
