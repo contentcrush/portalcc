@@ -355,7 +355,7 @@ export default function Clients() {
   const handleNextStep = () => {
     const currentValues = form.getValues();
     
-    // Validar campos da etapa 1
+    // Validar campos da etapa 1 (informações básicas)
     if (formStep === 0) {
       if (!currentValues.name || !currentValues.type) {
         form.trigger(['name', 'type']);
@@ -363,6 +363,19 @@ export default function Clients() {
       }
     }
     
+    // Validação para etapa 2 (informações de contato)
+    if (formStep === 1) {
+      // Aqui podemos adicionar validações para a segunda etapa se necessário
+      // mas não vamos impedir a navegação para a terceira etapa
+    }
+    
+    // Verifica se estamos na última etapa para enviar o formulário
+    if (formStep === 2) {
+      // Se estamos na última etapa, deixamos o botão de submit fazer seu trabalho
+      return;
+    }
+    
+    // Avança para a próxima etapa
     setFormStep(formStep + 1);
   };
   
