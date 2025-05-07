@@ -333,8 +333,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      // Verifica se estamos apenas atualizando o status active (para toggles rápidos)
+      const isQuickToggle = Object.keys(req.body).length === 1 && 'active' in req.body;
+      
       // Verificar se o logo está presente e é uma string (URL ou base64)
-      if (req.body.logo) {
+      if (!isQuickToggle && req.body.logo) {
         // Se é base64, garantir que começa com o formato correto
         if (typeof req.body.logo === 'string' && req.body.logo.length > 0) {
           console.log(`Atualizando: Recebendo logo com ${req.body.logo.length} caracteres`);
@@ -348,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Garantir que a data since é um objeto Date ou null
-      if (req.body.since !== undefined && req.body.since !== null) {
+      if (!isQuickToggle && req.body.since !== undefined && req.body.since !== null) {
         try {
           // Tentar converter para Date se for string
           if (typeof req.body.since === 'string') {
@@ -371,6 +374,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedClient) {
         return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Emitir eventos WebSocket para notificar todos os clientes conectados
+      if (io) {
+        io.emit("client_updated", { client: updatedClient });
+      }
+      
+      if (wss) {
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ 
+              type: "client_updated", 
+              data: { client: updatedClient } 
+            }));
+          }
+        });
+      }
+      
+      // Mensagem personalizada para o toggle de status
+      if (isQuickToggle) {
+        const statusMessage = updatedClient.active 
+          ? "Cliente ativado com sucesso." 
+          : "Cliente desativado com sucesso.";
+        
+        return res.json({ 
+          message: statusMessage,
+          client: updatedClient 
+        });
       }
       
       res.json(updatedClient);
