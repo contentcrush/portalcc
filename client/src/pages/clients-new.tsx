@@ -545,42 +545,44 @@ export default function Clients() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
           <p className="text-sm text-gray-500">Gerencie, visualize e adicione clientes</p>
         </div>
-        <Button onClick={handleNewClientClick} size="sm" className="shadow-sm h-10 px-4 whitespace-nowrap">
-          <Plus className="h-4 w-4 mr-1.5" />
-          Novo Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleNewClientClick} className="shadow-sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
       
       {/* Filters and search */}
       <Card className="border border-border/40 shadow-sm">
-        <CardContent className="p-3 pt-4 pb-4">
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-            <div className="flex flex-1 flex-row gap-2 w-full items-center">
-              {/* Barra de pesquisa com tamanho fixo e sem espaços desnecessários */}
-              <div className="relative w-full sm:max-w-[240px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar clientes..."
-                  className="pl-8 h-9 bg-background"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Search - com largura reduzida e design mais compacto */}
+            <div className="relative w-full md:w-auto md:min-w-[280px] md:max-w-[320px] md:flex-auto">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar clientes..."
+                className="pl-8 h-9 bg-background"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             
-              {/* Seletores lado a lado horizontalmente */}
+            {/* Filtros em linha em dispositivos maiores */}
+            <div className="flex flex-wrap gap-2 items-center">
               <Select
                 defaultValue="all"
                 value={typeFilter}
                 onValueChange={setTypeFilter}
               >
-                <SelectTrigger className="h-9 w-[140px] bg-background border border-input">
-                  <SelectValue placeholder="Todos os tipos" />
+                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                  <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
@@ -597,8 +599,8 @@ export default function Clients() {
                 value={sortBy}
                 onValueChange={setSortBy}
               >
-                <SelectTrigger className="h-9 w-[130px] bg-background border border-input">
-                  <SelectValue placeholder="Mais recentes" />
+                <SelectTrigger className="h-9 w-full xs:w-[150px] bg-background border border-input">
+                  <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Mais recentes</SelectItem>
@@ -608,14 +610,14 @@ export default function Clients() {
               </Select>
             </div>
             
-            {/* Toggle de visualização à direita */}
+            {/* Toggle de visualização sempre à direita */}
             <ToggleGroup
               type="single"
               value={viewMode}
               onValueChange={(value) => {
                 if (value) setViewMode(value as 'grid' | 'list');
               }}
-              className="border rounded-md p-0.5 ms-0 sm:ms-auto"
+              className="border rounded-md p-0.5 ml-auto"
             >
               <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-9 px-0">
                 <LayoutGrid className="h-4 w-4" />
@@ -628,7 +630,7 @@ export default function Clients() {
           
           {/* Contador de resultados */}
           {!isLoading && filteredClients && (
-            <div className="text-sm text-muted-foreground mt-2">
+            <div className="text-sm text-muted-foreground mt-3">
               {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
             </div>
           )}
