@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "@/components/ui/image-upload";
+import ClientContacts from "@/components/ClientContacts";
 import { 
   Building, 
   Mail, 
@@ -20,7 +21,8 @@ import {
   Filter,
   ChevronLeft,
   ArrowLeft,
-  Trash2
+  Trash2,
+  Users
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -573,10 +575,18 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-4">
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="contacts">
+                <Users className="h-4 w-4 mr-2" />
+                Contatos
+              </TabsTrigger>
               <TabsTrigger value="interactions">Histórico de Interações</TabsTrigger>
               <TabsTrigger value="financial">Documentos Financeiros</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="contacts" className="space-y-4">
+              <ClientContacts clientId={clientId} clientName={client.name} />
+            </TabsContent>
             
             <TabsContent value="interactions" className="space-y-4">
               <div className="flex justify-between items-center mb-2">
