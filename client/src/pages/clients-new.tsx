@@ -1431,13 +1431,13 @@ export default function Clients() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <DatePickerWithYearNavigation
+                          <Calendar
                             mode="single"
                             selected={field.value ?? undefined}
                             onSelect={field.onChange}
                             locale={ptBR}
                             initialFocus
-                            fromDate={projectForm.watch('startDate') || undefined}
+                            disabled={(date) => date < (projectForm.watch('startDate') || new Date())}
                           />
                         </PopoverContent>
                       </Popover>
