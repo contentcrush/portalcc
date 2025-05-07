@@ -7,7 +7,7 @@ import {
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
   insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema,
   insertCommentReactionSchema, insertProjectCommentSchema, insertProjectCommentReactionSchema,
-  financialDocuments
+  insertClientContactSchema, financialDocuments
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
