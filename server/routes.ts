@@ -893,22 +893,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`[Sistema] Documento financeiro ID:${pendingInvoice.id} atualizado para o novo valor do projeto ID:${id}`);
         } else {
-          // Criar nova fatura
-          const dueDate = updatedProject.endDate ? new Date(updatedProject.endDate) : new Date();
-          // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
-          if (dueDate < new Date()) {
-            dueDate.setDate(dueDate.getDate() + 15);
-          }
-          
-          const financialDocument = await storage.createFinancialDocument({
-            project_id: id,
-            client_id: updatedProject.client_id,
-            document_type: "invoice",
-            amount: updatedProject.budget,
-            due_date: dueDate,
-            status: "pending",
-            description: `Fatura referente ao projeto: ${updatedProject.name}`
-          });
+          // Criar nova fatura usando o prazo de pagamento
+          const paymentTerm = updatedProject.payment_term || 30;
+          const financialDocument = await createProjectInvoice(
+            id, 
+            updatedProject.client_id, 
+            updatedProject.name, 
+            updatedProject.budget, 
+            updatedProject.endDate,
+            paymentTerm
+          );
           
           console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
         }
@@ -986,22 +980,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`[Sistema] Documento financeiro ID:${pendingInvoice.id} atualizado para o novo valor do projeto ID:${id}`);
         } else {
-          // Criar nova fatura
-          const dueDate = updatedProject.endDate ? new Date(updatedProject.endDate) : new Date();
-          // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
-          if (dueDate < new Date()) {
-            dueDate.setDate(dueDate.getDate() + 15);
-          }
-          
-          const financialDocument = await storage.createFinancialDocument({
-            project_id: id,
-            client_id: updatedProject.client_id,
-            document_type: "invoice",
-            amount: updatedProject.budget,
-            due_date: dueDate,
-            status: "pending",
-            description: `Fatura referente ao projeto: ${updatedProject.name}`
-          });
+          // Criar nova fatura usando o prazo de pagamento
+          const paymentTerm = updatedProject.payment_term || 30;
+          const financialDocument = await createProjectInvoice(
+            id, 
+            updatedProject.client_id, 
+            updatedProject.name, 
+            updatedProject.budget, 
+            updatedProject.endDate,
+            paymentTerm
+          );
           
           console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
         }
