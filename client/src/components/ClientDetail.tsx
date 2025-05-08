@@ -388,7 +388,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       </div>
 
       {/* Main content - Redesigned with mobile-first approach */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Client info card - Full width on mobile */}
         <Card className="md:col-span-2 lg:col-span-3">
           <CardContent className="p-4 sm:p-6">
@@ -537,7 +537,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </CardContent>
         </Card>
         
-        {/* KPI Cards - 3 colunas no desktop, empilhado no mobile */}
+        {/* KPI Cards - 3 columns on desktop, stacked on mobile */}
         <Card className="lg:col-span-1">
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-2 gap-4">
@@ -586,8 +586,8 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         </Card>
         
         {/* Projects section - Wider layout */}
-        <div className="col-span-2 space-y-6">
-          {/* Projects section - Full width layout - Direct focus on content */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Projects section - Focus directly on the projects here */}
 
           {/* Projects section */}
           <Card>
