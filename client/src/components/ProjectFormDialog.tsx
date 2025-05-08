@@ -670,9 +670,91 @@ export function ProjectFormDialog() {
                   <div className="space-y-4">
                     <div className="border rounded-md p-4">
                       <h3 className="font-medium mb-3">Membros da Equipe</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Você poderá adicionar membros à equipe depois de criar o projeto.
-                      </p>
+                      
+                      <FormField
+                        control={form.control}
+                        name="team_members"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="space-y-4">
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {field.value?.map((userId) => {
+                                  const user = users.find((u) => u.id === userId);
+                                  if (!user) return null;
+                                  
+                                  return (
+                                    <div 
+                                      key={userId}
+                                      className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5"
+                                    >
+                                      <div className="flex-grow flex items-center gap-2">
+                                        <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                                          {user.name?.charAt(0) || "U"}
+                                        </div>
+                                        <span className="text-sm font-medium">{user.name}</span>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 rounded-full"
+                                        onClick={() => {
+                                          const newValue = field.value?.filter((id) => id !== userId) || [];
+                                          field.onChange(newValue);
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              <Select
+                                onValueChange={(value) => {
+                                  const userId = parseInt(value);
+                                  
+                                  // Verificar se o usuário já está na equipe
+                                  if (field.value?.includes(userId)) {
+                                    return;
+                                  }
+                                  
+                                  // Adicionar o usuário à equipe
+                                  const newValue = [...(field.value || []), userId];
+                                  field.onChange(newValue);
+                                }}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Adicionar membro à equipe" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {users.map((user) => (
+                                    <SelectItem 
+                                      key={user.id} 
+                                      value={user.id.toString()}
+                                      disabled={field.value?.includes(user.id)}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                                          {user.name?.charAt(0) || "U"}
+                                        </div>
+                                        <span>{user.name}</span>
+                                        <span className="text-xs text-muted-foreground">({user.role})</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <FormDescription>
+                              Selecione os membros que farão parte da equipe do projeto
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                 </TabsContent>
