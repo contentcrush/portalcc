@@ -816,68 +816,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
         {/* Right sidebar */}
         <div className="space-y-6">
-          {/* KPIs */}
-          <Card className="bg-white">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-500">Projetos Totais</p>
-                  <div className="mt-1 flex items-center">
-                    <span className="text-2xl font-bold">{projects?.length || 0}</span>
-                    {projects?.length > 0 && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">
-                        +{projects.filter(p => p.creation_date && new Date(p.creation_date) > new Date(new Date().setMonth(new Date().getMonth() - 3))).length} nos últimos 3 meses
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500">Valor Faturado</p>
-                  <div className="mt-1">
-                    <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-                    <div className="text-xs text-green-600">
-                      + 30% vs anterior
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Tempo de Retenção</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-2xl font-bold">
-                      {client.since ? (
-                        `${Math.max(0, Math.floor(
-                          (new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30)
-                        ) / 12).toFixed(1)} anos`
-                      ) : 'N/A'}
-                    </span>
-                    {client.since && (
-                      <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
-                        Cliente desde {format(new Date(client.since), 'MMM yyyy', { locale: ptBR })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <Separator className="my-4" />
-              
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm font-medium">Status Financeiro</p>
-                  <Badge variant="outline">{formatCurrency(pendingRevenue)} a receber</Badge>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-primary h-2.5 rounded-full" style={{ width: `${percentPaidRevenue}%` }}></div>
-                </div>
-                <div className="flex justify-between text-xs mt-1">
-                  <span>{formatCurrency(paidRevenue)} pago</span>
-                  <span>{percentPaidRevenue}% do total</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
           
           {/* Documents section */}
           <Card>
