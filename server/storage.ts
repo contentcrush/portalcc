@@ -4,19 +4,16 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
-  projectComments, projectCommentReactions, clientContacts, clientDocuments,
-  clientMeetings,
+  projectComments, projectCommentReactions, clientContacts,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
   type ProjectComment, type ProjectCommentReaction, type ClientContact,
-  type ClientDocument, type ClientMeeting,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
-  type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact,
-  type InsertClientDocument, type InsertClientMeeting
+  type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact
 } from "../shared/schema";
 
 export interface IStorage {
@@ -35,20 +32,6 @@ export interface IStorage {
   getUserPreferences(userId: number): Promise<UserPreference | undefined>;
   createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference>;
   updateUserPreferences(userId: number, preferences: Partial<InsertUserPreference>): Promise<UserPreference | undefined>;
-  
-  // Client Documents
-  getClientDocuments(clientId: number): Promise<ClientDocument[]>;
-  getClientDocument(id: number): Promise<ClientDocument | undefined>;
-  createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
-  updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined>;
-  deleteClientDocument(id: number): Promise<boolean>;
-  
-  // Client Meetings
-  getClientMeetings(clientId: number): Promise<ClientMeeting[]>;
-  getClientMeeting(id: number): Promise<ClientMeeting | undefined>;
-  createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting>;
-  updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined>;
-  deleteClientMeeting(id: number): Promise<boolean>;
   
   // Comments
   getTaskComments(taskId: number): Promise<TaskComment[]>;
@@ -174,20 +157,6 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<boolean>;
-  
-  // Client Documents
-  getClientDocument(id: number): Promise<ClientDocument | undefined>;
-  getClientDocuments(clientId: number): Promise<ClientDocument[]>;
-  createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
-  updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined>;
-  deleteClientDocument(id: number): Promise<boolean>;
-  
-  // Client Meetings
-  getClientMeeting(id: number): Promise<ClientMeeting | undefined>;
-  getClientMeetings(clientId: number): Promise<ClientMeeting[]>;
-  createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting>;
-  updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined>;
-  deleteClientMeeting(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -2747,92 +2716,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedContact;
-  }
-
-  // Client Documents
-  async getClientDocuments(clientId: number): Promise<ClientDocument[]> {
-    const documents = await db.select()
-      .from(clientDocuments)
-      .where(eq(clientDocuments.client_id, clientId))
-      .orderBy(desc(clientDocuments.upload_date));
-    
-    return documents;
-  }
-
-  async getClientDocument(id: number): Promise<ClientDocument | undefined> {
-    const [document] = await db.select()
-      .from(clientDocuments)
-      .where(eq(clientDocuments.id, id));
-    
-    return document;
-  }
-
-  async createClientDocument(document: InsertClientDocument): Promise<ClientDocument> {
-    const [createdDocument] = await db.insert(clientDocuments)
-      .values(document)
-      .returning();
-    
-    return createdDocument;
-  }
-
-  async updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined> {
-    const [updatedDocument] = await db.update(clientDocuments)
-      .set(document)
-      .where(eq(clientDocuments.id, id))
-      .returning();
-    
-    return updatedDocument;
-  }
-
-  async deleteClientDocument(id: number): Promise<boolean> {
-    const result = await db.delete(clientDocuments)
-      .where(eq(clientDocuments.id, id))
-      .returning({ id: clientDocuments.id });
-    
-    return result.length > 0;
-  }
-
-  // Client Meetings
-  async getClientMeetings(clientId: number): Promise<ClientMeeting[]> {
-    const meetings = await db.select()
-      .from(clientMeetings)
-      .where(eq(clientMeetings.client_id, clientId))
-      .orderBy(desc(clientMeetings.meeting_date));
-    
-    return meetings;
-  }
-
-  async getClientMeeting(id: number): Promise<ClientMeeting | undefined> {
-    const [meeting] = await db.select()
-      .from(clientMeetings)
-      .where(eq(clientMeetings.id, id));
-    
-    return meeting;
-  }
-
-  async createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting> {
-    const [createdMeeting] = await db.insert(clientMeetings)
-      .values(meeting)
-      .returning();
-    
-    return createdMeeting;
-  }
-
-  async updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined> {
-    const [updatedMeeting] = await db.update(clientMeetings)
-      .set(meeting)
-      .where(eq(clientMeetings.id, id))
-      .returning();
-    
-    return updatedMeeting;
-  }
-
-  async deleteClientMeeting(id: number): Promise<boolean> {
-    const result = await db.delete(clientMeetings)
-      .where(eq(clientMeetings.id, id))
-      .returning({ id: clientMeetings.id });
-    
-    return result.length > 0;
   }
 }
 

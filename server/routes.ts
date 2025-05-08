@@ -1,6 +1,5 @@
-import express, { type Express, Request, Response } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import path from 'path';
 import { storage } from "./storage";
 import { 
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
@@ -17,10 +16,6 @@ import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-
-// Import custom routers
-import clientDocumentsRouter from './routes/client-documents';
-import clientMeetingsRouter from './routes/client-meetings';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -2758,13 +2753,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to remove reaction" });
     }
   });
-
-  // Register custom routers
-  app.use('/api', clientDocumentsRouter);
-  app.use('/api', clientMeetingsRouter);
-  
-  // Servir arquivos estáticos da pasta de uploads
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   const httpServer = createServer(app);
   

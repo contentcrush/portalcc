@@ -244,8 +244,6 @@ export const financialDocuments = pgTable("financial_documents", {
   description: text("description"),
 });
 
-
-
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   project_id: integer("project_id"),
@@ -259,37 +257,6 @@ export const expenses = pgTable("expenses", {
   receipt: text("receipt"),
   approved: boolean("approved").default(false),
   creation_date: timestamp("creation_date").defaultNow(),
-});
-
-// Tabela para documentos do cliente
-export const clientDocuments = pgTable("client_documents", {
-  id: serial("id").primaryKey(),
-  client_id: integer("client_id").notNull(),
-  file_name: text("file_name").notNull(),
-  file_size: integer("file_size"),
-  file_type: text("file_type"),
-  file_url: text("file_url").notNull(),
-  file_key: text("file_key"), // Para armazenamento em S3 ou similar
-  description: text("description"),
-  category: text("category"),
-  uploaded_by: integer("uploaded_by").notNull(),
-  upload_date: timestamp("upload_date").defaultNow(),
-});
-
-// Tabela para reuniões do cliente
-export const clientMeetings = pgTable("client_meetings", {
-  id: serial("id").primaryKey(),
-  client_id: integer("client_id").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  meeting_date: timestamp("meeting_date").notNull(),
-  duration_minutes: integer("duration_minutes").notNull(),
-  location: text("location"),
-  meeting_type: text("meeting_type").notNull(), // presencial, zoom, teams, etc.
-  organized_by: integer("organized_by").notNull(),
-  related_event_id: integer("related_event_id"), // Relação ao evento do calendário
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
 });
 
 export const events = pgTable("events", {
@@ -436,45 +403,6 @@ export const insertEventSchema = eventBaseSchema.extend({
   )
 });
 
-// Schema para documentos de cliente
-const clientDocumentBaseSchema = createInsertSchema(clientDocuments).omit({ 
-  id: true, 
-  upload_date: true,
-  file_url: true,
-  file_key: true
-});
-
-export const insertClientDocumentSchema = clientDocumentBaseSchema.extend({
-  file_name: z.string().min(1, "Nome do arquivo é obrigatório"),
-  client_id: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-  uploaded_by: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-});
-
-// Schema para reuniões de cliente
-const clientMeetingBaseSchema = createInsertSchema(clientMeetings).omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-  related_event_id: true
-});
-
-export const insertClientMeetingSchema = clientMeetingBaseSchema.extend({
-  client_id: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-  organized_by: z.union([z.string(), z.number()]).transform(val => 
-    typeof val === 'string' ? parseInt(val, 10) : val
-  ),
-  meeting_date: z.union([z.string(), z.date()]).transform(val => 
-    typeof val === 'string' ? new Date(val) : val
-  ),
-  duration_minutes: z.coerce.number().int().min(15, { message: "A duração mínima é de 15 minutos" }),
-});
-
 // Select types
 export type User = typeof users.$inferSelect;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -498,8 +426,6 @@ export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Event = typeof events.$inferSelect;
-export type ClientDocument = typeof clientDocuments.$inferSelect;
-export type ClientMeeting = typeof clientMeetings.$inferSelect;
 
 // Insert types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -520,8 +446,6 @@ export type InsertClientInteraction = z.infer<typeof insertClientInteractionSche
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
-export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
-export type InsertClientMeeting = z.infer<typeof insertClientMeetingSchema>;
 
 // Definição de relações
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -530,8 +454,6 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   taskComments: many(taskComments),
   projectComments: many(projectComments),
   taskAttachments: many(taskAttachments),
-  clientDocuments: many(clientDocuments),
-  clientMeetings: many(clientMeetings),
   clientInteractions: many(clientInteractions),
   expenses: many(expenses),
   events: many(events),
@@ -561,8 +483,6 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   clientInteractions: many(clientInteractions),
   clientContacts: many(clientContacts),
   financialDocuments: many(financialDocuments),
-  documents: many(clientDocuments),
-  meetings: many(clientMeetings),
   events: many(events)
 }));
 
@@ -734,36 +654,6 @@ export const expensesRelations = relations(expenses, ({ one }) => ({
   paidBy: one(users, {
     fields: [expenses.paid_by],
     references: [users.id]
-  })
-}));
-
-// Relações para documentos de cliente
-export const clientDocumentsRelations = relations(clientDocuments, ({ one }) => ({
-  client: one(clients, {
-    fields: [clientDocuments.client_id],
-    references: [clients.id],
-    onDelete: "cascade"
-  }),
-  uploader: one(users, {
-    fields: [clientDocuments.uploaded_by],
-    references: [users.id]
-  })
-}));
-
-// Relações para reuniões de cliente
-export const clientMeetingsRelations = relations(clientMeetings, ({ one }) => ({
-  client: one(clients, {
-    fields: [clientMeetings.client_id],
-    references: [clients.id],
-    onDelete: "cascade"
-  }),
-  organizer: one(users, {
-    fields: [clientMeetings.organized_by],
-    references: [users.id]
-  }),
-  event: one(events, {
-    fields: [clientMeetings.related_event_id],
-    references: [events.id]
   })
 }));
 
