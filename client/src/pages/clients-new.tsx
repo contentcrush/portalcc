@@ -73,6 +73,7 @@ import {
   BarChart,
   Trash2,
   ArrowUpRight,
+  Check,
 } from "lucide-react";
 import {
   Dialog,
@@ -83,6 +84,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
