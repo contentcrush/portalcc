@@ -10,6 +10,9 @@ import cookieParser from 'cookie-parser';
 
 const router = Router();
 
+// Middleware para processar cookies (deve vir antes da autenticação)
+router.use(cookieParser());
+
 // Middleware para autenticação
 router.use(authenticateJWT);
 
