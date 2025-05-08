@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject, type Client, type Project } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency } from "@/lib/utils";
+import { getInitials, cn, formatCurrency } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
@@ -25,18 +23,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Plus,
   Search,
@@ -44,46 +31,24 @@ import {
   Mail,
   Phone,
   MapPin,
-  Clock,
-  FileText,
-  Filter,
-  MoreHorizontal,
-  X,
   Globe,
   LayoutGrid,
   List,
-  Download,
   CircleDollarSign,
-  Folders,
   Activity,
-  Upload,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  Info,
   Image,
-  Tag,
   ArrowRight,
   Calendar as CalendarIcon,
   User,
-  UserPlus,
-  Settings,
+  Check,
+  Upload,
   Briefcase,
-  ExternalLink,
   BarChart,
   Trash2,
-  ArrowUpRight,
-  Check,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -93,13 +58,14 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Form, 
   FormControl, 
@@ -110,12 +76,8 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DatePickerWithYearNavigation } from "@/components/ui/calendar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,8 +90,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
@@ -143,6 +103,26 @@ const projectFormSchema = insertProjectSchema.extend({
   name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
 });
 
+// Utilitários para campos nulos
+const getSafeFieldProps = (field: any) => ({
+  value: field.value ?? '',
+  onChange: field.onChange,
+  onBlur: field.onBlur,
+  name: field.name,
+  ref: field.ref,
+});
+
+const getSafeNumberFieldProps = (field: any) => ({
+  value: field.value ?? '',
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? undefined : Number(e.target.value);
+    field.onChange(value);
+  },
+  onBlur: field.onBlur,
+  name: field.name,
+  ref: field.ref,
+});
+
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -152,23 +132,21 @@ export default function Clients() {
   const [isDeleteClientDialogOpen, setIsDeleteClientDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<{ id: number; name: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [deleteItemsCount, setDeleteItemsCount] = useState<{
     projects: number;
     interactions: number;
     financialDocuments: number;
   }>({ projects: 0, interactions: 0, financialDocuments: 0 });
+  
+  // Estados do formulário de novo cliente
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [formStep, setFormStep] = useState<number>(0);
+  const [isLookupCnpj, setIsLookupCnpj] = useState(false);
+  
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
   // Formulário para novo cliente
-  // Estado para controlar etapas do formulário e outros estados do novo cliente
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [formStep, setFormStep] = useState<number>(0);
-  const [isCollapseOpen, setIsCollapseOpen] = useState(false);
-  const [segmentTags, setSegmentTags] = useState<string[]>([]);
-  const [isLookupCnpj, setIsLookupCnpj] = useState(false);
-  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -184,8 +162,10 @@ export default function Clients() {
       address: "",
       city: "",
       notes: "",
-      logo: "", // Campo para armazenar a URL da imagem de logo do cliente
-      since: null, // Data de início do relacionamento com o cliente
+      logo: "",
+      since: null,
+      active: true,
+      segments: [],
     },
   });
 
@@ -198,168 +178,158 @@ export default function Clients() {
       client_id: 0,
       status: "draft",
       budget: undefined,
-      startDate: undefined,
-      endDate: undefined,
-      progress: 0,
-      thumbnail: "",
+      startDate: null,
+      endDate: null,
     },
   });
 
-  // Mutation para criar novo cliente
+  // Query para carregar clientes
+  const { data: clients, isLoading } = useQuery<Client[]>({
+    queryKey: ['/api/clients'],
+  });
+
+  // Query para carregar projetos
+  const { data: projects } = useQuery<Project[]>({
+    queryKey: ['/api/projects'],
+  });
+
+  // Mutations
   const createClientMutation = useMutation({
     mutationFn: async (data: InsertClient) => {
-      const response = await apiRequest("POST", "/api/clients", data);
-      return await response.json();
+      const res = await apiRequest('POST', '/api/clients', data);
+      return await res.json();
     },
-    onSuccess: (newClient) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       setIsNewClientDialogOpen(false);
-      setFormStep(0); // Reset para o primeiro passo para próxima vez
-      setAvatarPreview(null); // Limpar preview
-      setSegmentTags([]); // Limpar tags
-      setIsCollapseOpen(false); // Resetar collapse
-      form.reset();
-      
-      // Toast com CTA para criar novo projeto
       toast({
         title: "Cliente criado com sucesso",
-        description: (
-          <div className="flex flex-col gap-2">
-            <p>{newClient.name} foi adicionado à sua base de clientes.</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-2 w-full justify-center"
-              onClick={() => {
-                handleNewProjectClick({
-                  id: newClient.id,
-                  name: newClient.name
-                });
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Criar novo projeto para este cliente
-            </Button>
-          </div>
-        ),
-        duration: 5000,
+        description: `O cliente ${form.getValues().name} foi adicionado.`,
       });
-      
-      navigate(`/clients/${newClient.id}`);
+      form.reset();
+      setFormStep(0);
+      setAvatarPreview(null);
     },
     onError: (error) => {
       toast({
         title: "Erro ao criar cliente",
-        description: error.message || "Ocorreu um erro ao criar o cliente. Tente novamente.",
+        description: error.message,
         variant: "destructive",
       });
-    },
+    }
   });
-  
-  // Mutation para criar novo projeto
+
   const createProjectMutation = useMutation({
     mutationFn: async (data: InsertProject) => {
-      const response = await apiRequest("POST", "/api/projects", data);
-      return await response.json();
+      const res = await apiRequest('POST', '/api/projects', data);
+      return await res.json();
     },
-    onSuccess: (newProject) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', selectedClient?.id, 'projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       setIsNewProjectDialogOpen(false);
-      projectForm.reset();
       toast({
         title: "Projeto criado com sucesso",
-        description: `${newProject.name} foi criado para o cliente ${selectedClient?.name}.`,
+        description: `O projeto ${projectForm.getValues().name} foi adicionado.`,
       });
-      navigate(`/projects/${newProject.id}`);
+      projectForm.reset();
     },
     onError: (error) => {
       toast({
         title: "Erro ao criar projeto",
-        description: error.message || "Ocorreu um erro ao criar o projeto. Tente novamente.",
+        description: error.message,
         variant: "destructive",
       });
-    },
+    }
   });
 
-  // Função para lidar com upload de avatar
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Verificar tipo e tamanho
-    if (!file.type.includes('image/')) {
+  const toggleActiveStatusMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/clients/${id}`, { active });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       toast({
-        title: "Formato inválido",
-        description: "Por favor, selecione uma imagem.",
+        title: data.active ? "Cliente ativado" : "Cliente desativado",
+        description: `${data.name} foi ${data.active ? "ativado" : "desativado"} com sucesso.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
         variant: "destructive",
       });
-      return;
     }
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB
+  });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/clients/${id}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      setIsDeleteClientDialogOpen(false);
       toast({
-        title: "Arquivo muito grande",
-        description: "O tamanho máximo permitido é 5MB.",
+        title: "Cliente excluído",
+        description: `${selectedClient?.name} foi excluído com sucesso.`,
+      });
+      setSelectedClient(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir cliente",
+        description: error.message,
         variant: "destructive",
       });
-      return;
     }
-    
-    // Criar uma URL temporária para visualização usando FileReader
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        const dataUrl = e.target.result as string;
-        setAvatarPreview(dataUrl);
-        
-        // Também armazenamos a dataUrl para enviar ao servidor
-        form.setValue('logo', dataUrl);
-      }
-    };
-    reader.readAsDataURL(file);
+  });
+
+  // Manipuladores de eventos
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    createClientMutation.mutate(data as InsertClient);
   };
-  
-  // Função para buscar dados do CNPJ
-  const handleCnpjLookup = async () => {
-    const cnpj = form.getValues('cnpj')?.replace(/[^\d]/g, '');
-    
-    if (!cnpj || cnpj.length !== 14) {
-      toast({
-        title: "CNPJ inválido",
-        description: "Digite um CNPJ válido para realizar a consulta.",
-        variant: "destructive",
-      });
-      return;
+
+  const onProjectSubmit = (data: z.infer<typeof projectFormSchema>) => {
+    if (selectedClient) {
+      const projectData: InsertProject = {
+        ...data,
+        client_id: selectedClient.id,
+      };
+      createProjectMutation.mutate(projectData);
     }
+  };
+
+  const handleCnpjLookup = () => {
+    const cnpj = form.getValues('cnpj');
+    if (!cnpj) return;
     
     setIsLookupCnpj(true);
     
-    try {
-      // Simulação de consulta à API
-      // Em um ambiente real, isso seria uma chamada à API Receita WS / Brasil.io
-      setTimeout(() => {
-        // Simular dados retornados
-        form.setValue('name', 'Empresa Simulada Ltda.');
-        form.setValue('address', 'Av. Brasil, 1500');
-        form.setValue('city', 'São Paulo');
-        
-        toast({
-          title: "CNPJ encontrado",
-          description: "Dados da empresa preenchidos automaticamente.",
-        });
-        setIsLookupCnpj(false);
-      }, 1500);
-    } catch (error) {
-      toast({
-        title: "Erro na consulta",
-        description: "Não foi possível consultar os dados do CNPJ.",
-        variant: "destructive",
-      });
+    // Simulação de busca de CNPJ (implementação real seria com API)
+    setTimeout(() => {
       setIsLookupCnpj(false);
-    }
+      toast({
+        title: "CNPJ consultado",
+        description: "Dados da empresa preenchidos automaticamente.",
+      });
+    }, 1500);
   };
-  
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Apenas para demonstração - em produção, faria upload para servidor
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Função para navegar entre etapas do formulário
   const handleNextStep = () => {
     const currentValues = form.getValues();
@@ -372,619 +342,312 @@ export default function Clients() {
       }
     }
     
-    setFormStep(formStep + 1);
+    // Validar campos da etapa 2
+    if (formStep === 1) {
+      if (currentValues.contactEmail) {
+        const isValid = form.trigger('contactEmail');
+        if (!isValid) return;
+      }
+    }
+    
+    setFormStep((prev) => Math.min(prev + 1, 2));
   };
-  
+
   const handlePrevStep = () => {
-    setFormStep(formStep - 1);
-  };
-  
-  // Função para submeter o formulário
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    // Convertendo valores para o formato esperado pela API
-    const clientData: InsertClient = {
-      ...data,
-      // A data já será tratada pelo schema Zod, não precisamos converter aqui
-      since: data.since,
-      // Adicionar os segmentos aos dados do cliente
-      segments: segmentTags.length > 0 ? segmentTags.join(', ') : undefined,
-    };
-    createClientMutation.mutate(clientData);
+    setFormStep((prev) => Math.max(prev - 1, 0));
   };
 
-  // Fetch clients
-  const { data: clients, isLoading } = useQuery<Client[]>({
-    queryKey: ['/api/clients']
-  });
-  
-  // Fetch projects para cada cliente (para contagem e badges)
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ['/api/projects']
-  });
-
-  // Filter clients based on criteria
+  // Filtragem e ordenação
   const filteredClients = clients?.filter((client: Client) => {
-    // Search term filter
-    if (searchTerm && !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
+    // Filtro por termo de busca
+    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          client.shortName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.cnpj?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Type filter
-    if (typeFilter !== "all" && client.type !== typeFilter) {
-      return false;
-    }
+    // Filtro por tipo
+    const matchesType = typeFilter === 'all' || client.type === typeFilter;
     
-    return true;
+    return matchesSearch && matchesType;
   });
 
-  // Sort clients
   const sortedClients = filteredClients?.sort((a: Client, b: Client) => {
-    if (sortBy === "recent") {
-      return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
-    } else if (sortBy === "name") {
+    if (sortBy === 'recent') {
+      return (b.id || 0) - (a.id || 0);
+    } else if (sortBy === 'name') {
       return a.name.localeCompare(b.name);
-    } else if (sortBy === "revenue") {
-      const revenueA = getClientRevenue(a.id);
-      const revenueB = getClientRevenue(b.id);
-      return revenueB - revenueA; // Ordem decrescente
+    } else if (sortBy === 'revenue') {
+      const revenueA = getClientTotalRevenue(a.id);
+      const revenueB = getClientTotalRevenue(b.id);
+      return revenueB - revenueA;
+    } else {
+      return 0;
     }
-    return 0;
   });
 
-  const handleNewClientClick = () => {
-    setIsNewClientDialogOpen(true);
+  // Auxiliares
+  const isClientActive = (client: Client) => {
+    return client.active !== false; // Caso a propriedade não exista, assume true
   };
-  
-  const handleNewProjectClick = (client: { id: number; name: string }) => {
+
+  const getClientProjectsCount = (clientId: number) => {
+    if (!projects) return 0;
+    return projects.filter((project: Project) => project.client_id === clientId).length;
+  };
+
+  const getClientTotalRevenue = (clientId: number) => {
+    if (!projects) return 0;
+    return projects
+      .filter((project: Project) => project.client_id === clientId)
+      .reduce((total: number, project: Project) => total + (project.budget || 0), 0);
+  };
+
+  const handleOpenProjectDialog = (client: { id: number; name: string }) => {
     setSelectedClient(client);
+    setIsNewProjectDialogOpen(true);
     projectForm.reset({
       name: "",
       description: "",
       client_id: client.id,
       status: "draft",
       budget: undefined,
-      startDate: undefined,
-      endDate: undefined,
-      progress: 0,
-      thumbnail: "",
+      startDate: null,
+      endDate: null,
     });
-    setIsNewProjectDialogOpen(true);
   };
-  
-  const onProjectSubmit = (data: z.infer<typeof projectFormSchema>) => {
-    // Converter valores para o formato esperado pela API
-    const projectData: InsertProject = {
-      ...data,
-      client_id: selectedClient?.id as number,
-    };
-    createProjectMutation.mutate(projectData);
-  };
-  
-  // Função para verificar se um cliente está ativo com base no campo 'active'
-  const isClientActive = (client: Client) => {
-    return client.active !== false; // Se o campo for undefined ou null, considera como ativo
-  };
-  
-  // Função para alternar o status ativo/inativo de um cliente
-  const toggleClientActiveStatus = async (clientId: number, currentStatus: boolean) => {
-    try {
-      const response = await apiRequest('PATCH', `/api/clients/${clientId}`, {
-        active: !currentStatus,
-      });
-      
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-        toast({
-          title: `Cliente ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
-          description: `O cliente foi marcado como ${!currentStatus ? 'ativo' : 'inativo'}.`,
-        });
-      } else {
-        throw new Error('Falha ao atualizar status do cliente');
-      }
-    } catch (error) {
-      console.error('Erro ao alternar status do cliente:', error);
-      toast({
-        title: "Erro ao atualizar cliente",
-        description: "Não foi possível alterar o status do cliente. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Função para contar o número de projetos por cliente
-  const getClientProjectsCount = (clientId: number) => {
-    if (!projects) return 0;
-    return projects.filter((project: Project) => project.client_id === clientId).length;
-  };
-  
-  // Função para calcular a receita total de projetos por cliente
-  const getClientRevenue = (clientId: number) => {
-    if (!projects) return 0;
-    return projects
-      .filter((project: Project) => project.client_id === clientId)
-      .reduce((total: number, project: Project) => total + (project.budget || 0), 0);
-  };
-  
-  // Utilitário para garantir valores não-nulos em campos de formulário
-  const getSafeFieldProps = (field: any) => ({
-    value: field.value || '',
-    onChange: field.onChange,
-    onBlur: field.onBlur,
-    name: field.name,
-    ref: field.ref,
-  });
-  
-  // Utilitário para campos numéricos
-  const getSafeNumberFieldProps = (field: any) => ({
-    value: field.value || '',
-    onChange: field.onChange,
-    onBlur: field.onBlur,
-    name: field.name,
-    ref: field.ref,
-  });
-  
-  // Mutation para excluir cliente
-  const deleteClientMutation = useMutation({
-    mutationFn: async (clientId: number) => {
-      const response = await apiRequest("DELETE", `/api/clients/${clientId}`);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-      setIsDeleteClientDialogOpen(false);
-      setSelectedClient(null);
-      
-      toast({
-        title: "Cliente excluído com sucesso",
-        description: `O cliente foi excluído junto com ${data.deletedItems.projects} projeto(s), ${data.deletedItems.interactions} interação(ões) e ${data.deletedItems.financialDocuments} documento(s) financeiro(s).`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao excluir cliente",
-        description: error.message || "Ocorreu um erro ao excluir o cliente. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
 
-  // Função para abrir o diálogo de confirmação de exclusão
-  const handleDeleteClientClick = (client: { id: number; name: string }) => {
+  const handleOpenDeleteDialog = (client: { id: number; name: string }) => {
     setSelectedClient(client);
+    setIsDeleteClientDialogOpen(true);
     
-    // Usar a nova rota OPTIONS para obter informações relacionadas eficientemente
-    fetch(`/api/clients/${client.id}`, { method: 'OPTIONS' })
-      .then(res => res.json())
-      .then(data => {
-        setDeleteItemsCount({
-          projects: data.related?.projects || 0,
-          interactions: data.related?.interactions || 0,
-          financialDocuments: data.related?.financialDocuments || 0
-        });
-        setIsDeleteClientDialogOpen(true);
-      })
-      .catch(err => {
-        console.error("Erro ao buscar informações relacionadas:", err);
-        setDeleteItemsCount({ projects: 0, interactions: 0, financialDocuments: 0 });
-        setIsDeleteClientDialogOpen(true);
-      });
+    // Simulação de contagem de itens a excluir
+    setDeleteItemsCount({
+      projects: getClientProjectsCount(client.id),
+      interactions: Math.floor(Math.random() * 5),
+      financialDocuments: Math.floor(Math.random() * 3)
+    });
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="container p-4 mx-auto max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-          <p className="text-sm text-gray-500">Gerencie, visualize e adicione clientes</p>
+          <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
+          <p className="text-muted-foreground">
+            Gerencie seus clientes e projetos associados
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleNewClientClick} className="shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button 
+            onClick={() => setIsNewClientDialogOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
           </Button>
         </div>
       </div>
       
-      {/* Filters and search */}
-      <Card className="border border-border/40 shadow-sm">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-            {/* Campo de busca compacto */}
-            <div className="relative sm:col-span-4 w-full">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar clientes..."
-                className="pl-8 h-9 bg-background w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex flex-wrap sm:col-span-8 gap-2 items-center justify-between w-full">
-              <div className="flex flex-wrap gap-2 items-center">
-                {/* Filtro de tipo mais compacto */}
-                <Select
-                  defaultValue="all"
-                  value={typeFilter}
-                  onValueChange={setTypeFilter}
-                >
-                  <SelectTrigger className="h-9 w-[120px] md:w-[140px]">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
-                    {CLIENT_TYPE_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {/* Ordenação mais compacta */}
-                <Select
-                  defaultValue="recent"
-                  value={sortBy}
-                  onValueChange={setSortBy}
-                >
-                  <SelectTrigger className="h-9 w-[120px] md:w-[140px]">
-                    <SelectValue placeholder="Ordenar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recent">Mais recentes</SelectItem>
-                    <SelectItem value="name">Nome</SelectItem>
-                    <SelectItem value="revenue">Receita</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Toggle de visualização à direita */}
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(value) => {
-                  if (value) setViewMode(value as 'grid' | 'list');
-                }}
-                className="border rounded-md p-0.5"
-              >
-                <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-8 px-0">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-8 w-8 px-0">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Buscar clientes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {CLIENT_TYPE_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
-          {/* Contador de resultados */}
-          {!isLoading && filteredClients && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="name">Nome (A-Z)</SelectItem>
+              <SelectItem value="revenue">Maior receita</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex border rounded-md">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('grid')}
+              className="rounded-r-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setViewMode('list')}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
       
-      {/* Loading state */}
-      {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="overflow-hidden">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="h-32 bg-muted rounded-t-lg" />
               <CardContent className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-muted animate-pulse" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
-                    <div className="h-3 bg-muted rounded animate-pulse w-1/3" />
+                <div className="h-6 bg-muted rounded-md mb-4 w-3/4" />
+                <div className="h-4 bg-muted rounded-md mb-2 w-1/2" />
+                <div className="h-4 bg-muted rounded-md mb-2 w-2/3" />
+                <div className="h-4 bg-muted rounded-md w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedClients?.map((client: Client) => (
+            <Card key={client.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-3">
+                    <ClientAvatar client={client} size="md" />
+                    <div>
+                      <CardTitle className="text-lg font-semibold truncate max-w-[200px]">
+                        {client.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {CLIENT_TYPE_OPTIONS.find(opt => opt.value === client.type)?.label || 'Cliente'}
+                      </CardDescription>
+                    </div>
                   </div>
+                  <Badge 
+                    variant={isClientActive(client) ? "outline" : "secondary"}
+                    className={cn(
+                      "cursor-pointer transition-colors",
+                      !isClientActive(client) && "hover:bg-primary hover:text-primary-foreground"
+                    )}
+                    onClick={() => toggleActiveStatusMutation.mutate({ 
+                      id: client.id, 
+                      active: !isClientActive(client) 
+                    })}
+                  >
+                    {isClientActive(client) ? "Ativo" : "Inativo"}
+                  </Badge>
                 </div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded animate-pulse" />
-                  <div className="h-3 bg-muted rounded animate-pulse" />
-                  <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
+              </CardHeader>
+              <CardContent className="p-4 pt-1">
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground flex items-center">
+                      <Briefcase className="h-3 w-3 mr-1" />
+                      Projetos
+                    </div>
+                    <p className="font-medium">
+                      {getClientProjectsCount(client.id) || "Nenhum"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground flex items-center">
+                      <CircleDollarSign className="h-3 w-3 mr-1" />
+                      Receita
+                    </div>
+                    <p className="font-medium">
+                      {formatCurrency(getClientTotalRevenue(client.id))}
+                    </p>
+                  </div>
+                  {client.contactEmail && (
+                    <div className="space-y-1 col-span-2">
+                      <div className="text-xs text-muted-foreground flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        Email
+                      </div>
+                      <p className="font-medium text-sm truncate">
+                        {client.contactEmail}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between bg-muted/20 border-t px-6 py-3">
-                <div className="h-4 bg-muted rounded animate-pulse w-16" />
-                <div className="h-4 bg-muted rounded animate-pulse w-24" />
+              <CardFooter className="p-3 bg-muted/30 flex justify-between gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full"
+                  onClick={() => navigate(`/clients/${client.id}`)}
+                >
+                  Detalhes
+                </Button>
+                <Button 
+                  size="sm"
+                  className="w-full"
+                  onClick={() => handleOpenProjectDialog(client)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Projeto
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
-      )}
-      
-      {/* Grid View */}
-      {!isLoading && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedClients?.map(client => (
-            <div
-              key={client.id}
-              onClick={() => navigate(`/clients/${client.id}`)}
-              className="group cursor-pointer"
-            >
-              <Card className="overflow-hidden h-full transition-all border border-border/40 hover:border-primary/20 hover:shadow-md">
-                <div className="absolute top-2 right-2 z-30">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/clients/${client.id}`);
-                      }}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleNewProjectClick(client);
-                      }}>
-                        <Briefcase className="h-4 w-4 mr-2" />
-                        Novo projeto
-                      </DropdownMenuItem>
-                      {client.website && (
-                        <DropdownMenuItem asChild>
-                          <a 
-                            href={client.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Visitar site
-                          </a>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClientClick(client);
-                        }} 
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir cliente
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+      ) : (
+        <div className="border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-12 p-3 bg-muted font-medium text-sm">
+            <div className="col-span-5">Cliente</div>
+            <div className="col-span-2 text-center">Tipo</div>
+            <div className="col-span-2 text-center">Projetos</div>
+            <div className="col-span-2 text-center">Receita</div>
+            <div className="col-span-1 text-right">Ações</div>
+          </div>
+          <div className="divide-y">
+            {sortedClients?.map((client: Client) => (
+              <div key={client.id} className="grid grid-cols-12 p-3 items-center hover:bg-muted/30 transition-colors">
+                <div className="col-span-5">
+                  <div className="flex items-center space-x-3">
+                    <ClientAvatar client={client} size="sm" />
+                    <div>
+                      <div className="font-medium">{client.name}</div>
+                      <div className="text-xs text-muted-foreground">{client.shortName || client.cnpj || "—"}</div>
+                    </div>
+                  </div>
                 </div>
-                
-                <CardHeader className="p-4 pb-2 group-hover:bg-muted/5 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <ClientAvatar 
-                      name={client.name}
-                      logoUrl={client.logo}
-                      size="md"
-                      className="mt-1 flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-medium truncate group-hover:text-primary transition-colors">
-                        {client.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
-                          {client.type}
-                        </Badge>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 
-                            ? "bg-green-50 text-green-700 border-green-200" 
-                            : "bg-gray-50 text-gray-700 border-gray-200"}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleClientActiveStatus(client.id, isClientActive(client));
-                          }}
-                        >
-                          {isClientActive(client) ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="p-4 pt-2">
-                  <div className="space-y-2 mt-2 h-[5.5rem]">
-                    {/* Informação de contato - sempre mostra, mesmo se vazio */}
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <User className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      {client.contactName ? (
-                        <span className="truncate">
-                          {client.contactName}
-                          {client.contactPosition && <span className="ml-1 opacity-70">({client.contactPosition})</span>}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/50 italic text-xs">Nenhum contato definido</span>
-                      )}
-                    </div>
-                    
-                    {/* Email - sempre mostra, mesmo se vazio */}
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <Mail className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      {client.contactEmail ? (
-                        <span className="truncate hover:text-primary transition-colors">
-                          {client.contactEmail}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/50 italic text-xs">Sem email cadastrado</span>
-                      )}
-                    </div>
-                    
-                    {/* Endereço - sempre mostra, mesmo se vazio */}
-                    <div className="flex items-center text-muted-foreground overflow-hidden">
-                      <MapPin className="h-3.5 w-3.5 mr-2 flex-shrink-0" />
-                      {client.address ? (
-                        <span className="truncate">
-                          {client.address}
-                          {client.city && <span className="ml-1">- {client.city}</span>}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/50 italic text-xs">Sem endereço cadastrado</span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-                
-                <Separator />
-                
-                <CardFooter className="p-4 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-row justify-between items-center">
-                  <div className="grid grid-cols-2 gap-4 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">
-                        {getClientProjectsCount(client.id)} projeto{getClientProjectsCount(client.id) !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1.5">
-                      <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {formatCurrency(getClientRevenue(client.id))}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-shrink-0">
-                    <ArrowUpRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </CardFooter>
-              </Card>
-            </div>
-          ))}
+                <div className="col-span-2 text-center">
+                  <Badge variant="outline">
+                    {CLIENT_TYPE_OPTIONS.find(opt => opt.value === client.type)?.label || 'Cliente'}
+                  </Badge>
+                </div>
+                <div className="col-span-2 text-center">{getClientProjectsCount(client.id) || "—"}</div>
+                <div className="col-span-2 text-center">{formatCurrency(getClientTotalRevenue(client.id))}</div>
+                <div className="col-span-1 flex justify-end gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => navigate(`/clients/${client.id}`)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
-      
-      {/* List View */}
-      {!isLoading && viewMode === 'list' && (
-        <Card className="border border-border/40 shadow-sm">
-          <ScrollArea className="h-[calc(100vh-270px)] w-full">
-            <Table>
-              <TableHeader className="bg-muted/20">
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Projetos</TableHead>
-                  <TableHead>Receita</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedClients?.map(client => (
-                  <TableRow 
-                    key={client.id}
-                    className="cursor-pointer hover:bg-muted/20"
-                    onClick={() => navigate(`/clients/${client.id}`)}
-                  >
-                    <TableCell className="font-medium min-w-[220px]">
-                      <div className="flex items-center gap-3">
-                        <ClientAvatar name={client.name} logoUrl={client.logo} size="sm" />
-                        <div className="flex flex-col">
-                          <span className="font-medium truncate max-w-[200px]">
-                            {client.name}
-                          </span>
-                          <div className="flex gap-1 mt-1">
-                            <Badge variant="outline" className="w-fit text-xs">
-                              {client.type}
-                            </Badge>
-                            <Badge 
-                              variant="outline" 
-                              className={`w-fit text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 
-                                ? "bg-green-50 text-green-700 border-green-200" 
-                                : "bg-gray-50 text-gray-700 border-gray-200"}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleClientActiveStatus(client.id, isClientActive(client));
-                              }}
-                            >
-                              {isClientActive(client) ? "Ativo" : "Inativo"}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] min-w-[200px]">
-                      {client.contactName ? (
-                        <div className="flex flex-col">
-                          <span className="truncate">{client.contactName}</span>
-                          {client.contactEmail && (
-                            <span className="text-xs text-muted-foreground truncate">
-                              {client.contactEmail}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/50 text-xs italic">
-                          Sem contato definido
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {getClientProjectsCount(client.id)}
-                    </TableCell>
-                    <TableCell>
-                      {formatCurrency(getClientRevenue(client.id))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/clients/${client.id}`);
-                          }}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            handleNewProjectClick(client);
-                          }}>
-                            <Briefcase className="h-4 w-4 mr-2" />
-                            Novo projeto
-                          </DropdownMenuItem>
-                          {client.website && (
-                            <DropdownMenuItem asChild>
-                              <a href={client.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Visitar site
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClientClick(client);
-                          }} className="text-destructive focus:text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir cliente
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </Card>
-      )}
-      
+
       {/* Sheet para novo cliente (melhor experiência mobile) */}
       <Sheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <SheetContent 
           side="bottom" 
-          className="h-[95%] sm:h-[90%] rounded-t-xl border-t border-border p-0"
+          className="h-[95svh] sm:h-[90svh] rounded-t-xl border-t border-border p-0"
         >
           <div className="flex flex-col h-full">
             <SheetHeader className="sticky top-0 z-20 bg-background pb-2 pt-0 px-6 shadow-sm">
@@ -1046,350 +709,350 @@ export default function Clients() {
                       </Button>
                     )}
                   
-                  {formStep === 0 && (
-                    <>
-                      <div className="mb-6 flex justify-center">
-                        <div className="relative">
-                          <Avatar className="h-28 w-28">
-                            {avatarPreview ? (
-                              <AvatarImage src={avatarPreview} alt="Preview" />
-                            ) : (
-                              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                                {getInitials(form.watch('name') || "NC")}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <div className="absolute bottom-0 right-0">
-                            <label htmlFor="avatar-upload" className="cursor-pointer">
-                              <div className="bg-primary text-white p-2 rounded-full shadow-sm">
-                                <Upload className="h-5 w-5" />
-                              </div>
-                            </label>
-                            <input 
-                              id="avatar-upload" 
-                              type="file" 
-                              className="hidden" 
-                              accept="image/*"
-                              onChange={handleAvatarUpload}
+                    {formStep === 0 && (
+                      <>
+                        <div className="mb-6 flex justify-center">
+                          <div className="relative">
+                            <Avatar className="h-28 w-28">
+                              {avatarPreview ? (
+                                <AvatarImage src={avatarPreview} alt="Preview" />
+                              ) : (
+                                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                                  {getInitials(form.watch('name') || "NC")}
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div className="absolute bottom-0 right-0">
+                              <label htmlFor="avatar-upload" className="cursor-pointer">
+                                <div className="bg-primary text-white p-2 rounded-full shadow-sm">
+                                  <Upload className="h-5 w-5" />
+                                </div>
+                              </label>
+                              <input 
+                                id="avatar-upload" 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-5">
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Nome do Cliente*</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: Empresa XYZ" 
+                                      className="h-12 text-base" 
+                                      {...getSafeFieldProps(field)} 
+                                      autoFocus
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="cnpj"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">CNPJ/CPF</FormLabel>
+                                  <div className="flex gap-2">
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="00.000.000/0001-00" 
+                                        className="h-12 text-base" 
+                                        {...getSafeFieldProps(field)}
+                                      />
+                                    </FormControl>
+                                    <Button 
+                                      type="button" 
+                                      variant="outline"
+                                      size="icon"
+                                      disabled={isLookupCnpj}
+                                      onClick={handleCnpjLookup}
+                                      className="flex-shrink-0 h-12 w-12"
+                                    >
+                                      {isLookupCnpj ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                      ) : (
+                                        <Search className="h-5 w-5" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <FormDescription className="text-xs">
+                                    Digite o CNPJ e pressione Enter ou clique no botão de busca
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="shortName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Nome abreviado</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Nome que aparecerá no dashboard" 
+                                      className="h-12 text-base" 
+                                      {...getSafeFieldProps(field)} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="type"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Tipo de Cliente*</FormLabel>
+                                  <Select
+                                    value={field.value || ''}
+                                    onValueChange={field.onChange}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-12 text-base">
+                                        <SelectValue placeholder="Selecione o tipo" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {CLIENT_TYPE_OPTIONS.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="space-y-5">
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Nome do Cliente*</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: Empresa XYZ" 
-                                  className="h-12 text-base" 
-                                  {...getSafeFieldProps(field)} 
-                                  autoFocus
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="cnpj"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">CNPJ/CPF</FormLabel>
-                              <div className="flex gap-2">
-                                <FormControl>
-                                  <Input 
-                                    placeholder="00.000.000/0001-00" 
-                                    className="h-12 text-base" 
-                                    {...getSafeFieldProps(field)}
-                                  />
-                                </FormControl>
-                                <Button 
-                                  type="button" 
-                                  variant="outline"
-                                  size="icon"
-                                  disabled={isLookupCnpj}
-                                  onClick={handleCnpjLookup}
-                                  className="flex-shrink-0 h-12 w-12"
-                                >
-                                  {isLookupCnpj ? (
-                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                  ) : (
-                                    <Search className="h-5 w-5" />
-                                  )}
-                                </Button>
-                              </div>
-                              <FormDescription className="text-xs">
-                                Digite o CNPJ e pressione Enter ou clique no botão de busca
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="shortName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Nome abreviado</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Nome que aparecerá no dashboard" 
-                                  className="h-12 text-base" 
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Tipo de Cliente*</FormLabel>
-                              <Select
-                                value={field.value || ''}
-                                onValueChange={field.onChange}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-12 text-base">
-                                    <SelectValue placeholder="Selecione o tipo" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {CLIENT_TYPE_OPTIONS.map(option => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-                
-                {formStep === 1 && (
-                  <>
-                    <h3 className="font-medium text-lg text-center mb-5 mt-1">Contato Principal</h3>
+                      </>
+                    )}
                     
-                    <div className="space-y-5">
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="contactEmail"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Email de contato*</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: contato@empresa.com" 
-                                  className="h-12 text-base"
-                                  type="email"
-                                  {...getSafeFieldProps(field)} 
-                                  autoFocus
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="contactName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Nome do contato</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: João Silva" 
-                                  className="h-12 text-base" 
-                                  {...getSafeFieldProps(field)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="contactPhone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Telefone</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: (11) 98765-4321" 
-                                  className="h-12 text-base"
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="website"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Website</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: www.empresa.com" 
-                                  className="h-12 text-base"
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-                
-                {formStep === 2 && (
-                  <>
-                    <h3 className="font-medium text-lg text-center mb-5 mt-1">Detalhes Adicionais</h3>
-                    
-                    <div className="space-y-5">
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="address"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Endereço</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: Rua das Flores, 123" 
-                                  className="h-12 text-base"
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="city"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Cidade</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: São Paulo" 
-                                  className="h-12 text-base"
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="since"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel className="text-base font-medium">Data de início</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
+                    {formStep === 1 && (
+                      <>
+                        <h3 className="font-medium text-lg text-center mb-5 mt-1">Contato Principal</h3>
+                        
+                        <div className="space-y-5">
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="contactEmail"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Email de contato*</FormLabel>
                                   <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "h-12 text-base px-3 text-left font-normal justify-between",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP", { locale: ptBR })
-                                      ) : (
-                                        <span>Selecione uma data</span>
-                                      )}
-                                      <CalendarIcon className="h-5 w-5 opacity-50" />
-                                    </Button>
+                                    <Input 
+                                      placeholder="Ex: contato@empresa.com" 
+                                      className="h-12 text-base"
+                                      type="email"
+                                      {...getSafeFieldProps(field)} 
+                                      autoFocus
+                                    />
                                   </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <DatePickerWithYearNavigation
-                                    date={field.value ?? undefined}
-                                    setDate={field.onChange}
-                                    fromYear={1970}
-                                    locale={ptBR}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="notes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">Observações</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Informações adicionais sobre o cliente..." 
-                                  className="min-h-[120px] resize-none text-base px-4 py-3"
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="contactName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Nome do contato</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: João Silva" 
+                                      className="h-12 text-base" 
+                                      {...getSafeFieldProps(field)}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="contactPhone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Telefone</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: (11) 98765-4321" 
+                                      className="h-12 text-base"
+                                      {...getSafeFieldProps(field)} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="website"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Website</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: www.empresa.com" 
+                                      className="h-12 text-base"
+                                      {...getSafeFieldProps(field)} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {formStep === 2 && (
+                      <>
+                        <h3 className="font-medium text-lg text-center mb-5 mt-1">Detalhes Adicionais</h3>
+                        
+                        <div className="space-y-5">
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="address"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Endereço</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: Rua das Flores, 123" 
+                                      className="h-12 text-base"
+                                      {...getSafeFieldProps(field)} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="city"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Cidade</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Ex: São Paulo" 
+                                      className="h-12 text-base"
+                                      {...getSafeFieldProps(field)} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="since"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                  <FormLabel className="text-base font-medium">Data de início</FormLabel>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <FormControl>
+                                        <Button
+                                          variant="outline"
+                                          className={cn(
+                                            "h-12 text-base px-3 text-left font-normal justify-between",
+                                            !field.value && "text-muted-foreground"
+                                          )}
+                                        >
+                                          {field.value ? (
+                                            format(field.value, "PPP", { locale: ptBR })
+                                          ) : (
+                                            <span>Selecione uma data</span>
+                                          )}
+                                          <CalendarIcon className="h-5 w-5 opacity-50" />
+                                        </Button>
+                                      </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <DatePickerWithYearNavigation
+                                        date={field.value ?? undefined}
+                                        setDate={field.onChange}
+                                        fromYear={1970}
+                                        locale={ptBR}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="notes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base font-medium">Observações</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Informações adicionais sobre o cliente"
+                                      className="h-24 text-base resize-none"
+                                      {...getSafeFieldProps(field)}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </form>
               </Form>
             </div>
