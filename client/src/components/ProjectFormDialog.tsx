@@ -685,13 +685,13 @@ export function ProjectFormDialog() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setActiveTab(activeTab === "info" ? "dates" : activeTab === "dates" ? "team" : "info")}
+                    onClick={() => setActiveTab(activeTab === "info" ? "dates" : activeTab === "dates" ? "priority" : activeTab === "priority" ? "team" : "info")}
                     disabled={isSubmitting}
                     className="flex-none"
                   >
                     {activeTab === "team" ? "Voltar" : "Próximo"}
                   </Button>
-                  <div className="text-sm text-muted-foreground">Etapa {activeTab === "info" ? "1" : activeTab === "dates" ? "2" : "3"} de 3</div>
+                  <div className="text-sm text-muted-foreground">Etapa {activeTab === "info" ? "1" : activeTab === "dates" ? "2" : activeTab === "priority" ? "3" : "4"} de 4</div>
                 </div>
                 
                 <div className="flex gap-2">
