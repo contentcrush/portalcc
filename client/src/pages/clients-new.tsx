@@ -1456,7 +1456,7 @@ export default function Clients() {
                       <Textarea 
                         placeholder="Descreva o projeto..."
                         className="min-h-[100px] resize-none"
-                        {...field} 
+                        {...getSafeFieldProps(field)} 
                       />
                     </FormControl>
                     <FormMessage />
@@ -1502,10 +1502,7 @@ export default function Clients() {
                         <Input 
                           type="number"
                           placeholder="0,00"
-                          {...field}
-                          onChange={event => field.onChange(
-                            event.target.value === '' ? undefined : Number(event.target.value)
-                          )}
+                          {...getSafeNumberFieldProps(field)}
                         />
                       </FormControl>
                       <FormMessage />
