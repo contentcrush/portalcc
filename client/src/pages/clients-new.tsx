@@ -11,7 +11,7 @@ import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
+import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject, type Client, type Project } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
@@ -387,23 +387,23 @@ export default function Clients() {
       // A data já será tratada pelo schema Zod, não precisamos converter aqui
       since: data.since,
       // Adicionar os segmentos aos dados do cliente
-      segments: segmentTags.join(', '),
+      segments: segmentTags.length > 0 ? segmentTags.join(', ') : undefined,
     };
     createClientMutation.mutate(clientData);
   };
 
   // Fetch clients
-  const { data: clients, isLoading } = useQuery({
+  const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ['/api/clients']
   });
   
   // Fetch projects para cada cliente (para contagem e badges)
-  const { data: projects } = useQuery({
+  const { data: projects } = useQuery<Project[]>({
     queryKey: ['/api/projects']
   });
 
   // Filter clients based on criteria
-  const filteredClients = clients?.filter(client => {
+  const filteredClients = clients?.filter((client: Client) => {
     // Search term filter
     if (searchTerm && !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
@@ -418,7 +418,7 @@ export default function Clients() {
   });
 
   // Sort clients
-  const sortedClients = filteredClients?.sort((a, b) => {
+  const sortedClients = filteredClients?.sort((a: Client, b: Client) => {
     if (sortBy === "recent") {
       return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
     } else if (sortBy === "name") {
@@ -461,7 +461,7 @@ export default function Clients() {
   };
   
   // Função para verificar se um cliente está ativo com base no campo 'active'
-  const isClientActive = (client: any) => {
+  const isClientActive = (client: Client) => {
     return client.active !== false; // Se o campo for undefined ou null, considera como ativo
   };
   
@@ -494,15 +494,15 @@ export default function Clients() {
   // Função para contar o número de projetos por cliente
   const getClientProjectsCount = (clientId: number) => {
     if (!projects) return 0;
-    return projects.filter((project: any) => project.client_id === clientId).length;
+    return projects.filter((project: Project) => project.client_id === clientId).length;
   };
   
   // Função para calcular a receita total de projetos por cliente
   const getClientRevenue = (clientId: number) => {
     if (!projects) return 0;
     return projects
-      .filter((project: any) => project.client_id === clientId)
-      .reduce((total: number, project: any) => total + (project.budget || 0), 0);
+      .filter((project: Project) => project.client_id === clientId)
+      .reduce((total: number, project: Project) => total + (project.budget || 0), 0);
   };
   
   // Mutation para excluir cliente

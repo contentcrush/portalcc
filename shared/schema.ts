@@ -95,6 +95,7 @@ export const clients = pgTable("clients", {
   notes: text("notes"),
   logo: text("logo"),
   active: boolean("active").default(true),
+  segments: text("segments"), // Adicionando campo para segmentos/tags
 });
 
 export const projects = pgTable("projects", {
