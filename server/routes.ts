@@ -2758,6 +2758,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register custom routers
+  app.use('/api', clientDocumentsRouter);
+  app.use('/api', clientMeetingsRouter);
+
   const httpServer = createServer(app);
   
   // Configurar WebSocket Server (usando 'ws' para WebSockets nativos)
