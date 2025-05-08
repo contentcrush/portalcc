@@ -94,55 +94,66 @@ const RecentDocuments: FC<RecentDocumentsProps> = ({
 
   // Função de download
   const handleDownload = (doc: Document) => {
-    window.open(doc.downloadUrl, '_blank');
+    // Se o documento tiver uma URL válida, abra em nova aba; caso contrário, exiba uma mensagem
+    if (doc.downloadUrl && doc.downloadUrl !== '#') {
+      window.open(doc.downloadUrl, '_blank');
+    } else {
+      // Em uma implementação real, você poderia usar um toast aqui
+      console.log('URL de download não disponível para este documento');
+    }
   };
 
   return (
     <Card className={className}>
-      <CardHeader className="px-6 py-4 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-medium text-gray-700">{title}</CardTitle>
-        {(viewAllHref || onViewAll) && (
-          <Button 
-            variant="link" 
-            className="text-sm font-medium text-primary px-0"
-            onClick={onViewAll}
-            asChild={!!viewAllHref}
-          >
-            {viewAllHref ? (
-              <a href={viewAllHref}>Ver todos</a>
-            ) : (
-              "Ver todos"
-            )}
-          </Button>
-        )}
+      <CardHeader className="px-6 py-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-sm font-medium uppercase text-gray-500">{title}</CardTitle>
+          {(viewAllHref || onViewAll) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-xs"
+              onClick={onViewAll}
+              asChild={!!viewAllHref}
+            >
+              {viewAllHref ? (
+                <a href={viewAllHref}>Ver todos</a>
+              ) : (
+                "Ver todos"
+              )}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       
-      <CardContent className="px-6 pb-4 pt-0 space-y-4">
+      <CardContent className="px-6 pb-4 pt-0 space-y-3">
         {displayDocuments.length > 0 ? (
           displayDocuments.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between">
+            <div key={doc.id} className="flex items-center justify-between py-1.5">
               <div className="flex items-center">
-                <div className={`${getFileColor(doc.type)} rounded-md p-2 mr-3 ${getFileTextColor(doc.type)}`}>
+                <div className={`${getFileColor(doc.type)} ${getFileTextColor(doc.type)} p-1.5 rounded mr-3`}>
                   {getFileIcon(doc.type)}
                 </div>
                 <div>
                   <p className="font-medium text-sm">{doc.name}</p>
-                  <p className="text-sm text-gray-500">{doc.size}</p>
+                  <p className="text-xs text-gray-500">{doc.size}</p>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => handleDownload(doc)}
-                className="hover:bg-gray-100"
+                className="h-8 w-8 hover:bg-gray-100"
               >
-                <Download className="h-5 w-5" />
+                <Download className="h-4 w-4" />
               </Button>
             </div>
           ))
         ) : (
-          <div className="text-center py-6 text-gray-500">
-            Nenhum documento encontrado
+          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+            <FileText className="h-12 w-12 mb-2 text-gray-300" />
+            <p>Nenhum documento encontrado</p>
+            <p className="text-xs text-gray-400 mt-1">Adicione documentos financeiros para visualizá-los aqui</p>
           </div>
         )}
       </CardContent>
