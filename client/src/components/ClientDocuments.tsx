@@ -1,405 +1,459 @@
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { AlertCircle, File, FileText, FilePlus, Download, Trash2, Upload } from "lucide-react";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ClientDocument } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClientDocument } from '@shared/schema';
-import { apiRequest } from '@/lib/queryClient';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { insertClientDocumentSchema } from "@shared/schema";
+import { 
+  Download, 
+  FileText, 
+  FileUp, 
+  Trash2,
+  Calendar,
+  FileArchive, 
+  File, 
+  FileImage,
+  FileSpreadsheet,
+  FileCode,
+  FilePdf
+} from "lucide-react";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { formatBytes } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 
-const documentCategories = [
-  { value: "contrato", label: "Contrato" },
-  { value: "proposta", label: "Proposta" },
-  { value: "relatorio", label: "Relatório" },
-  { value: "nota_fiscal", label: "Nota Fiscal" },
-  { value: "recibo", label: "Recibo" },
-  { value: "termo", label: "Termo" },
-  { value: "outro", label: "Outro" }
-];
+// Form schema for uploading documents
+const uploadSchema = insertClientDocumentSchema.extend({
+  file: z.instanceof(FileList).refine(files => files.length === 1, {
+    message: "Por favor, selecione um arquivo"
+  })
+});
+
+type UploadFormValues = z.infer<typeof uploadSchema>;
+
+// Helper to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Get appropriate icon based on file type
+const getFileIcon = (fileType: string) => {
+  if (fileType.includes('pdf')) {
+    return <FilePdf className="h-5 w-5 text-red-500" />;
+  } else if (fileType.includes('image')) {
+    return <FileImage className="h-5 w-5 text-blue-500" />;
+  } else if (fileType.includes('spreadsheet') || fileType.includes('excel') || fileType.includes('csv')) {
+    return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
+  } else if (fileType.includes('zip') || fileType.includes('compressed')) {
+    return <FileArchive className="h-5 w-5 text-yellow-500" />;
+  } else if (fileType.includes('html') || fileType.includes('javascript') || fileType.includes('xml')) {
+    return <FileCode className="h-5 w-5 text-purple-500" />;
+  } else {
+    return <FileText className="h-5 w-5 text-gray-500" />;
+  }
+};
 
 interface ClientDocumentsProps {
   clientId: number;
+  clientName: string;
+  documents: ClientDocument[];
+  isLoading: boolean;
 }
 
-const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) => {
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
+export default function ClientDocuments({
+  clientId,
+  clientName,
+  documents,
+  isLoading
+}: ClientDocumentsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const [openUploadDialog, setOpenUploadDialog] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Query para buscar documentos do cliente
-  const { data: documents = [], isLoading, error } = useQuery<ClientDocument[]>({
-    queryKey: ['/api/clients', clientId, 'documents'],
-    enabled: !!clientId,
+  // Form for document upload
+  const form = useForm<UploadFormValues>({
+    resolver: zodResolver(uploadSchema),
+    defaultValues: {
+      client_id: clientId,
+      title: "",
+      document_type: "",
+      description: "",
+    }
   });
 
-  // Mutation para fazer upload de documento
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const xhr = new XMLHttpRequest();
-      const promise = new Promise<any>((resolve, reject) => {
-        xhr.open("POST", `/api/clients/${clientId}/documents`);
-        
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
-        });
-        
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        };
-        
-        xhr.onerror = () => {
-          reject(new Error("Network error during upload"));
-        };
-        
-        xhr.send(formData);
-      });
+  // Handle document upload
+  const handleUpload = async (values: UploadFormValues) => {
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', values.file[0]);
+      formData.append('title', values.title);
+      formData.append('client_id', clientId.toString());
+      formData.append('document_type', values.document_type);
       
-      return promise;
-    },
-    onSuccess: () => {
-      setFile(null);
-      setDescription('');
-      setCategory('');
-      setUploadProgress(0);
-      setUploadOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
-      toast({
-        title: "Documento enviado",
-        description: "O documento foi enviado com sucesso.",
+      if (values.description) {
+        formData.append('description', values.description);
+      }
+
+      const response = await fetch('/api/client-documents', {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header, browser will set it with boundary
       });
-    },
-    onError: (error) => {
+
+      if (!response.ok) {
+        throw new Error('Falha ao fazer upload do documento');
+      }
+
+      // Close dialog and reset form
+      setOpenUploadDialog(false);
+      form.reset();
+
+      // Refresh documents list
+      queryClient.invalidateQueries({ queryKey: [`/api/client/${clientId}/documents`] });
+
+      toast({
+        title: "Documento enviado com sucesso",
+        description: "O documento foi adicionado à lista de documentos do cliente.",
+      });
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
       toast({
         title: "Erro ao enviar documento",
-        description: error.message || "Houve um erro ao enviar o documento. Tente novamente.",
+        description: "Ocorreu um erro ao tentar fazer o upload. Tente novamente.",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  // Mutation para deletar documento
-  const deleteMutation = useMutation({
-    mutationFn: async (documentId: number) => {
-      const response = await apiRequest(
-        "DELETE",
-        `/api/clients/${clientId}/documents/${documentId}`
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
+  // Handle document deletion
+  const handleDeleteDocument = async (documentId: number) => {
+    setDeletingId(documentId);
+    
+    try {
+      const response = await apiRequest('DELETE', `/api/client-documents/${documentId}`);
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir documento');
+      }
+
+      // Refresh documents list
+      queryClient.invalidateQueries({ queryKey: [`/api/client/${clientId}/documents`] });
+
       toast({
-        title: "Documento excluído",
-        description: "O documento foi excluído com sucesso.",
+        title: "Documento excluído com sucesso",
+        description: "O documento foi removido da lista de documentos do cliente.",
       });
-    },
-    onError: (error) => {
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error);
       toast({
         title: "Erro ao excluir documento",
-        description: error.message || "Houve um erro ao excluir o documento. Tente novamente.",
+        description: "Ocorreu um erro ao tentar excluir o documento. Tente novamente.",
         variant: "destructive",
       });
-    },
-  });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleUpload = () => {
-    if (!file) {
-      toast({
-        title: "Nenhum arquivo selecionado",
-        description: "Por favor, selecione um arquivo para enviar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!category) {
-      toast({
-        title: "Categoria não selecionada",
-        description: "Por favor, selecione uma categoria para o documento.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("description", description);
-    formData.append("category", category);
-
-    uploadMutation.mutate(formData);
+  // Handle document download
+  const handleDownloadDocument = (document: ClientDocument) => {
+    window.open(`/api/client-documents/${document.id}/download`, '_blank');
   };
-
-  const handleDelete = (documentId: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este documento?")) {
-      deleteMutation.mutate(documentId);
-    }
-  };
-
-  const handleDownload = async (document: ClientDocument) => {
-    try {
-      const response = await fetch(`/api/clients/${clientId}/documents/${document.id}/download`);
-      if (!response.ok) throw new Error("Erro ao baixar arquivo");
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = document.file_name;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      toast({
-        title: "Erro ao baixar documento",
-        description: "Houve um erro ao baixar o documento. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getFileIcon = (fileType: string) => {
-    if (!fileType) return <File className="h-6 w-6 text-muted-foreground" />;
-    
-    if (fileType.includes('pdf')) {
-      return <FileText className="h-6 w-6 text-red-500" />;
-    } else if (fileType.includes('image')) {
-      return <File className="h-6 w-6 text-blue-500" />;
-    } else if (fileType.includes('word') || fileType.includes('doc')) {
-      return <FileText className="h-6 w-6 text-blue-700" />;
-    } else if (fileType.includes('excel') || fileType.includes('sheet')) {
-      return <FileText className="h-6 w-6 text-green-600" />;
-    } else {
-      return <File className="h-6 w-6 text-muted-foreground" />;
-    }
-  };
-
-  const getCategoryLabel = (categoryValue: string) => {
-    const category = documentCategories.find(c => c.value === categoryValue);
-    return category ? category.label : categoryValue;
-  };
-
-  if (isLoading) {
-    return <div className="p-4 text-center text-muted-foreground">Carregando documentos...</div>;
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive" className="mb-4">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Erro</AlertTitle>
-        <AlertDescription>
-          Erro ao carregar os documentos. Por favor, tente novamente mais tarde.
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Documentos</h3>
-          <p className="text-sm text-muted-foreground">
-            Gerencie documentos relacionados a este cliente
-          </p>
-        </div>
-        
-        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <FilePlus className="mr-2 h-4 w-4" />
-              Novo Documento
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Enviar novo documento</DialogTitle>
-              <DialogDescription>
-                Faça upload de documentos relacionados a este cliente.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="file-upload">Arquivo</Label>
-                <Input 
-                  id="file-upload" 
-                  type="file" 
-                  onChange={handleFileChange} 
-                />
-                {file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {file.name} ({formatBytes(file.size)})
-                  </p>
-                )}
-              </div>
-              
-              <div className="grid w-full gap-1.5">
-                <Label htmlFor="doc-category">Categoria</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger id="doc-category">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Categorias</SelectLabel>
-                      {documentCategories.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid w-full gap-1.5">
-                <Label htmlFor="doc-description">Descrição</Label>
-                <Textarea
-                  id="doc-description"
-                  placeholder="Adicione uma descrição sobre este documento"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              
-              {uploadMutation.isPending && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="h-2 w-full" />
-                  <p className="text-xs text-center text-muted-foreground">
-                    Enviando... {uploadProgress}%
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setUploadOpen(false)}
-                disabled={uploadMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleUpload}
-                disabled={!file || !category || uploadMutation.isPending}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploadMutation.isPending ? "Enviando..." : "Enviar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <Separator />
-      
-      {documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center space-y-3 p-8 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground opacity-40" />
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-lg font-medium">Nenhum documento</p>
-            <p className="text-sm text-muted-foreground">
-              Este cliente não possui documentos cadastrados
-            </p>
+            <CardTitle className="text-xl">Documentos</CardTitle>
+            <CardDescription>
+              Documentos, contratos e arquivos relacionados a {clientName}
+            </CardDescription>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => setUploadOpen(true)}
-            className="mt-2"
-          >
-            <FilePlus className="mr-2 h-4 w-4" />
-            Adicionar Documento
-          </Button>
+          <Dialog open={openUploadDialog} onOpenChange={setOpenUploadDialog}>
+            <DialogTrigger asChild>
+              <Button className="gap-1">
+                <FileUp className="h-4 w-4" />
+                <span className="hidden sm:inline">Novo Documento</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Adicionar Documento</DialogTitle>
+                <DialogDescription>
+                  Faça upload de um novo documento para o cliente.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(handleUpload)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Título</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Contrato de Serviço"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="document_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Documento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Contrato, Recibo, Briefing"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrição (opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Descreva brevemente o conteúdo do documento"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="file"
+                    render={({ field: { value, onChange, ...fieldProps } }) => (
+                      <FormItem>
+                        <FormLabel>Arquivo</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            onChange={(e) => onChange(e.target.files)}
+                            {...fieldProps}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Selecione o arquivo que deseja enviar (máx. 10MB)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="mt-6">
+                    <DialogClose asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        disabled={uploading}
+                      >
+                        Cancelar
+                      </Button>
+                    </DialogClose>
+                    <Button 
+                      type="submit"
+                      disabled={uploading}
+                    >
+                      {uploading ? "Enviando..." : "Enviar Documento"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
-      ) : (
-        <ScrollArea className="h-[320px]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {documents.map((doc) => (
-              <Card key={doc.id} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center">
-                      {getFileIcon(doc.file_type || '')}
-                      <div className="ml-2">
-                        <CardTitle className="text-base truncate">
-                          {doc.file_name}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          {formatBytes(doc.file_size || 0)}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge variant="outline">
-                      {getCategoryLabel(doc.category || 'outro')}
-                    </Badge>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[365px] w-full pr-4">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-4 w-32" />
                   </div>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  {doc.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {doc.description}
-                    </p>
-                  )}
-                </CardContent>
-                <CardFooter className="flex justify-between pt-2 text-xs text-muted-foreground">
-                  <span>
-                    {new Date(doc.upload_date).toLocaleDateString('pt-BR')}
-                  </span>
-                  <div className="flex space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleDownload(doc)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleDelete(doc.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <File className="h-16 w-16 mb-4 opacity-30" />
+              <h3 className="text-lg font-medium">Nenhum documento</h3>
+              <p className="max-w-xs mt-2">
+                Este cliente ainda não possui documentos cadastrados.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Documento</TableHead>
+                    <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                    <TableHead className="hidden lg:table-cell">Data</TableHead>
+                    <TableHead className="hidden lg:table-cell">Tamanho</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {documents.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {getFileIcon(doc.file_type)}
+                          <div className="truncate max-w-[160px] md:max-w-[240px]">
+                            {doc.title}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {doc.document_type || "N/A"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {format(new Date(doc.upload_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {formatFileSize(doc.file_size)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDownloadDocument(doc)}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Baixar documento</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteDocument(doc.id)}
+                                  disabled={deletingId === doc.id}
+                                >
+                                  {deletingId === doc.id ? (
+                                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-red-600" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Excluir documento</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </ScrollArea>
-      )}
-    </div>
+      </CardContent>
+      <CardFooter className="pt-0 pb-4 text-xs text-muted-foreground">
+        <div className="flex items-center">
+          <Calendar className="h-3 w-3 mr-1" />
+          <span>
+            Última atualização: {documents.length > 0 
+              ? format(new Date(documents[0].upload_date), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+              : "N/A"
+            }
+          </span>
+        </div>
+      </CardFooter>
+    </Card>
   );
-};
-
-export default ClientDocuments;
+}

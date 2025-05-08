@@ -1,495 +1,877 @@
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ClientMeeting } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { format, isToday, isYesterday, isTomorrow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { 
-  AlertCircle, 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { insertClientMeetingSchema } from "@shared/schema";
+import { 
   Calendar, 
   Clock, 
-  Map, 
-  Video, 
-  Plus, 
+  MapPin, 
+  Plus,
+  User,
   Trash2,
-  Edit
+  Edit,
+  Check,
+  X
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClientMeeting } from '@shared/schema';
-import { apiRequest } from '@/lib/queryClient';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, addMinutes, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { formatDateToPtBr } from "@/lib/utils";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-// Tipos de reunião
-const meetingTypes = [
-  { value: "presencial", label: "Presencial" },
-  { value: "zoom", label: "Zoom" },
-  { value: "teams", label: "Microsoft Teams" },
-  { value: "meet", label: "Google Meet" },
-  { value: "outro", label: "Outro" }
-];
-
-// Schema de validação com Zod
-const meetingFormSchema = z.object({
-  title: z.string().min(3, { message: "O título deve ter pelo menos 3 caracteres" }),
-  description: z.string().optional(),
-  meeting_date: z.string().refine(val => !isNaN(Date.parse(val)), {
-    message: "Data inválida",
-  }),
-  duration_minutes: z.coerce.number().int().min(15, { message: "A duração mínima é de 15 minutos" }),
-  location: z.string().optional(),
-  meeting_type: z.string().min(1, { message: "Selecione um tipo de reunião" }),
+// Form schema for creating meetings
+const meetingSchema = insertClientMeetingSchema.extend({
+  meetingTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Formato de hora inválido. Use o formato HH:MM"
+  })
 });
 
-type MeetingFormValues = z.infer<typeof meetingFormSchema>;
+type MeetingFormValues = z.infer<typeof meetingSchema>;
+
+// Format relative date for display
+const formatRelativeDate = (date: Date): string => {
+  if (isToday(date)) {
+    return `Hoje, ${format(date, 'HH:mm')}`;
+  } else if (isYesterday(date)) {
+    return `Ontem, ${format(date, 'HH:mm')}`;
+  } else if (isTomorrow(date)) {
+    return `Amanhã, ${format(date, 'HH:mm')}`;
+  } else {
+    return format(date, 'dd/MM/yyyy HH:mm');
+  }
+};
+
+// Get color for badge based on meeting status
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'scheduled':
+      return 'bg-blue-500';
+    case 'completed':
+      return 'bg-green-500';
+    case 'cancelled':
+      return 'bg-red-500';
+    case 'rescheduled':
+      return 'bg-amber-500';
+    default:
+      return 'bg-slate-500';
+  }
+};
 
 interface ClientMeetingsProps {
   clientId: number;
+  clientName: string;
+  meetings: ClientMeeting[];
+  users: any[]; // User type should be defined in your schema
+  isLoading: boolean;
 }
 
-const ClientMeetings: React.FC<ClientMeetingsProps> = ({ clientId }) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<ClientMeeting | null>(null);
+export default function ClientMeetings({
+  clientId,
+  clientName,
+  meetings,
+  users,
+  isLoading
+}: ClientMeetingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Form para nova reunião
-  const form = useForm<MeetingFormValues>({
-    resolver: zodResolver(meetingFormSchema),
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState<ClientMeeting | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  
+  // Form for creating new meetings
+  const createForm = useForm<MeetingFormValues>({
+    resolver: zodResolver(meetingSchema),
     defaultValues: {
+      client_id: clientId,
       title: "",
-      description: "",
-      meeting_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      meeting_date: format(new Date(), 'yyyy-MM-dd'),
+      meetingTime: format(new Date(), 'HH:mm'),
       duration_minutes: 60,
+      status: "scheduled",
+      meeting_type: "standard",
       location: "",
-      meeting_type: "presencial",
-    },
-  });
-
-  // Query para buscar reuniões do cliente
-  const { data: meetings = [], isLoading, error } = useQuery<ClientMeeting[]>({
-    queryKey: ['/api/clients', clientId, 'meetings'],
-    enabled: !!clientId,
-  });
-
-  // Mutation para criar/editar reunião
-  const meetingMutation = useMutation({
-    mutationFn: async (values: MeetingFormValues) => {
-      const endpoint = selectedMeeting 
-        ? `/api/clients/${clientId}/meetings/${selectedMeeting.id}` 
-        : `/api/clients/${clientId}/meetings`;
-      
-      const method = selectedMeeting ? "PATCH" : "POST";
-      
-      const response = await apiRequest(method, endpoint, values);
-      return response.json();
-    },
-    onSuccess: () => {
-      setIsDialogOpen(false);
-      setSelectedMeeting(null);
-      form.reset();
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'meetings'] });
-      
-      toast({
-        title: selectedMeeting ? "Reunião atualizada" : "Reunião agendada",
-        description: selectedMeeting 
-          ? "A reunião foi atualizada com sucesso" 
-          : "Reunião agendada com sucesso",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao agendar reunião",
-        description: error.message || "Ocorreu um erro ao agendar a reunião. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation para deletar reunião
-  const deleteMutation = useMutation({
-    mutationFn: async (meetingId: number) => {
-      const response = await apiRequest(
-        "DELETE",
-        `/api/clients/${clientId}/meetings/${meetingId}`
-      );
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'meetings'] });
-      toast({
-        title: "Reunião cancelada",
-        description: "A reunião foi cancelada com sucesso.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao cancelar reunião",
-        description: error.message || "Ocorreu um erro ao cancelar a reunião. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDelete = (meetingId: number) => {
-    if (window.confirm("Tem certeza que deseja cancelar esta reunião?")) {
-      deleteMutation.mutate(meetingId);
+      notes: ""
     }
-  };
-
-  const handleEdit = (meeting: ClientMeeting) => {
-    setSelectedMeeting(meeting);
+  });
+  
+  // Form for editing meetings
+  const editForm = useForm<MeetingFormValues>({
+    resolver: zodResolver(meetingSchema),
+    defaultValues: {
+      client_id: clientId,
+      title: "",
+      meeting_date: "",
+      meetingTime: "",
+      duration_minutes: 60,
+      status: "scheduled",
+      meeting_type: "standard",
+      location: "",
+      notes: ""
+    }
+  });
+  
+  // Initialize edit form when a meeting is selected
+  const handleEditMeeting = (meeting: ClientMeeting) => {
+    const meetingDate = new Date(meeting.meeting_date);
     
-    form.reset({
+    setSelectedMeeting(meeting);
+    editForm.reset({
+      client_id: meeting.client_id,
       title: meeting.title,
-      description: meeting.description || "",
-      meeting_date: format(new Date(meeting.meeting_date), "yyyy-MM-dd'T'HH:mm"),
+      meeting_date: format(meetingDate, 'yyyy-MM-dd'),
+      meetingTime: format(meetingDate, 'HH:mm'),
       duration_minutes: meeting.duration_minutes,
-      location: meeting.location || "",
+      status: meeting.status,
       meeting_type: meeting.meeting_type,
+      location: meeting.location || "",
+      notes: meeting.notes || ""
     });
     
-    setIsDialogOpen(true);
+    setOpenEditDialog(true);
   };
-
-  const onDialogOpenChange = (open: boolean) => {
-    if (!open) {
-      // Resetar o form quando o dialog é fechado
-      form.reset();
+  
+  // Handle meeting creation
+  const handleCreateMeeting = async (values: MeetingFormValues) => {
+    try {
+      // Combine date and time into a single Date object
+      const [year, month, day] = values.meeting_date.split('-').map(Number);
+      const [hours, minutes] = values.meetingTime.split(':').map(Number);
+      const meetingDate = new Date(year, month - 1, day, hours, minutes);
+      
+      const response = await apiRequest('POST', '/api/client-meetings', {
+        ...values,
+        meeting_date: meetingDate.toISOString(),
+        // Remove the time field as it's combined into meeting_date
+        meetingTime: undefined
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao criar reunião');
+      }
+      
+      // Close dialog and reset form
+      setOpenCreateDialog(false);
+      createForm.reset({
+        ...createForm.getValues(),
+        title: "",
+        location: "",
+        notes: ""
+      });
+      
+      // Refresh meetings list
+      queryClient.invalidateQueries({ queryKey: [`/api/client/${clientId}/meetings`] });
+      
+      toast({
+        title: "Reunião agendada com sucesso",
+        description: "A reunião foi adicionada ao calendário.",
+      });
+    } catch (error) {
+      console.error('Erro ao criar reunião:', error);
+      toast({
+        title: "Erro ao agendar reunião",
+        description: "Ocorreu um erro ao tentar agendar a reunião. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle meeting update
+  const handleUpdateMeeting = async (values: MeetingFormValues) => {
+    if (!selectedMeeting) return;
+    
+    try {
+      // Combine date and time into a single Date object
+      const [year, month, day] = values.meeting_date.split('-').map(Number);
+      const [hours, minutes] = values.meetingTime.split(':').map(Number);
+      const meetingDate = new Date(year, month - 1, day, hours, minutes);
+      
+      const response = await apiRequest('PATCH', `/api/client-meetings/${selectedMeeting.id}`, {
+        ...values,
+        meeting_date: meetingDate.toISOString(),
+        // Remove the time field as it's combined into meeting_date
+        meetingTime: undefined
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar reunião');
+      }
+      
+      // Close dialog and reset selected meeting
+      setOpenEditDialog(false);
       setSelectedMeeting(null);
-    }
-    setIsDialogOpen(open);
-  };
-
-  const onSubmit = (values: MeetingFormValues) => {
-    meetingMutation.mutate(values);
-  };
-
-  const getMeetingTypeIcon = (type: string) => {
-    switch (type) {
-      case 'presencial':
-        return <Map className="h-4 w-4" />;
-      case 'zoom':
-      case 'teams':
-      case 'meet':
-        return <Video className="h-4 w-4" />;
-      default:
-        return <Calendar className="h-4 w-4" />;
+      
+      // Refresh meetings list
+      queryClient.invalidateQueries({ queryKey: [`/api/client/${clientId}/meetings`] });
+      
+      toast({
+        title: "Reunião atualizada com sucesso",
+        description: "As alterações foram salvas no calendário.",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar reunião:', error);
+      toast({
+        title: "Erro ao atualizar reunião",
+        description: "Ocorreu um erro ao tentar atualizar a reunião. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
-
-  const getMeetingTypeLabel = (typeValue: string) => {
-    const type = meetingTypes.find(t => t.value === typeValue);
-    return type ? type.label : typeValue;
+  
+  // Handle meeting deletion
+  const handleDeleteMeeting = async (meetingId: number) => {
+    setDeletingId(meetingId);
+    
+    try {
+      const response = await apiRequest('DELETE', `/api/client-meetings/${meetingId}`);
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir reunião');
+      }
+      
+      // Refresh meetings list
+      queryClient.invalidateQueries({ queryKey: [`/api/client/${clientId}/meetings`] });
+      
+      toast({
+        title: "Reunião excluída com sucesso",
+        description: "A reunião foi removida do calendário.",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir reunião:', error);
+      toast({
+        title: "Erro ao excluir reunião",
+        description: "Ocorreu um erro ao tentar excluir a reunião. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
-
-  if (isLoading) {
-    return <div className="p-4 text-center text-muted-foreground">Carregando reuniões...</div>;
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive" className="mb-4">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Erro</AlertTitle>
-        <AlertDescription>
-          Erro ao carregar as reuniões. Por favor, tente novamente mais tarde.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  
+  // Find username by ID
+  const getUsernameById = (userId: number): string => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.name : 'Usuário desconhecido';
+  };
+  
+  // Format meeting status for display
+  const formatStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'scheduled': 'Agendada',
+      'completed': 'Concluída',
+      'cancelled': 'Cancelada',
+      'rescheduled': 'Reagendada'
+    };
+    
+    return statusMap[status] || status;
+  };
+  
+  // Format meeting type for display
+  const formatMeetingType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'standard': 'Padrão',
+      'sales': 'Vendas',
+      'kickoff': 'Kickoff',
+      'presentation': 'Apresentação',
+      'feedback': 'Feedback'
+    };
+    
+    return typeMap[type] || type;
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Reuniões</h3>
-          <p className="text-sm text-muted-foreground">
-            Agende e gerencie reuniões com este cliente
-          </p>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={onDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Calendar className="mr-2 h-4 w-4" />
-              Agendar Reunião
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedMeeting ? "Editar reunião" : "Agendar nova reunião"}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedMeeting 
-                  ? "Modifique os detalhes da reunião existente." 
-                  : "Preencha os detalhes para agendar uma nova reunião."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Título</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome da reunião" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">Reuniões</CardTitle>
+            <CardDescription>
+              Histórico e agendamento de reuniões com {clientName}
+            </CardDescription>
+          </div>
+          <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
+            <DialogTrigger asChild>
+              <Button className="gap-1">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Agendar Reunião</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Agendar Nova Reunião</DialogTitle>
+                <DialogDescription>
+                  Agende uma nova reunião com o cliente.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...createForm}>
+                <form
+                  onSubmit={createForm.handleSubmit(handleCreateMeeting)}
+                  className="space-y-4"
+                >
                   <FormField
-                    control={form.control}
-                    name="meeting_date"
+                    control={createForm.control}
+                    name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data e Hora</FormLabel>
+                        <FormLabel>Título da Reunião</FormLabel>
                         <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="duration_minutes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duração (minutos)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min={15} 
-                            step={15} 
-                            {...field} 
+                          <Input
+                            placeholder="Ex: Briefing de Projeto"
+                            {...field}
                           />
                         </FormControl>
-                        <FormDescription>
-                          Mínimo 15 minutos
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="meeting_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Reunião</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="meeting_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="meetingTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Horário</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="duration_minutes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duração (minutos)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="15"
+                              step="15"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="meeting_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Reunião</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="standard">Padrão</SelectItem>
+                              <SelectItem value="sales">Vendas</SelectItem>
+                              <SelectItem value="kickoff">Kickoff</SelectItem>
+                              <SelectItem value="presentation">Apresentação</SelectItem>
+                              <SelectItem value="feedback">Feedback</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={createForm.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Local (opcional)</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo de reunião" />
-                          </SelectTrigger>
+                          <Input
+                            placeholder="Ex: Sala de Reuniões, Zoom, Google Meet"
+                            {...field}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectGroup>
-                            {meetingTypes.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Local / Link</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Local físico ou link da videochamada" 
-                          {...field}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descrição (opcional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Pauta e outros detalhes da reunião"
-                          className="min-h-[80px]"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                    disabled={meetingMutation.isPending}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit"
-                    disabled={meetingMutation.isPending}
-                  >
-                    {meetingMutation.isPending 
-                      ? "Salvando..." 
-                      : selectedMeeting 
-                        ? "Atualizar Reunião" 
-                        : "Agendar Reunião"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <Separator />
-      
-      {meetings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center space-y-3 p-8 text-center">
-          <Calendar className="h-12 w-12 text-muted-foreground opacity-40" />
-          <div>
-            <p className="text-lg font-medium">Nenhuma reunião agendada</p>
-            <p className="text-sm text-muted-foreground">
-              Este cliente não possui reuniões agendadas
-            </p>
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={() => setIsDialogOpen(true)}
-            className="mt-2"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Agendar Reunião
-          </Button>
-        </div>
-      ) : (
-        <ScrollArea className="h-[320px]">
-          <div className="grid grid-cols-1 gap-4">
-            {meetings.map((meeting) => {
-              const meetingDate = new Date(meeting.meeting_date);
-              const endTime = addMinutes(meetingDate, meeting.duration_minutes);
-              
-              return (
-                <Card key={meeting.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-base">{meeting.title}</CardTitle>
-                      <Badge 
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações (opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Informações adicionais sobre a reunião"
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="mt-6">
+                    <DialogClose asChild>
+                      <Button 
+                        type="button" 
                         variant="outline"
-                        className="flex items-center space-x-1"
                       >
-                        {getMeetingTypeIcon(meeting.meeting_type)}
-                        <span className="ml-1">{getMeetingTypeLabel(meeting.meeting_type)}</span>
+                        Cancelar
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit">
+                      Agendar Reunião
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Edit Meeting Dialog */}
+          <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Editar Reunião</DialogTitle>
+                <DialogDescription>
+                  Atualize os detalhes da reunião agendada.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...editForm}>
+                <form
+                  onSubmit={editForm.handleSubmit(handleUpdateMeeting)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={editForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Título da Reunião</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Briefing de Projeto"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="meeting_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="meetingTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Horário</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="duration_minutes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duração (minutos)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="15"
+                              step="15"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="scheduled">Agendada</SelectItem>
+                              <SelectItem value="completed">Concluída</SelectItem>
+                              <SelectItem value="cancelled">Cancelada</SelectItem>
+                              <SelectItem value="rescheduled">Reagendada</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={editForm.control}
+                    name="meeting_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Reunião</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o tipo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="standard">Padrão</SelectItem>
+                            <SelectItem value="sales">Vendas</SelectItem>
+                            <SelectItem value="kickoff">Kickoff</SelectItem>
+                            <SelectItem value="presentation">Apresentação</SelectItem>
+                            <SelectItem value="feedback">Feedback</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Local (opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Sala de Reuniões, Zoom, Google Meet"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações (opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Informações adicionais sobre a reunião"
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="mt-6">
+                    <DialogClose asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                      >
+                        Cancelar
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit">
+                      Salvar Alterações
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[365px] w-full pr-4">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : meetings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <Calendar className="h-16 w-16 mb-4 opacity-30" />
+              <h3 className="text-lg font-medium">Nenhuma reunião agendada</h3>
+              <p className="max-w-xs mt-2">
+                Este cliente ainda não possui reuniões agendadas.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {meetings.map((meeting) => (
+                <div 
+                  key={meeting.id} 
+                  className={cn(
+                    "relative group rounded-lg border p-4 transition-all",
+                    meeting.status === 'cancelled' ? "opacity-60" : ""
+                  )}
+                >
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-base font-medium">{meeting.title}</h4>
+                      <Badge 
+                        className={cn(getStatusColor(meeting.status), "text-white")}
+                      >
+                        {formatStatus(meeting.status)}
                       </Badge>
                     </div>
-                  </CardHeader>
-                  
-                  <CardContent className="pb-2 space-y-2">
-                    <div className="flex items-center text-sm">
-                      <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {formatDateToPtBr(meetingDate, 'dd MMM yyyy')}
-                      </span>
-                    </div>
                     
-                    <div className="flex items-center text-sm">
-                      <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {format(meetingDate, 'HH:mm')} - {format(endTime, 'HH:mm')} 
-                        ({meeting.duration_minutes} min)
-                      </span>
-                    </div>
-                    
-                    {meeting.location && (
-                      <div className="flex items-center text-sm">
-                        <Map className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span className="truncate">{meeting.location}</span>
+                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{formatRelativeDate(new Date(meeting.meeting_date))}</span>
                       </div>
-                    )}
-                    
-                    {meeting.description && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {meeting.description}
-                      </p>
-                    )}
-                  </CardContent>
-                  
-                  <CardFooter className="flex justify-between pt-2">
-                    <div className="text-xs text-muted-foreground">
-                      Criada em {formatDateToPtBr(new Date(meeting.created_at), 'dd MMM yyyy')}
+                      
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{meeting.duration_minutes} minutos</span>
+                      </div>
+                      
+                      {meeting.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{meeting.location}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        <span>{getUsernameById(meeting.organized_by)}</span>
+                      </div>
                     </div>
                     
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(meeting)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(meeting.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    {meeting.notes && (
+                      <p className="text-sm mt-2 text-muted-foreground">{meeting.notes}</p>
+                    )}
+                    
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleEditMeeting(meeting)}
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar reunião</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-600"
+                              onClick={() => handleDeleteMeeting(meeting.id)}
+                              disabled={deletingId === meeting.id}
+                            >
+                              {deletingId === meeting.id ? (
+                                <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-red-600" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Excluir reunião</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {meeting.status === 'scheduled' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-green-600"
+                                onClick={() => {
+                                  handleEditMeeting(meeting);
+                                  editForm.setValue('status', 'completed');
+                                }}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Marcar como concluída</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {meeting.status === 'scheduled' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-amber-600"
+                                onClick={() => {
+                                  handleEditMeeting(meeting);
+                                  editForm.setValue('status', 'cancelled');
+                                }}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Cancelar reunião</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </ScrollArea>
-      )}
-    </div>
+      </CardContent>
+      <CardFooter className="pt-0 pb-4 text-xs text-muted-foreground">
+        <div className="flex items-center">
+          <Calendar className="h-3 w-3 mr-1" />
+          <span>
+            Última atualização: {meetings.length > 0 
+              ? format(new Date(meetings[0].meeting_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+              : "N/A"
+            }
+          </span>
+        </div>
+      </CardFooter>
+    </Card>
   );
-};
-
-export default ClientMeetings;
+}
