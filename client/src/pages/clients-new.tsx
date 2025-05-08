@@ -372,21 +372,7 @@ export default function Clients() {
       }
     }
     
-    // Na etapa 1, apenas avançar para a etapa 2 (sem submeter o formulário)
-    if (formStep === 1) {
-      // Verificar opcional: validar e-mail se foi preenchido
-      if (currentValues.contactEmail) {
-        form.trigger('contactEmail');
-        if (form.formState.errors.contactEmail) {
-          return;
-        }
-      }
-    }
-    
-    // Incrementar para a próxima etapa
-    if (formStep < 2) {
-      setFormStep(formStep + 1);
-    }
+    setFormStep(formStep + 1);
   };
   
   const handlePrevStep = () => {
