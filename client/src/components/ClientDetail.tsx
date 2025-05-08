@@ -734,29 +734,30 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
         {/* Right sidebar */}
         <div className="space-y-6">
-          {/* Documentos Recentes */}
-          <RecentDocuments 
-            documents={financialDocuments?.map(doc => ({
-              id: doc.id.toString(),
-              name: doc.document_type === 'invoice' 
-                ? `Fatura_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'contract'
-                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'proposal'
-                ? `Proposta_${doc.document_number || doc.id}.pdf`
-                : `Documento_${doc.document_number || doc.id}.pdf`,
-              size: `${Math.floor(200 + Math.random() * 500)} KB`,
-              type: doc.document_type === 'invoice' 
-                ? 'pdf' 
-                : doc.document_type === 'contract' 
-                ? 'pdf'
-                : doc.document_type === 'spreadsheet'
-                ? 'xlsx'
-                : 'pdf',
-              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
-            })).slice(0, 4) || []}
-            viewAllHref="#documentos"
-          />
+          {/* Tempo de Retenção */}
+          <Card className="bg-white">
+            <CardHeader className="py-5 px-6">
+              <CardTitle className="text-lg font-semibold text-gray-700">
+                TEMPO DE RETENÇÃO
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-2xl font-bold">
+                  {client.since ? (
+                    `${Math.max(0, Math.floor(
+                      (new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30)
+                    ) / 12).toFixed(1)} anos`
+                  ) : 'N/A'}
+                </span>
+                {client.since && (
+                  <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
+                    Cliente desde {format(new Date(client.since), 'MMM yyyy', { locale: ptBR })}
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* KPIs */}
           <Card className="bg-white">
@@ -783,24 +784,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     </div>
                   </div>
                 </div>
-                
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Tempo de Retenção</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-2xl font-bold">
-                      {client.since ? (
-                        `${Math.max(0, Math.floor(
-                          (new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30)
-                        ) / 12).toFixed(1)} anos`
-                      ) : 'N/A'}
-                    </span>
-                    {client.since && (
-                      <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
-                        Cliente desde {format(new Date(client.since), 'MMM yyyy', { locale: ptBR })}
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
               
               <Separator className="my-4" />
@@ -820,8 +803,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
               </div>
             </CardContent>
           </Card>
-          
-
           
           {/* Próximas Reuniões */}
           <Card className="overflow-hidden">
@@ -876,6 +857,30 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Documentos Recentes */}
+          <RecentDocuments 
+            documents={financialDocuments?.map(doc => ({
+              id: doc.id.toString(),
+              name: doc.document_type === 'invoice' 
+                ? `Fatura_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'contract'
+                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'proposal'
+                ? `Proposta_${doc.document_number || doc.id}.pdf`
+                : `Documento_${doc.document_number || doc.id}.pdf`,
+              size: `${Math.floor(200 + Math.random() * 500)} KB`,
+              type: doc.document_type === 'invoice' 
+                ? 'pdf' 
+                : doc.document_type === 'contract' 
+                ? 'pdf'
+                : doc.document_type === 'spreadsheet'
+                ? 'xlsx'
+                : 'pdf',
+              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
+            })).slice(0, 4) || []}
+            viewAllHref="#documentos"
+          />
         </div>
       </div>
 
