@@ -823,55 +823,55 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           
 
           
-          {/* Upcoming meetings */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium uppercase text-gray-500">
+          {/* Próximas Reuniões */}
+          <Card className="overflow-hidden">
+            <CardHeader className="py-5 px-6">
+              <CardTitle className="text-lg font-semibold text-gray-700">
                 PRÓXIMAS REUNIÕES
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-8 px-6 pb-6">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium">Amanhã, 14:00</p>
-                  <Badge variant="outline" className="text-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-base font-semibold">Amanhã, 14:00</p>
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 text-xs font-medium bg-white">
                     20 min
                   </Badge>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                  <p className="text-sm">Apresentação do Storyboard</p>
+                <div className="flex items-start mb-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <p className="text-base font-semibold">Apresentação do Storyboard</p>
                 </div>
-                <div className="flex items-center mt-1 ml-4 text-xs text-gray-500">
+                <div className="flex items-center ml-5">
                   <img 
                     src="https://randomuser.me/api/portraits/men/32.jpg" 
                     alt="Responsável" 
-                    className="w-5 h-5 rounded-full mr-1" 
+                    className="w-6 h-6 rounded-full mr-2" 
                   />
-                  <span>RM: Ricardo Mendes</span>
-                  <span className="ml-2 px-1 py-0.5 rounded text-xs bg-blue-100 text-blue-600">Zoom</span>
+                  <span className="text-sm text-gray-600">RM: Ricardo Mendes</span>
+                  <span className="ml-3 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-600">Zoom</span>
                 </div>
               </div>
               
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium">26/04, 15:30</p>
-                  <Badge variant="outline" className="text-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-base font-semibold">26/04, 15:30</p>
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 text-xs font-medium bg-white">
                     1h
                   </Badge>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  <p className="text-sm">Aprovação Final - Cartão Premium</p>
+                <div className="flex items-start mb-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                  <p className="text-base font-semibold">Aprovação Final - Cartão Premium</p>
                 </div>
-                <div className="flex items-center mt-1 ml-4 text-xs text-gray-500">
+                <div className="flex items-center ml-5">
                   <img 
                     src="https://randomuser.me/api/portraits/men/32.jpg" 
                     alt="Responsável" 
-                    className="w-5 h-5 rounded-full mr-1" 
+                    className="w-6 h-6 rounded-full mr-2" 
                   />
-                  <span>BA: Banco Azul</span>
-                  <span className="ml-2 px-1 py-0.5 rounded text-xs bg-green-100 text-green-600">Presencial</span>
+                  <span className="text-sm text-gray-600">BA: Banco Azul</span>
+                  <span className="ml-3 px-2 py-0.5 rounded text-xs bg-green-100 text-green-600">Presencial</span>
                 </div>
               </div>
             </CardContent>
