@@ -73,6 +73,7 @@ export function FileUpload({
         {...getRootProps()}
         className={`
           p-6 border-2 border-dashed rounded-md cursor-pointer transition-colors
+          min-h-[160px] flex items-center justify-center w-full
           ${isDragActive 
             ? 'border-primary bg-primary/10' 
             : 'border-muted-foreground/25 hover:border-primary/50'
@@ -101,15 +102,15 @@ export function FileUpload({
       {files.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium mb-3">Arquivos para upload ({files.length}/{maxFiles})</h3>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
             {files.map((file) => (
               <div
                 key={file.name}
                 className="flex items-center justify-between p-3 border rounded-md bg-background"
               >
-                <div className="flex items-center gap-2 overflow-hidden">
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
                   <File className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate" title={file.name}>
                       {file.name}
                     </p>
@@ -118,20 +119,22 @@ export function FileUpload({
                     </p>
                   </div>
                 </div>
-                {!isUploading && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeFile(file.name)}
-                    className="rounded-full"
-                  >
-                    <XCircle className="h-5 w-5 hover:text-destructive" />
-                  </Button>
-                )}
-                {isUploading && (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                )}
+                <div className="flex-shrink-0 ml-2">
+                  {!isUploading && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFile(file.name)}
+                      className="rounded-full h-8 w-8"
+                    >
+                      <XCircle className="h-5 w-5 hover:text-destructive" />
+                    </Button>
+                  )}
+                  {isUploading && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -142,15 +145,15 @@ export function FileUpload({
       {rejectedFiles.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium text-destructive mb-3">Arquivos rejeitados</h3>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
             {rejectedFiles.map(({ file, errors }) => (
               <div
                 key={file.name}
                 className="flex items-center justify-between p-3 border border-destructive/50 rounded-md bg-destructive/5"
               >
-                <div className="flex items-start gap-2 overflow-hidden">
+                <div className="flex items-start gap-2 overflow-hidden flex-1">
                   <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate" title={file.name}>
                       {file.name}
                     </p>
@@ -161,15 +164,17 @@ export function FileUpload({
                     </ul>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeRejectedFile(file.name)}
-                  className="rounded-full"
-                >
-                  <XCircle className="h-5 w-5 hover:text-destructive" />
-                </Button>
+                <div className="flex-shrink-0 ml-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeRejectedFile(file.name)}
+                    className="rounded-full h-8 w-8"
+                  >
+                    <XCircle className="h-5 w-5 hover:text-destructive" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

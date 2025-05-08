@@ -222,35 +222,37 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
                 Adicionar Arquivos
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
+            <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <DialogHeader className="mb-4">
                 <DialogTitle>Fazer upload de arquivos</DialogTitle>
                 <DialogDescription>
                   Arraste arquivos para esta área ou clique para selecionar arquivos do seu dispositivo.
                 </DialogDescription>
               </DialogHeader>
-              <FileUpload
-                onUpload={handleUpload}
-                isUploading={uploadMutation.isPending}
-                maxFiles={5}
-                maxSize={10 * 1024 * 1024} // 10MB
-                accept={{
-                  'application/pdf': ['.pdf'],
-                  'application/msword': ['.doc'],
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                  'application/vnd.ms-excel': ['.xls'],
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-                  'application/vnd.ms-powerpoint': ['.ppt'],
-                  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-                  'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
-                  'text/plain': ['.txt'],
-                  'application/zip': ['.zip'],
-                  'application/x-zip-compressed': ['.zip'],
-                  'application/x-rar-compressed': ['.rar'],
-                  'application/json': ['.json'],
-                }}
-              />
-              <DialogFooter>
+              <div className="py-2">
+                <FileUpload
+                  onUpload={handleUpload}
+                  isUploading={uploadMutation.isPending}
+                  maxFiles={5}
+                  maxSize={10 * 1024 * 1024} // 10MB
+                  accept={{
+                    'application/pdf': ['.pdf'],
+                    'application/msword': ['.doc'],
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                    'application/vnd.ms-excel': ['.xls'],
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                    'application/vnd.ms-powerpoint': ['.ppt'],
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+                    'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                    'text/plain': ['.txt'],
+                    'application/zip': ['.zip'],
+                    'application/x-zip-compressed': ['.zip'],
+                    'application/x-rar-compressed': ['.rar'],
+                    'application/json': ['.json'],
+                  }}
+                />
+              </div>
+              <DialogFooter className="mt-6">
                 <Button 
                   variant="outline" 
                   onClick={() => setUploadDialogOpen(false)}
