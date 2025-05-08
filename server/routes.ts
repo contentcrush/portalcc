@@ -828,8 +828,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
+      // Extrair os membros da equipe do corpo da requisição
+      const { team_members, ...projectData } = req.body;
+      
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
-      const project = await storage.createProject(req.body);
+      const project = await storage.createProject(projectData);
+      
+      // Adicionar membros da equipe, se fornecidos
+      if (team_members && team_members.length > 0) {
+        for (const userId of team_members) {
+          await storage.addProjectMember({
+            project_id: project.id,
+            user_id: userId,
+            role: 'member'
+          });
+        }
+        
+        console.log(`[Sistema] Adicionados ${team_members.length} membros à equipe do projeto ID:${project.id}`);
+      }
       
       // Gerar automaticamente um documento financeiro (fatura a receber) se o projeto tem orçamento
       if (project.budget && project.budget > 0) {
@@ -848,10 +864,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Incluir informação da fatura gerada na resposta
         res.status(201).json({
           ...project,
+          team_members: team_members || [],
           generated_invoice: financialDocument
         });
       } else {
-        res.status(201).json(project);
+        res.status(201).json({
+          ...project,
+          team_members: team_members || []
+        });
       }
     } catch (error) {
       console.error("Error creating project:", error);

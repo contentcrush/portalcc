@@ -80,12 +80,12 @@ export function ProjectFormDialog() {
   const { toast } = useToast();
 
   // Fetch clients para o dropdown
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ['/api/clients']
   });
 
   // Fetch users para seleção de membros da equipe
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
     queryKey: ['/api/users']
   });
 
@@ -678,8 +678,8 @@ export function ProjectFormDialog() {
                           <FormItem>
                             <div className="space-y-4">
                               <div className="flex flex-wrap gap-2 mb-4">
-                                {field.value?.map((userId) => {
-                                  const user = users.find((u) => u.id === userId);
+                                {field.value?.map((userId: number) => {
+                                  const user = users.find((u: any) => u.id === userId);
                                   if (!user) return null;
                                   
                                   return (
@@ -699,7 +699,7 @@ export function ProjectFormDialog() {
                                         size="sm"
                                         className="h-5 w-5 p-0 rounded-full"
                                         onClick={() => {
-                                          const newValue = field.value?.filter((id) => id !== userId) || [];
+                                          const newValue = field.value?.filter((id: number) => id !== userId) || [];
                                           field.onChange(newValue);
                                         }}
                                       >
@@ -730,7 +730,7 @@ export function ProjectFormDialog() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {users.map((user) => (
+                                  {users.map((user: any) => (
                                     <SelectItem 
                                       key={user.id} 
                                       value={user.id.toString()}

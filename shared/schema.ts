@@ -317,7 +317,9 @@ export const insertProjectSchema = projectBaseSchema.extend({
     typeof val === 'string' ? parseInt(val, 10) : val
   ).default(30).refine(val => [30, 60, 75].includes(val), {
     message: "Prazo de pagamento deve ser 30, 60 ou 75 dias"
-  })
+  }),
+  // Lista de IDs dos usuários que farão parte da equipe
+  team_members: z.array(z.number()).optional()
 });
 // Criamos um schema base e depois estendemos para forçar a conversão do project_id para número
 const projectMemberBaseSchema = createInsertSchema(projectMembers).omit({ id: true });
