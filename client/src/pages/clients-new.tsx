@@ -65,6 +65,7 @@ import {
   BarChart,
   Trash2,
   ArrowUpRight,
+  Check,
 } from "lucide-react";
 import {
   Dialog,
