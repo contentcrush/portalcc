@@ -244,6 +244,8 @@ export const financialDocuments = pgTable("financial_documents", {
   description: text("description"),
 });
 
+
+
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   project_id: integer("project_id"),
