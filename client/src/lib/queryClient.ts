@@ -41,13 +41,38 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: {
+    body?: FormData;
+    headers?: HeadersInit;
+  }
 ): Promise<Response> {
-  let res = await fetch(url, {
+  // Se options.body estiver presente, usamos ele ao invés de stringificar o data
+  // Isso é útil para FormData que não deve ser stringificada
+  const requestOptions: RequestInit = {
     method,
-    headers: getAuthHeaders(!!data),
-    body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
-  });
+  };
+  
+  // Se fornecido um body via options, usamos ele
+  if (options?.body) {
+    requestOptions.body = options.body;
+    // Não definimos Content-Type para FormData, o navegador cuidará disso
+  } else if (data) {
+    requestOptions.headers = getAuthHeaders(true);
+    requestOptions.body = JSON.stringify(data);
+  } else {
+    requestOptions.headers = getAuthHeaders(false);
+  }
+  
+  // Adicionar headers extras se fornecidos
+  if (options?.headers) {
+    requestOptions.headers = {
+      ...requestOptions.headers,
+      ...options.headers
+    };
+  }
+  
+  let res = await fetch(url, requestOptions);
 
   // Se recebemos um erro 401 (não autorizado), verificamos se já estamos na página de autenticação
   if (res.status === 401) {
@@ -67,13 +92,8 @@ export async function apiRequest(
         const refreshSuccessful = await refreshToken();
         
         if (refreshSuccessful) {
-          // Retentar a requisição após renovar o token
-          res = await fetch(url, {
-            method,
-            headers: getAuthHeaders(!!data),
-            body: data ? JSON.stringify(data) : undefined,
-            credentials: "include",
-          });
+          // Retentar a requisição após renovar o token, mantendo as mesmas opções que usamos antes
+          res = await fetch(url, requestOptions);
         } else {
           // Se não conseguimos renovar o token, redirecionamos para login
           window.location.href = '/auth';

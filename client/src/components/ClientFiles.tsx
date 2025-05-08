@@ -60,13 +60,24 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
   // Mutação para upload de arquivos
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest('POST', `/api/clients/${clientId}/files`, undefined, {
-        body: formData,
-        headers: {
-          // Não incluir Content-Type pois o navegador definirá o boundary correto
-        },
-      });
-      return response.json();
+      // Não definimos o Content-Type manualmente para que o navegador defina o boundary correto
+      try {
+        const response = await apiRequest('POST', `/api/clients/${clientId}/files`, undefined, {
+          body: formData,
+          // Aqui removemos a definição do headers completamente para deixar o navegador cuidar disso
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Erro no upload:', errorData);
+          throw new Error(errorData.message || 'Erro ao fazer upload de arquivos');
+        }
+        
+        return response.json();
+      } catch (error) {
+        console.error('Erro ao processar upload:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'files'] });
@@ -77,9 +88,10 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
       });
     },
     onError: (error: Error) => {
+      console.error('Erro no uploadMutation:', error);
       toast({
         title: 'Erro no upload',
-        description: error.message,
+        description: error.message || 'Ocorreu um erro ao fazer o upload dos arquivos',
         variant: 'destructive',
       });
     },
@@ -126,10 +138,12 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
     if (files.length === 0) return;
 
     const formData = new FormData();
+    // Anexar cada arquivo com nome 'files' (importante: este nome deve corresponder ao esperado pelo multer no servidor)
     files.forEach(file => {
       formData.append('files', file);
     });
-
+    
+    console.log('Enviando arquivos:', files.map(f => f.name));
     uploadMutation.mutate(formData);
   };
 

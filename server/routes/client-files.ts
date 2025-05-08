@@ -25,12 +25,31 @@ router.get('/clients/:clientId/files', async (req: Request, res: Response) => {
   }
 });
 
+// Middleware para verificar o campo files antes de usar o multer
+const checkFiles = (req: Request, res: Response, next: Function) => {
+  // Log para depuração
+  console.log('Headers da requisição:', req.headers);
+  console.log('Corpo da requisição:', req.body);
+  console.log('Files na requisição:', req.files);
+  
+  // Verificar se é multipart/form-data
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) {
+    console.warn('Content-Type não é multipart/form-data:', contentType);
+  }
+  
+  next();
+};
+
 // Rota para fazer upload de arquivos para um cliente
-router.post('/clients/:clientId/files', upload.array('files', 5), async (req: Request, res: Response) => {
+router.post('/clients/:clientId/files', checkFiles, upload.array('files', 5), async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
     const files = req.files as Express.Multer.File[];
     const user = req.user as any;
+    
+    console.log('Requisição recebida - Files:', files);
+    console.log('User:', user);
     
     if (!files || files.length === 0) {
       return res.status(400).json({ message: 'Nenhum arquivo enviado' });
@@ -50,6 +69,7 @@ router.post('/clients/:clientId/files', upload.array('files', 5), async (req: Re
         description: ''
       };
 
+      console.log('Salvando arquivo no banco:', fileData);
       const [insertedFile] = await db.insert(clientFiles).values(fileData).returning();
       uploadedFiles.push(insertedFile);
     }
@@ -57,7 +77,10 @@ router.post('/clients/:clientId/files', upload.array('files', 5), async (req: Re
     res.status(201).json(uploadedFiles);
   } catch (error) {
     console.error('Erro ao fazer upload de arquivos:', error);
-    res.status(500).json({ message: 'Erro ao fazer upload de arquivos' });
+    res.status(500).json({ 
+      message: 'Erro ao fazer upload de arquivos',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
