@@ -6,6 +6,7 @@ import { clientFiles } from '../../shared/schema';
 import fs from 'fs';
 import path from 'path';
 import { authenticateJWT } from '../auth';
+import cookieParser from 'cookie-parser';
 
 const router = Router();
 
