@@ -36,7 +36,7 @@ import { UserAvatar } from "./UserAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
+import { insertClientSchema, insertProjectSchema, insertFinancialDocumentSchema, type InsertClient, type InsertProject, type InsertFinancialDocument } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
@@ -733,7 +733,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                         <Filter className="h-4 w-4 mr-2" />
                         Filtrar
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setNewFinancialDocumentDialogOpen(true)}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Adicionar
                       </Button>
