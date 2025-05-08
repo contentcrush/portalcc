@@ -229,6 +229,13 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // Validar manualmente os campos obrigatórios
+    if (!data.name || !data.type) {
+      form.setError("name", { message: "Nome é obrigatório" });
+      form.setError("type", { message: "Tipo é obrigatório" });
+      return;
+    }
+
     // Se o nome abreviado não foi preenchido, use as iniciais do nome principal
     if (!data.shortName && data.name) {
       data.shortName = getInitials(data.name);
@@ -240,6 +247,7 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
       logo: avatarPreview || "",
     };
 
+    console.log("Enviando dados do cliente:", clientData);
     createClientMutation.mutate(clientData);
   };
 
