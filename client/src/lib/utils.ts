@@ -671,36 +671,3 @@ export function getProgressBarColor(progress: number): string {
     return 'bg-red-500'; // vermelho para progresso baixo
   }
 }
-
-/**
- * Função utilitária para lidar com valores potencialmente nulos/undefined em campos de formulário
- * Resolve problemas com campos controlados no React Hook Form
- * @param field Campo do react-hook-form
- * @returns Propriedades seguras para o campo
- */
-export function getSafeFieldProps(field: any) {
-  return {
-    ...field,
-    value: field.value ?? "",
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      field.onChange(e.target.value || null);
-    }
-  };
-}
-
-/**
- * Função utilitária para lidar com valores potencialmente nulos/undefined em campos numéricos
- * Resolve problemas com campos controlados no React Hook Form
- * @param field Campo do react-hook-form
- * @returns Propriedades seguras para o campo
- */
-export function getSafeNumberFieldProps(field: any) {
-  return {
-    ...field,
-    value: field.value ?? "",
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value === "" ? null : Number(e.target.value);
-      field.onChange(value);
-    }
-  };
-}
