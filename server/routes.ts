@@ -1,5 +1,6 @@
-import type { Express, Request, Response } from "express";
+import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import path from 'path';
 import { storage } from "./storage";
 import { 
   insertClientSchema, insertProjectSchema, insertTaskSchema, 
@@ -2761,6 +2762,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register custom routers
   app.use('/api', clientDocumentsRouter);
   app.use('/api', clientMeetingsRouter);
+  
+  // Servir arquivos estáticos da pasta de uploads
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   const httpServer = createServer(app);
   

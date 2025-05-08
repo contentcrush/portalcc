@@ -1,88 +1,74 @@
 import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
 
-// In ES modules, we need to get the directory using fileURLToPath
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Configurar pasta de uploads
+const uploadDir = path.join(process.cwd(), 'uploads');
 
-// Ensure upload directories exist
-const uploadDir = path.join(__dirname, '../../uploads');
-const clientDocsDir = path.join(uploadDir, 'client-documents');
-
-// Create directories if they don't exist
+// Certificar-se de que a pasta de uploads existe
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-if (!fs.existsSync(clientDocsDir)) {
-  fs.mkdirSync(clientDocsDir, { recursive: true });
+// Configurar o storage para o multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Gerar um nome de arquivo único combinando uuid e extensão original
+    const uniqueSuffix = uuidv4();
+    const fileExt = path.extname(file.originalname);
+    cb(null, `${uniqueSuffix}${fileExt}`);
+  }
+});
+
+// Filtro para permitir apenas certos tipos de arquivo
+const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  // Tipos de arquivo permitidos
+  const allowedMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'application/zip',
+    'application/x-zip-compressed',
+  ];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`));
+  }
+};
+
+// Configurar o upload
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // Limite de 10MB
+  }
+});
+
+// Função para formatação de tamanho de arquivo
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return '0 Bytes';
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Configure storage for client documents
-const clientDocStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, clientDocsDir);
-  },
-  filename: (_req, file, cb) => {
-    // Generate a unique filename with original extension
-    const uniqueId = uuidv4();
-    const fileExtension = path.extname(file.originalname);
-    const sanitizedFileName = file.originalname
-      .replace(/[^a-zA-Z0-9]/g, '_') // Replace non-alphanumeric chars with underscore
-      .replace(/_+/g, '_') // Replace multiple underscores with a single one
-      .substring(0, 50); // Limit the filename length to 50 chars
-      
-    const finalFileName = `${uniqueId}_${sanitizedFileName}${fileExtension}`;
-    cb(null, finalFileName);
-  }
-});
-
-// Create multer upload middlewares
-export const clientDocumentUpload = multer({
-  storage: clientDocStorage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max file size
-  },
-  fileFilter: (_req, file, cb) => {
-    // Define allowed file types
-    const allowedFileTypes = [
-      // Documents
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-      // Images
-      '.jpg', '.jpeg', '.png', '.gif', '.svg',
-      // Archives
-      '.zip', '.rar', '.7z',
-      // Other
-      '.csv', '.json'
-    ];
-    
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedFileTypes.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Tipo de arquivo não permitido. Tipos aceitos: ${allowedFileTypes.join(', ')}`));
-    }
-  }
-});
-
-// Helper function to delete files
-export const deleteFile = async (filePath: string): Promise<boolean> => {
-  try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error(`Erro ao excluir arquivo ${filePath}:`, error);
-    return false;
-  }
-};
-
-// Helper function to get file path
-export const getClientDocumentPath = (fileName: string): string => {
-  return path.join(clientDocsDir, fileName);
-};
+export default upload;

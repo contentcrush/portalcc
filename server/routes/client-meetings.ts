@@ -1,164 +1,134 @@
-import express from 'express';
-import { insertClientMeetingSchema, insertEventSchema } from '@shared/schema';
+import { Router } from 'express';
 import { storage } from '../storage';
-import { authenticateJWT } from '../auth';
+import { insertClientMeetingSchema } from '../../shared/schema';
+import { z } from 'zod';
 
-const router = express.Router();
+const router = Router();
 
-// Get all meetings for a client
-router.get('/client/:clientId/meetings', authenticateJWT, async (req, res) => {
+// Obter todas as reuniões de um cliente
+router.get('/:clientId/meetings', async (req, res) => {
   try {
     const clientId = parseInt(req.params.clientId);
-    if (isNaN(clientId)) {
-      return res.status(400).json({ message: 'ID do cliente inválido' });
-    }
-
     const meetings = await storage.getClientMeetings(clientId);
     res.json(meetings);
   } catch (error) {
     console.error('Erro ao buscar reuniões do cliente:', error);
-    res.status(500).json({ message: 'Erro ao buscar reuniões' });
+    res.status(500).json({ error: 'Erro ao buscar reuniões do cliente' });
   }
 });
 
-// Get a specific meeting
-router.get('/client-meetings/:id', authenticateJWT, async (req, res) => {
+// Obter uma reunião específica
+router.get('/meetings/:id', async (req, res) => {
   try {
-    const meetingId = parseInt(req.params.id);
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ message: 'ID da reunião inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const meeting = await storage.getClientMeeting(id);
     
-    const meeting = await storage.getClientMeeting(meetingId);
     if (!meeting) {
-      return res.status(404).json({ message: 'Reunião não encontrada' });
+      return res.status(404).json({ error: 'Reunião não encontrada' });
     }
     
     res.json(meeting);
   } catch (error) {
     console.error('Erro ao buscar reunião:', error);
-    res.status(500).json({ message: 'Erro ao buscar reunião' });
+    res.status(500).json({ error: 'Erro ao buscar reunião' });
   }
 });
 
-// Create a new meeting
-router.post('/client-meetings', authenticateJWT, async (req, res) => {
+// Criar uma nova reunião
+router.post('/:clientId/meetings', async (req, res) => {
   try {
-    // Validate the request body using the meeting schema
-    const validatedData = insertClientMeetingSchema.parse({
-      ...req.body,
-      organized_by: req.user.id // From JWT authentication
-    });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+
+    const clientId = parseInt(req.params.clientId);
     
-    // Calculate end date based on meeting date and duration
-    const meetingDate = new Date(validatedData.meeting_date);
-    const endDate = new Date(meetingDate);
-    endDate.setMinutes(endDate.getMinutes() + validatedData.duration_minutes);
-    
-    // Create calendar event for this meeting
-    const newEvent = await storage.createEvent({
-      title: validatedData.title,
-      description: validatedData.notes || '',
-      client_id: validatedData.client_id,
-      user_id: req.user.id,
-      event_type: 'meeting',
-      all_day: false,
-      start_date: meetingDate,
-      end_date: endDate,
-      status: 'scheduled',
-      location: validatedData.location || '',
-      color: '#4CAF50' // Green color for meetings
-    });
-    
-    // Create meeting record in database and link it to the calendar event
-    const newMeeting = await storage.createClientMeeting({
-      ...validatedData,
-      related_event_id: newEvent.id
-    });
-    
-    res.status(201).json(newMeeting);
+    // Validar os dados do corpo da requisição usando o schema
+    try {
+      const meetingData = insertClientMeetingSchema.parse({
+        client_id: clientId,
+        title: req.body.title,
+        description: req.body.description,
+        meeting_date: req.body.meeting_date,
+        duration_minutes: req.body.duration_minutes,
+        location: req.body.location,
+        meeting_type: req.body.meeting_type,
+        organized_by: req.user.id
+      });
+      
+      // Criar a reunião no banco
+      const meeting = await storage.createClientMeeting(meetingData);
+      
+      // TODO: Criar evento no calendário se necessário
+      // Isso seria feito através de uma função que cria um evento no calendário
+      // e então atualiza a reunião com o ID do evento
+      
+      res.status(201).json(meeting);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Erro ao criar reunião:', error);
-    res.status(500).json({ message: 'Erro ao criar reunião' });
+    res.status(500).json({ error: 'Erro ao criar reunião' });
   }
 });
 
-// Update a meeting
-router.patch('/client-meetings/:id', authenticateJWT, async (req, res) => {
+// Atualizar uma reunião
+router.patch('/meetings/:id', async (req, res) => {
   try {
-    const meetingId = parseInt(req.params.id);
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ message: 'ID da reunião inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const meeting = await storage.getClientMeeting(id);
     
-    const meeting = await storage.getClientMeeting(meetingId);
     if (!meeting) {
-      return res.status(404).json({ message: 'Reunião não encontrada' });
+      return res.status(404).json({ error: 'Reunião não encontrada' });
     }
     
-    // Update the meeting
-    const updatedMeeting = await storage.updateClientMeeting(meetingId, req.body);
+    // Campos permitidos para atualização
+    const updateData = {
+      title: req.body.title,
+      description: req.body.description,
+      meeting_date: req.body.meeting_date ? new Date(req.body.meeting_date) : undefined,
+      duration_minutes: req.body.duration_minutes,
+      location: req.body.location,
+      meeting_type: req.body.meeting_type
+    };
     
-    // If meeting date or duration changed, update the associated calendar event
-    if (req.body.meeting_date || req.body.duration_minutes) {
-      const eventId = meeting.related_event_id;
-      if (eventId) {
-        const event = await storage.getEvent(eventId);
-        if (event) {
-          // Calculate new start and end dates
-          const meetingDate = req.body.meeting_date ? new Date(req.body.meeting_date) : new Date(meeting.meeting_date);
-          const duration = req.body.duration_minutes || meeting.duration_minutes;
-          const endDate = new Date(meetingDate);
-          endDate.setMinutes(endDate.getMinutes() + duration);
-          
-          // Update event
-          await storage.updateEvent(eventId, {
-            title: req.body.title || event.title,
-            description: req.body.notes || event.description,
-            start_date: meetingDate,
-            end_date: endDate,
-            location: req.body.location || event.location
-          });
-        }
-      }
-    }
+    const updatedMeeting = await storage.updateClientMeeting(id, updateData);
+    
+    // TODO: Atualizar evento no calendário se a reunião tiver um evento associado
     
     res.json(updatedMeeting);
   } catch (error) {
     console.error('Erro ao atualizar reunião:', error);
-    res.status(500).json({ message: 'Erro ao atualizar reunião' });
+    res.status(500).json({ error: 'Erro ao atualizar reunião' });
   }
 });
 
-// Delete a meeting
-router.delete('/client-meetings/:id', authenticateJWT, async (req, res) => {
+// Deletar uma reunião
+router.delete('/meetings/:id', async (req, res) => {
   try {
-    const meetingId = parseInt(req.params.id);
-    if (isNaN(meetingId)) {
-      return res.status(400).json({ message: 'ID da reunião inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const meeting = await storage.getClientMeeting(id);
     
-    const meeting = await storage.getClientMeeting(meetingId);
     if (!meeting) {
-      return res.status(404).json({ message: 'Reunião não encontrada' });
+      return res.status(404).json({ error: 'Reunião não encontrada' });
     }
     
-    // Delete the associated calendar event
-    if (meeting.related_event_id) {
-      await storage.deleteEvent(meeting.related_event_id);
-    }
+    // TODO: Deletar evento no calendário se a reunião tiver um evento associado
     
-    // Delete the meeting
-    const result = await storage.deleteClientMeeting(meetingId);
+    const success = await storage.deleteClientMeeting(id);
     
-    if (result) {
-      res.json({ success: true, message: 'Reunião excluída com sucesso' });
+    if (success) {
+      res.status(200).json({ message: 'Reunião removida com sucesso' });
     } else {
-      res.status(500).json({ message: 'Erro ao excluir reunião' });
+      res.status(500).json({ error: 'Erro ao remover reunião do banco de dados' });
     }
   } catch (error) {
-    console.error('Erro ao excluir reunião:', error);
-    res.status(500).json({ message: 'Erro ao excluir reunião' });
+    console.error('Erro ao deletar reunião:', error);
+    res.status(500).json({ error: 'Erro ao deletar reunião' });
   }
 });
 

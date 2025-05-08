@@ -1,172 +1,202 @@
-import express from 'express';
-import { insertClientDocumentSchema } from '@shared/schema';
+import { Router } from 'express';
 import { storage } from '../storage';
-import { clientDocumentUpload, getClientDocumentPath, deleteFile } from '../utils/file-upload';
+import multer from 'multer';
+import upload from '../utils/file-upload';
 import path from 'path';
 import fs from 'fs';
-import { authenticateJWT } from '../auth';
+import { insertClientDocumentSchema } from '../../shared/schema';
+import { z } from 'zod';
 
-const router = express.Router();
+const router = Router();
+const uploadDir = path.join(process.cwd(), 'uploads');
 
-// Get all documents for a client
-router.get('/client/:clientId/documents', authenticateJWT, async (req, res) => {
+// Função para obter o caminho completo do arquivo
+export function getClientDocumentPath(fileName: string): string {
+  return path.join(uploadDir, fileName);
+}
+
+// Função para deletar um arquivo
+export function deleteFile(filePath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+// Obter todos os documentos de um cliente
+router.get('/:clientId/documents', async (req, res) => {
   try {
     const clientId = parseInt(req.params.clientId);
-    if (isNaN(clientId)) {
-      return res.status(400).json({ message: 'ID do cliente inválido' });
-    }
-
     const documents = await storage.getClientDocuments(clientId);
     res.json(documents);
   } catch (error) {
     console.error('Erro ao buscar documentos do cliente:', error);
-    res.status(500).json({ message: 'Erro ao buscar documentos' });
+    res.status(500).json({ error: 'Erro ao buscar documentos do cliente' });
   }
 });
 
-// Get a specific document
-router.get('/client-documents/:id', authenticateJWT, async (req, res) => {
+// Obter um documento específico
+router.get('/documents/:id', async (req, res) => {
   try {
-    const documentId = parseInt(req.params.id);
-    if (isNaN(documentId)) {
-      return res.status(400).json({ message: 'ID do documento inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const document = await storage.getClientDocument(id);
     
-    const document = await storage.getClientDocument(documentId);
     if (!document) {
-      return res.status(404).json({ message: 'Documento não encontrado' });
+      return res.status(404).json({ error: 'Documento não encontrado' });
     }
     
     res.json(document);
   } catch (error) {
     console.error('Erro ao buscar documento:', error);
-    res.status(500).json({ message: 'Erro ao buscar documento' });
+    res.status(500).json({ error: 'Erro ao buscar documento' });
   }
 });
 
-// Download a document
-router.get('/client-documents/:id/download', authenticateJWT, async (req, res) => {
-  try {
-    const documentId = parseInt(req.params.id);
-    if (isNaN(documentId)) {
-      return res.status(400).json({ message: 'ID do documento inválido' });
-    }
-    
-    const document = await storage.getClientDocument(documentId);
-    if (!document) {
-      return res.status(404).json({ message: 'Documento não encontrado' });
-    }
-    
-    // Get the file path
-    const filePath = getClientDocumentPath(document.file_key);
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Arquivo não encontrado no servidor' });
-    }
-    
-    // Set headers for download
-    res.setHeader('Content-Disposition', `attachment; filename="${document.file_name}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-  } catch (error) {
-    console.error('Erro ao baixar documento:', error);
-    res.status(500).json({ message: 'Erro ao baixar documento' });
-  }
-});
-
-// Upload a new document
-router.post('/client-documents', authenticateJWT, clientDocumentUpload.single('file'), async (req, res) => {
+// Upload de documento
+router.post('/:clientId/documents', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
     
-    // Get file info
-    const { filename, originalname, size, mimetype } = req.file;
+    if (!req.user) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+
+    const clientId = parseInt(req.params.clientId);
+    const file = req.file;
     
-    // Validate the request body using Zod schema
-    const validatedData = insertClientDocumentSchema.parse({
-      ...req.body,
-      file_name: originalname,
-      uploaded_by: req.user.id // From JWT authentication
-    });
-    
-    // Create document record in database
-    const newDocument = await storage.createClientDocument({
-      ...validatedData,
-      file_key: filename,
-      file_url: `/api/client-documents/${filename}/download`,
-      file_size: size,
-      file_type: mimetype,
-      upload_date: new Date()
-    });
-    
-    res.status(201).json(newDocument);
+    // Validar os dados do corpo da requisição usando o schema
+    try {
+      const documentData = insertClientDocumentSchema.parse({
+        client_id: clientId,
+        file_name: file.originalname,
+        file_size: file.size,
+        file_type: file.mimetype,
+        category: req.body.category || null,
+        description: req.body.description || null,
+        uploaded_by: req.user.id
+      });
+      
+      // Criar o documento no banco com o caminho do arquivo
+      const document = await storage.createClientDocument({
+        ...documentData,
+        file_url: `/uploads/${file.filename}`
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      throw error;
+    }
   } catch (error) {
-    console.error('Erro ao fazer upload do documento:', error);
-    // If there was an error, try to delete the uploaded file
+    console.error('Erro ao fazer upload de documento:', error);
+    // Se ocorrer um erro, tenta remover o arquivo que foi enviado
     if (req.file) {
-      const filePath = getClientDocumentPath(req.file.filename);
-      deleteFile(filePath).catch(err => console.error('Failed to delete file after error:', err));
+      try {
+        await deleteFile(req.file.path);
+      } catch (unlinkError) {
+        console.error('Erro ao remover arquivo após falha:', unlinkError);
+      }
     }
-    res.status(500).json({ message: 'Erro ao fazer upload do documento' });
+    res.status(500).json({ error: 'Erro ao fazer upload de documento' });
   }
 });
 
-// Update document metadata
-router.patch('/client-documents/:id', authenticateJWT, async (req, res) => {
+// Atualizar metadados do documento
+router.patch('/documents/:id', async (req, res) => {
   try {
-    const documentId = parseInt(req.params.id);
-    if (isNaN(documentId)) {
-      return res.status(400).json({ message: 'ID do documento inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const document = await storage.getClientDocument(id);
     
-    const document = await storage.getClientDocument(documentId);
     if (!document) {
-      return res.status(404).json({ message: 'Documento não encontrado' });
+      return res.status(404).json({ error: 'Documento não encontrado' });
     }
     
-    // Update document
-    const updatedDocument = await storage.updateClientDocument(documentId, req.body);
+    // Só podemos atualizar certos campos (não o arquivo em si)
+    const updateData = {
+      category: req.body.category,
+      description: req.body.description
+    };
+    
+    const updatedDocument = await storage.updateClientDocument(id, updateData);
     res.json(updatedDocument);
   } catch (error) {
     console.error('Erro ao atualizar documento:', error);
-    res.status(500).json({ message: 'Erro ao atualizar documento' });
+    res.status(500).json({ error: 'Erro ao atualizar documento' });
   }
 });
 
-// Delete a document
-router.delete('/client-documents/:id', authenticateJWT, async (req, res) => {
+// Deletar documento
+router.delete('/documents/:id', async (req, res) => {
   try {
-    const documentId = parseInt(req.params.id);
-    if (isNaN(documentId)) {
-      return res.status(400).json({ message: 'ID do documento inválido' });
-    }
+    const id = parseInt(req.params.id);
+    const document = await storage.getClientDocument(id);
     
-    const document = await storage.getClientDocument(documentId);
     if (!document) {
-      return res.status(404).json({ message: 'Documento não encontrado' });
+      return res.status(404).json({ error: 'Documento não encontrado' });
     }
     
-    // Delete file from disk
-    const filePath = getClientDocumentPath(document.file_key);
-    await deleteFile(filePath);
+    // Remover o arquivo físico
+    const filePath = getClientDocumentPath(path.basename(document.file_url));
+    try {
+      await deleteFile(filePath);
+    } catch (unlinkError) {
+      console.error('Aviso: falha ao remover arquivo físico:', unlinkError);
+      // Continuamos mesmo se não conseguirmos remover o arquivo
+    }
     
-    // Delete from database
-    const result = await storage.deleteClientDocument(documentId);
+    // Remover o registro do banco
+    const success = await storage.deleteClientDocument(id);
     
-    if (result) {
-      res.json({ success: true, message: 'Documento excluído com sucesso' });
+    if (success) {
+      res.status(200).json({ message: 'Documento removido com sucesso' });
     } else {
-      res.status(500).json({ message: 'Erro ao excluir documento' });
+      res.status(500).json({ error: 'Erro ao remover documento do banco de dados' });
     }
   } catch (error) {
-    console.error('Erro ao excluir documento:', error);
-    res.status(500).json({ message: 'Erro ao excluir documento' });
+    console.error('Erro ao deletar documento:', error);
+    res.status(500).json({ error: 'Erro ao deletar documento' });
+  }
+});
+
+// Download de documento
+router.get('/documents/:id/download', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const document = await storage.getClientDocument(id);
+    
+    if (!document) {
+      return res.status(404).json({ error: 'Documento não encontrado' });
+    }
+    
+    const filePath = getClientDocumentPath(path.basename(document.file_url));
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
+    }
+    
+    // Enviar o arquivo
+    res.download(filePath, document.file_name, (err) => {
+      if (err) {
+        console.error('Erro ao enviar arquivo:', err);
+        // Se o cabeçalho ainda não foi enviado, podemos tentar enviar uma resposta de erro
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erro ao baixar arquivo' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao processar download de documento:', error);
+    res.status(500).json({ error: 'Erro ao processar download de documento' });
   }
 });
 
