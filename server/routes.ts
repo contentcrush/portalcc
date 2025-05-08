@@ -889,8 +889,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Extrair os membros da equipe do corpo da requisição
+      const { team_members, ...projectData } = req.body;
+      
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
-      const updatedProject = await storage.updateProject(id, req.body);
+      const updatedProject = await storage.updateProject(id, projectData);
+      
+      // Processar membros da equipe se fornecidos
+      if (team_members) {
+        // Primeiro, obter os membros atuais da equipe
+        const currentMembers = await storage.getProjectMembers(id);
+        const currentMemberIds = currentMembers.map(member => member.user_id);
+        
+        // Identificar membros a serem removidos (estão nos atuais mas não nos novos)
+        const membersToRemove = currentMemberIds.filter(userId => !team_members.includes(userId));
+        
+        // Identificar membros a serem adicionados (estão nos novos mas não nos atuais)
+        const membersToAdd = team_members.filter(userId => !currentMemberIds.includes(userId));
+        
+        // Remover membros que não estão mais na equipe
+        for (const userId of membersToRemove) {
+          await storage.removeProjectMember(id, userId);
+        }
+        
+        // Adicionar novos membros à equipe
+        for (const userId of membersToAdd) {
+          await storage.addProjectMember({
+            project_id: id,
+            user_id: userId,
+            role: 'member'
+          });
+        }
+        
+        console.log(`[Sistema] Equipe do projeto ID:${id} atualizada: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
+      }
       
       // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
       if (req.body.budget && (currentProject.budget !== req.body.budget)) {
@@ -976,8 +1008,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Extrair os membros da equipe do corpo da requisição
+      const { team_members, ...projectData } = req.body;
+      
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
-      const updatedProject = await storage.updateProject(id, req.body);
+      const updatedProject = await storage.updateProject(id, projectData);
+      
+      // Processar membros da equipe se fornecidos
+      if (team_members) {
+        // Primeiro, obter os membros atuais da equipe
+        const currentMembers = await storage.getProjectMembers(id);
+        const currentMemberIds = currentMembers.map(member => member.user_id);
+        
+        // Identificar membros a serem removidos (estão nos atuais mas não nos novos)
+        const membersToRemove = currentMemberIds.filter(userId => !team_members.includes(userId));
+        
+        // Identificar membros a serem adicionados (estão nos novos mas não nos atuais)
+        const membersToAdd = team_members.filter(userId => !currentMemberIds.includes(userId));
+        
+        // Remover membros que não estão mais na equipe
+        for (const userId of membersToRemove) {
+          await storage.removeProjectMember(id, userId);
+        }
+        
+        // Adicionar novos membros à equipe
+        for (const userId of membersToAdd) {
+          await storage.addProjectMember({
+            project_id: id,
+            user_id: userId,
+            role: 'member'
+          });
+        }
+        
+        console.log(`[Sistema] Equipe do projeto ID:${id} atualizada via PUT: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
+      }
       
       // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
       if (req.body.budget && (currentProject.budget !== req.body.budget)) {
