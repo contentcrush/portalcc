@@ -633,9 +633,24 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
           
           // Cria descrição detalhada para tooltip
           const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(doc.amount);
+          
+          // Extrai informações de prazo de pagamento da descrição, se disponível
+          let paymentTermInfo = '';
+          let cleanDescription = doc.description || '';
+          
+          if (cleanDescription && cleanDescription.includes('(Prazo:')) {
+            const match = cleanDescription.match(/\(Prazo: (\d+) dias\)/);
+            if (match && match[1]) {
+              paymentTermInfo = `Prazo de Pagamento: ${match[1]} dias`;
+              // Remove a parte do prazo da descrição para evitar duplicação
+              cleanDescription = cleanDescription.replace(/\s*\(Prazo: \d+ dias\)/, '');
+            }
+          }
+          
           const tooltipDescription = `${isPagamento ? 'Pagamento' : 'Recebimento'} - ${valorFormatado}
           ${projectName ? `Projeto: ${projectName}` : ''}
-          ${doc.description ? `Descrição: ${doc.description}` : ''}
+          ${cleanDescription ? `Descrição: ${cleanDescription}` : ''}
+          ${paymentTermInfo ? paymentTermInfo : ''}
           Vencimento: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`;
           
           // Atualizar evento com novas informações
@@ -676,9 +691,24 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
           
           // Cria descrição detalhada para tooltip
           const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(doc.amount);
+          
+          // Extrai informações de prazo de pagamento da descrição, se disponível
+          let paymentTermInfo = '';
+          let cleanDescription = doc.description || '';
+          
+          if (cleanDescription && cleanDescription.includes('(Prazo:')) {
+            const match = cleanDescription.match(/\(Prazo: (\d+) dias\)/);
+            if (match && match[1]) {
+              paymentTermInfo = `Prazo de Pagamento: ${match[1]} dias`;
+              // Remove a parte do prazo da descrição para evitar duplicação
+              cleanDescription = cleanDescription.replace(/\s*\(Prazo: \d+ dias\)/, '');
+            }
+          }
+          
           const tooltipDescription = `${isPagamento ? 'Pagamento' : 'Recebimento'} - ${valorFormatado}
           ${projectName ? `Projeto: ${projectName}` : ''}
-          ${doc.description ? `Descrição: ${doc.description}` : ''}
+          ${cleanDescription ? `Descrição: ${cleanDescription}` : ''}
+          ${paymentTermInfo ? paymentTermInfo : ''}
           Vencimento: ${format(doc.due_date, 'dd/MM/yyyy', { locale: ptBR })}`;
             
           // Criar novo evento para a data de vencimento
