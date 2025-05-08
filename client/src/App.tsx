@@ -9,6 +9,7 @@ import DashboardNovo from "@/pages/dashboard-novo";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients-new";
+import ImprovedClientsPage from "@/pages/clients-improved";
 import ClientDetail from "@/pages/client-detail";
 import Financial from "@/pages/financial";
 import Calendar from "@/pages/calendar";
@@ -42,7 +43,8 @@ function Router() {
       <ProtectedRoute path="/projects/:id" component={Projects} />
       <ProtectedRoute path="/tasks" component={Tasks} />
       <ProtectedRoute path="/tasks/:id" component={Tasks} />
-      <ProtectedRoute path="/clients" component={Clients} />
+      <ProtectedRoute path="/clients" component={ImprovedClientsPage} />
+      <ProtectedRoute path="/clients-legacy" component={Clients} />
       <ProtectedRoute path="/clients/:id" component={ClientDetail} />
       <ProtectedRoute path="/financial" component={Financial} />
       <ProtectedRoute path="/calendar" component={Calendar} />
