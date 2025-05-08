@@ -340,39 +340,57 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
-          <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
+      {/* Header with mobile-first design */}
+      <div className="flex flex-col gap-4 sm:gap-2">
+        <div className="flex justify-between items-center">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/clients')}
-            className="flex items-center"
+            className="flex items-center p-2 h-9"
+            size="sm"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
-          <Button variant="outline" onClick={handleEditClick}>
-            <FileText className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-          <Button className="bg-primary" onClick={() => setIsNewProjectDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Projeto
-          </Button>
-          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir
-          </Button>
+          
+          <div className="flex space-x-2">
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              size="icon"
+              className="h-9 w-9"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleEditClick}
+              size="icon"
+              className="h-9 w-9"
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+            <Button 
+              className="bg-primary h-9" 
+              onClick={() => setIsNewProjectDialogOpen(true)}
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Projeto
+            </Button>
+          </div>
+        </div>
+        
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Detalhes do Cliente</h1>
+          <p className="text-sm text-gray-500">Visualizando informações completas do cliente</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Client info section */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Main content - Reorganized for mobile-first */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-3">
+        {/* Client info section - Full width on mobile, 2/3 width on larger screens */}
+        <div className="md:col-span-3 lg:col-span-2 space-y-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
