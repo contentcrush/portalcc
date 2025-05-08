@@ -2748,6 +2748,92 @@ export class DatabaseStorage implements IStorage {
     
     return updatedContact;
   }
+
+  // Client Documents
+  async getClientDocuments(clientId: number): Promise<ClientDocument[]> {
+    const documents = await db.select()
+      .from(clientDocuments)
+      .where(eq(clientDocuments.client_id, clientId))
+      .orderBy(desc(clientDocuments.upload_date));
+    
+    return documents;
+  }
+
+  async getClientDocument(id: number): Promise<ClientDocument | undefined> {
+    const [document] = await db.select()
+      .from(clientDocuments)
+      .where(eq(clientDocuments.id, id));
+    
+    return document;
+  }
+
+  async createClientDocument(document: InsertClientDocument): Promise<ClientDocument> {
+    const [createdDocument] = await db.insert(clientDocuments)
+      .values(document)
+      .returning();
+    
+    return createdDocument;
+  }
+
+  async updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined> {
+    const [updatedDocument] = await db.update(clientDocuments)
+      .set(document)
+      .where(eq(clientDocuments.id, id))
+      .returning();
+    
+    return updatedDocument;
+  }
+
+  async deleteClientDocument(id: number): Promise<boolean> {
+    const result = await db.delete(clientDocuments)
+      .where(eq(clientDocuments.id, id))
+      .returning({ id: clientDocuments.id });
+    
+    return result.length > 0;
+  }
+
+  // Client Meetings
+  async getClientMeetings(clientId: number): Promise<ClientMeeting[]> {
+    const meetings = await db.select()
+      .from(clientMeetings)
+      .where(eq(clientMeetings.client_id, clientId))
+      .orderBy(desc(clientMeetings.meeting_date));
+    
+    return meetings;
+  }
+
+  async getClientMeeting(id: number): Promise<ClientMeeting | undefined> {
+    const [meeting] = await db.select()
+      .from(clientMeetings)
+      .where(eq(clientMeetings.id, id));
+    
+    return meeting;
+  }
+
+  async createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting> {
+    const [createdMeeting] = await db.insert(clientMeetings)
+      .values(meeting)
+      .returning();
+    
+    return createdMeeting;
+  }
+
+  async updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined> {
+    const [updatedMeeting] = await db.update(clientMeetings)
+      .set(meeting)
+      .where(eq(clientMeetings.id, id))
+      .returning();
+    
+    return updatedMeeting;
+  }
+
+  async deleteClientMeeting(id: number): Promise<boolean> {
+    const result = await db.delete(clientMeetings)
+      .where(eq(clientMeetings.id, id))
+      .returning({ id: clientMeetings.id });
+    
+    return result.length > 0;
+  }
 }
 
 // Use DatabaseStorage instead of MemStorage
