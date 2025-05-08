@@ -505,6 +505,15 @@ export default function Clients() {
       .reduce((total: number, project: Project) => total + (project.budget || 0), 0);
   };
   
+  // Utilitário para garantir valores não-nulos em campos de formulário
+  const getSafeFieldProps = (field: any) => ({
+    value: field.value || '',
+    onChange: field.onChange,
+    onBlur: field.onBlur,
+    name: field.name,
+    ref: field.ref,
+  });
+  
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
     mutationFn: async (clientId: number) => {
@@ -1052,7 +1061,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: Empresa XYZ" 
                                   className="h-12 text-base" 
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                   autoFocus
                                 />
                               </FormControl>
@@ -1074,7 +1083,7 @@ export default function Clients() {
                                   <Input 
                                     placeholder="00.000.000/0001-00" 
                                     className="h-12 text-base" 
-                                    {...field} 
+                                    {...getSafeFieldProps(field)}
                                   />
                                 </FormControl>
                                 <Button 
@@ -1112,7 +1121,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Nome que aparecerá no dashboard" 
                                   className="h-12 text-base" 
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1129,7 +1138,7 @@ export default function Clients() {
                             <FormItem>
                               <FormLabel className="text-base font-medium">Tipo de Cliente*</FormLabel>
                               <Select
-                                value={field.value}
+                                value={field.value || ''}
                                 onValueChange={field.onChange}
                               >
                                 <FormControl>
