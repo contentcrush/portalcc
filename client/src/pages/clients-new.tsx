@@ -1439,7 +1439,7 @@ export default function Clients() {
                   <FormItem>
                     <FormLabel>Nome do Projeto</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Campanha de Marketing" {...field} />
+                      <Input placeholder="Ex: Campanha de Marketing" {...getSafeFieldProps(field)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
