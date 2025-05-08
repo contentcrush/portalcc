@@ -156,7 +156,6 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
       toast({
         title: "Empresa encontrada",
         description: "Os dados foram preenchidos automaticamente.",
-        variant: "success",
       });
       
       // Avançar para próximo passo automaticamente

@@ -72,7 +72,6 @@ export default function ImprovedClientsPage() {
       toast({
         title: "Status atualizado",
         description: "O status do cliente foi atualizado com sucesso.",
-        variant: "success",
       });
     },
     onError: (error) => {
@@ -95,7 +94,6 @@ export default function ImprovedClientsPage() {
       toast({
         title: "Cliente excluído",
         description: "O cliente foi excluído com sucesso.",
-        variant: "success",
       });
       setIsDeleteClientDialogOpen(false);
     },
