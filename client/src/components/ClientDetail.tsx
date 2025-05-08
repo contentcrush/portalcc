@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "@/components/ui/image-upload";
 import ClientContacts from "@/components/ClientContacts";
-import ClientFiles from "@/components/ClientFiles";
 import { 
   Building, 
   Mail, 
@@ -23,8 +22,7 @@ import {
   ChevronLeft,
   ArrowLeft,
   Trash2,
-  Users,
-  File
+  Users
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -656,14 +654,10 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-4 mb-4">
+                <TabsList className="grid grid-cols-3 mb-4">
                   <TabsTrigger value="contacts">
                     <Users className="h-4 w-4 mr-2 hidden sm:inline-block" />
                     Contatos
-                  </TabsTrigger>
-                  <TabsTrigger value="files">
-                    <File className="h-4 w-4 mr-2 hidden sm:inline-block" />
-                    Arquivos
                   </TabsTrigger>
                   <TabsTrigger value="interactions">Histórico</TabsTrigger>
                   <TabsTrigger value="financial">Financeiro</TabsTrigger>
@@ -671,10 +665,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                 
                 <TabsContent value="contacts" className="space-y-4">
                   <ClientContacts clientId={clientId} clientName={client.name} />
-                </TabsContent>
-
-                <TabsContent value="files" className="space-y-4">
-                  <ClientFiles clientId={clientId} clientName={client.name} />
                 </TabsContent>
                 
                 <TabsContent value="interactions" className="space-y-4">

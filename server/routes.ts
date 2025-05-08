@@ -16,14 +16,10 @@ import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import clientFilesRouter from "./routes/client-files";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
-  
-  // Registrar rotas para arquivos de clientes
-  app.use('/api', clientFilesRouter);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
