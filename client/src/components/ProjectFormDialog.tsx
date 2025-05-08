@@ -52,7 +52,7 @@ import {
   PopoverTrigger
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { PROJECT_STATUS_OPTIONS } from "@/lib/constants";
+import { PROJECT_STATUS_OPTIONS, TEAM_ROLE_OPTIONS } from "@/lib/constants";
 
 // Estender o schema para adicionar validações específicas do formulário
 const projectFormSchema = insertProjectSchema.extend({
@@ -718,14 +718,11 @@ export function ProjectFormDialog() {
                                             <SelectValue placeholder="Selecionar função" />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="responsavel">Responsável</SelectItem>
-                                            <SelectItem value="coordenador">Coordenador</SelectItem>
-                                            <SelectItem value="editor">Editor</SelectItem>
-                                            <SelectItem value="revisor">Revisor</SelectItem>
-                                            <SelectItem value="design">Design</SelectItem>
-                                            <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                                            <SelectItem value="financeiro">Financeiro</SelectItem>
-                                            <SelectItem value="suporte">Suporte</SelectItem>
+                                            {TEAM_ROLE_OPTIONS.map((option) => (
+                                              <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
                                           </SelectContent>
                                         </Select>
                                       </div>
