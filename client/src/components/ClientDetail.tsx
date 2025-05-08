@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { Checkbox } from "@/components/ui/checkbox";
 import ClientContacts from "@/components/ClientContacts";
 import { 
   Building, 
@@ -37,10 +36,10 @@ import { UserAvatar } from "./UserAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertClientSchema, insertProjectSchema, insertFinancialDocumentSchema, type InsertClient, type InsertProject, type InsertFinancialDocument } from "@shared/schema";
+import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { CLIENT_TYPE_OPTIONS, DOCUMENT_TYPE_OPTIONS, DOCUMENT_STATUS_OPTIONS } from "@/lib/constants";
+import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -92,7 +91,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isNewFinancialDocumentDialogOpen, setNewFinancialDocumentDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -129,12 +127,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   // Schema para validação do formulário de projeto
   const projectFormSchema = insertProjectSchema.extend({
     name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
-  });
-
-  // Schema para validação do formulário de documento financeiro
-  const financialDocumentFormSchema = insertFinancialDocumentSchema.extend({
-    document_type: z.string().min(1, "Tipo de documento é obrigatório"),
-    amount: z.coerce.number().min(0, "Valor deve ser maior que zero"),
   });
   
   // Estado para preview de imagem
@@ -174,22 +166,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       progress: 0,
       thumbnail: "",
     },
-  });
-  
-  // Formulário para novo documento financeiro
-  const financialDocumentForm = useForm<z.infer<typeof financialDocumentFormSchema>>({
-    resolver: zodResolver(financialDocumentFormSchema),
-    defaultValues: {
-      document_type: "",
-      document_number: "",
-      description: "",
-      amount: 0,
-      client_id: clientId,
-      project_id: undefined,
-      due_date: undefined,
-      status: "pendente",
-      paid: false,
-    }
   });
   
   // Mutation para atualizar cliente
@@ -242,30 +218,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     },
   });
   
-  // Mutation para criar novo documento financeiro
-  const createFinancialDocumentMutation = useMutation({
-    mutationFn: async (data: InsertFinancialDocument) => {
-      const response = await apiRequest("POST", "/api/financial-documents", data);
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/financial-documents`] });
-      setNewFinancialDocumentDialogOpen(false);
-      financialDocumentForm.reset();
-      toast({
-        title: "Documento financeiro adicionado com sucesso",
-        description: "O documento foi adicionado à lista de documentos financeiros do cliente."
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao adicionar documento financeiro",
-        description: error.message || "Ocorreu um erro ao adicionar o documento. Tente novamente.",
-        variant: "destructive"
-      });
-    },
-  });
-
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
     mutationFn: async () => {
@@ -333,16 +285,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       client_id: clientId,
     };
     createProjectMutation.mutate(projectData);
-  };
-  
-  // Função para submeter o formulário de documento financeiro
-  const onFinancialDocumentSubmit = (data: z.infer<typeof financialDocumentFormSchema>) => {
-    // Converter valores para o formato esperado pela API
-    const documentData: InsertFinancialDocument = {
-      ...data,
-      client_id: clientId,
-    };
-    createFinancialDocumentMutation.mutate(documentData);
   };
   
   // Função para abrir o dialog de edição preenchendo os valores do formulário
@@ -787,18 +729,13 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium">Documentos Financeiros</h3>
                     <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        className="bg-primary"
-                        onClick={() => setNewFinancialDocumentDialogOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Novo Documento
-                      </Button>
                       <Button variant="outline" size="sm">
                         <Filter className="h-4 w-4 mr-2" />
                         Filtrar
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar
                       </Button>
                     </div>
                   </div>
@@ -1511,244 +1448,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Modal para adicionar documento financeiro */}
-      <Dialog open={isNewFinancialDocumentDialogOpen} onOpenChange={setNewFinancialDocumentDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar Documento Financeiro</DialogTitle>
-            <DialogDescription>
-              Registre um novo documento financeiro para {client.name}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...financialDocumentForm}>
-            <form onSubmit={financialDocumentForm.handleSubmit(onFinancialDocumentSubmit)} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="document_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Documento</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DOCUMENT_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="document_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número do Documento</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: 2025/001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor (R$)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          step="0.01" 
-                          placeholder="0,00" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="due_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Data de Vencimento</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(new Date(field.value), "dd/MM/yyyy")
-                              ) : (
-                                <span>Selecione a data</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => field.onChange(date)}
-                            disabled={(date) =>
-                              date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DOCUMENT_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={financialDocumentForm.control}
-                  name="paid"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-end space-x-3 space-y-0 rounded-md p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value || false}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Pagamento Confirmado
-                        </FormLabel>
-                        <FormDescription>
-                          Marque se o documento já foi pago
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={financialDocumentForm.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Projeto Relacionado (opcional)</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
-                      defaultValue={field.value ? field.value.toString() : undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um projeto" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">Não relacionado a projeto</SelectItem>
-                        {projects?.map((project) => (
-                          <SelectItem key={project.id} value={project.id.toString()}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={financialDocumentForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Detalhes sobre o documento financeiro"
-                        className="resize-none min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setNewFinancialDocumentDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={createFinancialDocumentMutation.isPending}
-                >
-                  {createFinancialDocumentMutation.isPending ? (
-                    <>
-                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent border-white rounded-full"></div>
-                      Salvando...
-                    </>
-                  ) : (
-                    "Adicionar Documento"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
