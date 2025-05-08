@@ -36,6 +36,20 @@ export interface IStorage {
   createUserPreferences(preferences: InsertUserPreference): Promise<UserPreference>;
   updateUserPreferences(userId: number, preferences: Partial<InsertUserPreference>): Promise<UserPreference | undefined>;
   
+  // Client Documents
+  getClientDocuments(clientId: number): Promise<ClientDocument[]>;
+  getClientDocument(id: number): Promise<ClientDocument | undefined>;
+  createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
+  updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined>;
+  deleteClientDocument(id: number): Promise<boolean>;
+  
+  // Client Meetings
+  getClientMeetings(clientId: number): Promise<ClientMeeting[]>;
+  getClientMeeting(id: number): Promise<ClientMeeting | undefined>;
+  createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting>;
+  updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined>;
+  deleteClientMeeting(id: number): Promise<boolean>;
+  
   // Comments
   getTaskComments(taskId: number): Promise<TaskComment[]>;
   getTaskCommentById(commentId: number): Promise<TaskComment | undefined>;
