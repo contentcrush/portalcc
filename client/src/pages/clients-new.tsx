@@ -514,6 +514,15 @@ export default function Clients() {
     ref: field.ref,
   });
   
+  // Utilitário para campos numéricos
+  const getSafeNumberFieldProps = (field: any) => ({
+    value: field.value || '',
+    onChange: field.onChange,
+    onBlur: field.onBlur,
+    name: field.name,
+    ref: field.ref,
+  });
+  
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
     mutationFn: async (clientId: number) => {
@@ -1180,7 +1189,7 @@ export default function Clients() {
                                   placeholder="Ex: contato@empresa.com" 
                                   className="h-12 text-base"
                                   type="email"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                   autoFocus
                                 />
                               </FormControl>
@@ -1201,7 +1210,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: João Silva" 
                                   className="h-12 text-base" 
-                                  {...field}
+                                  {...getSafeFieldProps(field)}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1221,7 +1230,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: (11) 98765-4321" 
                                   className="h-12 text-base"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1241,7 +1250,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: www.empresa.com" 
                                   className="h-12 text-base"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1269,7 +1278,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: Rua das Flores, 123" 
                                   className="h-12 text-base"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1289,7 +1298,7 @@ export default function Clients() {
                                 <Input 
                                   placeholder="Ex: São Paulo" 
                                   className="h-12 text-base"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -1351,7 +1360,7 @@ export default function Clients() {
                                 <Textarea 
                                   placeholder="Informações adicionais sobre o cliente..." 
                                   className="min-h-[120px] resize-none text-base px-4 py-3"
-                                  {...field} 
+                                  {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
                               <FormMessage />
