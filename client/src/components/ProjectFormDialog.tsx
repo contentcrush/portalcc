@@ -105,6 +105,7 @@ export function ProjectFormDialog() {
       priority: projectToEdit?.priority || "media",
       complexity: projectToEdit?.complexity || "moderada",
       team_members: projectToEdit?.team_members || [],
+      team_members_roles: projectToEdit?.team_members_roles || {},
       thumbnail: projectToEdit?.thumbnail || ""
     }
   });
@@ -124,6 +125,7 @@ export function ProjectFormDialog() {
         priority: projectToEdit.priority || "media",
         complexity: projectToEdit.complexity || "moderada",
         team_members: projectToEdit.team_members || [],
+        team_members_roles: projectToEdit.team_members_roles || {},
         thumbnail: projectToEdit.thumbnail || ""
       });
     }
@@ -678,33 +680,74 @@ export function ProjectFormDialog() {
                         render={({ field }) => (
                           <FormItem>
                             <div className="space-y-4">
-                              <div className="flex flex-wrap gap-2 mb-4">
+                              <div className="flex flex-col gap-2 mb-4">
                                 {field.value?.map((userId: number) => {
                                   const user = users.find((u: any) => u.id === userId);
                                   if (!user) return null;
                                   
+                                  // Obter a função do membro da equipe (se existir)
+                                  const teamMemberRole = form.getValues().team_members_roles?.[userId] || '';
+                                  
                                   return (
                                     <div 
                                       key={userId}
-                                      className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5"
+                                      className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-2"
                                     >
                                       <div className="flex-grow flex items-center gap-2">
-                                        <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
+                                        <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
                                           {user.name?.charAt(0) || "U"}
                                         </div>
-                                        <span className="text-sm font-medium">{user.name}</span>
+                                        <div className="flex flex-col">
+                                          <span className="text-sm font-medium">{user.name}</span>
+                                          <span className="text-xs text-muted-foreground">{user.role}</span>
+                                        </div>
                                       </div>
+                                      
+                                      <div className="flex-grow">
+                                        <Select
+                                          value={teamMemberRole}
+                                          onValueChange={(value) => {
+                                            const currentRoles = form.getValues().team_members_roles || {};
+                                            form.setValue('team_members_roles', {
+                                              ...currentRoles,
+                                              [userId]: value
+                                            });
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue placeholder="Selecionar função" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="responsavel">Responsável</SelectItem>
+                                            <SelectItem value="coordenador">Coordenador</SelectItem>
+                                            <SelectItem value="editor">Editor</SelectItem>
+                                            <SelectItem value="revisor">Revisor</SelectItem>
+                                            <SelectItem value="design">Design</SelectItem>
+                                            <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
+                                            <SelectItem value="financeiro">Financeiro</SelectItem>
+                                            <SelectItem value="suporte">Suporte</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      
                                       <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        className="h-5 w-5 p-0 rounded-full"
+                                        className="h-8 w-8 p-0 rounded-full ml-2"
                                         onClick={() => {
+                                          // Remover usuário da equipe
                                           const newValue = field.value?.filter((id: number) => id !== userId) || [];
                                           field.onChange(newValue);
+                                          
+                                          // Remover função do usuário
+                                          const currentRoles = form.getValues().team_members_roles || {};
+                                          const newRoles = { ...currentRoles };
+                                          delete newRoles[userId];
+                                          form.setValue('team_members_roles', newRoles);
                                         }}
                                       >
-                                        <X className="h-3 w-3" />
+                                        <X className="h-4 w-4" />
                                       </Button>
                                     </div>
                                   );
@@ -723,6 +766,13 @@ export function ProjectFormDialog() {
                                   // Adicionar o usuário à equipe
                                   const newValue = [...(field.value || []), userId];
                                   field.onChange(newValue);
+                                  
+                                  // Inicializar a função como vazia
+                                  const currentRoles = form.getValues().team_members_roles || {};
+                                  form.setValue('team_members_roles', {
+                                    ...currentRoles,
+                                    [userId]: ''
+                                  });
                                 }}
                               >
                                 <FormControl>
@@ -750,7 +800,7 @@ export function ProjectFormDialog() {
                               </Select>
                             </div>
                             <FormDescription>
-                              Selecione os membros que farão parte da equipe do projeto
+                              Selecione os membros que farão parte da equipe do projeto e atribua funções a cada um
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
