@@ -4,16 +4,19 @@ import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
-  projectComments, projectCommentReactions, clientContacts,
+  projectComments, projectCommentReactions, clientContacts, clientDocuments,
+  clientMeetings,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
   type ProjectComment, type ProjectCommentReaction, type ClientContact,
+  type ClientDocument, type ClientMeeting,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
-  type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact
+  type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact,
+  type InsertClientDocument, type InsertClientMeeting
 } from "../shared/schema";
 
 export interface IStorage {
@@ -157,6 +160,20 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<boolean>;
+  
+  // Client Documents
+  getClientDocument(id: number): Promise<ClientDocument | undefined>;
+  getClientDocuments(clientId: number): Promise<ClientDocument[]>;
+  createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
+  updateClientDocument(id: number, document: Partial<InsertClientDocument>): Promise<ClientDocument | undefined>;
+  deleteClientDocument(id: number): Promise<boolean>;
+  
+  // Client Meetings
+  getClientMeeting(id: number): Promise<ClientMeeting | undefined>;
+  getClientMeetings(clientId: number): Promise<ClientMeeting[]>;
+  createClientMeeting(meeting: InsertClientMeeting): Promise<ClientMeeting>;
+  updateClientMeeting(id: number, meeting: Partial<InsertClientMeeting>): Promise<ClientMeeting | undefined>;
+  deleteClientMeeting(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {

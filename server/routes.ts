@@ -17,6 +17,10 @@ import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 
+// Import custom routers
+import clientDocumentsRouter from './routes/client-documents';
+import clientMeetingsRouter from './routes/client-meetings';
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
