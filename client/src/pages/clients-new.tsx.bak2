@@ -993,272 +993,329 @@ export default function Clients() {
               </div>
               <SheetTitle className="text-xl font-semibold">Novo Cliente</SheetTitle>
               <SheetDescription className="text-sm">
-                Preencha as informações do cliente
+                Fluxo rápido para cadastro de cliente
               </SheetDescription>
+              <div className="w-full flex justify-center my-3">
+                <div className="flex items-center space-x-3">
+                  <div className={cn(
+                    "flex items-center justify-center h-6 w-6 rounded-full border transition-colors text-xs font-medium",
+                    formStep === 0 
+                      ? "border-primary bg-primary text-primary-foreground" 
+                      : formStep > 0 
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "border-muted bg-muted/50 text-muted-foreground"
+                  )}>1</div>
+                  <div className={cn("h-px w-4 transition-colors", 
+                    formStep > 0 ? "bg-primary" : "bg-muted"
+                  )} />
+                  <div className={cn(
+                    "flex items-center justify-center h-6 w-6 rounded-full border transition-colors text-xs font-medium",
+                    formStep === 1 
+                      ? "border-primary bg-primary text-primary-foreground" 
+                      : formStep > 1 
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "border-muted bg-muted/50 text-muted-foreground"
+                  )}>2</div>
+                  <div className={cn("h-px w-4 transition-colors", 
+                    formStep > 1 ? "bg-primary" : "bg-muted"
+                  )} />
+                  <div className={cn(
+                    "flex items-center justify-center h-6 w-6 rounded-full border transition-colors text-xs font-medium",
+                    formStep === 2 
+                      ? "border-primary bg-primary text-primary-foreground" 
+                      : "border-muted bg-muted/50 text-muted-foreground"
+                  )}>3</div>
+                </div>
+              </div>
             </SheetHeader>
             
             <div className="overflow-y-auto flex-1 pb-24">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-4" id="client-form">
-                  <div className="flex justify-center mb-6">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        {avatarPreview ? (
-                          <AvatarImage src={avatarPreview} alt="Preview" />
-                        ) : (
-                          <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                            {getInitials(form.watch('name') || "NC")}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="absolute bottom-0 right-0">
-                        <label htmlFor="avatar-upload" className="cursor-pointer">
-                          <div className="bg-primary text-white p-2 rounded-full shadow-sm">
-                            <Upload className="h-4 w-4" />
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-6 py-2" id="client-form">
+                  <div className="relative mt-1">
+                    {formStep > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -left-2 -top-1 flex items-center p-1 h-8 rounded-full"
+                        onClick={handlePrevStep}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                        <span className="ml-1 text-sm">Voltar</span>
+                      </Button>
+                    )}
+                  
+                  {formStep === 0 && (
+                    <>
+                      <div className="mb-6 flex justify-center">
+                        <div className="relative">
+                          <Avatar className="h-28 w-28">
+                            {avatarPreview ? (
+                              <AvatarImage src={avatarPreview} alt="Preview" />
+                            ) : (
+                              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                                {getInitials(form.watch('name') || "NC")}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="absolute bottom-0 right-0">
+                            <label htmlFor="avatar-upload" className="cursor-pointer">
+                              <div className="bg-primary text-white p-2 rounded-full shadow-sm">
+                                <Upload className="h-5 w-5" />
+                              </div>
+                            </label>
+                            <input 
+                              id="avatar-upload" 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                            />
                           </div>
-                        </label>
-                        <input 
-                          id="avatar-upload" 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                        />
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Informações básicas */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-4 pb-1 border-b">Informações básicas</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome do cliente*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Ex: Studio Criativo" 
-                                {...getSafeFieldProps(field)} 
-                                autoFocus
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       
-                      <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de cliente</FormLabel>
-                            <Select
-                              value={field.value || ''}
-                              onValueChange={field.onChange}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione um tipo" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {CLIENT_TYPE_OPTIONS.map(option => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contactEmail"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>E-mail*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="contato@exemplo.com" 
-                                type="email"
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contactPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefone</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="(00) 00000-0000" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Contato principal */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-4 pb-1 border-b">Contato principal</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="contactName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome do contato</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Ex: João Silva" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="contactPosition"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cargo</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Ex: Diretor de Marketing" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="website"
-                        render={({ field }) => (
-                          <FormItem className="sm:col-span-2">
-                            <FormLabel>Website</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="www.exemplo.com" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Informações financeiras */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-4 pb-1 border-b">Informações financeiras</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="cnpj"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CNPJ/CPF</FormLabel>
-                            <div className="flex gap-2">
+                      <div className="space-y-5">
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Nome do Cliente*</FormLabel>
                               <FormControl>
                                 <Input 
-                                  placeholder="00.000.000/0000-00" 
+                                  placeholder="Ex: Empresa XYZ" 
+                                  className="h-12 text-base" 
+                                  {...getSafeFieldProps(field)} 
+                                  autoFocus
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="cnpj"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">CNPJ/CPF</FormLabel>
+                              <div className="flex gap-2">
+                                <FormControl>
+                                  <Input 
+                                    placeholder="00.000.000/0001-00" 
+                                    className="h-12 text-base" 
+                                    {...getSafeFieldProps(field)}
+                                  />
+                                </FormControl>
+                                <Button 
+                                  type="button" 
+                                  variant="outline"
+                                  size="icon"
+                                  disabled={isLookupCnpj}
+                                  onClick={handleCnpjLookup}
+                                  className="flex-shrink-0 h-12 w-12"
+                                >
+                                  {isLookupCnpj ? (
+                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  ) : (
+                                    <Search className="h-5 w-5" />
+                                  )}
+                                </Button>
+                              </div>
+                              <FormDescription className="text-xs">
+                                Digite o CNPJ e pressione Enter ou clique no botão de busca
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="shortName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Nome abreviado</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Nome que aparecerá no dashboard" 
+                                  className="h-12 text-base" 
                                   {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
-                              <Button 
-                                type="button" 
-                                variant="outline"
-                                size="icon"
-                                disabled={isLookupCnpj}
-                                onClick={handleCnpjLookup}
-                                className="flex-shrink-0"
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Tipo de Cliente*</FormLabel>
+                              <Select
+                                value={field.value || ''}
+                                onValueChange={field.onChange}
                               >
-                                {isLookupCnpj ? (
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                ) : (
-                                  <Search className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="shortName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome abreviado</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Nome para dashboard" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                                <FormControl>
+                                  <SelectTrigger className="h-12 text-base">
+                                    <SelectValue placeholder="Selecione o tipo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {CLIENT_TYPE_OPTIONS.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Endereço */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-4 pb-1 border-b">Endereço</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Endereço completo</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Rua, número, complemento" 
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  </>
+                )}
+                
+                {formStep === 1 && (
+                  <>
+                    <h3 className="font-medium text-lg text-center mb-5 mt-1">Contato Principal</h3>
+                    
+                    <div className="space-y-5">
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="contactEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Email de contato*</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Ex: contato@empresa.com" 
+                                  className="h-12 text-base"
+                                  type="email"
+                                  {...getSafeFieldProps(field)} 
+                                  autoFocus
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="contactName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Nome do contato</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Ex: João Silva" 
+                                  className="h-12 text-base" 
+                                  {...getSafeFieldProps(field)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="contactPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Telefone</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Ex: (11) 98765-4321" 
+                                  className="h-12 text-base"
+                                  {...getSafeFieldProps(field)} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="website"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Website</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Ex: www.empresa.com" 
+                                  className="h-12 text-base"
+                                  {...getSafeFieldProps(field)} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {formStep === 2 && (
+                  <>
+                    <h3 className="font-medium text-lg text-center mb-5 mt-1">Detalhes Adicionais</h3>
+                    
+                    <div className="space-y-5">
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base font-medium">Endereço</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Ex: Rua das Flores, 123" 
+                                  className="h-12 text-base"
+                                  {...getSafeFieldProps(field)} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
                         <FormField
                           control={form.control}
                           name="city"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Cidade</FormLabel>
+                              <FormLabel className="text-base font-medium">Cidade</FormLabel>
                               <FormControl>
                                 <Input 
                                   placeholder="Ex: São Paulo" 
+                                  className="h-12 text-base"
                                   {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
@@ -1266,16 +1323,61 @@ export default function Clients() {
                             </FormItem>
                           )}
                         />
-
+                      </div>
+                      
+                      <div>
                         <FormField
                           control={form.control}
-                          name="state"
+                          name="since"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                              <FormLabel className="text-base font-medium">Data de início</FormLabel>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "h-12 text-base px-3 text-left font-normal justify-between",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        format(field.value, "PPP", { locale: ptBR })
+                                      ) : (
+                                        <span>Selecione uma data</span>
+                                      )}
+                                      <CalendarIcon className="h-5 w-5 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <DatePickerWithYearNavigation
+                                    date={field.value ?? undefined}
+                                    setDate={field.onChange}
+                                    fromYear={1970}
+                                    locale={ptBR}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormField
+                          control={form.control}
+                          name="notes"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Estado</FormLabel>
+                              <FormLabel className="text-base font-medium">Observações</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder="Ex: SP" 
+                                <Textarea 
+                                  placeholder="Informações adicionais sobre o cliente..." 
+                                  className="min-h-[120px] resize-none text-base px-4 py-3"
                                   {...getSafeFieldProps(field)} 
                                 />
                               </FormControl>
@@ -1285,176 +1387,55 @@ export default function Clients() {
                         />
                       </div>
                     </div>
-                  </div>
-
-                  {/* Segmentos e observações */}
-                  <div className="mb-6">
-                    <h3 className="text-base font-medium mb-4 pb-1 border-b">Informações adicionais</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="segments"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Segmentos</FormLabel>
-                            <FormControl>
-                              <>
-                                <div className="flex flex-wrap gap-2 mb-2">
-                                  {segmentTags.map((tag, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs px-2 py-1 gap-1">
-                                      {tag}
-                                      <X 
-                                        className="h-3 w-3 cursor-pointer" 
-                                        onClick={() => {
-                                          const newTags = [...segmentTags];
-                                          newTags.splice(index, 1);
-                                          setSegmentTags(newTags);
-                                          
-                                          field.onChange(newTags.join(','));
-                                        }}
-                                      />
-                                    </Badge>
-                                  ))}
-                                </div>
-                                <div className="flex gap-2">
-                                  <Input
-                                    placeholder="Adicione segmentos separados por vírgula"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ',') {
-                                        e.preventDefault();
-                                        const input = e.currentTarget;
-                                        const value = input.value.trim();
-                                        
-                                        if (value && !segmentTags.includes(value)) {
-                                          const newTags = [...segmentTags, value];
-                                          setSegmentTags(newTags);
-                                          field.onChange(newTags.join(','));
-                                          input.value = '';
-                                        }
-                                      }
-                                    }}
-                                  />
-                                  <Button 
-                                    type="button" 
-                                    variant="outline"
-                                    size="icon"
-                                    className="flex-shrink-0"
-                                    onClick={(e) => {
-                                      const input = e.currentTarget.previousSibling as HTMLInputElement;
-                                      const value = input.value.trim();
-                                      
-                                      if (value && !segmentTags.includes(value)) {
-                                        const newTags = [...segmentTags, value];
-                                        setSegmentTags(newTags);
-                                        field.onChange(newTags.join(','));
-                                        input.value = '';
-                                      }
-                                    }}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </>
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Digite o segmento e pressione Enter ou clique no + para adicionar
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="since"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de início do relacionamento</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP", { locale: ptBR })
-                                    ) : (
-                                      <span>Selecione uma data</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <DatePickerWithYearNavigation
-                                  date={field.value ?? undefined}
-                                  setDate={field.onChange}
-                                  fromYear={1970}
-                                  locale={ptBR}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Observações</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Notas importantes sobre este cliente" 
-                                className="resize-none min-h-[100px]"
-                                {...getSafeFieldProps(field)} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
+                  </>
+                )}
+              </div>
                 </form>
               </Form>
             </div>
             
-            <div className="px-6 pb-6 pt-3 sticky bottom-0 bg-background z-20 border-t">
-              <div className="flex gap-3">
+            <div className="px-6 pb-8 pt-3 sticky bottom-0 bg-background z-20 border-t">
+              {formStep < 2 ? (
                 <Button 
-                  variant="outline" 
-                  onClick={() => setIsNewClientDialogOpen(false)}
-                  className="flex-1"
+                  type="button" 
+                  onClick={handleNextStep}
+                  className="w-full h-14 text-base font-medium"
                 >
-                  Cancelar
+                  Avançar
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
+              ) : (
                 <Button 
                   type="submit" 
                   form="client-form"
                   disabled={createClientMutation.isPending}
-                  className="flex-1"
+                  className="w-full h-14 text-base font-medium"
                 >
                   {createClientMutation.isPending ? (
                     <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                       Criando...
                     </>
                   ) : (
-                    'Criar cliente'
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      Criar Cliente
+                    </>
                   )}
                 </Button>
-              </div>
-              <div className="text-xs text-center text-muted-foreground mt-3">
-                  Apenas campos com * são obrigatórios
-              </div>
+              )}
+              
+              {formStep === 0 && (
+                <div className="text-xs text-center text-muted-foreground mt-2">
+                  Apenas nome, tipo e e-mail são obrigatórios
+                </div>
+              )}
+              
+              {formStep === 2 && (
+                <div className="text-xs text-center text-muted-foreground mt-2">
+                  Pressione ⌘/Ctrl + Enter para criar rapidamente
+                </div>
+              )}
             </div>
           </div>
         </SheetContent>
