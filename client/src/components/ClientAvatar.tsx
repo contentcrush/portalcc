@@ -2,27 +2,48 @@ import { useEffect, useState } from "react";
 import { getInitials, generateAvatarColor } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
+import { Client } from "@shared/schema";
 
 interface ClientAvatarProps {
   name?: string;
   logoUrl?: string | null | undefined;
   client_id?: number;
+  client?: Client;
   className?: string;
+  fallbackClassName?: string;
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-export function ClientAvatar({ name, logoUrl, client_id, className = "", size = "md" }: ClientAvatarProps) {
+export function ClientAvatar({ 
+  name, 
+  logoUrl, 
+  client_id, 
+  client, 
+  className = "", 
+  fallbackClassName = "",
+  size = "md" 
+}: ClientAvatarProps) {
   const [validLogo, setValidLogo] = useState<string | null>(null);
   const [error, setError] = useState(false);
-  const [clientName, setClientName] = useState<string>(name || "");
+  const [clientName, setClientName] = useState<string>(
+    client?.name || name || ""
+  );
   
-  // Buscar dados do cliente se um ID for fornecido
+  // Buscar dados do cliente se um ID for fornecido e não temos client diretamente
   const { data: clientData } = useQuery({
-    queryKey: client_id ? [`/api/clients/${client_id}`] : ['no-client'],
-    enabled: !!client_id
+    queryKey: client_id && !client ? [`/api/clients/${client_id}`] : ['no-client'],
+    enabled: !!client_id && !client
   });
   
-  // Atualizar dados do cliente quando estiverem disponíveis
+  // Usar o objeto client se fornecido diretamente
+  useEffect(() => {
+    if (client) {
+      setClientName(client.name || client.shortName || "");
+      validateLogo(client.logo, client.name);
+    }
+  }, [client]);
+  
+  // Atualizar dados do cliente quando estiverem disponíveis pela consulta
   useEffect(() => {
     if (clientData && typeof clientData === 'object') {
       // Verificar se os campos necessários existem antes de acessá-los
@@ -104,6 +125,7 @@ export function ClientAvatar({ name, logoUrl, client_id, className = "", size = 
         </>
       ) : null}
       <AvatarFallback 
+        className={fallbackClassName}
         style={{ 
           backgroundColor, 
           color: 'white',
