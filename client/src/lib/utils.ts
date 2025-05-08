@@ -339,6 +339,37 @@ export function formatFileSize(sizeInBytes: number | null | undefined): string {
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
+/**
+ * Formata uma data para o formato brasileiro com opções de padrão
+ * @param date Data a ser formatada
+ * @param formatStr String de formato (padrão é dd/MM/yyyy)
+ * @returns Data formatada de acordo com o locale pt-BR
+ */
+export function formatDateToPtBr(date: Date | string | null | undefined, formatStr: string = 'dd/MM/yyyy'): string {
+  if (!date) return '';
+  
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  
+  if (!isValid(dateObj)) return '';
+  
+  return format(dateObj, formatStr, { locale: ptBR });
+}
+
+/**
+ * Formata o tamanho de um arquivo para exibição
+ * @param bytes Tamanho em bytes
+ * @returns String formatada (ex: "2.5 MB")
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+  
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
 export function findClientById(clients: Client[], id: number): Client | undefined {
   return clients.find(client => client.id === id);
 }

@@ -434,6 +434,45 @@ export const insertEventSchema = eventBaseSchema.extend({
   )
 });
 
+// Schema para documentos de cliente
+const clientDocumentBaseSchema = createInsertSchema(clientDocuments).omit({ 
+  id: true, 
+  upload_date: true,
+  file_url: true,
+  file_key: true
+});
+
+export const insertClientDocumentSchema = clientDocumentBaseSchema.extend({
+  file_name: z.string().min(1, "Nome do arquivo é obrigatório"),
+  client_id: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+  uploaded_by: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+});
+
+// Schema para reuniões de cliente
+const clientMeetingBaseSchema = createInsertSchema(clientMeetings).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+  related_event_id: true
+});
+
+export const insertClientMeetingSchema = clientMeetingBaseSchema.extend({
+  client_id: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+  organized_by: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ),
+  meeting_date: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  duration_minutes: z.coerce.number().int().min(15, { message: "A duração mínima é de 15 minutos" }),
+});
+
 // Select types
 export type User = typeof users.$inferSelect;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -479,6 +518,8 @@ export type InsertClientInteraction = z.infer<typeof insertClientInteractionSche
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
+export type InsertClientMeeting = z.infer<typeof insertClientMeetingSchema>;
 
 // Definição de relações
 export const usersRelations = relations(users, ({ many, one }) => ({
