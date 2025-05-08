@@ -1,7 +1,7 @@
 import { FC } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, FileSpreadsheet, Download } from 'lucide-react';
+import { FileText, FileSpreadsheet, FileImage, Download, File } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -42,7 +42,19 @@ const RecentDocuments: FC<RecentDocumentsProps> = ({
       return <FileSpreadsheet className={iconClassName} />;
     }
     
-    return <FileText className={iconClassName} />;
+    if (type.includes('image') || type.includes('jpg') || type.includes('jpeg') || type.includes('png') || type.includes('gif')) {
+      return <FileImage className={iconClassName} />;
+    }
+    
+    if (type.includes('pdf')) {
+      return <FileText className={iconClassName} />;
+    }
+    
+    if (type.includes('document') || type.includes('doc') || type.includes('docx')) {
+      return <FileText className={iconClassName} />;
+    }
+    
+    return <File className={iconClassName} />;
   };
 
   // Determinar a cor de fundo baseada no tipo de arquivo

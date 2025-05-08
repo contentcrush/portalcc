@@ -41,6 +41,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import RecentDocuments from "@/components/RecentDocuments";
 import {
   Dialog,
   DialogContent,
@@ -733,6 +734,30 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
         {/* Right sidebar */}
         <div className="space-y-6">
+          {/* Documentos Recentes */}
+          <RecentDocuments 
+            documents={financialDocuments?.map(doc => ({
+              id: doc.id.toString(),
+              name: doc.document_type === 'invoice' 
+                ? `Fatura_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'contract'
+                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'proposal'
+                ? `Proposta_${doc.document_number || doc.id}.pdf`
+                : `Documento_${doc.document_number || doc.id}.pdf`,
+              size: `${Math.floor(200 + Math.random() * 500)} KB`,
+              type: doc.document_type === 'invoice' 
+                ? 'pdf' 
+                : doc.document_type === 'contract' 
+                ? 'pdf'
+                : doc.document_type === 'spreadsheet'
+                ? 'xlsx'
+                : 'pdf',
+              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
+            })).slice(0, 4) || []}
+            viewAllHref="#documentos"
+          />
+
           {/* KPIs */}
           <Card className="bg-white">
             <CardContent className="pt-6">
@@ -824,80 +849,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             </CardContent>
           </Card>
           
-          {/* Documents section */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium uppercase text-gray-500">
-                  DOCUMENTOS RECENTES
-                </CardTitle>
-                <Button variant="ghost" size="sm" className="h-8 text-xs">
-                  Ver todos
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-red-100 text-red-600 rounded mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Contrato_BancoAzul_2025.pdf</p>
-                    <p className="text-xs text-gray-500">323 KB</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Proposta_Videos_Redes.pdf</p>
-                    <p className="text-xs text-gray-500">1.5 MB</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-green-100 text-green-600 rounded mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Orçamento_Detalhado.xlsx</p>
-                    <p className="text-xs text-gray-500">258 KB</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-yellow-100 text-yellow-600 rounded mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Storyboard_Campanha.pdf</p>
-                    <p className="text-xs text-gray-500">4.2 MB</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+
           
           {/* Upcoming meetings */}
           <Card>
