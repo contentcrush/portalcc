@@ -70,6 +70,7 @@ const projectFormSchema = insertProjectSchema.extend({
   priority: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   complexity: z.enum(["simples", "moderada", "complexa", "muito_complexa"]).default("moderada"),
   team_members: z.array(z.number()).optional(),
+  team_members_roles: z.record(z.string(), z.string()).optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
