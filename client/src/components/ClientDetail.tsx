@@ -734,30 +734,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
 
         {/* Right sidebar */}
         <div className="space-y-6">
-          {/* Documentos Recentes */}
-          <RecentDocuments 
-            documents={financialDocuments?.map(doc => ({
-              id: doc.id.toString(),
-              name: doc.document_type === 'invoice' 
-                ? `Fatura_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'contract'
-                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'proposal'
-                ? `Proposta_${doc.document_number || doc.id}.pdf`
-                : `Documento_${doc.document_number || doc.id}.pdf`,
-              size: `${Math.floor(200 + Math.random() * 500)} KB`,
-              type: doc.document_type === 'invoice' 
-                ? 'pdf' 
-                : doc.document_type === 'contract' 
-                ? 'pdf'
-                : doc.document_type === 'spreadsheet'
-                ? 'xlsx'
-                : 'pdf',
-              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
-            })).slice(0, 4) || []}
-            viewAllHref="#documentos"
-          />
-
           {/* KPIs */}
           <Card className="bg-white">
             <CardContent className="pt-6">
@@ -876,6 +852,30 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Documentos Recentes */}
+          <RecentDocuments 
+            documents={financialDocuments?.map(doc => ({
+              id: doc.id.toString(),
+              name: doc.document_type === 'invoice' 
+                ? `Fatura_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'contract'
+                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
+                : doc.document_type === 'proposal'
+                ? `Proposta_${doc.document_number || doc.id}.pdf`
+                : `Documento_${doc.document_number || doc.id}.pdf`,
+              size: `${Math.floor(200 + Math.random() * 500)} KB`,
+              type: doc.document_type === 'invoice' 
+                ? 'pdf' 
+                : doc.document_type === 'contract' 
+                ? 'pdf'
+                : doc.document_type === 'spreadsheet'
+                ? 'xlsx'
+                : 'pdf',
+              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
+            })).slice(0, 4) || []}
+            viewAllHref="#documentos"
+          />
         </div>
       </div>
 
