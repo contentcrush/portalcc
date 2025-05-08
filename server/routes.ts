@@ -800,11 +800,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Gerar automaticamente um documento financeiro (fatura a receber) se o projeto tem orçamento
       if (project.budget && project.budget > 0) {
-        const dueDate = project.endDate ? new Date(project.endDate) : new Date();
-        // Se a data de fim já passou, definir o vencimento para 15 dias a partir de hoje
-        if (dueDate < new Date()) {
-          dueDate.setDate(dueDate.getDate() + 15);
+        // Calcular data de vencimento baseada no prazo de pagamento
+        let dueDate = new Date();
+        
+        if (project.endDate) {
+          // Se tiver data de fim, usamos ela como referência
+          dueDate = new Date(project.endDate);
+          
+          // Se a data de fim já passou, definir o início como hoje
+          if (dueDate < new Date()) {
+            dueDate = new Date();
+          }
         }
+        
+        // Adicionar dias do prazo de pagamento (ou usar 30 como padrão)
+        const paymentTerm = project.payment_term || 30;
+        dueDate.setDate(dueDate.getDate() + paymentTerm);
+        
+        console.log(`[Sistema] Criando fatura com prazo de pagamento de ${paymentTerm} dias. Vencimento: ${dueDate.toISOString()}`);
         
         const financialDocument = await storage.createFinancialDocument({
           project_id: project.id,
@@ -813,7 +826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: project.budget,
           due_date: dueDate,
           status: "pending",
-          description: `Fatura referente ao projeto: ${project.name}`
+          description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
         });
         
         console.log(`[Sistema] Documento financeiro ID:${financialDocument.id} gerado automaticamente para o projeto ID:${project.id}`);
