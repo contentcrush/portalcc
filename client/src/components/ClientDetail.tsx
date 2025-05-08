@@ -1659,7 +1659,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     <FormItem className="flex flex-row items-end space-x-3 space-y-0 rounded-md p-4">
                       <FormControl>
                         <Checkbox
-                          checked={field.value}
+                          checked={field.value || false}
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
