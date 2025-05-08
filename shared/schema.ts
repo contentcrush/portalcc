@@ -319,7 +319,9 @@ export const insertProjectSchema = projectBaseSchema.extend({
     message: "Prazo de pagamento deve ser 30, 60 ou 75 dias"
   }),
   // Lista de IDs dos usuários que farão parte da equipe
-  team_members: z.array(z.number()).optional()
+  team_members: z.array(z.number()).optional(),
+  // Mapa de funções para cada membro da equipe (chave: userId, valor: função)
+  team_members_roles: z.record(z.string(), z.string()).optional()
 });
 // Criamos um schema base e depois estendemos para forçar a conversão do project_id para número
 const projectMemberBaseSchema = createInsertSchema(projectMembers).omit({ id: true });

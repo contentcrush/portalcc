@@ -828,8 +828,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects", authenticateJWT, requirePermission('manage_projects'), validateBody(insertProjectSchema), async (req, res) => {
     try {
-      // Extrair os membros da equipe do corpo da requisição
-      const { team_members, ...projectData } = req.body;
+      // Extrair os membros da equipe e suas funções do corpo da requisição
+      const { team_members, team_members_roles, ...projectData } = req.body;
       
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const project = await storage.createProject(projectData);
@@ -837,10 +837,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Adicionar membros da equipe, se fornecidos
       if (team_members && team_members.length > 0) {
         for (const userId of team_members) {
+          // Obter a função do membro, se existir
+          const memberRole = team_members_roles && team_members_roles[userId] 
+            ? team_members_roles[userId] 
+            : 'member';
+          
           await storage.addProjectMember({
             project_id: project.id,
             user_id: userId,
-            role: 'member'
+            role: memberRole
           });
         }
         
@@ -889,8 +894,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Extrair os membros da equipe do corpo da requisição
-      const { team_members, ...projectData } = req.body;
+      // Extrair os membros da equipe e suas funções do corpo da requisição
+      const { team_members, team_members_roles, ...projectData } = req.body;
       
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, projectData);
@@ -912,13 +917,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.removeProjectMember(id, userId);
         }
         
-        // Adicionar novos membros à equipe
+        // Adicionar novos membros à equipe com suas funções
         for (const userId of membersToAdd) {
+          // Obter a função do membro, se existir
+          const memberRole = team_members_roles && team_members_roles[userId] 
+            ? team_members_roles[userId] 
+            : 'member';
+            
           await storage.addProjectMember({
             project_id: id,
             user_id: userId,
-            role: 'member'
+            role: memberRole
           });
+        }
+        
+        // Atualizar funções dos membros existentes que permaneceram na equipe
+        const membersToUpdate = team_members.filter(userId => 
+          currentMemberIds.includes(userId) && 
+          team_members_roles && 
+          team_members_roles[userId]
+        );
+        
+        for (const userId of membersToUpdate) {
+          // Encontrar o membro na lista atual
+          const currentMember = currentMembers.find(member => member.user_id === userId);
+          
+          // Se a função mudou, atualizar removendo e adicionando novamente
+          if (currentMember && team_members_roles && 
+              team_members_roles[userId] && 
+              currentMember.role !== team_members_roles[userId]) {
+            
+            await storage.removeProjectMember(id, userId);
+            await storage.addProjectMember({
+              project_id: id,
+              user_id: userId,
+              role: team_members_roles[userId]
+            });
+            
+            console.log(`[Sistema] Função do membro ${userId} atualizada para ${team_members_roles[userId]}`);
+          }
         }
         
         console.log(`[Sistema] Equipe do projeto ID:${id} atualizada: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
@@ -1008,8 +1045,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
-      // Extrair os membros da equipe do corpo da requisição
-      const { team_members, ...projectData } = req.body;
+      // Extrair os membros da equipe e suas funções do corpo da requisição
+      const { team_members, team_members_roles, ...projectData } = req.body;
       
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, projectData);
@@ -1031,13 +1068,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.removeProjectMember(id, userId);
         }
         
-        // Adicionar novos membros à equipe
+        // Adicionar novos membros à equipe com suas funções
         for (const userId of membersToAdd) {
+          // Obter a função do membro, se existir
+          const memberRole = team_members_roles && team_members_roles[userId] 
+            ? team_members_roles[userId] 
+            : 'member';
+            
           await storage.addProjectMember({
             project_id: id,
             user_id: userId,
-            role: 'member'
+            role: memberRole
           });
+        }
+        
+        // Atualizar funções dos membros existentes que permaneceram na equipe
+        const membersToUpdate = team_members.filter(userId => 
+          currentMemberIds.includes(userId) && 
+          team_members_roles && 
+          team_members_roles[userId]
+        );
+        
+        for (const userId of membersToUpdate) {
+          // Encontrar o membro na lista atual
+          const currentMember = currentMembers.find(member => member.user_id === userId);
+          
+          // Se a função mudou, atualizar removendo e adicionando novamente
+          if (currentMember && team_members_roles && 
+              team_members_roles[userId] && 
+              currentMember.role !== team_members_roles[userId]) {
+            
+            await storage.removeProjectMember(id, userId);
+            await storage.addProjectMember({
+              project_id: id,
+              user_id: userId,
+              role: team_members_roles[userId]
+            });
+            
+            console.log(`[Sistema] Função do membro ${userId} atualizada para ${team_members_roles[userId]}`);
+          }
         }
         
         console.log(`[Sistema] Equipe do projeto ID:${id} atualizada via PUT: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
