@@ -90,7 +90,7 @@ export function FileUpload({
                 Arraste e solte arquivos aqui, ou clique para selecionar
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Até {maxFiles} arquivos &bull; Máximo {formatBytes(maxSize)} por arquivo
+                Até {maxFiles} arquivos &bull; Máximo {formatFileSize(maxSize)} por arquivo
               </p>
             </>
           )}
@@ -114,7 +114,7 @@ export function FileUpload({
                       {file.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatBytes(file.size)}
+                      {formatFileSize(file.size)}
                     </p>
                   </div>
                 </div>
