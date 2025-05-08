@@ -16,6 +16,7 @@ import Calendar from "@/pages/calendar";
 import Team from "@/pages/team";
 import UserProfile from "@/pages/user-profile";
 import Settings from "@/pages/settings";
+import TestUpload from "@/pages/test-upload";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
@@ -51,6 +52,7 @@ function Router() {
       <ProtectedRoute path="/team" component={Team} />
       <ProtectedRoute path="/team/user/:id" component={UserProfile} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/test-upload" component={TestUpload} />
       <Route component={NotFound} />
     </Switch>
   );
