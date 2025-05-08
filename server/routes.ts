@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients/:id/contacts", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientContactSchema), async (req, res) => {
+  app.post("/api/clients/:id/contacts", authenticateJWT, requirePermission('manage_clients'), validateBody(insertClientContactSchema.omit({ client_id: true })), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
       
