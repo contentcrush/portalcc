@@ -64,6 +64,9 @@ const projectFormSchema = insertProjectSchema.extend({
   // Transforme as datas para o formato ISO string ao validar
   startDate: z.date().nullable().optional(),
   endDate: z.date().nullable().optional(),
+  payment_term: z.number().default(30).refine(val => [30, 60, 75].includes(val), {
+    message: "Prazo de pagamento deve ser 30, 60 ou 75 dias"
+  }),
   priority: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   complexity: z.enum(["simples", "moderada", "complexa", "muito_complexa"]).default("moderada"),
   team_members: z.array(z.number()).optional(),
@@ -97,6 +100,7 @@ export function ProjectFormDialog() {
       budget: projectToEdit?.budget || undefined,
       startDate: projectToEdit?.startDate ? new Date(projectToEdit.startDate) : null,
       endDate: projectToEdit?.endDate ? new Date(projectToEdit.endDate) : null,
+      payment_term: projectToEdit?.payment_term || 30,
       priority: projectToEdit?.priority || "media",
       complexity: projectToEdit?.complexity || "moderada",
       team_members: projectToEdit?.team_members || [],
@@ -115,6 +119,7 @@ export function ProjectFormDialog() {
         budget: projectToEdit.budget || undefined,
         startDate: projectToEdit.startDate ? new Date(projectToEdit.startDate) : null,
         endDate: projectToEdit.endDate ? new Date(projectToEdit.endDate) : null,
+        payment_term: projectToEdit.payment_term || 30,
         priority: projectToEdit.priority || "media",
         complexity: projectToEdit.complexity || "moderada",
         team_members: projectToEdit.team_members || [],
@@ -578,33 +583,65 @@ export function ProjectFormDialog() {
                     />
                   </div>
                   
-                  <FormField
-                    control={form.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Orçamento (R$)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0,00" 
-                            value={field.value || ""}
-                            name={field.name}
-                            ref={field.ref}
-                            onBlur={field.onBlur}
-                            onChange={(e) => {
-                              const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          O valor total do orçamento para este projeto
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="budget"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Orçamento (R$)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0,00" 
+                              value={field.value || ""}
+                              name={field.name}
+                              ref={field.ref}
+                              onBlur={field.onBlur}
+                              onChange={(e) => {
+                                const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange(value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            O valor total do orçamento para este projeto
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="payment_term"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prazo de Pagamento</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
+                            defaultValue="30"
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o prazo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="30">30 dias</SelectItem>
+                              <SelectItem value="60">60 dias</SelectItem>
+                              <SelectItem value="75">75 dias</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Prazo para pagamento a partir da data de faturamento
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <FormField
                     control={form.control}

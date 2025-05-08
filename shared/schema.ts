@@ -107,6 +107,7 @@ export const projects = pgTable("projects", {
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  payment_term: integer("payment_term").default(30), // Prazo de pagamento em dias: 30, 60 ou 75
   progress: integer("progress").default(0),
   thumbnail: text("thumbnail"),
   creation_date: timestamp("creation_date").defaultNow(),
@@ -311,7 +312,12 @@ export const insertProjectSchema = projectBaseSchema.extend({
   ).nullable().optional(),
   endDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
     val === null ? null : typeof val === 'string' ? new Date(val) : val
-  ).nullable().optional()
+  ).nullable().optional(),
+  payment_term: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseInt(val, 10) : val
+  ).default(30).refine(val => [30, 60, 75].includes(val), {
+    message: "Prazo de pagamento deve ser 30, 60 ou 75 dias"
+  })
 });
 // Criamos um schema base e depois estendemos para forçar a conversão do project_id para número
 const projectMemberBaseSchema = createInsertSchema(projectMembers).omit({ id: true });
