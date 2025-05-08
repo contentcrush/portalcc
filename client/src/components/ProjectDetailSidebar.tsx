@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
@@ -54,9 +54,28 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { openProjectForm, setProjectToEdit } = useProjectForm();
+  const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Estados para controlar os diálogos
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  
+  // Adiciona um event listener para detectar cliques fora da barra lateral
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Verifica se o clique foi fora da barra lateral
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+    
+    // Adiciona o event listener ao body
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Limpa o event listener ao desmontar o componente
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
   
   // Funções para navegação
   const handleManageTasks = () => {
@@ -296,7 +315,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
 
   if (isLoadingProject) {
     return (
-      <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6 flex items-center justify-center">
+      <div ref={sidebarRef} className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -304,7 +323,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
 
   if (!project) {
     return (
-      <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6">
+      <div ref={sidebarRef} className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-transform duration-300 z-20 border-l border-gray-200 p-6">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="font-semibold text-lg">Projeto não encontrado</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -316,7 +335,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-all duration-300 z-20 border-l border-gray-200 overflow-y-auto">
+    <div ref={sidebarRef} className="fixed inset-y-0 right-0 bg-white shadow-lg w-96 transform transition-all duration-300 z-20 border-l border-gray-200 overflow-y-auto">
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <h2 className="font-semibold text-lg">DETALHES DO PROJETO</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
