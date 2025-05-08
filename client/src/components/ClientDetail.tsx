@@ -537,7 +537,53 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </CardContent>
         </Card>
         
-        {/* Removido os cards de KPIs/métricas financeiras */}
+        {/* KPI Cards - 3 colunas no desktop, empilhado no mobile */}
+        <Card className="lg:col-span-1">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-500">Projetos Totais</h3>
+                <p className="text-2xl font-bold">{projects?.length || 0}</p>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-500">Valor Faturado</h3>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+                <div className="text-xs text-green-600">+ 30% do anterior</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="lg:col-span-1">
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Tempo de Retenção</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">0.1 anos</p>
+                <Badge className="mt-1 bg-amber-100 text-amber-800">Cliente desde {formatDate(client.since)}</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="lg:col-span-1">
+          <CardContent className="p-4 sm:p-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Status Financeiro</h3>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium">{formatCurrency(pendingRevenue)} a receber</span>
+                <span className="text-xs text-red-600">{100 - percentPaidRevenue}% do total</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full" style={{ width: `${percentPaidRevenue}%` }} />
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span>{formatCurrency(paidRevenue)} pago</span>
+                <span>{percentPaidRevenue}% do total</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
         {/* Projects section - Wider layout */}
         <div className="col-span-2 space-y-6">
