@@ -64,7 +64,6 @@ const projectFormSchema = insertProjectSchema.extend({
   // Transforme as datas para o formato ISO string ao validar
   startDate: z.date().nullable().optional(),
   endDate: z.date().nullable().optional(),
-  primary_area: z.string().optional(),
   priority: z.enum(["baixa", "media", "alta", "urgente"]).default("media"),
   complexity: z.enum(["simples", "moderada", "complexa", "muito_complexa"]).default("moderada"),
   team_members: z.array(z.number()).optional(),
@@ -98,7 +97,6 @@ export function ProjectFormDialog() {
       budget: projectToEdit?.budget || undefined,
       startDate: projectToEdit?.startDate ? new Date(projectToEdit.startDate) : null,
       endDate: projectToEdit?.endDate ? new Date(projectToEdit.endDate) : null,
-      primary_area: projectToEdit?.primary_area || "",
       priority: projectToEdit?.priority || "media",
       complexity: projectToEdit?.complexity || "moderada",
       team_members: projectToEdit?.team_members || [],
@@ -117,7 +115,6 @@ export function ProjectFormDialog() {
         budget: projectToEdit.budget || undefined,
         startDate: projectToEdit.startDate ? new Date(projectToEdit.startDate) : null,
         endDate: projectToEdit.endDate ? new Date(projectToEdit.endDate) : null,
-        primary_area: projectToEdit.primary_area || "",
         priority: projectToEdit.priority || "media",
         complexity: projectToEdit.complexity || "moderada",
         team_members: projectToEdit.team_members || [],
@@ -380,34 +377,7 @@ export function ProjectFormDialog() {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="primary_area"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Área Principal</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a área principal" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="design">Design</SelectItem>
-                            <SelectItem value="video">Vídeo</SelectItem>
-                            <SelectItem value="social">Mídias Sociais</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="audio">Áudio</SelectItem>
-                            <SelectItem value="photo">Fotografia</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                 </TabsContent>
                 
                 {/* Tab: Prioridade e Complexidade */}
