@@ -228,6 +228,24 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
     }
   };
 
+  // Handler para detectar Ctrl+Enter ou Cmd+Enter para submissão rápida
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (formStep === 1) {
+        form.handleSubmit(onSubmit)();
+      }
+    }
+  }, [formStep, form]);
+  
+  // Adicionar e remover o event listener quando o componente é montado/desmontado
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     // Validar manualmente os campos obrigatórios
     if (!data.name || !data.type) {
@@ -583,8 +601,8 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
               </Button>
             ) : (
               <Button 
-                type="submit" 
-                form="client-form"
+                type="button" 
+                onClick={() => form.handleSubmit(onSubmit)()}
                 disabled={createClientMutation.isPending}
                 className="w-full h-14 text-base font-medium"
               >
