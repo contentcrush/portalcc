@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash, Eye, Download, Upload, FileText, FileImage, FileArchive, RefreshCcw, X } from 'lucide-react';
+import { Trash, Eye, Download, Upload, FileText, FileImage, FileArchive, RefreshCcw, X, AlertTriangle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -16,7 +16,18 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogDescription,
+  DialogClose,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FileUpload } from '@/components/ui/file-upload';
 
 interface ClientFile {
@@ -39,6 +50,8 @@ interface ClientFilesProps {
 export default function ClientFiles({ clientId, clientName }: ClientFilesProps) {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [viewFile, setViewFile] = useState<ClientFile | null>(null);
+  const [fileToDelete, setFileToDelete] = useState<ClientFile | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Buscar arquivos do cliente
@@ -119,8 +132,15 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
   });
 
   const handleDeleteFile = (file: ClientFile) => {
-    if (confirm(`Tem certeza que deseja excluir o arquivo "${file.name}"?`)) {
-      deleteMutation.mutate(file.id);
+    setFileToDelete(file);
+    setConfirmDeleteOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    if (fileToDelete) {
+      deleteMutation.mutate(fileToDelete.id);
+      setConfirmDeleteOpen(false);
+      setFileToDelete(null);
     }
   };
 
@@ -208,139 +228,187 @@ export default function ClientFiles({ clientId, clientName }: ClientFilesProps) 
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
-            <FileText className="mr-2 h-5 w-5" />
-            Arquivos do Cliente
-          </div>
-          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="ml-auto">
-                <Upload className="mr-2 h-4 w-4" />
-                Adicionar Arquivos
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <DialogHeader className="mb-4">
-                <DialogTitle>Fazer upload de arquivos</DialogTitle>
-                <DialogDescription>
-                  Arraste arquivos para esta área ou clique para selecionar arquivos do seu dispositivo.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-2">
-                <FileUpload
-                  onUpload={handleUpload}
-                  isUploading={uploadMutation.isPending}
-                  maxFiles={5}
-                  maxSize={10 * 1024 * 1024} // 10MB
-                  accept={{
-                    'application/pdf': ['.pdf'],
-                    'application/msword': ['.doc'],
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                    'application/vnd.ms-excel': ['.xls'],
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-                    'application/vnd.ms-powerpoint': ['.ppt'],
-                    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-                    'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
-                    'text/plain': ['.txt'],
-                    'application/zip': ['.zip'],
-                    'application/x-zip-compressed': ['.zip'],
-                    'application/x-rar-compressed': ['.rar'],
-                    'application/json': ['.json'],
-                  }}
-                />
-              </div>
-              <DialogFooter className="mt-6">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setUploadDialogOpen(false)}
-                  disabled={uploadMutation.isPending}
-                >
-                  Cancelar
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <FileText className="mr-2 h-5 w-5" />
+              Arquivos do Cliente
+            </div>
+            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="ml-auto">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Adicionar Arquivos
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardTitle>
-      </CardHeader>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="mb-4">
+                  <DialogTitle>Fazer upload de arquivos</DialogTitle>
+                  <DialogDescription>
+                    Arraste arquivos para esta área ou clique para selecionar arquivos do seu dispositivo.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-2">
+                  <FileUpload
+                    onUpload={handleUpload}
+                    isUploading={uploadMutation.isPending}
+                    maxFiles={5}
+                    maxSize={10 * 1024 * 1024} // 10MB
+                    accept={{
+                      'application/pdf': ['.pdf'],
+                      'application/msword': ['.doc'],
+                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                      'application/vnd.ms-excel': ['.xls'],
+                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                      'application/vnd.ms-powerpoint': ['.ppt'],
+                      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+                      'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                      'text/plain': ['.txt'],
+                      'application/zip': ['.zip'],
+                      'application/x-zip-compressed': ['.zip'],
+                      'application/x-rar-compressed': ['.rar'],
+                      'application/json': ['.json'],
+                    }}
+                  />
+                </div>
+                <DialogFooter className="mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setUploadDialogOpen(false)}
+                    disabled={uploadMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardTitle>
+        </CardHeader>
 
-      <CardContent>
-        {files.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed rounded-md">
-            <FileText className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-lg font-medium">Nenhum arquivo encontrado</p>
-            <p className="text-sm text-muted-foreground mt-1">Adicione arquivos para este cliente</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => setUploadDialogOpen(true)}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Fazer Upload
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {files.map((file) => (
-              <div 
-                key={file.id}
-                className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
+        <CardContent>
+          {files.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed rounded-md">
+              <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-lg font-medium">Nenhum arquivo encontrado</p>
+              <p className="text-sm text-muted-foreground mt-1">Adicione arquivos para este cliente</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setUploadDialogOpen(true)}
               >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="flex-shrink-0 h-10 w-10 bg-muted rounded-md flex items-center justify-center">
-                    {getFileIcon(file.type)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate" title={file.name}>
-                      {file.name}
-                    </p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <span className="mr-2">{formatFileSize(file.size)}</span>
-                      <span>
-                        {file.upload_date && formatDistanceToNow(new Date(file.upload_date), {
-                          addSuffix: true,
-                          locale: ptBR
-                        })}
-                      </span>
+                <Upload className="mr-2 h-4 w-4" />
+                Fazer Upload
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {files.map((file) => (
+                <div 
+                  key={file.id}
+                  className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex-shrink-0 h-10 w-10 bg-muted rounded-md flex items-center justify-center">
+                      {getFileIcon(file.type)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate" title={file.name}>
+                        {file.name}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <span className="mr-2">{formatFileSize(file.size)}</span>
+                        <span>
+                          {file.upload_date && formatDistanceToNow(new Date(file.upload_date), {
+                            addSuffix: true,
+                            locale: ptBR
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleViewFile(file)}
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownloadFile(file)}
+                      title="Baixar"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteFile(file)}
+                      title="Excluir"
+                    >
+                      <Trash className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewFile(file)}
-                    title="Visualizar"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDownloadFile(file)}
-                    title="Baixar"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteFile(file)}
-                    title="Excluir"
-                  >
-                    <Trash className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
-        Total: {files.length} arquivo{files.length !== 1 ? 's' : ''}
-      </CardFooter>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="text-xs text-muted-foreground">
+          Total: {files.length} arquivo{files.length !== 1 ? 's' : ''}
+        </CardFooter>
+      </Card>
+
+      {/* Diálogo de confirmação de exclusão */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirmar exclusão
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {fileToDelete && (
+                <>
+                  Tem certeza que deseja excluir o arquivo <span className="font-medium">{fileToDelete.name}</span>?
+                  <br />
+                  Esta ação não poderá ser desfeita.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteMutation.isPending}
+              onClick={() => setFileToDelete(null)}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Excluir
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
