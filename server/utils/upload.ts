@@ -2,86 +2,89 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
+import crypto from 'crypto';
+
+// Pasta de upload de arquivos
+const UPLOAD_FOLDER = './uploads';
 
 // Certificar que a pasta de uploads existe
-const uploadDir = path.join(process.cwd(), 'uploads');
-const clientFilesDir = path.join(uploadDir, 'client_files');
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+if (!fs.existsSync(UPLOAD_FOLDER)) {
+  fs.mkdirSync(UPLOAD_FOLDER, { recursive: true });
 }
 
-if (!fs.existsSync(clientFilesDir)) {
-  fs.mkdirSync(clientFilesDir);
-}
-
-// Configuração de armazenamento para Multer
+// Configuração de armazenamento
 const storage = multer.diskStorage({
   destination: function (req: Request, file: Express.Multer.File, cb) {
+    // Criar pastas específicas para cada cliente
     const clientId = req.params.clientId;
-    const clientDir = path.join(clientFilesDir, clientId);
+    const clientFolder = path.join(UPLOAD_FOLDER, `client_${clientId}`);
     
-    // Criar pasta específica para o cliente se não existir
-    if (!fs.existsSync(clientDir)) {
-      fs.mkdirSync(clientDir, { recursive: true });
+    if (!fs.existsSync(clientFolder)) {
+      fs.mkdirSync(clientFolder, { recursive: true });
     }
     
-    cb(null, clientDir);
+    cb(null, clientFolder);
   },
   filename: function (req: Request, file: Express.Multer.File, cb) {
-    // Gerar nome de arquivo único para evitar sobrescrita
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.originalname.replace(ext, '') + '-' + uniqueSuffix + ext);
+    // Gerar nome de arquivo único para evitar colisões
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
+    const fileExt = path.extname(file.originalname);
+    cb(null, `${path.basename(file.originalname, fileExt)}-${uniqueSuffix}${fileExt}`);
   }
 });
 
 // Filtro para tipos de arquivo permitidos
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Tipos de arquivo permitidos
-  const allowedMimes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
+  // Tipos MIME permitidos
+  const allowedMimeTypes = [
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain'
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'text/plain',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/x-rar-compressed',
+    'application/json'
   ];
 
-  if (allowedMimes.includes(file.mimetype)) {
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Tipo de arquivo não permitido. Tipos permitidos: ${allowedMimes.join(', ')}`));
+    cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`));
   }
 };
 
-// Limites de upload
-const limits = {
-  fileSize: 10 * 1024 * 1024, // 10MB
-  files: 5 // máximo de 5 arquivos de uma vez
-};
-
-// Exportar configuração do Multer
+// Configuração do multer
 export const upload = multer({
-  storage,
-  fileFilter,
-  limits
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  }
 });
 
-// Helper para excluir arquivos
+// Função para excluir um arquivo
 export const deleteFile = (filePath: string): Promise<boolean> => {
   return new Promise((resolve) => {
+    if (!fs.existsSync(filePath)) {
+      console.warn(`Arquivo não encontrado para exclusão: ${filePath}`);
+      return resolve(false);
+    }
+
     fs.unlink(filePath, (err) => {
       if (err) {
-        console.error('Erro ao excluir arquivo:', err);
-        resolve(false);
-      } else {
-        resolve(true);
+        console.error(`Erro ao excluir arquivo ${filePath}:`, err);
+        return resolve(false);
       }
+      
+      return resolve(true);
     });
   });
 };

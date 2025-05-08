@@ -1,13 +1,23 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileUpload } from '@/components/ui/file-upload';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, Trash2, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { formatDate } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Trash, Eye, Download, Upload, FileText, FileImage, FileArchive, RefreshCcw, X } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { toast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { FileUpload } from '@/components/ui/file-upload';
 
 interface ClientFile {
   id: number;
@@ -17,6 +27,8 @@ interface ClientFile {
   size: number;
   type: string;
   upload_date: string;
+  uploaded_by: number | null;
+  description: string;
 }
 
 interface ClientFilesProps {
@@ -25,246 +37,294 @@ interface ClientFilesProps {
 }
 
 export default function ClientFiles({ clientId, clientName }: ClientFilesProps) {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [fileToDelete, setFileToDelete] = useState<ClientFile | null>(null);
-  const { toast } = useToast();
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewFile, setViewFile] = useState<ClientFile | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: files = [], isLoading } = useQuery<ClientFile[]>({
+  // Buscar arquivos do cliente
+  const { data: files = [], isLoading, error } = useQuery<ClientFile[]>({
     queryKey: ['/api/clients', clientId, 'files'],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/clients/${clientId}/files`);
-      return res.json();
-    }
-  });
-
-  const uploadMutation = useMutation({
-    mutationFn: async (files: File[]) => {
-      const formData = new FormData();
-      files.forEach(file => {
-        formData.append('files', file);
-      });
-      
-      setUploading(true);
-      setProgress(0);
-      
-      const xhr = new XMLHttpRequest();
-      const promise = new Promise<ClientFile[]>((resolve, reject) => {
-        xhr.open('POST', `/api/clients/${clientId}/files`);
-        
-        // Configurar token de autenticação se necessário
-        const token = document.cookie.split('; ').find(row => row.startsWith('authToken='));
-        if (token) {
-          xhr.setRequestHeader('Authorization', `Bearer ${token.split('=')[1]}`);
-        }
-        
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setProgress(percentComplete);
-          }
-        });
-        
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.response));
-          } else {
-            reject(new Error(`Upload failed with status: ${xhr.status}`));
-          }
-          setUploading(false);
-        };
-        
-        xhr.onerror = () => {
-          reject(new Error('Network error during upload'));
-          setUploading(false);
-        };
-        
-        xhr.send(formData);
-      });
-      
-      return promise;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Arquivos enviados com sucesso",
-        description: "Os arquivos foram adicionados ao cliente",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'files'] });
+      const response = await apiRequest('GET', `/api/clients/${clientId}/files`);
+      return response.json();
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao enviar arquivos",
+        title: 'Erro ao carregar arquivos',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-      setUploading(false);
-    }
+    },
   });
 
+  // Mutação para upload de arquivos
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await apiRequest('POST', `/api/clients/${clientId}/files`, undefined, {
+        body: formData,
+        headers: {
+          // Não incluir Content-Type pois o navegador definirá o boundary correto
+        },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'files'] });
+      setUploadDialogOpen(false);
+      toast({
+        title: 'Upload realizado com sucesso',
+        description: 'Os arquivos foram adicionados ao cliente.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro no upload',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Mutação para deletar arquivo
   const deleteMutation = useMutation({
     mutationFn: async (fileId: number) => {
       await apiRequest('DELETE', `/api/clients/${clientId}/files/${fileId}`);
     },
     onSuccess: () => {
-      toast({
-        title: "Arquivo excluído",
-        description: "O arquivo foi removido com sucesso",
-        variant: "success",
-      });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'files'] });
+      toast({
+        title: 'Arquivo excluído',
+        description: 'O arquivo foi removido com sucesso.',
+      });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao excluir arquivo",
+        title: 'Erro ao excluir arquivo',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-    }
+    },
   });
 
-  const handleUpload = (selectedFiles: File[]) => {
-    uploadMutation.mutate(selectedFiles);
-  };
-
   const handleDeleteFile = (file: ClientFile) => {
-    setFileToDelete(file);
-  };
-
-  const confirmDelete = () => {
-    if (fileToDelete) {
-      deleteMutation.mutate(fileToDelete.id);
-      setFileToDelete(null);
+    if (confirm(`Tem certeza que deseja excluir o arquivo "${file.name}"?`)) {
+      deleteMutation.mutate(file.id);
     }
   };
 
   const handleViewFile = (file: ClientFile) => {
+    setViewFile(file);
+    // Abrir em uma nova aba
     window.open(`/api/clients/${clientId}/files/${file.id}/view`, '_blank');
   };
 
-  const getFileIcon = (fileType: string) => {
-    const type = fileType.split('/')[0];
-    return type;
+  const handleDownloadFile = (file: ClientFile) => {
+    window.open(`/api/clients/${clientId}/files/${file.id}/download`, '_blank');
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} bytes`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const handleUpload = (files: File[]) => {
+    if (files.length === 0) return;
+
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    uploadMutation.mutate(formData);
   };
+
+  // Função para formatar o tamanho do arquivo
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
+  };
+
+  // Função para obter o ícone baseado no tipo do arquivo
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return <FileImage className="h-5 w-5" />;
+    if (type.includes('pdf') || type.includes('document') || type.includes('text')) return <FileText className="h-5 w-5" />;
+    if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) return <FileArchive className="h-5 w-5" />;
+    return <FileText className="h-5 w-5" />;
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <FileText className="mr-2 h-5 w-5" />
+            Arquivos do Cliente
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center py-8">
+          <Spinner size="lg" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <FileText className="mr-2 h-5 w-5" />
+            Arquivos do Cliente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <X className="h-10 w-10 text-destructive mb-2" />
+            <p className="text-lg font-medium">Erro ao carregar arquivos</p>
+            <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'files'] })}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Tentar novamente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center">
-          <span>Arquivos</span>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <FileText className="mr-2 h-5 w-5" />
+            Arquivos do Cliente
+          </div>
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="ml-auto">
+                <Upload className="mr-2 h-4 w-4" />
+                Adicionar Arquivos
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Fazer upload de arquivos</DialogTitle>
+                <DialogDescription>
+                  Arraste arquivos para esta área ou clique para selecionar arquivos do seu dispositivo.
+                </DialogDescription>
+              </DialogHeader>
+              <FileUpload
+                onUpload={handleUpload}
+                isUploading={uploadMutation.isPending}
+                maxFiles={5}
+                maxSize={10 * 1024 * 1024} // 10MB
+                accept={{
+                  'application/pdf': ['.pdf'],
+                  'application/msword': ['.doc'],
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                  'application/vnd.ms-excel': ['.xls'],
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+                  'application/vnd.ms-powerpoint': ['.ppt'],
+                  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+                  'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+                  'text/plain': ['.txt'],
+                  'application/zip': ['.zip'],
+                  'application/x-zip-compressed': ['.zip'],
+                  'application/x-rar-compressed': ['.rar'],
+                  'application/json': ['.json'],
+                }}
+              />
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setUploadDialogOpen(false)}
+                  disabled={uploadMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <FileUpload
-          onUpload={handleUpload}
-          uploading={uploading}
-          progress={progress}
-          className="h-auto"
-          maxFiles={5}
-          maxSize={10 * 1024 * 1024} // 10MB
-          accept={{
-            'image/*': ['.jpeg', '.jpg', '.png', '.gif'],
-            'application/pdf': ['.pdf'],
-            'application/msword': ['.doc'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-            'application/vnd.ms-excel': ['.xls'],
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-            'text/plain': ['.txt'],
-          }}
-        />
 
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
-          </div>
-        ) : files.length > 0 ? (
-          <div className="space-y-2 mt-4">
-            <h4 className="text-sm font-medium">Arquivos do cliente</h4>
-            <div className="rounded-md border overflow-hidden">
-              <div className="divide-y">
-                {files.map((file) => (
-                  <div key={file.id} className="bg-background p-3 flex items-center justify-between">
-                    <div className="flex items-start space-x-3">
-                      <div className={`p-2 rounded-md bg-${getFileIcon(file.type)}-100 text-${getFileIcon(file.type)}-700`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                          <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{file.name}</p>
-                        <div className="flex space-x-2 text-xs text-muted-foreground">
-                          <span>{formatFileSize(file.size)}</span>
-                          <span>•</span>
-                          <span>{formatDate(file.upload_date)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleViewFile(file)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => window.open(`/api/clients/${clientId}/files/${file.id}/download`, '_self')}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteFile(file)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      <CardContent>
+        {files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed rounded-md">
+            <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-lg font-medium">Nenhum arquivo encontrado</p>
+            <p className="text-sm text-muted-foreground mt-1">Adicione arquivos para este cliente</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Fazer Upload
+            </Button>
           </div>
         ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            Nenhum arquivo enviado para este cliente.
+          <div className="space-y-4">
+            {files.map((file) => (
+              <div 
+                key={file.id}
+                className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="flex-shrink-0 h-10 w-10 bg-muted rounded-md flex items-center justify-center">
+                    {getFileIcon(file.type)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate" title={file.name}>
+                      {file.name}
+                    </p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <span className="mr-2">{formatFileSize(file.size)}</span>
+                      <span>
+                        {file.upload_date && formatDistanceToNow(new Date(file.upload_date), {
+                          addSuffix: true,
+                          locale: ptBR
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleViewFile(file)}
+                    title="Visualizar"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownloadFile(file)}
+                    title="Baixar"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteFile(file)}
+                    title="Excluir"
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
-
-      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o arquivo <strong>{fileToDelete?.name}</strong>?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CardFooter className="text-xs text-muted-foreground">
+        Total: {files.length} arquivo{files.length !== 1 ? 's' : ''}
+      </CardFooter>
     </Card>
   );
 }
