@@ -118,6 +118,7 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
       toast({
         title: "Cliente criado com sucesso",
         description: "O cliente foi adicionado à sua base de dados.",
+        variant: "success",
       });
       onOpenChange(false);
       onClientCreated?.(data.id);
@@ -156,6 +157,7 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
       toast({
         title: "Empresa encontrada",
         description: "Os dados foram preenchidos automaticamente.",
+        variant: "success",
       });
       
       // Avançar para próximo passo automaticamente
@@ -185,8 +187,8 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
     
     // Validar campos da etapa 1
     if (formStep === 0) {
-      if (!currentValues.name) {
-        form.trigger('name');
+      if (!currentValues.cnpj && !currentValues.name) {
+        form.trigger(['name', 'cnpj']);
         return;
       }
       
@@ -199,8 +201,9 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
     
     // Validar campos da etapa 2
     if (formStep === 1) {
-      if (currentValues.contactEmail) {
+      if (!currentValues.contactEmail) {
         form.trigger('contactEmail');
+        return;
       }
     }
     
@@ -226,8 +229,6 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log("Enviando dados do formulário:", data);
-    
     // Se o nome abreviado não foi preenchido, use as iniciais do nome principal
     if (!data.shortName && data.name) {
       data.shortName = getInitials(data.name);
@@ -236,19 +237,8 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
     // Aplicando eventuais transformações nos dados antes do envio
     const clientData: InsertClient = {
       ...data,
-      logo: avatarPreview || null,
-      active: true,
+      logo: avatarPreview || "",
     };
-
-    // Verificar se temos ao menos os campos obrigatórios
-    if (!clientData.name) {
-      toast({
-        title: "Erro ao criar cliente",
-        description: "O nome do cliente é obrigatório.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     createClientMutation.mutate(clientData);
   };
@@ -587,7 +577,6 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
               <Button 
                 type="submit" 
                 form="client-form"
-                onClick={() => form.handleSubmit(onSubmit)()}
                 disabled={createClientMutation.isPending}
                 className="w-full h-14 text-base font-medium"
               >
