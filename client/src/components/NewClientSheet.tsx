@@ -601,8 +601,8 @@ export function NewClientSheet({ open, onOpenChange, onClientCreated }: NewClien
               </Button>
             ) : (
               <Button 
-                type="button" 
-                onClick={() => form.handleSubmit(onSubmit)()}
+                type="submit" 
+                form="client-form"
                 disabled={createClientMutation.isPending}
                 className="w-full h-14 text-base font-medium"
               >
