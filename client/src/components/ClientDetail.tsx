@@ -91,6 +91,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isNewFinancialDocumentDialogOpen, setNewFinancialDocumentDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -127,6 +128,12 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   // Schema para validação do formulário de projeto
   const projectFormSchema = insertProjectSchema.extend({
     name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
+  });
+
+  // Schema para validação do formulário de documento financeiro
+  const financialDocumentFormSchema = insertFinancialDocumentSchema.extend({
+    document_type: z.string().min(1, "Tipo de documento é obrigatório"),
+    amount: z.coerce.number().min(0, "Valor deve ser maior que zero"),
   });
   
   // Estado para preview de imagem
@@ -166,6 +173,22 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       progress: 0,
       thumbnail: "",
     },
+  });
+  
+  // Formulário para novo documento financeiro
+  const financialDocumentForm = useForm<z.infer<typeof financialDocumentFormSchema>>({
+    resolver: zodResolver(financialDocumentFormSchema),
+    defaultValues: {
+      document_type: "",
+      document_number: "",
+      description: "",
+      amount: 0,
+      client_id: clientId,
+      project_id: undefined,
+      due_date: undefined,
+      status: "pendente",
+      paid: false,
+    }
   });
   
   // Mutation para atualizar cliente
@@ -218,6 +241,30 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     },
   });
   
+  // Mutation para criar novo documento financeiro
+  const createFinancialDocumentMutation = useMutation({
+    mutationFn: async (data: InsertFinancialDocument) => {
+      const response = await apiRequest("POST", "/api/financial-documents", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/financial-documents`] });
+      setNewFinancialDocumentDialogOpen(false);
+      financialDocumentForm.reset();
+      toast({
+        title: "Documento financeiro adicionado com sucesso",
+        description: "O documento foi adicionado à lista de documentos financeiros do cliente."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao adicionar documento financeiro",
+        description: error.message || "Ocorreu um erro ao adicionar o documento. Tente novamente.",
+        variant: "destructive"
+      });
+    },
+  });
+
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
     mutationFn: async () => {
@@ -285,6 +332,16 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       client_id: clientId,
     };
     createProjectMutation.mutate(projectData);
+  };
+  
+  // Função para submeter o formulário de documento financeiro
+  const onFinancialDocumentSubmit = (data: z.infer<typeof financialDocumentFormSchema>) => {
+    // Converter valores para o formato esperado pela API
+    const documentData: InsertFinancialDocument = {
+      ...data,
+      client_id: clientId,
+    };
+    createFinancialDocumentMutation.mutate(documentData);
   };
   
   // Função para abrir o dialog de edição preenchendo os valores do formulário
