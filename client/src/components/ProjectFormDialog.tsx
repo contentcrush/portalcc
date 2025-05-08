@@ -89,6 +89,12 @@ export function ProjectFormDialog() {
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
     queryKey: ['/api/users']
   });
+  
+  // Fetch members do projeto atual (quando estiver em modo de edição)
+  const { data: currentProjectMembers = [] } = useQuery<any[]>({
+    queryKey: [`/api/projects/${projectToEdit?.id}/members`],
+    enabled: !!projectToEdit?.id, // Só executa quando tem um projeto para editar
+  });
 
   // Configurar react-hook-form
   const form = useForm<ProjectFormValues>({
@@ -110,7 +116,7 @@ export function ProjectFormDialog() {
     }
   });
   
-  // Atualizar o formulário quando projectToEdit mudar
+  // Atualizar o formulário quando projectToEdit ou membros da equipe mudarem
   useEffect(() => {
     if (projectToEdit) {
       form.reset({
@@ -130,6 +136,24 @@ export function ProjectFormDialog() {
       });
     }
   }, [projectToEdit, form]);
+  
+  // Atualizar membros da equipe quando currentProjectMembers mudar
+  useEffect(() => {
+    if (projectToEdit && currentProjectMembers.length > 0) {
+      // Preparar dados dos membros atuais
+      const memberIds = currentProjectMembers.map(member => member.user_id);
+      
+      // Preparar funções dos membros
+      const memberRoles: Record<number, string> = {};
+      currentProjectMembers.forEach(member => {
+        memberRoles[member.user_id] = member.role;
+      });
+      
+      // Atualizar o formulário com os dados dos membros atuais sem perder outras alterações
+      form.setValue('team_members', memberIds);
+      form.setValue('team_members_roles', memberRoles);
+    }
+  }, [currentProjectMembers, projectToEdit, form]);
 
   // Mutation para criar projeto
   const createProjectMutation = useMutation({
@@ -241,6 +265,43 @@ export function ProjectFormDialog() {
   // Lidar com a submissão do formulário
   function onSubmit(data: ProjectFormValues) {
     if (projectToEdit) {
+      // Garantir que não estamos removendo membros existentes durante a edição
+      if (currentProjectMembers.length > 0) {
+        // Recuperar os IDs de usuários dos membros atuais
+        const currentMemberIds = currentProjectMembers.map(member => member.user_id);
+        
+        // Garantir que team_members existe e é um array
+        const teamMembers = Array.isArray(data.team_members) ? data.team_members : [];
+        
+        // Verificar se já existem membros na equipe que não estão no formulário
+        const missingMembers = currentMemberIds.filter(id => !teamMembers.includes(id));
+        
+        // Adicionar os membros existentes que possam estar faltando
+        if (missingMembers.length > 0) {
+          // Garantir que team_members é um array válido
+          const currentTeamMembers = Array.isArray(data.team_members) ? data.team_members : [];
+          
+          const updatedTeamMembers = [...currentTeamMembers, ...missingMembers];
+          
+          // Atualizar as funções também
+          let updatedRoles: Record<number, string> = { ...(data.team_members_roles || {}) };
+          
+          // Preservar as funções dos membros existentes
+          currentProjectMembers.forEach(member => {
+            if (missingMembers.includes(member.user_id)) {
+              updatedRoles[member.user_id] = member.role;
+            }
+          });
+          
+          // Atualizar os dados
+          data = {
+            ...data,
+            team_members: updatedTeamMembers,
+            team_members_roles: updatedRoles
+          };
+        }
+      }
+      
       updateProjectMutation.mutate(data);
     } else {
       createProjectMutation.mutate(data);
