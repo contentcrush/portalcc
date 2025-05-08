@@ -1,0 +1,32 @@
+// Função auxiliar para criar faturas com prazo de pagamento
+async function createProjectInvoice(projectId: number, clientId: number, projectName: string, budget: number, endDate: Date | null, paymentTerm: number = 30) {
+  // Calcular data de vencimento baseada no prazo de pagamento
+  let dueDate = new Date();
+  
+  if (endDate) {
+    // Se tiver data de fim, usamos ela como referência
+    dueDate = new Date(endDate);
+    
+    // Se a data de fim já passou, definir o início como hoje
+    if (dueDate < new Date()) {
+      dueDate = new Date();
+    }
+  }
+  
+  // Adicionar dias do prazo de pagamento
+  dueDate.setDate(dueDate.getDate() + paymentTerm);
+  
+  console.log(`[Sistema] Criando fatura com prazo de pagamento de ${paymentTerm} dias. Vencimento: ${dueDate.toISOString()}`);
+  
+  const financialDocument = await storage.createFinancialDocument({
+    project_id: projectId,
+    client_id: clientId,
+    document_type: "invoice",
+    amount: budget,
+    due_date: dueDate,
+    status: "pending",
+    description: `Fatura referente ao projeto: ${projectName} (Prazo: ${paymentTerm} dias)`
+  });
+  
+  return financialDocument;
+}
