@@ -218,6 +218,18 @@ export const clientContacts = pgTable("client_contacts", {
   updated_at: timestamp("updated_at"),
 });
 
+export const clientFiles = pgTable("client_files", {
+  id: serial("id").primaryKey(),
+  client_id: integer("client_id").notNull(),
+  name: text("name").notNull(),
+  path: text("path").notNull(),
+  size: integer("size").notNull(),
+  type: text("type").notNull(),
+  upload_date: timestamp("upload_date").defaultNow(),
+  uploaded_by: integer("uploaded_by"),
+  description: text("description"),
+});
+
 export const clientInteractions = pgTable("client_interactions", {
   id: serial("id").primaryKey(),
   client_id: integer("client_id").notNull(),
@@ -371,6 +383,11 @@ export const insertClientContactSchema = createInsertSchema(clientContacts).omit
   updated_at: true
 });
 
+export const insertClientFileSchema = createInsertSchema(clientFiles).omit({
+  id: true,
+  upload_date: true,
+});
+
 export const insertClientInteractionSchema = createInsertSchema(clientInteractions).omit({ id: true, date: true });
 // Schema base para documentos financeiros
 const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
@@ -422,6 +439,7 @@ export type ProjectComment = typeof projectComments.$inferSelect & {
 export type ProjectCommentReaction = typeof projectCommentReactions.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
 export type ClientContact = typeof clientContacts.$inferSelect;
+export type ClientFile = typeof clientFiles.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
@@ -442,6 +460,7 @@ export type InsertProjectComment = z.infer<typeof insertProjectCommentSchema>;
 export type InsertProjectCommentReaction = z.infer<typeof insertProjectCommentReactionSchema>;
 export type InsertTaskAttachment = z.infer<typeof insertTaskAttachmentSchema>;
 export type InsertClientContact = z.infer<typeof insertClientContactSchema>;
+export type InsertClientFile = z.infer<typeof insertClientFileSchema>;
 export type InsertClientInteraction = z.infer<typeof insertClientInteractionSchema>;
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
@@ -482,6 +501,7 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   projects: many(projects),
   clientInteractions: many(clientInteractions),
   clientContacts: many(clientContacts),
+  clientFiles: many(clientFiles),
   financialDocuments: many(financialDocuments),
   events: many(events)
 }));
