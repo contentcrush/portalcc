@@ -821,34 +821,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             </CardContent>
           </Card>
           
-          {/* Responsible internal contacts */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium uppercase text-gray-500">
-                RESPONSÁVEIS INTERNOS
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[1, 2, 3].map((_, index) => (
-                <div key={index} className="flex items-center">
-                  <img 
-                    src={`https://randomuser.me/api/portraits/${index === 0 ? 'men' : 'women'}/${index === 0 ? '32' : index === 1 ? '44' : '29'}.jpg`}
-                    alt="Responsável" 
-                    className="w-8 h-8 rounded-full mr-3" 
-                  />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {index === 0 ? 'Bruno Silva' : index === 1 ? 'Ana Oliveira' : 'Carlos Mendes'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {index === 0 ? 'Gerente de Marketing' : index === 1 ? 'Produtora' : 'Designer'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          
 
           
           {/* Upcoming meetings */}
