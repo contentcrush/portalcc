@@ -337,7 +337,16 @@ export default function DashboardNovo() {
           title="Projetos Ativos" 
           value={activeProjects.length}
           subtext={`de ${projects?.length || 0} total`}
-          change={12}
+          change={calculatePercentChange(activeProjects.length, 
+            // Calcula projetos ativos do mês anterior para comparação
+            projects.filter((p: any) => {
+              const updatedDate = new Date(p.updated_at || p.created_at || Date.now());
+              const prevMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+              const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+              return updatedDate.getMonth() === prevMonth && 
+                     updatedDate.getFullYear() === prevYear &&
+                     p.status !== 'concluido' && p.status !== 'cancelado';
+            }).length || 1)} // Evita divisão por zero
           color="green"
         />
         
@@ -345,7 +354,16 @@ export default function DashboardNovo() {
           title="Tarefas Pendentes" 
           value={pendingTasks.length}
           subtext={`${overdueTasks.length} atrasadas`}
-          change={-5}
+          change={calculatePercentChange(pendingTasks.length, 
+            // Calcula tarefas pendentes do mês anterior para comparação
+            tasks.filter((t: any) => {
+              if (t.completed) return false;
+              const updatedDate = new Date(t.updated_at || t.created_at || Date.now());
+              const prevMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+              const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+              return updatedDate.getMonth() === prevMonth && 
+                     updatedDate.getFullYear() === prevYear;
+            }).length || 1)} // Evita divisão por zero
           color="amber"
         />
         
@@ -359,7 +377,26 @@ export default function DashboardNovo() {
             return clientDate.getMonth() === today.getMonth() && 
                    clientDate.getFullYear() === today.getFullYear();
           }).length} novos este mês`}
-          change={8}
+          change={calculatePercentChange(activeClients.length, 
+            // Calcula clientes ativos do mês anterior
+            (() => {
+              const prevMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+              const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+              
+              return clients.filter((c: any) => {
+                if (c.active === false) return false;
+                
+                // Se o cliente tem data de criação e foi criado antes do final do mês anterior
+                if (c.since) {
+                  const sinceDate = new Date(c.since);
+                  const endOfPrevMonth = new Date(prevYear, prevMonth + 1, 0);
+                  return sinceDate <= endOfPrevMonth;
+                }
+                
+                return true; // Se não tiver data, considera como existente
+              }).length || 1; // Evita divisão por zero
+            })()
+          )}
           color="blue"
         />
         
@@ -617,9 +654,23 @@ export default function DashboardNovo() {
                       </h4>
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {client.active_projects ? 
-                        `${client.active_projects} projetos ativos` : 
-                        client.is_new ? "Novo cliente" : "1 projeto ativo"}
+                      {(() => {
+                        // Conta quantos projetos ativos tem este cliente
+                        const clientActiveProjects = activeProjects.filter((p: any) => p.client_id === client.id).length;
+                        
+                        if (clientActiveProjects > 0) {
+                          return `${clientActiveProjects} projeto${clientActiveProjects > 1 ? 's' : ''} ativo${clientActiveProjects > 1 ? 's' : ''}`;
+                        } else if (client.since) {
+                          const sinceDate = new Date(client.since);
+                          const daysAgo = Math.floor((today.getTime() - sinceDate.getTime()) / (1000 * 60 * 60 * 24));
+                          
+                          if (daysAgo < 30) {
+                            return "Novo cliente";
+                          }
+                        }
+                        
+                        return "Sem projetos ativos";
+                      })()}
                     </p>
                   </div>
                 </div>
