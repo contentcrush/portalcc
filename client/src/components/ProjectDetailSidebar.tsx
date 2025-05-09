@@ -66,13 +66,23 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Adiciona um event listener para detectar cliques fora da barra lateral
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      // Se o diálogo de adicionar membro estiver aberto, não fechar a barra lateral
-      if (showAddMemberDialog) {
+      // Se qualquer diálogo estiver aberto, não fechar a barra lateral
+      if (showAddMemberDialog || confirmDialogOpen) {
         return;
       }
       
       // Verifica se o clique foi fora da barra lateral
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+      // E também verifica se o alvo não é um elemento de diálogo ou modal
+      const target = event.target as HTMLElement;
+      const isDialogElement = target.closest('[role="dialog"]') || 
+                              target.closest('.alert-dialog') || 
+                              target.closest('.dialog');
+      
+      if (isDialogElement) {
+        return; // Não fechar se clicou em qualquer elemento de diálogo
+      }
+      
+      if (sidebarRef.current && !sidebarRef.current.contains(target)) {
         onClose();
       }
     }
@@ -84,7 +94,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose, showAddMemberDialog]);
+  }, [onClose, showAddMemberDialog, confirmDialogOpen]);
   
   // Funções para navegação
   const handleManageTasks = () => {
