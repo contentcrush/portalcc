@@ -359,41 +359,38 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const uploadAttachmentMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const file = formData.get('file') as File;
-      const reader = new FileReader();
       
-      return new Promise((resolve, reject) => {
-        reader.onload = async (event) => {
-          try {
-            if (!event.target || !event.target.result) {
-              throw new Error("Falha ao ler o arquivo");
-            }
-            
-            // Base64 do arquivo
-            const fileBase64 = event.target.result.toString().split(',')[1];
-            
-            // Criando um objeto com os dados necessários
-            const data = {
-              file_name: file.name,
-              file_url: `data:${file.type};base64,${fileBase64}`,
-              project_id: projectId,
-              file_size: file.size,
-              file_type: file.type
-            };
-            
-            const response = await apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
-            resolve(response);
-          } catch (error) {
-            reject(error);
+      // Cria URL temporária para facilitar manipulação
+      const tempUrl = URL.createObjectURL(file);
+      
+      // Converte para base64 para enviar ao servidor
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result) {
+            const base64String = reader.result.toString().split(',')[1];
+            resolve(base64String);
+          } else {
+            reject(new Error("Falha ao ler o arquivo"));
           }
         };
-        
-        reader.onerror = () => {
-          reject(new Error("Erro ao ler o arquivo"));
-        };
-        
-        // Inicia a leitura do arquivo como URL de dados
+        reader.onerror = () => reject(new Error("Erro ao ler o arquivo"));
         reader.readAsDataURL(file);
       });
+      
+      // Dados para enviar ao servidor
+      const data = {
+        file_name: file.name,
+        file_url: `data:${file.type};base64,${base64}`,
+        file_size: file.size,
+        file_type: file.type,
+        project_id: projectId
+      };
+      
+      // Libera URL temporária
+      URL.revokeObjectURL(tempUrl);
+      
+      return apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
@@ -408,11 +405,12 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         fileInputRef.current.value = '';
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Erro ao anexar arquivo:", error);
       setIsUploadingFile(false);
       toast({
         title: "Erro ao anexar arquivo",
-        description: error.message,
+        description: error.message || "Ocorreu um erro ao anexar o arquivo",
         variant: "destructive"
       });
     }
