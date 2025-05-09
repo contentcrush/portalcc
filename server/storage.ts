@@ -2248,6 +2248,26 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
   
+  // Project Attachments
+  async getProjectAttachments(projectId: number): Promise<ProjectAttachment[]> {
+    return await db.select().from(projectAttachments).where(eq(projectAttachments.project_id, projectId));
+  }
+  
+  async getProjectAttachment(id: number): Promise<ProjectAttachment | undefined> {
+    const [attachment] = await db.select().from(projectAttachments).where(eq(projectAttachments.id, id));
+    return attachment || undefined;
+  }
+
+  async createProjectAttachment(insertAttachment: InsertProjectAttachment): Promise<ProjectAttachment> {
+    const [attachment] = await db.insert(projectAttachments).values(insertAttachment).returning();
+    return attachment;
+  }
+
+  async deleteProjectAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(projectAttachments).where(eq(projectAttachments.id, id));
+    return true;
+  }
+  
   // Client Contacts
   async getClientContacts(clientId: number): Promise<ClientContact[]> {
     const contacts = await db.select()
