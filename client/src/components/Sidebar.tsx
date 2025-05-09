@@ -7,6 +7,7 @@ import { LucideIcon, LucideProps, LogOut } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { ProjectProgress } from "@/components/ProjectProgress";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ClientAvatar } from "@/components/ClientAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import logoImage from "@/assets/CNTN_CRUSH_no_bg.png";
 
@@ -142,7 +143,11 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                   }}
                   className="flex items-center px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
                 >
-                  <span className={cn("status-badge", getStatusColor(project.status))}></span>
+                  <ClientAvatar 
+                    client_id={project.client_id} 
+                    size="xs" 
+                    className="mr-2" 
+                  />
                   <span className="truncate">{project.name}</span>
                 </a>
                 
