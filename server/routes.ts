@@ -2954,21 +2954,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Adiciona o ID do usuário autenticado e o projeto
-      const attachmentData = {
-        file_name: req.body.file_name,
-        file_url: req.body.file_url,
-        file_size: req.body.file_size || 0,
-        file_type: req.body.file_type || "application/octet-stream",
-        project_id: projectId,
-        uploaded_by: req.user!.id
-      };
+      // Verificar se o projeto existe
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        console.error("Projeto não encontrado:", projectId);
+        return res.status(404).json({ message: "Projeto não encontrado" });
+      }
       
-      console.log("Dados de anexo preparados, enviando para storage");
-      const attachment = await storage.createProjectAttachment(attachmentData);
-      console.log("Anexo criado com sucesso, ID:", attachment.id);
-      
-      res.status(201).json(attachment);
+      try {
+        // Adiciona o ID do usuário autenticado e o projeto
+        const attachmentData = {
+          file_name: req.body.file_name,
+          file_url: req.body.file_url,
+          file_size: req.body.file_size || 0,
+          file_type: req.body.file_type || "application/octet-stream",
+          project_id: projectId,
+          uploaded_by: req.user!.id,
+          // Campos opcionais com valores default
+          encrypted: false,
+          encryption_iv: null,
+          encryption_key_id: null
+        };
+        
+        console.log("Dados de anexo preparados, enviando para storage");
+        const attachment = await storage.createProjectAttachment(attachmentData);
+        console.log("Anexo criado com sucesso, ID:", attachment.id);
+        
+        res.status(201).json(attachment);
+      } catch (dbError) {
+        console.error("Erro no banco de dados ao criar anexo:", dbError);
+        if (dbError instanceof Error) {
+          console.error("Detalhe do erro DB:", dbError.message);
+          console.error("Stack trace DB:", dbError.stack);
+        }
+        throw new Error("Erro ao salvar o anexo no banco de dados");
+      }
     } catch (error) {
       console.error("Erro ao criar anexo do projeto:", error);
       // Detalhando o erro para diagnóstico

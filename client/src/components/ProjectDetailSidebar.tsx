@@ -359,9 +359,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const uploadAttachmentMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const file = formData.get('file') as File;
-      
-      // Cria URL temporária para facilitar manipulação
-      const tempUrl = URL.createObjectURL(file);
+      console.log("Iniciando upload do arquivo:", file.name);
       
       // Converte para base64 para enviar ao servidor
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -369,30 +367,49 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         reader.onload = () => {
           if (reader.result) {
             const base64String = reader.result.toString().split(',')[1];
+            console.log("Arquivo convertido para base64, tamanho:", base64String.length);
             resolve(base64String);
           } else {
             reject(new Error("Falha ao ler o arquivo"));
           }
         };
-        reader.onerror = () => reject(new Error("Erro ao ler o arquivo"));
+        reader.onerror = (error) => {
+          console.error("Erro ao ler arquivo:", error);
+          reject(new Error("Erro ao ler o arquivo"));
+        };
         reader.readAsDataURL(file);
       });
       
       // Dados para enviar ao servidor
-      const data = {
+      const attachmentData = {
         file_name: file.name,
         file_url: `data:${file.type};base64,${base64}`,
         file_size: file.size,
         file_type: file.type,
-        project_id: projectId
+        project_id: projectId,
+        // Campos opcionais não explicitamente necessários no servidor
+        encrypted: false
       };
       
-      // Libera URL temporária
-      URL.revokeObjectURL(tempUrl);
+      console.log("Enviando dados para o servidor:", {
+        fileName: attachmentData.file_name,
+        fileType: attachmentData.file_type,
+        fileSize: attachmentData.file_size,
+        projectId: attachmentData.project_id,
+        urlLength: attachmentData.file_url.length
+      });
       
-      return apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
+      try {
+        const response = await apiRequest('POST', `/api/projects/${projectId}/attachments`, attachmentData);
+        console.log("Resposta do servidor:", response);
+        return response;
+      } catch (err) {
+        console.error("Erro na requisição:", err);
+        throw err;
+      }
     },
     onSuccess: () => {
+      console.log("Anexo enviado com sucesso!");
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
       setIsUploadingFile(false);
       toast({
