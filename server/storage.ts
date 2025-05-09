@@ -124,6 +124,12 @@ export interface IStorage {
   createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
   deleteTaskAttachment(id: number): Promise<boolean>;
   
+  // Project Attachments
+  getProjectAttachments(projectId: number): Promise<ProjectAttachment[]>;
+  getProjectAttachment(id: number): Promise<ProjectAttachment | undefined>;
+  createProjectAttachment(attachment: InsertProjectAttachment): Promise<ProjectAttachment>;
+  deleteProjectAttachment(id: number): Promise<boolean>;
+  
   
   // Client Interactions
   getClientInteractions(clientId: number): Promise<ClientInteraction[]>;
