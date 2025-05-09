@@ -436,7 +436,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Mutation para excluir anexo
   const deleteAttachmentMutation = useMutation({
     mutationFn: async (attachmentId: number) => {
-      return apiRequest('DELETE', `/api/projects/${projectId}/attachments/${attachmentId}`);
+      return apiRequest('DELETE', `/api/projects/attachments/${attachmentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
