@@ -58,6 +58,10 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   
   // Estados para controlar os diálogos
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<number | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Adiciona um event listener para detectar cliques fora da barra lateral
   useEffect(() => {
