@@ -75,10 +75,20 @@ export function formatCurrency(value: number | null | undefined): string {
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  // Convertemos para Date garantindo que está na timezone correta
+  let dateObj: Date;
+  
+  if (typeof date === "string") {
+    // Se for string, converter para Date usando parseISO
+    dateObj = parseISO(date);
+  } else {
+    // Se já for Date, fazer uma cópia para garantir que não modificamos o original
+    dateObj = new Date(date);
+  }
   
   if (!isValid(dateObj)) return "";
   
+  // Aplicar timezone local ao formatar a data
   return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
 }
 
@@ -86,7 +96,16 @@ export function formatDate(date: Date | string | null | undefined): string {
 export function formatDueDateWithDaysRemaining(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  // Convertemos para Date garantindo que está na timezone correta
+  let dateObj: Date;
+  
+  if (typeof date === "string") {
+    // Se for string, converter para Date usando parseISO
+    dateObj = parseISO(date);
+  } else {
+    // Se já for Date, fazer uma cópia para garantir que não modificamos o original
+    dateObj = new Date(date);
+  }
   
   if (!isValid(dateObj)) return "";
   
