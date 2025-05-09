@@ -14,7 +14,6 @@ import {
 import { Link } from "wouter";
 import { ProjectProgress } from "@/components/ProjectProgress";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
-import ClientAvatar from "@/components/ClientAvatar";
 
 const StatusBadge = ({ status }: { status: string }) => {
   const colorMap: Record<string, string> = {
@@ -420,55 +419,36 @@ export default function DashboardNovo() {
             </Button>
           </CardHeader>
           <CardContent className="px-6 space-y-4">
-            {activeProjects.slice(0, 3).map((project: any) => {
-              // Encontra o cliente associado a este projeto
-              const projectClient = clients.find((c: any) => c.id === project.client_id);
-              
-              return (
-                <div key={project.id} className="space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <Link href={`/projects/${project.id}`}>
-                        <h3 className="font-medium text-sm hover:text-primary cursor-pointer">
-                          {project.name}
-                        </h3>
-                      </Link>
-                      <p className="text-xs text-muted-foreground flex items-center">
-                        {projectClient && (
-                          <ClientAvatar 
-                            client={projectClient}
-                            size="xxs"
-                            className="mr-1.5"
-                          />
-                        )}
-                        {project.description?.substring(0, 40) + (project.description?.length > 40 ? "..." : "") || "Sem descrição"}
-                      </p>
-                    </div>
-                    <StatusBadge status={project.status} />
-                  </div>
-                  
+            {activeProjects.slice(0, 3).map((project: any) => (
+              <div key={project.id} className="space-y-3">
+                <div className="flex justify-between items-start">
                   <div>
-                    <ProjectProgress project={project} size="sm" />
-                    
-                    <div className="flex justify-between items-center mt-2">
-                      <div className="text-xs text-muted-foreground">
-                        {project.deadline ? (
-                          <>
-                            Prazo: {formatDate(new Date(project.deadline))}
-                            {new Date(project.deadline) < today ? (
-                              <span className="text-red-500 ml-1">(Atrasado)</span>
-                            ) : null}
-                          </>
-                        ) : "Prazo: Não definido"}
-                      </div>
-                      <div className="text-xs font-medium">
-                        {project.progress || 0}%
-                      </div>
+                    <Link href={`/projects/${project.id}`}>
+                      <h3 className="font-medium text-sm hover:text-primary cursor-pointer">
+                        {project.name}
+                      </h3>
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {project.description?.substring(0, 40) || "Sem descrição"}
+                    </p>
+                  </div>
+                  <StatusBadge status={project.status === "em_andamento" ? "em_producao" : project.status === "edicao" ? "em_edicao" : project.status} />
+                </div>
+                
+                <div>
+                  <ProjectProgress project={project} size="sm" />
+                  
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-xs text-muted-foreground">
+                      Prazo: {project.deadline ? formatDate(new Date(project.deadline)) : "Não definido"}
+                    </div>
+                    <div className="text-xs font-medium">
+                      {project.progress || 0}%
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
             
             <div className="pt-2">
               <Link href="/projects">
