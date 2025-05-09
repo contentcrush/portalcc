@@ -1,0 +1,30 @@
+Pensou por 4 segundos
+
+
+### Guia para “fuso-zero” — como manter a hora **exata e coerente** em todo o Portal CC
+
+| Camada                    | Boa prática                                                                                                                                                                                              | Como aplicar na sua stack                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Servidores / Replit**   | • Sincronizar o relógio do container com **NTP** (já é padrão).<br>• Definir `TZ=UTC` no ambiente.                                                                                                       | Em Replit basta adicionar no *Secrets* ou `.env`: `TZ=UTC`.                        |
+| **Banco (PostgreSQL)**    | • Guardar **sempre em UTC** (`timestamp with time zone`).<br>• `db.timezone = '+00:00'` no pool.                                                                                                         | Drizzle já mapeia `timestamptz`; use `now()` do banco, não do Node.                |
+| **Back-end Node**         | • Lidar internamente em UTC (`Date.toISOString()`).<br>• Nunca construir datas por string local.<br>• Cron jobs com `cron.schedule('0 2 * * *', tz:'UTC')`.                                              | Biblioteca: `luxon` ou `dayjs.utc()`; evite `moment` legado.                       |
+| **APIs / JSON**           | • Enviar datas ISO-8601 (`2025-05-02T13:00:00Z`).<br>• Nunca mandar “02/05/2025 10:00”.                                                                                                                  | `res.json({ dueDate: date.toISOString() })`.                                       |
+| **Front-end React**       | • Converter para o **timezone do usuário** só na borda:<br>`DateTime.fromISO(d).setZone(Intl.DateTimeFormat().resolvedOptions().timeZone)`.<br>• Exibir com `toLocaleDateString` + `toLocaleTimeString`. | `date-fns-tz` ou `luxon` no browser.                                               |
+| **Calendário**            | • FullCalendar config `timeZone: 'local'` e feed `.ics` em UTC.<br>• Tooltips mostram UTC no hover para consistência.                                                                                    | Impede discrepância nos eventos compartilhados.                                    |
+| **Logs**                  | • Pino: `timestamp: pino.stdTimeFunctions.isoTime`. <br>• Prefixar cada linha com “Z” (UTC).                                                                                                             | Facilita correlação com db e serviços externos.                                    |
+| **Notificações / e-mail** | • Mensagens “Tarefa vence **2 mai 2025 às 17h (GMT-3)**”.<br>• Incluir identificador de fuso, não só hora.                                                                                               | `DateTime.fromISO(d).setZone('America/Sao_Paulo').toFormat('dd LLL yyyy, HH:mm')`. |
+| **Testes automáticos**    | • Nos testes Vitest definir `process.env.TZ='UTC'`.                                                                                                                                                      | Evita falhas em CI rodando em zonas diferentes.                                    |
+| **Mobile / PWA offline**  | • Armazenar no IndexedDB/Lokistore em UTC; converter ao renderizar.                                                                                                                                      | Coerência mesmo sem conexão.                                                       |
+| **Importação CSV/Excel**  | • Esperar colunas UTC ou exigir coluna `timezone`; validar na importação.                                                                                                                                | Feedback “Data deve estar em UTC ou informar fuso”.                                |
+
+---
+
+#### Checklist rápido
+
+1. `TZ=UTC` em **server** e banco ✔
+2. Todas as datas na **API** no formato ISO-Z ✔
+3. **Converter** para fuso local **somente no front-end** ✔
+4. Cron e schedulers com `'tz':'UTC'` ✔
+5. Logs, audits, e-mails sempre com identificador de fuso ✔
+
+Seguindo esses passos, independente de quem acessa (Brasil, EUA, servidor Replit em outro país), todo módulo olha para a mesma linha do tempo — e bug de “horário errado” deixa de existir.
