@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, parseISO, isValid, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DateTime } from "luxon";
 import { 
   ProjectStatus, ProjectStageStatus, ProjectSpecialStatus,
   TaskStatus, TaskPriority, InteractionType, DocumentType, 
@@ -82,26 +83,42 @@ export function formatDate(date: Date | string | null | undefined): string {
   return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
 }
 
+// Importações necessárias para formatação de datas
+import { formatDateToLocal } from './date-utils';
+
 // Formata a data no formato natural "Vence em X dias (DD/MM/YYYY)"
 export function formatDueDateWithDaysRemaining(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  // Converter para DateTime do Luxon para lidar corretamente com fusos
+  const dateTime = typeof date === 'string' 
+    ? DateTime.fromISO(date)
+    : DateTime.fromJSDate(date as Date);
   
-  if (!isValid(dateObj)) return "";
+  if (!dateTime.isValid) return "";
   
-  const today = new Date();
-  const diffTime = dateObj.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Usar timezone local do usuário
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const localDate = dateTime.setZone(userTz);
+  
+  // Data atual no timezone do usuário
+  const today = DateTime.now().setZone(userTz).startOf('day');
+  const dueDate = localDate.startOf('day');
+  
+  // Calcular diferença em dias
+  const diffDays = Math.ceil(dueDate.diff(today, 'days').days);
+  
+  // Formatação da data no formato local
+  const formattedDate = formatDateToLocal(date);
   
   if (diffDays < 0) {
-    return `Atrasada em ${Math.abs(diffDays)} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+    return `Atrasada em ${Math.abs(diffDays)} dias (${formattedDate})`;
   } else if (diffDays === 0) {
-    return `Vence hoje (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+    return `Vence hoje (${formattedDate})`;
   } else if (diffDays === 1) {
-    return `Vence amanhã (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+    return `Vence amanhã (${formattedDate})`;
   } else {
-    return `Vence em ${diffDays} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
+    return `Vence em ${diffDays} dias (${formattedDate})`;
   }
 }
 
@@ -316,13 +333,22 @@ export function calculateProjectProgress(project: Project): {
 export function calculateDaysRemaining(endDate: Date | string | null | undefined): number {
   if (!endDate) return 0;
   
-  const dateObj = typeof endDate === "string" ? parseISO(endDate) : endDate;
+  // Usar Luxon para lidar corretamente com fusos horários
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   
-  if (!isValid(dateObj)) return 0;
+  // Converter para DateTime do Luxon
+  const targetDate = typeof endDate === 'string' 
+    ? DateTime.fromISO(endDate).setZone(userTz).startOf('day')
+    : DateTime.fromJSDate(endDate as Date).setZone(userTz).startOf('day');
   
-  const today = new Date();
-  const diffTime = dateObj.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (!targetDate.isValid) return 0;
+  
+  // Obter a data atual no timezone do usuário
+  const today = DateTime.now().setZone(userTz).startOf('day');
+  
+  // Calcular a diferença em dias
+  const diff = targetDate.diff(today, 'days');
+  return Math.ceil(diff.days);
 }
 
 export function truncateText(text: string, maxLength: number): string {
@@ -488,15 +514,25 @@ export function hasInteractiveStages(project: Project | undefined | null): boole
 export function calculateTaskDaysOverdue(task: Task): number {
   if (!task.due_date || task.completed) return 0;
   
-  const dueDate = typeof task.due_date === "string" ? parseISO(task.due_date) : task.due_date;
+  // Usar Luxon para lidar corretamente com fusos horários
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   
-  if (!isValid(dueDate)) return 0;
+  // Converter para DateTime do Luxon
+  const dueDate = typeof task.due_date === 'string' 
+    ? DateTime.fromISO(task.due_date).setZone(userTz).startOf('day')
+    : DateTime.fromJSDate(task.due_date as Date).setZone(userTz).startOf('day');
   
-  const today = new Date();
+  if (!dueDate.isValid) return 0;
+  
+  // Obter a data atual no timezone do usuário
+  const today = DateTime.now().setZone(userTz).startOf('day');
+  
+  // Se ainda não está atrasada, retornar 0
   if (dueDate > today) return 0;
   
-  const diffTime = today.getTime() - dueDate.getTime();
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  // Calcular a diferença em dias
+  const diff = today.diff(dueDate, 'days');
+  return Math.floor(diff.days);
 }
 
 export function isTaskOverdue(task: Task): boolean {
@@ -506,15 +542,25 @@ export function isTaskOverdue(task: Task): boolean {
 export function isTaskDueSoon(task: Task, days: number = 2): boolean {
   if (!task.due_date || task.completed) return false;
   
-  const dueDate = typeof task.due_date === "string" ? parseISO(task.due_date) : task.due_date;
+  // Usar Luxon para lidar corretamente com fusos horários
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   
-  if (!isValid(dueDate)) return false;
+  // Converter para DateTime do Luxon
+  const dueDate = typeof task.due_date === 'string' 
+    ? DateTime.fromISO(task.due_date).setZone(userTz).startOf('day')
+    : DateTime.fromJSDate(task.due_date as Date).setZone(userTz).startOf('day');
   
-  const today = new Date();
+  if (!dueDate.isValid) return false;
+  
+  // Obter a data atual no timezone do usuário
+  const today = DateTime.now().setZone(userTz).startOf('day');
+  
+  // Se já está atrasada, não é "em breve", já é atrasada
   if (dueDate < today) return false;
   
-  const diffTime = dueDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Calcular a diferença em dias
+  const diff = dueDate.diff(today, 'days');
+  const diffDays = Math.ceil(diff.days);
   
   return diffDays <= days;
 }
@@ -589,6 +635,9 @@ export function sortTasksByPriority(a: Task, b: Task): number {
  */
 export function getTaskSortFunction(): (a: Task, b: Task) => number {
   return (a: Task, b: Task) => {
+    // Timezone do usuário para comparações de data
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     // Primeiro critério: tarefas concluídas vão para o fim (dividimos a lista em duas partes)
     if (a.completed !== b.completed) {
       return a.completed ? 1 : -1;
@@ -596,8 +645,14 @@ export function getTaskSortFunction(): (a: Task, b: Task) => number {
     
     // Segundo critério: se ambas tarefas têm a mesma prioridade, ordenamos diretamente pela data
     if (a.priority === b.priority && a.due_date && b.due_date) {
-      const dateA = new Date(a.due_date);
-      const dateB = new Date(b.due_date);
+      const dateA = typeof a.due_date === 'string' 
+        ? DateTime.fromISO(a.due_date).setZone(userTz).startOf('day')
+        : DateTime.fromJSDate(a.due_date as Date).setZone(userTz).startOf('day');
+        
+      const dateB = typeof b.due_date === 'string' 
+        ? DateTime.fromISO(b.due_date).setZone(userTz).startOf('day')
+        : DateTime.fromJSDate(b.due_date as Date).setZone(userTz).startOf('day');
+        
       if (dateA < dateB) return -1;
       if (dateA > dateB) return 1;
     }
@@ -605,9 +660,15 @@ export function getTaskSortFunction(): (a: Task, b: Task) => number {
     // Verificamos diretamente a data de vencimento para tarefas próximas do vencimento, 
     // independente da prioridade, dando prioridade às tarefas vencidas ou prestes a vencer
     if (a.due_date && b.due_date) {
-      const dateA = new Date(a.due_date);
-      const dateB = new Date(b.due_date);
-      const today = new Date();
+      const dateA = typeof a.due_date === 'string' 
+        ? DateTime.fromISO(a.due_date).setZone(userTz).startOf('day')
+        : DateTime.fromJSDate(a.due_date as Date).setZone(userTz).startOf('day');
+        
+      const dateB = typeof b.due_date === 'string' 
+        ? DateTime.fromISO(b.due_date).setZone(userTz).startOf('day')
+        : DateTime.fromJSDate(b.due_date as Date).setZone(userTz).startOf('day');
+        
+      const today = DateTime.now().setZone(userTz).startOf('day');
       
       // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
       const aIsOverdue = dateA < today;
