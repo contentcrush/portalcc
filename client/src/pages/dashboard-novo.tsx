@@ -121,9 +121,15 @@ export default function DashboardNovo() {
     return dueDate < new Date();
   });
   
-  // Clientes ativos (com projetos ativos)
+  // Clientes ativos (com status ativo - por padrão todos os clientes são considerados ativos)
+  // Primeiro verificamos clientes com projetos ativos
   const projectClientIds = new Set(activeProjects.map((p: any) => p.client_id).filter(Boolean));
-  const activeClients = clients.filter((c: any) => projectClientIds.has(c.id));
+  
+  // Depois filtramos apenas clientes ativos (aqueles que não possuem active=false explicitamente)
+  const activeClients = clients.filter((c: any) => 
+    (c.active !== false) && 
+    (projectClientIds.has(c.id) || true) // Consideramos todos os clientes ativos, não apenas os com projetos
+  );
   
   // Configurações de período
   const currentMonth = today.getMonth();
@@ -346,7 +352,13 @@ export default function DashboardNovo() {
         <KPICard 
           title="Clientes Ativos" 
           value={activeClients.length}
-          subtext={`${3} novos este mês`}
+          subtext={`${clients.filter((c: any) => {
+            // Verifica clientes criados neste mês
+            if (!c.since) return false;
+            const clientDate = new Date(c.since);
+            return clientDate.getMonth() === today.getMonth() && 
+                   clientDate.getFullYear() === today.getFullYear();
+          }).length} novos este mês`}
           change={8}
           color="blue"
         />
