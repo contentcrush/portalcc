@@ -914,6 +914,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               className="hidden"
               onChange={handleFileUpload}
               ref={fileInputRef}
+              accept="*/*"
             />
             <Button
               variant="ghost"
@@ -942,46 +943,86 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             </div>
           ) : attachments && attachments.length > 0 ? (
             <ul className="space-y-2">
-              {attachments.map((attachment) => (
-                <li 
-                  key={attachment.id} 
-                  className="flex items-center justify-between p-2 rounded-md border border-slate-200 group hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center">
-                    <div className="bg-slate-100 p-2 rounded mr-3">
-                      <File className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <a 
-                        href={attachment.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-slate-700 hover:text-indigo-600 truncate block max-w-[180px]"
-                      >
-                        {attachment.file_name || 'Anexo'}
-                      </a>
-                      <p className="text-xs text-slate-500">
-                        {formatDate(attachment.upload_date)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleDeleteClick(attachment.id)}
+              {attachments.map((attachment) => {
+                // Determinar o tipo de arquivo para o ícone
+                const fileType = attachment.file_type || '';
+                let FileIcon;
+                
+                // Selecionar o ícone baseado no tipo de arquivo
+                if (fileType.includes('image/')) {
+                  FileIcon = () => <img 
+                    src={attachment.file_url}
+                    alt={attachment.file_name}
+                    className="h-8 w-8 object-cover rounded"
+                  />;
+                } else if (fileType.includes('pdf')) {
+                  FileIcon = () => <FileText className="h-4 w-4 text-red-500" />;
+                } else if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('tar')) {
+                  FileIcon = () => <File className="h-4 w-4 text-orange-500" />;
+                } else if (fileType.includes('doc') || fileType.includes('word')) {
+                  FileIcon = () => <FileText className="h-4 w-4 text-blue-500" />;
+                } else {
+                  FileIcon = () => <File className="h-4 w-4 text-slate-500" />;
+                }
+                
+                return (
+                  <li 
+                    key={attachment.id} 
+                    className="flex items-center justify-between p-2 rounded-md border border-slate-200 group hover:bg-slate-50 transition-colors"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
-                  </Button>
-                </li>
-              ))}
+                    <div className="flex items-center">
+                      <div className="bg-slate-100 p-2 rounded mr-3">
+                        <FileIcon />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-medium text-slate-700 truncate block max-w-[160px]">
+                          {attachment.file_name || 'Anexo'}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {formatDate(attachment.upload_date)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDownloadFile(attachment)}
+                        title="Baixar arquivo"
+                      >
+                        <Download className="h-3.5 w-3.5 text-slate-400 hover:text-indigo-600" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDeleteClick(attachment.id)}
+                        title="Excluir anexo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="text-center py-4 border border-dashed border-slate-200 rounded-md">
               <p className="text-sm text-slate-500">
                 Nenhum anexo foi adicionado a este projeto.
               </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
             </div>
           )}
         </div>
