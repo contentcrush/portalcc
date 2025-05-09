@@ -358,11 +358,18 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Mutation para upload de arquivo
   const uploadAttachmentMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      return apiRequest('POST', `/api/projects/${projectId}/attachments`, formData, {
-        headers: {
-          // Não definimos o Content-Type para que o navegador defina com o boundary correto
-        }
-      });
+      const file = formData.get('file') as File;
+      
+      // Criando um objeto com os dados necessários
+      const data = {
+        file_name: file.name,
+        file_url: URL.createObjectURL(file),
+        project_id: projectId,
+        file_size: file.size,
+        file_type: file.type
+      };
+      
+      return apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
@@ -841,94 +848,94 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           />
         </div>
         
+        {/* Seção de anexos */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-xs font-medium text-gray-500">ANEXOS</div>
+            <input
+              type="file"
+              id="fileUpload"
+              className="hidden"
+              onChange={handleFileUpload}
+              ref={fileInputRef}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-indigo-600 h-7 px-3 py-1"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingFile}
+            >
+              {isUploadingFile ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Adicionar
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {isLoadingAttachments ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : attachments && attachments.length > 0 ? (
+            <ul className="space-y-2">
+              {attachments.map((attachment) => (
+                <li 
+                  key={attachment.id} 
+                  className="flex items-center justify-between p-2 rounded-md border border-slate-200 group hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="bg-slate-100 p-2 rounded mr-3">
+                      <File className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <a 
+                        href={attachment.file_path} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-slate-700 hover:text-indigo-600 truncate block max-w-[180px]"
+                      >
+                        {attachment.filename || 'Anexo'}
+                      </a>
+                      <p className="text-xs text-slate-500">
+                        {formatDate(attachment.upload_date)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleDeleteClick(attachment.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-4 border border-dashed border-slate-200 rounded-md">
+              <p className="text-sm text-slate-500">
+                Nenhum anexo foi adicionado a este projeto.
+              </p>
+            </div>
+          )}
+        </div>
+        
         {/* Seção de comentários do projeto */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <div className="text-xs font-medium text-gray-500">COMENTÁRIOS</div>
           </div>
           <ProjectCommentSection projectId={projectId} />
-          
-          {/* Seção de anexos */}
-          <div className="mt-8 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium text-sm">ANEXOS</h4>
-              <input
-                type="file"
-                id="fileUpload"
-                className="hidden"
-                onChange={handleFileUpload}
-                ref={fileInputRef}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-600 h-7 px-3 py-1"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingFile}
-              >
-                {isUploadingFile ? (
-                  <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    Adicionar
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            {isLoadingAttachments ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
-            ) : attachments && attachments.length > 0 ? (
-              <ul className="space-y-2">
-                {attachments.map((attachment) => (
-                  <li 
-                    key={attachment.id} 
-                    className="flex items-center justify-between p-2 rounded-md border border-slate-200 group hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center">
-                      <div className="bg-slate-100 p-2 rounded mr-3">
-                        <File className="h-4 w-4 text-slate-500" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <a 
-                          href={attachment.file_path} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-slate-700 hover:text-indigo-600 truncate block max-w-[180px]"
-                        >
-                          {attachment.filename || 'Anexo'}
-                        </a>
-                        <p className="text-xs text-slate-500">
-                          {formatDate(attachment.upload_date)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleDeleteClick(attachment.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center py-4 border border-dashed border-slate-200 rounded-md">
-                <p className="text-sm text-slate-500">
-                  Nenhum anexo foi adicionado a este projeto.
-                </p>
-              </div>
-            )}
-          </div>
         </div>
         
         {/* Diálogo de confirmação para exclusão de anexo */}
