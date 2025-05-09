@@ -1036,33 +1036,25 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         </div>
         
         {/* Diálogo de confirmação para exclusão de anexo */}
-        <Dialog open={confirmDialogOpen} onOpenChange={(open) => {
-          setConfirmDialogOpen(open);
-          if (!open) cancelDeleteAttachment();
-        }}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Excluir anexo</DialogTitle>
-              <DialogDescription>
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir anexo</AlertDialogTitle>
+              <AlertDialogDescription>
                 Tem certeza que deseja excluir este anexo? Esta ação não pode ser desfeita.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={cancelDeleteAttachment}
-              >
-                Cancelar
-              </Button>
-              <Button 
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDeleteAttachment}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
                 onClick={confirmDeleteAttachment}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
         <div>
           <Button 
