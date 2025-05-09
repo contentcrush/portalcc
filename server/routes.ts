@@ -2922,6 +2922,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoints para gerenciamento de anexos de projetos
+  app.get("/api/projects/:id/attachments", authenticateJWT, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const attachments = await storage.getProjectAttachments(projectId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Erro ao buscar anexos do projeto:", error);
+      res.status(500).json({ message: "Falha ao buscar anexos do projeto" });
+    }
+  });
+  
+  app.post("/api/projects/:id/attachments", authenticateJWT, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      if (!req.body.file_name || !req.body.file_url) {
+        return res.status(400).json({ 
+          message: "Erro de validação", 
+          errors: [{ code: "invalid_type", path: ["file_name", "file_url"], message: "Campos obrigatórios ausentes" }] 
+        });
+      }
+      
+      // Adiciona o ID do usuário autenticado e o projeto
+      const attachment = await storage.createProjectAttachment({
+        ...req.body,
+        project_id: projectId,
+        uploaded_by: req.user!.id
+      });
+      
+      res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Erro ao criar anexo do projeto:", error);
+      res.status(500).json({ message: "Falha ao criar anexo do projeto" });
+    }
+  });
+  
+  app.delete("/api/projects/attachments/:id", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o anexo existe e se o usuário tem permissão
+      const attachment = await storage.getProjectAttachment(id);
+      
+      if (!attachment) {
+        return res.status(404).json({ message: "Anexo não encontrado" });
+      }
+      
+      // Apenas o usuário que enviou o anexo ou um admin pode excluí-lo
+      if (attachment.uploaded_by !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ 
+          message: "Permissão negada. Você só pode excluir seus próprios anexos." 
+        });
+      }
+      
+      await storage.deleteProjectAttachment(id);
+      res.status(200).json({ message: "Anexo excluído com sucesso" });
+    } catch (error) {
+      console.error("Erro ao excluir anexo do projeto:", error);
+      res.status(500).json({ message: "Falha ao excluir anexo do projeto" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Configurar WebSocket Server (usando 'ws' para WebSockets nativos)
