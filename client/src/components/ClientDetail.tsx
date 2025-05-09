@@ -149,8 +149,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     }
   });
   
-  // Não precisamos mais do projectForm já que estamos usando o ProjectFormContext
-  
   // Mutation para atualizar cliente
   const updateClientMutation = useMutation({
     mutationFn: async (data: InsertClient) => {
@@ -174,8 +172,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       });
     }
   });
-  
-  // Não precisamos mais da mutation createProjectMutation já que estamos usando o ProjectFormDialog
   
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
@@ -235,8 +231,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     };
     updateClientMutation.mutate(clientData);
   };
-  
-  // Não precisamos mais da função onProjectSubmit já que estamos usando o ProjectFormContext
   
   // Função para abrir o dialog de edição preenchendo os valores do formulário
   const handleEditClick = () => {
@@ -703,189 +697,130 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     <span className="text-2xl font-bold">{projects?.length || 0}</span>
                     {projects?.length > 0 && (
                       <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">
-                        +{projects.filter(p => p.creation_date && new Date(p.creation_date) > new Date(new Date().setMonth(new Date().getMonth() - 3))).length} nos últimos 3 meses
+                        Ativos
                       </span>
                     )}
                   </div>
                 </div>
-                
+
                 <div>
-                  <p className="text-sm text-gray-500">Valor Faturado</p>
+                  <p className="text-sm text-gray-500">Documentos</p>
+                  <div className="mt-1 flex items-center">
+                    <span className="text-2xl font-bold">{financialDocuments?.length || 0}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">Total Recebido</p>
                   <div className="mt-1">
-                    <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-                    <div className="text-xs text-green-600">
-                      + 30% vs anterior
-                    </div>
+                    <span className="text-2xl font-bold text-green-600">{formatCurrency(paidRevenue)}</span>
                   </div>
                 </div>
-                
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Tempo de Retenção</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-2xl font-bold">
-                      {client.since ? (
-                        `${Math.max(0, Math.floor(
-                          (new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30)
-                        ) / 12).toFixed(1)} anos`
-                      ) : 'N/A'}
-                    </span>
-                    {client.since && (
-                      <span className="text-sm px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
-                        Cliente desde {format(new Date(client.since), 'MMM yyyy', { locale: ptBR })}
-                      </span>
-                    )}
+
+                <div>
+                  <p className="text-sm text-gray-500">Pendente</p>
+                  <div className="mt-1">
+                    <span className="text-2xl font-bold text-yellow-600">{formatCurrency(pendingRevenue)}</span>
                   </div>
                 </div>
               </div>
-              
-              <Separator className="my-4" />
-              
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm font-medium">Status Financeiro</p>
-                  <Badge variant="outline">{formatCurrency(pendingRevenue)} a receber</Badge>
+
+              {totalRevenue > 0 && (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-500">Recebimentos</span>
+                    <span className="text-sm font-medium">{percentPaidRevenue}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{ width: `${percentPaidRevenue}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{formatCurrency(paidRevenue)}</span>
+                    <span>{formatCurrency(totalRevenue)}</span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-primary h-2.5 rounded-full" style={{ width: `${percentPaidRevenue}%` }}></div>
-                </div>
-                <div className="flex justify-between text-xs mt-1">
-                  <span>{formatCurrency(paidRevenue)} pago</span>
-                  <span>{percentPaidRevenue}% do total</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
-          
 
-          
-          {/* Próximas Reuniões */}
-          <Card className="overflow-hidden">
-            <CardHeader className="py-5 px-6">
-              <CardTitle className="text-lg font-semibold text-gray-700">
-                PRÓXIMAS REUNIÕES
-              </CardTitle>
+          {/* Recent financial documents */}
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="text-base">Últimos Documentos</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8 px-6 pb-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-base font-semibold">Amanhã, 14:00</p>
-                  <Badge variant="outline" className="rounded-full px-3 py-0.5 text-xs font-medium bg-white">
-                    20 min
-                  </Badge>
-                </div>
-                <div className="flex items-start mb-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <p className="text-base font-semibold">Apresentação do Storyboard</p>
-                </div>
-                <div className="flex items-center ml-5">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Responsável" 
-                    className="w-6 h-6 rounded-full mr-2" 
-                  />
-                  <span className="text-sm text-gray-600">RM: Ricardo Mendes</span>
-                  <span className="ml-3 px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-600">Zoom</span>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-base font-semibold">26/04, 15:30</p>
-                  <Badge variant="outline" className="rounded-full px-3 py-0.5 text-xs font-medium bg-white">
-                    1h
-                  </Badge>
-                </div>
-                <div className="flex items-start mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                  <p className="text-base font-semibold">Aprovação Final - Cartão Premium</p>
-                </div>
-                <div className="flex items-center ml-5">
-                  <img 
-                    src="https://randomuser.me/api/portraits/men/32.jpg" 
-                    alt="Responsável" 
-                    className="w-6 h-6 rounded-full mr-2" 
-                  />
-                  <span className="text-sm text-gray-600">BA: Banco Azul</span>
-                  <span className="ml-3 px-2 py-0.5 rounded text-xs bg-green-100 text-green-600">Presencial</span>
-                </div>
-              </div>
+            <CardContent>
+              <RecentDocuments 
+                documents={financialDocuments?.slice(0, 5) || []}
+                projects={projects || []}
+              />
             </CardContent>
           </Card>
 
-          {/* Documentos Recentes */}
-          <RecentDocuments 
-            documents={financialDocuments?.map(doc => ({
-              id: doc.id.toString(),
-              name: doc.document_type === 'invoice' 
-                ? `Fatura_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'contract'
-                ? `Contrato_${client?.shortName || client?.name}_${doc.document_number || doc.id}.pdf`
-                : doc.document_type === 'proposal'
-                ? `Proposta_${doc.document_number || doc.id}.pdf`
-                : `Documento_${doc.document_number || doc.id}.pdf`,
-              size: `${Math.floor(200 + Math.random() * 500)} KB`,
-              type: doc.document_type === 'invoice' 
-                ? 'pdf' 
-                : doc.document_type === 'contract' 
-                ? 'pdf'
-                : doc.document_type === 'spreadsheet'
-                ? 'xlsx'
-                : 'pdf',
-              downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
-            })).slice(0, 4) || []}
-            viewAllHref="#documentos"
-          />
+          {/* Client Info Card */}
+          <Card>
+            <CardHeader className="pb-0">
+              <CardTitle className="text-base">Informações de Sistema</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">ID do Cliente</span>
+                  <span className="text-sm font-medium">{client.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Cadastrado em</span>
+                  <span className="text-sm font-medium">
+                    {client.creation_date 
+                      ? format(new Date(client.creation_date), "dd/MM/yyyy", { locale: ptBR })
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Status</span>
+                  <Badge variant={client.active ? 'success' : 'destructive'}>
+                    {client.active ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+                {/* Add other system information as needed */}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Modal de Edição de Cliente */}
+      {/* Dialog de edição de cliente */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
             <DialogDescription>
-              Atualize as informações do cliente {client.name}
+              Atualize as informações do cliente. Clique em salvar quando terminar.
             </DialogDescription>
           </DialogHeader>
-
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <Tabs defaultValue="info" className="mt-2">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="contact">Contato</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="info" className="space-y-5 pt-4">
-                  <FormField
-                    control={form.control}
-                    name="logo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Logo</FormLabel>
-                        <FormControl>
-                          <ImageUpload 
-                            value={logoPreview}
-                            onChange={(value) => {
-                              field.onChange(value);
-                              setLogoPreview(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 flex justify-center">
+                  <ImageUpload
+                    value={logoPreview}
+                    onChange={setLogoPreview}
+                    width={120}
+                    height={120}
+                    className="rounded-md"
                   />
-              
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                </div>
+                
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel>Nome do Cliente</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nome completo" {...field} />
+                        <Input placeholder="Nome da empresa" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1042,362 +977,20 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="since"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Cliente desde</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              formatDate(field.value)
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <DatePickerWithYearNavigation
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1980-01-01")
-                          }
-                          fromYear={1980}
-                          toYear={new Date().getFullYear()}
-                          captionLayout="dropdown-buttons"
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription>
-                      Data de início do relacionamento com o cliente
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-                </TabsContent>
-                
-                <TabsContent value="contact" className="space-y-5 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="contactName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Contato Principal</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome do contato" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactPosition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cargo do Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Gerente de Marketing" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email do Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="email@exemplo.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone do Contato</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(00) 00000-0000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Endereço completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cidade</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Cidade" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <Input placeholder="exemplo.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel>Notas</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Informações adicionais sobre o cliente" 
-                              className="resize-none h-20" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button" 
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={updateClientMutation.isPending}>
-                  {updateClientMutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Salvando...
-                    </>
-                  ) : "Salvar Alterações"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Novo Projeto */}
-      <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Novo Projeto</DialogTitle>
-            <DialogDescription>
-              Crie um novo projeto para o cliente {client.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...projectForm}>
-            <form onSubmit={projectForm.handleSubmit(onProjectSubmit)} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={projectForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Nome do Projeto</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Digite o nome do projeto" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
-                  control={projectForm.control}
-                  name="description"
+                  control={form.control}
+                  name="notes"
                   render={({ field }) => (
                     <FormItem className="col-span-2">
-                      <FormLabel>Descrição</FormLabel>
+                      <FormLabel>Notas</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Descreva o projeto brevemente" 
-                          className="resize-none h-20" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="draft">Rascunho</SelectItem>
-                          <SelectItem value="planning">Planejamento</SelectItem>
-                          <SelectItem value="in_progress">Em Andamento</SelectItem>
-                          <SelectItem value="review">Revisão</SelectItem>
-                          <SelectItem value="completed">Concluído</SelectItem>
-                          <SelectItem value="canceled">Cancelado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
-                  name="budget"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Orçamento (R$)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
+                          placeholder="Informações adicionais sobre o cliente"
+                          className="min-h-[100px]"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                          value={field.value !== undefined ? field.value : ''}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Data de Início</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
-                            >
-                              {field.value ? (
-                                format(new Date(field.value), "dd/MM/yyyy")
-                              ) : (
-                                <span>Selecione uma data</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => field.onChange(date?.toISOString())}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={projectForm.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Prazo de Entrega</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
-                            >
-                              {field.value ? (
-                                format(new Date(field.value), "dd/MM/yyyy")
-                              ) : (
-                                <span>Selecione uma data</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => field.onChange(date?.toISOString())}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1405,26 +998,29 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
               </div>
 
               <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button" 
-                  onClick={() => setIsNewProjectDialogOpen(false)}
-                >
+                <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createProjectMutation.isPending}>
-                  {createProjectMutation.isPending ? (
+                <Button 
+                  type="submit" 
+                  disabled={updateClientMutation.isPending}
+                >
+                  {updateClientMutation.isPending ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Criando...
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-r-transparent"></div>
+                      Salvando...
                     </>
-                  ) : "Criar Projeto"}
+                  ) : (
+                    "Salvar Alterações"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de Novo Projeto removido - usando ProjectFormDialog do Context */}
 
       {/* Diálogo de confirmação para exclusão do cliente */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
