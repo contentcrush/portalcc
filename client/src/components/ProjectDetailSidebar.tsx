@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File, Download } from "lucide-react";
-import { formatDate, formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
+import { formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
+import { useDateFormatter } from "@/hooks/use-date-formatter";
+import { DateDisplay } from "@/components/DateDisplay";
 import { UserAvatar } from "./UserAvatar";
 import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +54,7 @@ interface ProjectDetailSidebarProps {
 export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDetailSidebarProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const dateFormatter = useDateFormatter();
   const [, navigate] = useLocation();
   const { openProjectForm, setProjectToEdit } = useProjectForm();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -540,7 +543,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         <div className="text-center mb-6">
           <h3 className="font-medium text-lg">{project?.name || 'Carregando...'}</h3>
           <p className="text-sm text-gray-500">
-            Criado em {project?.creation_date ? formatDate(project.creation_date) : '-'}
+            Criado em <DateDisplay date={project?.creation_date} />
           </p>
         </div>
         
@@ -567,7 +570,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Prazo:</div>
             <div className="text-sm font-medium">
-              {project?.endDate ? formatDate(project.endDate) : 'Não definido'}
+              <DateDisplay date={project?.endDate} fallback="Não definido" />
             </div>
           </div>
         </div>
@@ -989,7 +992,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                           {attachment.file_name || 'Anexo'}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {formatDate(attachment.upload_date)}
+                          <DateDisplay date={attachment.upload_date} />
                         </p>
                       </div>
                     </div>
