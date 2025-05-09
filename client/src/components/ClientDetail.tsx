@@ -91,7 +91,6 @@ interface ClientDetailProps {
 export default function ClientDetail({ clientId }: ClientDetailProps) {
   const [activeTab, setActiveTab] = useState("contacts");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -127,11 +126,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     contactEmail: z.string().email("Email inválido").nullable().optional(),
   });
 
-  // Schema para validação do formulário de projeto
-  const projectFormSchema = insertProjectSchema.extend({
-    name: z.string().min(2, "Nome do projeto deve ter pelo menos 2 caracteres"),
-  });
-  
   // Estado para preview de imagem
   const [logoPreview, setLogoPreview] = useState<string | null>(client?.logo || null);
   
@@ -155,21 +149,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     }
   });
   
-  // Formulário para novo projeto
-  const projectForm = useForm<z.infer<typeof projectFormSchema>>({
-    resolver: zodResolver(projectFormSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      client_id: clientId,
-      status: "draft",
-      budget: undefined,
-      startDate: undefined,
-      endDate: undefined,
-      progress: 0,
-      thumbnail: "",
-    },
-  });
+  // Não precisamos mais do projectForm já que estamos usando o ProjectFormContext
   
   // Mutation para atualizar cliente
   const updateClientMutation = useMutation({
@@ -195,31 +175,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     }
   });
   
-  // Mutation para criar novo projeto
-  const createProjectMutation = useMutation({
-    mutationFn: async (data: InsertProject) => {
-      const response = await apiRequest("POST", "/api/projects", data);
-      return await response.json();
-    },
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/projects`] });
-      setIsNewProjectDialogOpen(false);
-      projectForm.reset();
-      toast({
-        title: "Projeto criado com sucesso",
-        description: `${newProject.name} foi criado para o cliente ${client?.name}.`,
-      });
-      // Permanecer na página atual para ver o projeto na lista
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao criar projeto",
-        description: error.message || "Ocorreu um erro ao criar o projeto. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
+  // Não precisamos mais da mutation createProjectMutation já que estamos usando o ProjectFormDialog
   
   // Mutation para excluir cliente
   const deleteClientMutation = useMutation({
@@ -280,15 +236,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     updateClientMutation.mutate(clientData);
   };
   
-  // Função para submeter o formulário de criação de projeto
-  const onProjectSubmit = (data: z.infer<typeof projectFormSchema>) => {
-    // Converter valores para o formato esperado pela API
-    const projectData: InsertProject = {
-      ...data,
-      client_id: clientId,
-    };
-    createProjectMutation.mutate(projectData);
-  };
+  // Não precisamos mais da função onProjectSubmit já que estamos usando o ProjectFormContext
   
   // Função para abrir o dialog de edição preenchendo os valores do formulário
   const handleEditClick = () => {
@@ -362,7 +310,17 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             <FileText className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button className="bg-primary" onClick={() => setIsNewProjectDialogOpen(true)}>
+          <Button 
+            className="bg-primary" 
+            onClick={() => {
+              // Configurar o projeto com o cliente atual antes de abrir o formulário
+              projectForm.reset({
+                ...projectForm.getValues(),
+                client_id: clientId,
+              });
+              openProjectForm();
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -535,7 +493,14 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     variant="default"
                     size="sm" 
                     className="text-xs flex items-center"
-                    onClick={() => setIsNewProjectDialogOpen(true)}
+                    onClick={() => {
+                      // Configurar o projeto com o cliente atual antes de abrir o formulário
+                      projectForm.reset({
+                        ...projectForm.getValues(),
+                        client_id: clientId,
+                      });
+                      openProjectForm();
+                    }}
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Novo Projeto
