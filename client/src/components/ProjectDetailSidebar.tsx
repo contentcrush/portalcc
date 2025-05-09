@@ -3,7 +3,7 @@ import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check } from "lucide-react";
+import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
@@ -131,6 +131,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutos
     cacheTime: 10 * 60 * 1000 // 10 minutos
+  });
+  
+  // Carregar anexos do projeto
+  const { data: attachments, isLoading: isLoadingAttachments } = useQuery({
+    queryKey: [`/api/projects/${projectId}/attachments`],
+    enabled: !!projectId,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    cacheTime: 5 * 60 * 1000 // 5 minutos
   });
 
   // Mutation to update a project stage
@@ -316,6 +324,93 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const handleRemoveMember = (userId: number, userName: string) => {
     removeMemberMutation.mutate({ projectId, userId });
   };
+  
+  // Funções para manipulação de anexos
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    setIsUploadingFile(true);
+    
+    const formData = new FormData();
+    // Adiciona apenas o primeiro arquivo selecionado
+    formData.append('file', files[0]);
+    
+    uploadAttachmentMutation.mutate(formData);
+  };
+  
+  const handleDeleteClick = (attachmentId: number) => {
+    setAttachmentToDelete(attachmentId);
+    setConfirmDialogOpen(true);
+  };
+  
+  const confirmDeleteAttachment = () => {
+    if (attachmentToDelete !== null) {
+      deleteAttachmentMutation.mutate(attachmentToDelete);
+    }
+  };
+  
+  const cancelDeleteAttachment = () => {
+    setAttachmentToDelete(null);
+    setConfirmDialogOpen(false);
+  };
+  
+  // Mutation para upload de arquivo
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return apiRequest('POST', `/api/projects/${projectId}/attachments`, formData, {
+        headers: {
+          // Não definimos o Content-Type para que o navegador defina com o boundary correto
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
+      setIsUploadingFile(false);
+      toast({
+        title: "Arquivo anexado",
+        description: "O arquivo foi anexado ao projeto com sucesso."
+      });
+      
+      // Limpa o input de arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    onError: (error) => {
+      setIsUploadingFile(false);
+      toast({
+        title: "Erro ao anexar arquivo",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Mutation para excluir anexo
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: async (attachmentId: number) => {
+      return apiRequest('DELETE', `/api/projects/${projectId}/attachments/${attachmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
+      setAttachmentToDelete(null);
+      setConfirmDialogOpen(false);
+      toast({
+        title: "Anexo excluído",
+        description: "O anexo foi removido do projeto com sucesso."
+      });
+    },
+    onError: (error) => {
+      setAttachmentToDelete(null);
+      setConfirmDialogOpen(false);
+      toast({
+        title: "Erro ao excluir anexo",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
 
   // Calculate progress
   const progress = project?.progress || 0;
@@ -752,7 +847,110 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             <div className="text-xs font-medium text-gray-500">COMENTÁRIOS</div>
           </div>
           <ProjectCommentSection projectId={projectId} />
+          
+          {/* Seção de anexos */}
+          <div className="mt-8 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-medium text-sm">ANEXOS</h4>
+              <input
+                type="file"
+                id="fileUpload"
+                className="hidden"
+                onChange={handleFileUpload}
+                ref={fileInputRef}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-indigo-600 h-7 px-3 py-1"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingFile}
+              >
+                {isUploadingFile ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Adicionar
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {isLoadingAttachments ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : attachments && attachments.length > 0 ? (
+              <ul className="space-y-2">
+                {attachments.map((attachment) => (
+                  <li 
+                    key={attachment.id} 
+                    className="flex items-center justify-between p-2 rounded-md border border-slate-200 group hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-slate-100 p-2 rounded mr-3">
+                        <File className="h-4 w-4 text-slate-500" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <a 
+                          href={attachment.file_path} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-slate-700 hover:text-indigo-600 truncate block max-w-[180px]"
+                        >
+                          {attachment.filename || 'Anexo'}
+                        </a>
+                        <p className="text-xs text-slate-500">
+                          {formatDate(attachment.upload_date)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteClick(attachment.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-4 border border-dashed border-slate-200 rounded-md">
+                <p className="text-sm text-slate-500">
+                  Nenhum anexo foi adicionado a este projeto.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Diálogo de confirmação para exclusão de anexo */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir anexo</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este anexo? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDeleteAttachment}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteAttachment}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
         <div>
           <Button 
