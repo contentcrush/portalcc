@@ -37,7 +37,7 @@ import { UserAvatar } from "./UserAvatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
+import { insertClientSchema, type InsertClient } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
@@ -313,12 +313,8 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           <Button 
             className="bg-primary" 
             onClick={() => {
-              // Configurar o projeto com o cliente atual antes de abrir o formulário
-              projectForm.reset({
-                ...projectForm.getValues(),
-                client_id: clientId,
-              });
-              openProjectForm();
+              // Abrir o formulário de projeto com o cliente atual já selecionado
+              openProjectForm({ defaultValues: { client_id: clientId } });
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -494,12 +490,8 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     size="sm" 
                     className="text-xs flex items-center"
                     onClick={() => {
-                      // Configurar o projeto com o cliente atual antes de abrir o formulário
-                      projectForm.reset({
-                        ...projectForm.getValues(),
-                        client_id: clientId,
-                      });
-                      openProjectForm();
+                      // Abrir o formulário de projeto com o cliente atual já selecionado
+                      openProjectForm({ defaultValues: { client_id: clientId } });
                     }}
                   >
                     <Plus className="h-3 w-3 mr-1" />
