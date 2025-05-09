@@ -23,11 +23,10 @@ import {
   File
 } from "lucide-react";
 import { 
-  formatDate, 
-  formatDateTime,
   getStatusBadgeClasses,
   getInitials
 } from "@/lib/utils";
+import DateDisplay from "@/components/DateDisplay";
 import PriorityBadge from "@/components/PriorityBadge";
 import { 
   AlertDialog,
@@ -360,14 +359,18 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
           {task.start_date && (
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium text-gray-600">Data de Início:</div>
-              <div className="text-sm font-medium">{formatDate(task.start_date)}</div>
+              <div className="text-sm font-medium">
+                <DateDisplay date={task.start_date} format="date" />
+              </div>
             </div>
           )}
           
           {task.due_date && (
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium text-gray-600">Data de Entrega:</div>
-              <div className="text-sm font-medium">{formatDate(task.due_date)}</div>
+              <div className="text-sm font-medium">
+                <DateDisplay date={task.due_date} format="date" />
+              </div>
             </div>
           )}
           
@@ -496,13 +499,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
                         <div>
                           <div className="font-medium text-gray-700">{comment.user?.name || `Usuário ${comment.user_id}`}</div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            {new Date(comment.creation_date).toLocaleString('pt-BR', {
-                              day: 'numeric',
-                              month: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: false
-                            }).replace(',', ' às')}
+                            <DateDisplay date={comment.creation_date} format="datetime" />
                           </div>
                         </div>
                       </div>
