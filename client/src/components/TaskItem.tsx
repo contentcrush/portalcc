@@ -166,8 +166,7 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
 
   // Formatação da data no formato DD/MM/YYYY
   const getFullDate = (date: Date) => {
-    // Usar a função formatDate para garantir consistência
-    return formatDate(date);
+    return new Date(date).toLocaleDateString('pt-BR');
   };
 
   const getPriorityClass = () => {

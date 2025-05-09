@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, parseISO, isValid, isToday, isTomorrow, addDays } from "date-fns";
+import { format, parseISO, isValid, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ProjectStatus, ProjectStageStatus, ProjectSpecialStatus,
@@ -72,62 +72,13 @@ export function formatCurrency(value: number | null | undefined): string {
   }).format(value);
 }
 
-/**
- * Função global para obter a data atual correta para o sistema
- * Importante para manter consistência em todo o aplicativo
- * @returns Data atual corrigida para o sistema
- */
-export function getCurrentSystemDate(): Date {
-  // Obtém a data local e garantimos que ela está no fuso horário correto
-  const today = new Date();
-  
-  // Forçar a data para o dia correto (09/05/2025) para evitar problemas de fuso horário
-  // Definir o horário para meia-noite para cálculos de diferença de dias
-  today.setHours(0, 0, 0, 0);
-  
-  return today;
-}
-
-/**
- * Função global para normalizar datas (string ou Date) para o formato Date
- * corrigindo qualquer problema de timezone
- * @param date Data a ser normalizada
- * @returns Date normalizada ou null se inválida
- */
-export function normalizeDate(date: Date | string | null | undefined): Date | null {
-  if (!date) return null;
-  
-  let dateObj: Date;
-  
-  if (typeof date === "string") {
-    // Se for string ISO, converter para Date
-    dateObj = parseISO(date);
-    
-    // Ajuste para corrigir problemas de fuso horário
-    // Quando as datas vêm do servidor, podem perder um dia devido ao fuso
-    const offset = dateObj.getTimezoneOffset();
-    if (offset !== 0) {
-      // Aqui ajustamos para manter a data correta em UTC
-      dateObj.setHours(12, 0, 0, 0); // Meio-dia para garantir que está no mesmo dia
-    }
-  } else {
-    // Se já for Date, fazer uma cópia e normalizar
-    dateObj = new Date(date);
-    dateObj.setHours(12, 0, 0, 0); // Meio-dia para garantir que está no mesmo dia
-  }
-  
-  if (!isValid(dateObj)) return null;
-  
-  return dateObj;
-}
-
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = normalizeDate(date);
-  if (!dateObj) return "";
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
   
-  // Aplicar timezone local ao formatar a data
+  if (!isValid(dateObj)) return "";
+  
   return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
 }
 
@@ -135,32 +86,31 @@ export function formatDate(date: Date | string | null | undefined): string {
 export function formatDueDateWithDaysRemaining(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = normalizeDate(date);
-  if (!dateObj) return "";
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
+  if (!isValid(dateObj)) return "";
+  
+  const today = new Date();
   const diffTime = dateObj.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  const formattedDate = format(dateObj, "dd/MM/yyyy", { locale: ptBR });
-  
   if (diffDays < 0) {
-    return `Atrasada em ${Math.abs(diffDays)} dias (${formattedDate})`;
+    return `Atrasada em ${Math.abs(diffDays)} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
   } else if (diffDays === 0) {
-    return `Vence hoje (${formattedDate})`;
+    return `Vence hoje (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
   } else if (diffDays === 1) {
-    return `Vence amanhã (${formattedDate})`;
+    return `Vence amanhã (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
   } else {
-    return `Vence em ${diffDays} dias (${formattedDate})`;
+    return `Vence em ${diffDays} dias (${format(dateObj, "dd/MM/yyyy", { locale: ptBR })})`;
   }
 }
 
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = normalizeDate(date);
-  if (!dateObj) return "";
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
+  
+  if (!isValid(dateObj)) return "";
   
   return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
@@ -168,25 +118,15 @@ export function formatDateTime(date: Date | string | null | undefined): string {
 export function getRelativeDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = normalizeDate(date);
-  if (!dateObj) return "";
+  const dateObj = typeof date === "string" ? parseISO(date) : date;
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
-  const tomorrow = addDays(today, 1);
+  if (!isValid(dateObj)) return "";
   
   if (isToday(dateObj)) {
     return `Hoje, ${format(dateObj, "HH:mm", { locale: ptBR })}`;
   }
   
-  // Comparação de datas considerando apenas o dia, mês e ano
-  const isSameDay = (date1: Date, date2: Date) => {
-    return date1.getDate() === date2.getDate() && 
-           date1.getMonth() === date2.getMonth() && 
-           date1.getFullYear() === date2.getFullYear();
-  };
-  
-  if (isSameDay(dateObj, tomorrow)) {
+  if (isTomorrow(dateObj)) {
     return `Amanhã, ${format(dateObj, "HH:mm", { locale: ptBR })}`;
   }
   
@@ -376,11 +316,11 @@ export function calculateProjectProgress(project: Project): {
 export function calculateDaysRemaining(endDate: Date | string | null | undefined): number {
   if (!endDate) return 0;
   
-  const dateObj = normalizeDate(endDate);
-  if (!dateObj) return 0;
+  const dateObj = typeof endDate === "string" ? parseISO(endDate) : endDate;
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
+  if (!isValid(dateObj)) return 0;
+  
+  const today = new Date();
   const diffTime = dateObj.getTime() - today.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
@@ -474,9 +414,8 @@ export function getNormalizedProjectStatus(project: Project | undefined | null):
     return { stageStatus: 'producao', specialStatus: null };
   }
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
-  const endDate = project.endDate ? normalizeDate(project.endDate) : null;
+  const today = new Date();
+  const endDate = project.endDate ? new Date(project.endDate) : null;
   const status = project.status || 'producao';
   
   // Se o status atual é atrasado, mantemos esse status especial independentemente da data
@@ -549,11 +488,11 @@ export function hasInteractiveStages(project: Project | undefined | null): boole
 export function calculateTaskDaysOverdue(task: Task): number {
   if (!task.due_date || task.completed) return 0;
   
-  const dueDate = normalizeDate(task.due_date);
-  if (!dueDate) return 0;
+  const dueDate = typeof task.due_date === "string" ? parseISO(task.due_date) : task.due_date;
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
+  if (!isValid(dueDate)) return 0;
+  
+  const today = new Date();
   if (dueDate > today) return 0;
   
   const diffTime = today.getTime() - dueDate.getTime();
@@ -567,11 +506,11 @@ export function isTaskOverdue(task: Task): boolean {
 export function isTaskDueSoon(task: Task, days: number = 2): boolean {
   if (!task.due_date || task.completed) return false;
   
-  const dueDate = normalizeDate(task.due_date);
-  if (!dueDate) return false;
+  const dueDate = typeof task.due_date === "string" ? parseISO(task.due_date) : task.due_date;
   
-  // Usa a função global para data atual
-  const today = getCurrentSystemDate();
+  if (!isValid(dueDate)) return false;
+  
+  const today = new Date();
   if (dueDate < today) return false;
   
   const diffTime = dueDate.getTime() - today.getTime();
@@ -657,34 +596,30 @@ export function getTaskSortFunction(): (a: Task, b: Task) => number {
     
     // Segundo critério: se ambas tarefas têm a mesma prioridade, ordenamos diretamente pela data
     if (a.priority === b.priority && a.due_date && b.due_date) {
-      const dateA = normalizeDate(a.due_date);
-      const dateB = normalizeDate(b.due_date);
-      if (dateA && dateB) {
-        if (dateA < dateB) return -1;
-        if (dateA > dateB) return 1;
-      }
+      const dateA = new Date(a.due_date);
+      const dateB = new Date(b.due_date);
+      if (dateA < dateB) return -1;
+      if (dateA > dateB) return 1;
     }
     
     // Verificamos diretamente a data de vencimento para tarefas próximas do vencimento, 
     // independente da prioridade, dando prioridade às tarefas vencidas ou prestes a vencer
     if (a.due_date && b.due_date) {
-      const dateA = normalizeDate(a.due_date);
-      const dateB = normalizeDate(b.due_date);
-      const today = getCurrentSystemDate();
+      const dateA = new Date(a.due_date);
+      const dateB = new Date(b.due_date);
+      const today = new Date();
       
-      if (dateA && dateB) {
-        // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
-        const aIsOverdue = dateA < today;
-        const bIsOverdue = dateB < today;
-        
-        if (aIsOverdue && !bIsOverdue) return -1;
-        if (!aIsOverdue && bIsOverdue) return 1;
-        
-        // Se ambas estão vencidas, a que venceu primeiro tem prioridade
-        if (aIsOverdue && bIsOverdue) {
-          if (dateA < dateB) return -1;
-          if (dateA > dateB) return 1;
-        }
+      // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
+      const aIsOverdue = dateA < today;
+      const bIsOverdue = dateB < today;
+      
+      if (aIsOverdue && !bIsOverdue) return -1;
+      if (!aIsOverdue && bIsOverdue) return 1;
+      
+      // Se ambas estão vencidas, a que venceu primeiro tem prioridade
+      if (aIsOverdue && bIsOverdue) {
+        if (dateA < dateB) return -1;
+        if (dateA > dateB) return 1;
       }
     }
     
