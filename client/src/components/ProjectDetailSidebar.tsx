@@ -62,6 +62,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   // Adiciona um event listener para detectar cliques fora da barra lateral
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // Se o diálogo de adicionar membro estiver aberto, não fechar a barra lateral
+      if (showAddMemberDialog) {
+        return;
+      }
+      
       // Verifica se o clique foi fora da barra lateral
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         onClose();
@@ -75,7 +80,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose]);
+  }, [onClose, showAddMemberDialog]);
   
   // Funções para navegação
   const handleManageTasks = () => {
