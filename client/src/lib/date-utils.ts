@@ -1,7 +1,12 @@
 import { DateTime } from 'luxon';
 import { parseISO, format as dateFormat } from 'date-fns';
-import { formatInTimeZone, zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
+
+// Declare o módulo luxon para evitar erros de tipagem
+declare module 'luxon' {
+  export const DateTime: any;
+}
 
 // Obtém o timezone do navegador do usuário
 export const getUserTimeZone = (): string => {
@@ -59,13 +64,18 @@ export const formatDateTimeWithTZ = (
 
 // Retorna uma data ISO em UTC a partir de uma data local
 export const localDateToUTC = (localDate: Date): string => {
-  return zonedTimeToUtc(localDate, getUserTimeZone()).toISOString();
+  // Usar o Luxon para converter do timezone local para UTC
+  return DateTime.fromJSDate(localDate)
+    .setZone(getUserTimeZone())
+    .toUTC()
+    .toISO();
 };
 
 // Converte uma data UTC para o timezone do usuário
 export const utcToLocalDate = (utcDate: string | Date): Date => {
   const date = typeof utcDate === 'string' ? parseISO(utcDate) : utcDate;
-  return utcToZonedTime(date, getUserTimeZone());
+  // Converter para o timezone do usuário usando date-fns-tz
+  return toZonedTime(date, getUserTimeZone());
 };
 
 // Formata duração entre duas datas

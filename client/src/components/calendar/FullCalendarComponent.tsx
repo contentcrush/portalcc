@@ -8,12 +8,14 @@ import { DateSelectArg, EventClickArg, EventContentArg, EventInput } from '@full
 import { Event } from '@shared/schema';
 // Importação correta do locale ptBR
 import ptBRLocale from '@fullcalendar/core/locales/pt-br';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Card, CardContent } from '@/components/ui/card';
 import EventDialog from './EventDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getUserTimeZone, formatDateTimeWithTZ } from '@/lib/date-utils';
 
 interface FullCalendarComponentProps {
   events?: Event[];
@@ -203,6 +205,20 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
           </div>
         )}
         
+        <div className="flex items-center justify-end mb-2 text-xs text-muted-foreground">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                <span>Fuso horário: {getUserTimeZone()}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Todos os eventos são armazenados em UTC e convertidos para seu fuso horário local.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           headerToolbar={{
@@ -220,6 +236,7 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
           locale={ptBRLocale}
           height="auto"
           firstDay={1}  // Segunda-feira como primeiro dia da semana (padrão europeu/brasileiro)
+          timeZone="local" // Usar o fuso horário local do usuário para exibição
           eventTimeFormat={{
             hour: '2-digit',
             minute: '2-digit',
