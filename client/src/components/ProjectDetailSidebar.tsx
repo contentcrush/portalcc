@@ -570,7 +570,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           <div className="flex items-center justify-between">
             <div className="text-sm font-medium text-gray-600">Prazo:</div>
             <div className="text-sm font-medium">
-              <DateDisplay date={project?.endDate} fallback="Não definido" />
+              {project?.endDate ? <DateDisplay date={project.endDate} /> : 'Não definido'}
             </div>
           </div>
         </div>
