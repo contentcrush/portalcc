@@ -359,17 +359,41 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const uploadAttachmentMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const file = formData.get('file') as File;
+      const reader = new FileReader();
       
-      // Criando um objeto com os dados necessários
-      const data = {
-        file_name: file.name,
-        file_url: URL.createObjectURL(file),
-        project_id: projectId,
-        file_size: file.size,
-        file_type: file.type
-      };
-      
-      return apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
+      return new Promise((resolve, reject) => {
+        reader.onload = async (event) => {
+          try {
+            if (!event.target || !event.target.result) {
+              throw new Error("Falha ao ler o arquivo");
+            }
+            
+            // Base64 do arquivo
+            const fileBase64 = event.target.result.toString().split(',')[1];
+            
+            // Criando um objeto com os dados necessários
+            const data = {
+              file_name: file.name,
+              file_url: `data:${file.type};base64,${fileBase64}`,
+              project_id: projectId,
+              file_size: file.size,
+              file_type: file.type
+            };
+            
+            const response = await apiRequest('POST', `/api/projects/${projectId}/attachments`, data);
+            resolve(response);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        reader.onerror = () => {
+          reject(new Error("Erro ao ler o arquivo"));
+        };
+        
+        // Inicia a leitura do arquivo como URL de dados
+        reader.readAsDataURL(file);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/attachments`] });
@@ -897,12 +921,12 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                     </div>
                     <div className="overflow-hidden">
                       <a 
-                        href={attachment.file_path} 
+                        href={attachment.file_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-slate-700 hover:text-indigo-600 truncate block max-w-[180px]"
                       >
-                        {attachment.filename || 'Anexo'}
+                        {attachment.file_name || 'Anexo'}
                       </a>
                       <p className="text-xs text-slate-500">
                         {formatDate(attachment.upload_date)}
