@@ -19,6 +19,49 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Função para determinar o ícone pelo tipo de arquivo
+export function getFileTypeIcon(fileType: string | null | undefined) {
+  if (!fileType) return 'file';
+  
+  // Normaliza o tipo do arquivo para minúsculas
+  const type = fileType.toLowerCase();
+  
+  // Documentos
+  if (type.includes('pdf')) return 'file-text';
+  if (type.includes('doc') || type.includes('word') || type.includes('rtf') || type.includes('txt')) return 'file-text';
+  
+  // Planilhas
+  if (type.includes('xls') || type.includes('sheet') || type.includes('csv')) return 'file-spreadsheet';
+  
+  // Apresentações
+  if (type.includes('ppt') || type.includes('presentation')) return 'file-presentation';
+  
+  // Imagens
+  if (type.includes('image') || type.includes('jpg') || type.includes('jpeg') || 
+      type.includes('png') || type.includes('gif') || type.includes('svg') || 
+      type.includes('webp')) return 'image';
+  
+  // Áudio
+  if (type.includes('audio') || type.includes('mp3') || type.includes('wav') || 
+      type.includes('ogg') || type.includes('flac')) return 'file-audio';
+  
+  // Vídeo
+  if (type.includes('video') || type.includes('mp4') || type.includes('avi') || 
+      type.includes('mov') || type.includes('webm')) return 'file-video';
+  
+  // Compactados
+  if (type.includes('zip') || type.includes('rar') || type.includes('tar') || 
+      type.includes('gz') || type.includes('7z')) return 'file-archive';
+      
+  // Código
+  if (type.includes('html') || type.includes('css') || type.includes('js') || 
+      type.includes('json') || type.includes('xml') || type.includes('php') || 
+      type.includes('java') || type.includes('py')) return 'file-code';
+  
+  // Padrão
+  return 'file';
+}
+
 // Função getInitials foi movida para baixo no arquivo
 
 export function formatCurrency(value: number | null | undefined): string {

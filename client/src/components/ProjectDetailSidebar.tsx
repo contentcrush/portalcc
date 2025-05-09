@@ -3,7 +3,7 @@ import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File } from "lucide-react";
+import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File, Download } from "lucide-react";
 import { formatDate, formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
@@ -337,6 +337,23 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     formData.append('file', files[0]);
     
     uploadAttachmentMutation.mutate(formData);
+  };
+  
+  // Função para baixar um arquivo
+  const handleDownloadFile = (attachment: any) => {
+    // Verificar se é um arquivo com dados base64
+    if (attachment.file_url?.startsWith('data:')) {
+      // Criar um link para download do arquivo base64
+      const link = document.createElement('a');
+      link.href = attachment.file_url;
+      link.download = attachment.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Se não for base64, abrir em uma nova aba
+      window.open(attachment.file_url, '_blank');
+    }
   };
   
   const handleDeleteClick = (attachmentId: number) => {
