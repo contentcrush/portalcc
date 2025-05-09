@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Card, CardContent } from '@/components/ui/card';
 import EventDialog from './EventDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getUserTimeZone, formatDateTimeWithTZ } from '@/lib/date-utils';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface FullCalendarComponentProps {
   events?: Event[];
@@ -47,6 +47,7 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
   onViewChange,
 }) => {
   const { toast } = useToast();
+  const dateFormatter = useDateFormatter();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -210,7 +211,7 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                <span>Fuso horário: {getUserTimeZone()}</span>
+                <span>Fuso horário: {dateFormatter.getUserTZ()}</span>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Todos os eventos são armazenados em UTC e convertidos para seu fuso horário local.</p>

@@ -19,6 +19,7 @@ import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
+import { DateFormatterProvider } from "@/hooks/use-date-formatter";
 import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
 import { SocketProvider } from "@/contexts/SocketContext";
 import Layout from "@/components/Layout";
@@ -60,18 +61,20 @@ function App() {
       <AuthProvider>
         <PreferencesProvider>
           <AccessibilityProvider>
-            <ProjectFormProvider>
-              <SocketProvider>
-                <TooltipProvider>
-                  <Layout>
-                    <Router />
-                  </Layout>
-                  {/* Renderizar o diálogo de formulário de projeto globalmente */}
-                  <ProjectFormDialog />
-                  <Toaster />
-                </TooltipProvider>
-              </SocketProvider>
-            </ProjectFormProvider>
+            <DateFormatterProvider>
+              <ProjectFormProvider>
+                <SocketProvider>
+                  <TooltipProvider>
+                    <Layout>
+                      <Router />
+                    </Layout>
+                    {/* Renderizar o diálogo de formulário de projeto globalmente */}
+                    <ProjectFormDialog />
+                    <Toaster />
+                  </TooltipProvider>
+                </SocketProvider>
+              </ProjectFormProvider>
+            </DateFormatterProvider>
           </AccessibilityProvider>
         </PreferencesProvider>
       </AuthProvider>
