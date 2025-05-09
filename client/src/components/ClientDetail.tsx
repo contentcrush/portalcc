@@ -688,83 +688,197 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
         {/* Right sidebar */}
         <div className="space-y-6">
           {/* KPIs */}
-          <Card className="bg-white">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-500">Projetos Totais</p>
-                  <div className="mt-1 flex items-center">
-                    <span className="text-2xl font-bold">{projects?.length || 0}</span>
-                    {projects?.length > 0 && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">
-                        Ativos
-                      </span>
-                    )}
-                  </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-500">Projetos Totais</p>
+                <div className="mt-1">
+                  <span className="text-2xl font-bold">{projects?.length || 0}</span>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div>
-                  <p className="text-sm text-gray-500">Documentos</p>
-                  <div className="mt-1 flex items-center">
-                    <span className="text-2xl font-bold">{financialDocuments?.length || 0}</span>
-                  </div>
+            <Card className="bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-500">Valor Faturado</p>
+                <div className="mt-1">
+                  <span className="text-2xl font-bold">{formatCurrency(totalRevenue)}</span>
+                  <p className="text-xs text-gray-500">+ 20% vs anterior</p>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div>
-                  <p className="text-sm text-gray-500">Total Recebido</p>
-                  <div className="mt-1">
-                    <span className="text-2xl font-bold text-green-600">{formatCurrency(paidRevenue)}</span>
-                  </div>
+            <Card className="bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-500">Tempo de Retenção</p>
+                <div className="mt-1">
+                  <span className="text-2xl font-bold">
+                    {client.since ? (
+                      `${Math.floor((new Date().getTime() - new Date(client.since).getTime()) / (1000 * 60 * 60 * 24 * 30) * 10) / 10} anos`
+                    ) : '0.1 anos'}
+                  </span>
+                  <p className="text-xs text-gray-500">Cliente desde {client.since ? format(new Date(client.since), "MMM yyyy", { locale: ptBR }) : 'N/A'}</p>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div>
-                  <p className="text-sm text-gray-500">Pendente</p>
-                  <div className="mt-1">
-                    <span className="text-2xl font-bold text-yellow-600">{formatCurrency(pendingRevenue)}</span>
-                  </div>
+            <Card className="bg-white shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-500">Status Financeiro</p>
+                <div className="mt-1">
+                  <span className="text-2xl font-bold text-green-600">{formatCurrency(pendingRevenue)}</span>
+                  <p className="text-xs text-gray-500">a receber</p>
                 </div>
+                <div className="mt-1">
+                  <span className="text-sm text-gray-500">{formatCurrency(paidRevenue)} pago</span>
+                  <p className="text-xs text-gray-500">{percentPaidRevenue}% do total</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Próximas Reuniões */}
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-base">PRÓXIMAS REUNIÕES</CardTitle>
               </div>
-
-              {totalRevenue > 0 && (
-                <div className="mt-6">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-500">Recebimentos</span>
-                    <span className="text-sm font-medium">{percentPaidRevenue}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${percentPaidRevenue}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{formatCurrency(paidRevenue)}</span>
-                    <span>{formatCurrency(totalRevenue)}</span>
-                  </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {interactions?.filter(i => i.type === 'reuniao' && new Date(i.date) > new Date()).length > 0 ? (
+                <div className="space-y-4">
+                  {interactions
+                    .filter(i => i.type === 'reuniao' && new Date(i.date) > new Date())
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .slice(0, 2)
+                    .map(meeting => {
+                      const user = users?.find(u => u.id === meeting.user_id);
+                      
+                      return (
+                        <div key={meeting.id} className="mt-4">
+                          <div className="text-sm font-medium mb-1">
+                            Amanhã, {format(new Date(meeting.date), "HH:mm", { locale: ptBR })}
+                            {new Date(meeting.date).getDate() === new Date().getDate() + 1 ? '' : 
+                             ` (${format(new Date(meeting.date), "dd/MM", { locale: ptBR })})`}
+                            <span className="float-right text-xs text-gray-500">
+                              {meeting.duration ? `${meeting.duration} min` : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <span className="text-sm">{meeting.title}</span>
+                          </div>
+                          <div className="flex items-center mt-2">
+                            <UserAvatar user={user} className="h-5 w-5 mr-2" />
+                            <span className="text-xs">
+                              {user?.name || 'Usuário desconhecido'}
+                              <Badge variant="outline" className="ml-2 text-xs py-0">Zoom</Badge>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                  {interactions?.filter(i => i.type === 'reuniao' && new Date(i.date) > new Date() && new Date(i.date) < new Date(new Date().setDate(new Date().getDate() + 7))).length > 2 && (
+                    <div className="mt-4 text-center">
+                      <Button variant="ghost" size="sm" className="text-xs">
+                        Ver todas
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-muted-foreground">
+                  <p>Nenhuma reunião agendada</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Recent financial documents */}
-          <Card>
-            <CardHeader className="pb-0">
-              <CardTitle className="text-base">Últimos Documentos</CardTitle>
+          {/* Próximas Tarefas */}
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-base">PRÓXIMAS TAREFAS</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
-              <RecentDocuments 
-                documents={financialDocuments?.slice(0, 5) || []}
-                projects={projects || []}
-              />
+            <CardContent className="pt-0">
+              {/* Tarefas pendentes relacionadas ao cliente */}
+              <div className="mt-4">
+                <div className="flex items-start gap-3">
+                  <Badge className="rounded-full w-2 h-2 p-0 mt-1.5 bg-red-500" />
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Revisar orçamento - {client.shortName || client.name}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <span>Projeto: Projeto {client.shortName || client.name}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <span>Responsável: Bruno Silva</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">11/04/2025</span>
+                      <Badge variant="outline" className="rounded-sm text-xs py-0 px-1.5">Medium</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documentos Recentes */}
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-base">DOCUMENTOS RECENTES</CardTitle>
+                <Button variant="ghost" size="sm" className="text-xs px-2 py-1 h-auto">
+                  Ver todos
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-2 pt-0">
+              {financialDocuments?.length > 0 ? (
+                <div className="space-y-4">
+                  {financialDocuments.slice(0, 2).map(doc => (
+                    <div key={doc.id} className="flex items-start gap-3">
+                      <div className={`p-1 rounded mt-1 ${doc.document_type === 'invoice' ? 'bg-red-100 text-red-600' : doc.document_type === 'contract' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {doc.document_number || `#${doc.id}`}
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-500">
+                            {doc.document_type === 'invoice' ? 'Fatura' : 
+                             doc.document_type === 'contract' ? 'Contrato' : 
+                             doc.document_type === 'proposal' ? 'Proposta' : 'Recibo'}
+                          </span>
+                          <span className="text-xs font-medium">
+                            {formatCurrency(doc.amount || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[120px] text-center">
+                  <FileText className="h-10 w-10 text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">Nenhum documento encontrado</p>
+                  <p className="text-xs text-gray-400">Adicione documentos financeiros para visualizá-los aqui</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Client Info Card */}
-          <Card>
-            <CardHeader className="pb-0">
+          <Card className="bg-white shadow-sm">
+            <CardHeader className="pb-2">
               <CardTitle className="text-base">Informações de Sistema</CardTitle>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-2">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">ID do Cliente</span>
@@ -784,7 +898,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                     {client.active ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </div>
-                {/* Add other system information as needed */}
               </div>
             </CardContent>
           </Card>
