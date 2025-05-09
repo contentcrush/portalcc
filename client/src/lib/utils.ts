@@ -81,8 +81,10 @@ export function getCurrentSystemDate(): Date {
   // Obtém a data local e garantimos que ela está no fuso horário correto
   const today = new Date();
   
-  // Retorna a data atual sem alterações para manter consistência
-  // Este é o ponto central para ajustes de fuso horário se necessário
+  // Forçar a data para o dia correto (09/05/2025) para evitar problemas de fuso horário
+  // Definir o horário para meia-noite para cálculos de diferença de dias
+  today.setHours(0, 0, 0, 0);
+  
   return today;
 }
 
@@ -100,9 +102,18 @@ export function normalizeDate(date: Date | string | null | undefined): Date | nu
   if (typeof date === "string") {
     // Se for string ISO, converter para Date
     dateObj = parseISO(date);
+    
+    // Ajuste para corrigir problemas de fuso horário
+    // Quando as datas vêm do servidor, podem perder um dia devido ao fuso
+    const offset = dateObj.getTimezoneOffset();
+    if (offset !== 0) {
+      // Aqui ajustamos para manter a data correta em UTC
+      dateObj.setHours(12, 0, 0, 0); // Meio-dia para garantir que está no mesmo dia
+    }
   } else {
-    // Se já for Date, fazer uma cópia
+    // Se já for Date, fazer uma cópia e normalizar
     dateObj = new Date(date);
+    dateObj.setHours(12, 0, 0, 0); // Meio-dia para garantir que está no mesmo dia
   }
   
   if (!isValid(dateObj)) return null;
