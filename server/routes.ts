@@ -2936,9 +2936,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/projects/:id/attachments", authenticateJWT, async (req, res) => {
     try {
+      console.log("Iniciando processamento de anexo de projeto");
       const projectId = parseInt(req.params.id);
+      console.log("Project ID:", projectId);
+      console.log("Body recebido:", {
+        fileName: req.body.file_name,
+        fileSize: req.body.file_size,
+        fileType: req.body.file_type,
+        fileUrlLength: req.body.file_url ? req.body.file_url.length : 0
+      });
       
       if (!req.body.file_name || !req.body.file_url) {
+        console.error("Campos obrigatórios ausentes");
         return res.status(400).json({ 
           message: "Erro de validação", 
           errors: [{ code: "invalid_type", path: ["file_name", "file_url"], message: "Campos obrigatórios ausentes" }] 
@@ -2946,15 +2955,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Adiciona o ID do usuário autenticado e o projeto
-      const attachment = await storage.createProjectAttachment({
-        ...req.body,
+      const attachmentData = {
+        file_name: req.body.file_name,
+        file_url: req.body.file_url,
+        file_size: req.body.file_size || 0,
+        file_type: req.body.file_type || "application/octet-stream",
         project_id: projectId,
         uploaded_by: req.user!.id
-      });
+      };
+      
+      console.log("Dados de anexo preparados, enviando para storage");
+      const attachment = await storage.createProjectAttachment(attachmentData);
+      console.log("Anexo criado com sucesso, ID:", attachment.id);
       
       res.status(201).json(attachment);
     } catch (error) {
       console.error("Erro ao criar anexo do projeto:", error);
+      // Detalhando o erro para diagnóstico
+      if (error instanceof Error) {
+        console.error("Mensagem de erro:", error.message);
+        console.error("Stack trace:", error.stack);
+      }
       res.status(500).json({ message: "Falha ao criar anexo do projeto" });
     }
   });
