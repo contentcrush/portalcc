@@ -179,7 +179,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       setIsEditDialogOpen(false);
-      toast({
+      showSuccessToast({
         title: "Cliente atualizado com sucesso",
         description: "As informações do cliente foram atualizadas."
       });
@@ -204,7 +204,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/projects`] });
       setIsNewProjectDialogOpen(false);
       projectForm.reset();
-      toast({
+      showSuccessToast({
         title: "Projeto criado com sucesso",
         description: `${newProject.name} foi criado para o cliente ${client?.name}.`,
       });
@@ -244,7 +244,7 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
       const interactions = deletedItems?.interactions || 0;
       const financialDocuments = deletedItems?.financialDocuments || 0;
       
-      toast({
+      showSuccessToast({
         title: "Cliente excluído com sucesso",
         description: `Foram excluídos: ${projects} projeto(s), ${interactions} interação(ões) e ${financialDocuments} documento(s) financeiro(s) relacionados a este cliente.`,
         duration: 5000,
