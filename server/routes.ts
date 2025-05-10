@@ -1621,8 +1621,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      // Importando date-fns para tratamento correto de datas
-      const { parseISO } = require("date-fns");
+      // Já importado no topo do arquivo
+      // Não use require aqui - o projeto usa ES modules
       
       // Limpa campos de data quando são strings vazias
       const cleanedData = { ...req.body };
