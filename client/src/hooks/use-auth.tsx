@@ -7,6 +7,7 @@ import {
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 
 type AuthResponse = {
   user: SelectUser;
@@ -56,10 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
       // O token agora é armazenado em cookies HTTP-only pelo servidor
-      toast({
+      showSuccessToast({
         title: "Login bem-sucedido",
-        description: `Bem-vindo de volta, ${data.user.name}!`,
-        variant: "default",
+        description: `Bem-vindo de volta, ${data.user.name}!`
       });
     },
     onError: (error: Error) => {
