@@ -37,6 +37,7 @@ import { TaskWithDetails } from "@/lib/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { UserAvatar } from "./UserAvatar";
 import { ClientAvatar } from "./ClientAvatar";
 
@@ -82,9 +83,9 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
       if (task.project_id) {
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
       }
-      toast({
+      showSuccessToast({
         title: variables.completed ? "Tarefa concluída" : "Tarefa reaberta",
-        description: task.title,
+        description: task.title
       });
     },
     onError: (error) => {
@@ -105,9 +106,9 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
       if (task.project_id) {
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
       }
-      toast({
+      showSuccessToast({
         title: "Tarefa excluída",
-        description: `A tarefa "${task.title}" foi excluída com sucesso.`,
+        description: `A tarefa "${task.title}" foi excluída com sucesso.`
       });
     },
     onError: (error) => {
