@@ -104,6 +104,7 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
   // Estado para controlar a exibição das tarefas concluídas
   const [showAllCompleted, setShowAllCompleted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -147,6 +148,11 @@ export default function Tasks() {
   // Fetch users for dropdown
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ['/api/users'],
+  });
+  
+  // Fetch clients for dropdown
+  const { data: clients = [] } = useQuery<any[]>({
+    queryKey: ['/api/clients'],
   });
 
   // Create task mutation
@@ -363,6 +369,15 @@ export default function Tasks() {
       return false;
     }
     
+    // Client filter
+    if (clientFilter !== "all") {
+      // Precisamos verificar o cliente associado ao projeto
+      const project = projects.find(p => p.id === task.project_id);
+      if (!project || project.client_id !== parseInt(clientFilter)) {
+        return false;
+      }
+    }
+    
     // Removemos os filtros baseados no activeTab para permitir
     // que ambas as seções (pendentes e concluídas) sejam exibidas simultaneamente
     
@@ -435,7 +450,7 @@ export default function Tasks() {
           
           {/* Tarefas Pendentes */}
           <CardContent className="p-6">
-            <header className="flex items-center justify-between mb-5">
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
               <div className="flex items-center gap-3">
                 <AlarmClock className="h-5 w-5 text-amber-500" />
                 <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
@@ -446,30 +461,50 @@ export default function Tasks() {
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar tarefas..."
-                    className="pl-9 bg-gray-50 border-gray-200"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                {/* Filtros - primeira linha (em mobile) ou todos em linha (desktop) */}
+                <div className="flex flex-wrap w-full md:w-auto items-center gap-2">
+                  {/* Campo de busca */}
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar tarefas..."
+                      className="pl-9 bg-gray-50 border-gray-200"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Filtro por Prioridade */}
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="w-full sm:w-40 bg-gray-50 border-gray-200">
+                      <SelectValue placeholder="Prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {TASK_PRIORITY_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {/* Filtro por Cliente */}
+                  <Select value={clientFilter} onValueChange={setClientFilter}>
+                    <SelectTrigger className="w-full sm:w-40 bg-gray-50 border-gray-200">
+                      <SelectValue placeholder="Cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.shortName || client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger className="w-40 bg-gray-50 border-gray-200">
-                    <SelectValue placeholder="Prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {TASK_PRIORITY_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </header>
             
@@ -507,7 +542,7 @@ export default function Tasks() {
           
           {/* Tarefas Concluídas */}
           <CardContent className="border-t border-gray-200 bg-gray-50 p-6">
-            <header className="flex items-center justify-between mb-5">
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <h2 className="text-lg font-semibold">Tarefas Concluídas</h2>
