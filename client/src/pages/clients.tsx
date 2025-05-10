@@ -119,6 +119,7 @@ import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { showSuccessToast } from "@/lib/utils";
 
 // Schema para validação do formulário
 const formSchema = insertClientSchema.extend({
@@ -333,9 +334,9 @@ export default function Clients() {
         form.setValue('address', 'Av. Brasil, 1500');
         form.setValue('city', 'São Paulo');
         
-        toast({
+        showSuccessToast({
           title: "CNPJ encontrado",
-          description: "Dados da empresa preenchidos automaticamente.",
+          description: "Dados da empresa preenchidos automaticamente."
         });
         setIsLookupCnpj(false);
       }, 1500);
