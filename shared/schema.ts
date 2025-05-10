@@ -364,7 +364,8 @@ export const insertTaskSchema = taskBaseSchema.extend({
   priority: z.string().nullable().optional(),
   estimated_hours: z.number().nullable().optional(),
   start_date: z.union([z.string(), z.date(), z.null()]).nullable().optional(),
-  due_date: z.union([z.string(), z.date(), z.null()]).nullable().optional()
+  due_date: z.union([z.string(), z.date(), z.null()]).nullable().optional(),
+  due_time: z.string().nullable().optional() // Formato HH:MM
 });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ 
   id: true, 

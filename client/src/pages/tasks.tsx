@@ -726,6 +726,24 @@ export default function Tasks() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
+                    name="start_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de início</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
                     name="due_date"
                     render={({ field }) => (
                       <FormItem>
@@ -741,20 +759,25 @@ export default function Tasks() {
                       </FormItem>
                     )}
                   />
-                  
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="start_date"
+                    name="due_time"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data de início</FormLabel>
+                        <FormLabel>Hora de entrega</FormLabel>
                         <FormControl>
                           <Input 
-                            type="date" 
+                            type="time" 
                             {...field}
                             value={field.value || ''}
                           />
                         </FormControl>
+                        <FormDescription>
+                          Especifique a hora limite para entrega da tarefa.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

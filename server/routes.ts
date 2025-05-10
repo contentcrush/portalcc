@@ -1539,7 +1539,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
           completed: req.body.completed === true || req.body.completed === "true" ? true : false,
           start_date: null,
-          due_date: null
+          due_date: null,
+          due_time: req.body.due_time || null
         };
         
         // Processamento das datas com tratamento específico
@@ -1629,6 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanedData = { ...req.body };
       if (cleanedData.start_date === '') cleanedData.start_date = null;
       if (cleanedData.due_date === '') cleanedData.due_date = null;
+      if (cleanedData.due_time === '') cleanedData.due_time = null;
       if (cleanedData.estimated_hours === '') cleanedData.estimated_hours = null;
       
       // Conversão de datas de string para Date
