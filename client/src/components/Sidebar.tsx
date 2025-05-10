@@ -177,35 +177,36 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </nav>
       
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        {/* Botão unificado de perfil e configurações */}
-        <a
-          href="/settings"
-          onClick={(e) => {
-            e.preventDefault();
-            onNavigate("/settings");
-          }}
-          className="group flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-all"
-        >
-          <UserAvatar user={user} className="h-10 w-10 ring-2 ring-gray-200 group-hover:ring-primary/50 transition-all" />
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
-          </div>
-          <div className="text-gray-400 group-hover:text-primary transition-colors">
-            <LucideIcons.ChevronRight className="h-5 w-5" />
-          </div>
-        </a>
-        
-        {/* Botão de logout separado como um botão discreto */}
-        <div className="mt-2 px-3">
+      {/* Footer - versão compacta e responsiva */}
+      <div className="p-2 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          {/* Perfil compacto - clicável para ir às configurações */}
+          <a
+            href="/settings"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate("/settings");
+            }}
+            className="group flex items-center gap-2 py-2 px-3 rounded-md hover:bg-gray-100 transition-all flex-1"
+          >
+            <UserAvatar user={user} className="h-8 w-8 shrink-0 ring-1 ring-gray-200 group-hover:ring-primary/40 transition-all" />
+            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-1">
+              <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
+              <p className="text-xs text-gray-500 truncate sm:before:content-['·'] sm:before:mx-1 sm:before:text-gray-300">
+                {user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}
+              </p>
+            </div>
+            <LucideIcons.ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-primary transition-colors shrink-0" />
+          </a>
+          
+          {/* Botão de logout compacto */}
           <button 
-            onClick={handleLogout} 
-            className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+            onClick={handleLogout}
+            aria-label="Sair"
+            className="p-2 text-gray-500 hover:text-red-600 transition-colors rounded-md hover:bg-gray-100 ml-1 flex items-center gap-1"
           >
             <LogOut className="h-4 w-4" />
-            <span>Sair</span>
+            <span className="sr-only sm:not-sr-only text-xs sm:text-sm">Sair</span>
           </button>
         </div>
       </div>
