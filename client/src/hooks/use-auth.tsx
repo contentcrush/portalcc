@@ -79,10 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (data: { user: SelectUser, token: string }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
       // O token agora é armazenado em cookies HTTP-only pelo servidor
-      toast({
+      showSuccessToast({
         title: "Registro bem-sucedido",
-        description: `Bem-vindo, ${data.user.name}!`,
-        variant: "default",
+        description: `Bem-vindo, ${data.user.name}!`
       });
     },
     onError: (error: Error) => {
@@ -103,10 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/auth/me"], null);
       // Limpar outras queries do cache para evitar dados antigos
       queryClient.clear();
-      toast({
+      showSuccessToast({
         title: "Logout bem-sucedido",
-        description: "Você foi desconectado com sucesso.",
-        variant: "default",
+        description: "Você foi desconectado com sucesso."
       });
       // Redirecionar para a página de login
       window.location.href = "/auth";
@@ -140,10 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      toast({
+      showSuccessToast({
         title: "Perfil atualizado",
-        description: "Suas informações de perfil foram atualizadas com sucesso.",
-        variant: "default",
+        description: "Suas informações de perfil foram atualizadas com sucesso."
       });
     },
     onError: (error: Error) => {
@@ -167,10 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (data) => {
-      toast({
+      showSuccessToast({
         title: "Senha alterada com sucesso",
-        description: "Sua senha foi atualizada. Use a nova senha no próximo login.",
-        variant: "default",
+        description: "Sua senha foi atualizada. Use a nova senha no próximo login."
       });
     },
     onError: (error: Error) => {
