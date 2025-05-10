@@ -26,6 +26,7 @@ import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin, RefreshCw } from 'lucide-react';
 import { initWebSocket, onWebSocketMessage } from '@/lib/socket';
 import { useAuth } from '@/hooks/use-auth';
+import { showSuccessToast } from '@/lib/utils';
 
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
@@ -52,10 +53,9 @@ export default function CalendarPage() {
       // Invalidar a query de eventos para recarregar os dados
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       
-      toast({
+      showSuccessToast({
         title: 'Calendário sincronizado',
-        description: data.message,
-        variant: 'default',
+        description: data.message
       });
     },
     onError: (error: any) => {
@@ -84,10 +84,9 @@ export default function CalendarPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       
       // Notificar o usuário (optional)
-      toast({
+      showSuccessToast({
         title: 'Calendário atualizado',
-        description: data.message || 'O calendário foi atualizado automaticamente',
-        variant: 'default',
+        description: data.message || 'O calendário foi atualizado automaticamente'
       });
     });
     

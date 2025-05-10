@@ -56,7 +56,7 @@ import { PROJECT_STATUS_OPTIONS, CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { getProgressBarColor } from "@/lib/utils";
+import { getProgressBarColor, showSuccessToast } from "@/lib/utils";
 
 export default function Projects({ params }: { params?: { id?: string } }) {
   const { toast } = useToast();
@@ -96,10 +96,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       return await res.json();
     },
     onSuccess: () => {
-      toast({
+      showSuccessToast({
         title: "Projeto duplicado com sucesso",
-        description: "Uma cópia do projeto foi criada",
-        variant: "default",
+        description: "Uma cópia do projeto foi criada"
       });
       // Atualiza a lista de projetos
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
@@ -119,10 +118,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       return apiRequest("DELETE", `/api/projects/${projectId}`);
     },
     onSuccess: () => {
-      toast({
+      showSuccessToast({
         title: "Projeto excluído com sucesso",
-        description: "O projeto e todos seus dados relacionados foram removidos permanentemente",
-        variant: "default",
+        description: "O projeto e todos seus dados relacionados foram removidos permanentemente"
       });
       // Fecha o sidebar de detalhes caso esteja aberto
       setSelectedProjectId(null);
