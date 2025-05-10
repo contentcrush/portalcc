@@ -163,6 +163,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
+      showSuccessToast({
+        title: "Comentário excluído",
+        description: "O comentário foi excluído com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -186,6 +190,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
+      showSuccessToast({
+        title: "Reação adicionada",
+        description: "Sua reação foi adicionada com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
