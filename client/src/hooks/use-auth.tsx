@@ -20,6 +20,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<AuthResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<AuthResponse, Error, InsertUser>;
+  updateProfileMutation: UseMutationResult<SelectUser, Error, Partial<SelectUser>>;
 };
 
 type LoginData = {
@@ -115,6 +116,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Mutação para atualizar dados do perfil
+  const updateProfileMutation = useMutation({
+    mutationFn: async (userData: Partial<SelectUser>) => {
+      const userId = authData?.user?.id;
+      if (!userId) throw new Error("Usuário não autenticado");
+      
+      const res = await apiRequest("PATCH", `/api/users/${userId}`, userData);
+      return await res.json();
+    },
+    onSuccess: (updatedUser: SelectUser) => {
+      // Atualiza os dados do usuário no cache
+      if (authData) {
+        queryClient.setQueryData(["/api/auth/me"], {
+          ...authData,
+          user: updatedUser
+        });
+      }
+      
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações de perfil foram atualizadas com sucesso.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Falha na atualização",
+        description: error.message || "Não foi possível atualizar o perfil",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Os tokens são gerenciados automaticamente via cookies HTTP-only pelo servidor
 
   return (
@@ -126,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        updateProfileMutation,
       }}
     >
       {children}

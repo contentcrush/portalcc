@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
 import { 
   LockIcon, 
@@ -400,96 +401,282 @@ function RBACSettings() {
 
 // Componente para a aba de Perfil
 function ProfileSettings() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
-
-  const handleSaveProfile = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações de perfil foram atualizadas com sucesso.",
-      });
-    }, 1500);
+  const { user, updateProfileMutation } = useAuth();
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    department: user?.department || '',
+    position: user?.position || '',
+    bio: user?.bio || '',
+    avatar: user?.avatar || null,
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  
+  // Referência para o formulário de senha
+  const passwordFormRef = useRef<HTMLFormElement>(null);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
   };
+  
+  const handleAvatarChange = (value: string | null) => {
+    setFormData(prev => ({
+      ...prev,
+      avatar: value
+    }));
+  };
+  
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Cria o objeto com os dados a serem atualizados
+    const updatedData: Partial<typeof user> = {
+      name: formData.name,
+      email: formData.email,
+      department: formData.department || null,
+      position: formData.position || null,
+      bio: formData.bio || null,
+      avatar: formData.avatar
+    };
+    
+    // Enviar dados para a API
+    updateProfileMutation.mutate(updatedData);
+  };
+  
+  const handlePasswordUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validar se as senhas coincidem
+    if (formData.newPassword !== formData.confirmPassword) {
+      return;
+    }
+    
+    // Aqui implementaria a mudança de senha quando estiver disponível na API
+    console.log("Alteração de senha solicitada");
+    
+    // Limpar formulário
+    if (passwordFormRef.current) {
+      passwordFormRef.current.reset();
+    }
+    setFormData(prev => ({
+      ...prev,
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }));
+  };
+  
+  // Status de carregamento
+  const isLoading = updateProfileMutation.isPending;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center space-x-2">
-          <UserIcon className="h-5 w-5 text-blue-500" />
-          <CardTitle>Perfil do Usuário</CardTitle>
+    <div className="space-y-8">
+      <Card className="overflow-hidden">
+        <div className="md:flex">
+          {/* Coluna da esquerda com avatar e informações básicas */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/30 p-6 md:p-8 md:w-1/3 flex flex-col items-center justify-center">
+            <div className="mb-6 text-center">
+              <div className="relative mx-auto mb-4 h-32 w-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-md">
+                {formData.avatar ? (
+                  <img 
+                    src={formData.avatar} 
+                    alt={user?.name || 'Perfil'} 
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-muted">
+                    <UserIcon className="h-16 w-16 text-muted-foreground/60" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-2">
+                <ImageUpload 
+                  value={formData.avatar} 
+                  onChange={handleAvatarChange}
+                />
+              </div>
+            </div>
+            
+            <div className="w-full mt-4">
+              <div className="text-sm text-muted-foreground mb-1">Cargo</div>
+              <div className="font-medium">{user?.position || '(Não definido)'}</div>
+              
+              <div className="text-sm text-muted-foreground mt-4 mb-1">Departamento</div>
+              <div className="font-medium">{user?.department || '(Não definido)'}</div>
+              
+              <div className="text-sm text-muted-foreground mt-4 mb-1">Função</div>
+              <div className="font-medium capitalize">
+                {user?.role === 'admin' ? 'Administrador' : 
+                 user?.role === 'manager' ? 'Gestor' : 
+                 user?.role === 'editor' ? 'Editor' : 'Visualizador'}
+              </div>
+            </div>
+          </div>
+          
+          {/* Coluna da direita com formulário */}
+          <div className="p-6 md:p-8 md:w-2/3">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold mb-1">Informações Pessoais</h3>
+              <p className="text-muted-foreground text-sm">
+                Atualize suas informações básicas e personalize seu perfil
+              </p>
+            </div>
+            
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome Completo</Label>
+                  <Input 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleInputChange} 
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department">Departamento</Label>
+                  <Input 
+                    id="department" 
+                    value={formData.department} 
+                    onChange={handleInputChange} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Cargo</Label>
+                  <Input 
+                    id="position" 
+                    value={formData.position} 
+                    onChange={handleInputChange} 
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="bio">Biografia</Label>
+                <textarea 
+                  id="bio" 
+                  className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Salvando...
+                    </>
+                  ) : "Salvar Alterações"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-        <CardDescription>
-          Atualize suas informações pessoais e preferências.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-6">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome Completo</Label>
-                <Input id="fullName" defaultValue={user?.name} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue={user?.email} />
-              </div>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <LockIcon className="h-5 w-5 text-amber-500" />
+              <CardTitle>Segurança da Conta</CardTitle>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="department">Departamento</Label>
-                <Input id="department" defaultValue={user?.department || ''} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="position">Cargo</Label>
-                <Input id="position" defaultValue={user?.position || ''} />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="bio">Biografia</Label>
-              <textarea 
-                id="bio" 
-                className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                defaultValue={user?.bio || ''} 
-              />
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Alteração de Senha</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Senha Atual</Label>
-                <Input id="currentPassword" type="password" />
-              </div>
-              <div></div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Nova Senha</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <Button onClick={handleSaveProfile} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar Alterações"}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setPasswordVisible(!passwordVisible)}
+            >
+              {passwordVisible ? "Cancelar" : "Alterar Senha"}
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          <CardDescription>
+            Gerencie sua senha e configurações de segurança
+          </CardDescription>
+        </CardHeader>
+        
+        {passwordVisible && (
+          <CardContent>
+            <form ref={passwordFormRef} onSubmit={handlePasswordUpdate} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Senha Atual</Label>
+                  <Input 
+                    id="currentPassword" 
+                    type="password" 
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div></div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nova Senha</Label>
+                  <Input 
+                    id="newPassword" 
+                    type="password" 
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  {formData.newPassword && 
+                   formData.confirmPassword && 
+                   formData.newPassword !== formData.confirmPassword && (
+                    <p className="text-sm text-red-500 mt-1">As senhas não coincidem</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <Button type="submit" disabled={
+                  !formData.currentPassword || 
+                  !formData.newPassword || 
+                  !formData.confirmPassword ||
+                  formData.newPassword !== formData.confirmPassword
+                }>
+                  Atualizar Senha
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        )}
+      </Card>
+    </div>
   );
 }
 
