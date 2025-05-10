@@ -323,37 +323,12 @@ export const insertClientSchema = clientBaseSchema.extend({
 // Define schema base e customiza para adicionar transformação de strings para dates
 const projectBaseSchema = createInsertSchema(projects).omit({ id: true, creation_date: true });
 export const insertProjectSchema = projectBaseSchema.extend({
-  startDate: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null) return null;
-    
-    // Se for uma string, converter para Date e ajustar para início do dia em UTC
-    if (typeof val === 'string') {
-      const localDate = new Date(val);
-      localDate.setUTCHours(0, 0, 0, 0);
-      return localDate;
-    }
-    
-    // Se já for um objeto Date, garantir que seja início do dia em UTC
-    const dateObj = new Date(val);
-    dateObj.setUTCHours(0, 0, 0, 0);
-    return dateObj;
-  }).nullable().optional(),
-  
-  endDate: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null) return null;
-    
-    // Se for uma string, converter para Date e ajustar para final do dia em UTC
-    if (typeof val === 'string') {
-      const localDate = new Date(val);
-      localDate.setUTCHours(23, 59, 59, 999);
-      return localDate;
-    }
-    
-    // Se já for um objeto Date, garantir que seja final do dia em UTC
-    const dateObj = new Date(val);
-    dateObj.setUTCHours(23, 59, 59, 999);
-    return dateObj;
-  }).nullable().optional(),
+  startDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional(),
+  endDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional(),
   payment_term: z.union([z.string(), z.number()]).transform(val => 
     typeof val === 'string' ? parseInt(val, 10) : val
   ).default(30).refine(val => [30, 60, 75].includes(val), {
@@ -386,40 +361,8 @@ export const insertTaskSchema = taskBaseSchema.extend({
   assigned_to: z.number().nullable().optional(),
   priority: z.string().nullable().optional(),
   estimated_hours: z.number().nullable().optional(),
-  
-  // Start date - início do dia em UTC
-  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null) return null;
-    
-    // Se for uma string, converter para Date e ajustar para início do dia em UTC
-    if (typeof val === 'string') {
-      const localDate = new Date(val);
-      localDate.setUTCHours(0, 0, 0, 0);
-      return localDate;
-    }
-    
-    // Se já for um objeto Date, garantir que seja início do dia em UTC
-    const dateObj = new Date(val);
-    dateObj.setUTCHours(0, 0, 0, 0);
-    return dateObj;
-  }).nullable().optional(),
-  
-  // Due date - final do dia em UTC
-  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null) return null;
-    
-    // Se for uma string, converter para Date e ajustar para final do dia em UTC
-    if (typeof val === 'string') {
-      const localDate = new Date(val);
-      localDate.setUTCHours(23, 59, 59, 999);
-      return localDate;
-    }
-    
-    // Se já for um objeto Date, garantir que seja final do dia em UTC
-    const dateObj = new Date(val);
-    dateObj.setUTCHours(23, 59, 59, 999);
-    return dateObj;
-  }).nullable().optional(),
+  start_date: z.union([z.string(), z.date(), z.null()]).nullable().optional(),
+  due_date: z.union([z.string(), z.date(), z.null()]).nullable().optional()
 });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ 
   id: true, 

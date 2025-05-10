@@ -1483,21 +1483,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completed: req.body.completed === true || req.body.completed === "true" ? true : false
         };
         
-        // Datas já processadas pelo schema Zod com ajuste de início/fim do dia em UTC
+        // Processamento das datas com tratamento específico
         if (req.body.start_date) {
           try {
-            taskData.start_date = req.body.start_date;
+            // Converter para Date objeto se for string
+            taskData.start_date = new Date(req.body.start_date);
           } catch (e) {
-            console.error("Erro ao processar start_date:", e);
             taskData.start_date = null;
           }
         }
         
         if (req.body.due_date) {
           try {
-            taskData.due_date = req.body.due_date;
+            // Converter para Date objeto se for string
+            taskData.due_date = new Date(req.body.due_date);
           } catch (e) {
-            console.error("Erro ao processar due_date:", e);
             taskData.due_date = null;
           }
         }
