@@ -413,7 +413,7 @@ export default function Tasks() {
             <h1 className="text-2xl font-bold">Tarefas</h1>
             <p className="text-sm text-gray-500">Gerenciamento de tarefas da equipe</p>
           </div>
-          <Button onClick={handleNewTask} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={handleNewTask} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             Nova Tarefa
           </Button>
