@@ -1,9 +1,19 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, parseISO, isValid, isToday, isTomorrow, differenceInCalendarDays, startOfDay } from "date-fns";
+import { 
+  format, 
+  parseISO, 
+  isValid, 
+  isToday, 
+  isTomorrow, 
+  differenceInCalendarDays, 
+  startOfDay,
+  addDays,
+  endOfDay,
+  differenceInDays
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
-import { DateTime } from "luxon";
 import { 
   ProjectStatus, ProjectStageStatus, ProjectSpecialStatus,
   TaskStatus, TaskPriority, InteractionType, DocumentType, 
@@ -690,57 +700,71 @@ export function sortTasksByPriority(a: Task, b: Task): number {
  */
 export function getTaskSortFunction(): (a: Task, b: Task) => number {
   return (a: Task, b: Task) => {
-    // Timezone do usuário para comparações de data
-    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Primeiro critério: tarefas concluídas vão para o fim (dividimos a lista em duas partes)
-    if (a.completed !== b.completed) {
-      return a.completed ? 1 : -1;
-    }
-    
-    // Segundo critério: se ambas tarefas têm a mesma prioridade, ordenamos diretamente pela data
-    if (a.priority === b.priority && a.due_date && b.due_date) {
-      const dateA = typeof a.due_date === 'string' 
-        ? DateTime.fromISO(a.due_date).setZone(userTz).startOf('day')
-        : DateTime.fromJSDate(a.due_date as Date).setZone(userTz).startOf('day');
-        
-      const dateB = typeof b.due_date === 'string' 
-        ? DateTime.fromISO(b.due_date).setZone(userTz).startOf('day')
-        : DateTime.fromJSDate(b.due_date as Date).setZone(userTz).startOf('day');
-        
-      if (dateA < dateB) return -1;
-      if (dateA > dateB) return 1;
-    }
-    
-    // Verificamos diretamente a data de vencimento para tarefas próximas do vencimento, 
-    // independente da prioridade, dando prioridade às tarefas vencidas ou prestes a vencer
-    if (a.due_date && b.due_date) {
-      const dateA = typeof a.due_date === 'string' 
-        ? DateTime.fromISO(a.due_date).setZone(userTz).startOf('day')
-        : DateTime.fromJSDate(a.due_date as Date).setZone(userTz).startOf('day');
-        
-      const dateB = typeof b.due_date === 'string' 
-        ? DateTime.fromISO(b.due_date).setZone(userTz).startOf('day')
-        : DateTime.fromJSDate(b.due_date as Date).setZone(userTz).startOf('day');
-        
-      const today = DateTime.now().setZone(userTz).startOf('day');
+    try {
+      // Timezone do usuário para comparações de data
+      const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
-      // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
-      const aIsOverdue = dateA < today;
-      const bIsOverdue = dateB < today;
+      // Primeiro critério: tarefas concluídas vão para o fim (dividimos a lista em duas partes)
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
       
-      if (aIsOverdue && !bIsOverdue) return -1;
-      if (!aIsOverdue && bIsOverdue) return 1;
-      
-      // Se ambas estão vencidas, a que venceu primeiro tem prioridade
-      if (aIsOverdue && bIsOverdue) {
+      // Segundo critério: se ambas tarefas têm a mesma prioridade, ordenamos diretamente pela data
+      if (a.priority === b.priority && a.due_date && b.due_date) {
+        // Converter para objeto Date
+        const dateObjA = typeof a.due_date === 'string' 
+          ? parseISO(a.due_date) 
+          : a.due_date as Date;
+          
+        const dateObjB = typeof b.due_date === 'string' 
+          ? parseISO(b.due_date) 
+          : b.due_date as Date;
+        
+        // Converter para o timezone do usuário
+        const dateA = startOfDay(toZonedTime(dateObjA, userTz));
+        const dateB = startOfDay(toZonedTime(dateObjB, userTz));
+        
         if (dateA < dateB) return -1;
         if (dateA > dateB) return 1;
-      }
     }
     
-    // Terceiro critério: aplicamos o cálculo de score para ordenar o restante
-    return sortTasksByPriority(a, b);
+      // Verificamos diretamente a data de vencimento para tarefas próximas do vencimento, 
+      // independente da prioridade, dando prioridade às tarefas vencidas ou prestes a vencer
+      if (a.due_date && b.due_date) {
+        // Converter para objeto Date
+        const dateObjA = typeof a.due_date === 'string' 
+          ? parseISO(a.due_date) 
+          : a.due_date as Date;
+          
+        const dateObjB = typeof b.due_date === 'string' 
+          ? parseISO(b.due_date) 
+          : b.due_date as Date;
+        
+        // Converter para o timezone do usuário
+        const dateA = startOfDay(toZonedTime(dateObjA, userTz));
+        const dateB = startOfDay(toZonedTime(dateObjB, userTz));
+        const today = startOfDay(new Date());
+        
+        // Se uma tarefa está vencida e a outra não, a vencida tem prioridade
+        const aIsOverdue = dateA < today;
+        const bIsOverdue = dateB < today;
+        
+        if (aIsOverdue && !bIsOverdue) return -1;
+        if (!aIsOverdue && bIsOverdue) return 1;
+        
+        // Se ambas estão vencidas, a que venceu primeiro tem prioridade
+        if (aIsOverdue && bIsOverdue) {
+          if (dateA < dateB) return -1;
+          if (dateA > dateB) return 1;
+        }
+      }
+      
+      // Terceiro critério: aplicamos o cálculo de score para ordenar o restante
+      return sortTasksByPriority(a, b);
+    } catch (error) {
+      console.error("Erro ao ordenar tarefas:", error);
+      return 0;
+    }
   };
 }
 
