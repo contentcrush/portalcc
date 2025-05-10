@@ -10,7 +10,7 @@ import {
   insertClientContactSchema, financialDocuments
 } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, authenticateJWT, requireRole, requirePermission } from "./auth";
+import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePassword, hashPassword } from "./auth";
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
@@ -157,8 +157,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(userWithoutPassword);
     } catch (error) {
-      console.error("Error updating user:", error);
-      res.status(500).json({ message: "Failed to update user" });
+      console.error("Erro ao atualizar usuário:", error);
+      res.status(500).json({ message: "Falha ao atualizar usuário" });
+    }
+  });
+  
+  // Rota para alteração de senha
+  app.post("/api/users/:id/change-password", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { currentPassword, newPassword } = req.body;
+      
+      // Verificar se o próprio usuário está alterando sua senha ou se é um admin
+      if (req.user!.id !== id && req.user!.role !== 'admin') {
+        return res.status(403).json({ 
+          message: "Acesso negado. Você só pode alterar sua própria senha." 
+        });
+      }
+      
+      // Verificar se a senha atual e a nova senha foram fornecidas
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+          message: "Senha atual e nova senha são obrigatórias" 
+        });
+      }
+      
+      // Obter o usuário
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Verificar se a senha atual está correta
+      const isValidPassword = await comparePassword(currentPassword, user.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+      
+      // Hash da nova senha
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Atualizar a senha
+      const updatedUser = await storage.updateUser(id, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Erro ao atualizar senha" });
+      }
+      
+      // Remover a senha da resposta
+      const userWithoutPassword = { ...updatedUser };
+      delete (userWithoutPassword as any).password;
+      
+      return res.status(200).json({ 
+        message: "Senha alterada com sucesso",
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error("Erro ao alterar senha:", error);
+      res.status(500).json({ message: "Falha ao alterar senha" });
     }
   });
   
