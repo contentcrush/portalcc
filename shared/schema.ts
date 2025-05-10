@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   position: text("position"),
   bio: text("bio"),
   avatar: text("avatar"),
+  timezone: text("timezone").default("America/Sao_Paulo"),
   
   // Campos básicos
   user_type: userTypeEnum("user_type"), // PF ou PJ

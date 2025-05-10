@@ -162,6 +162,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota específica para atualizar perfil do usuário (avatar e timezone)
+  app.patch("/api/profile", authenticateJWT, async (req, res) => {
+    try {
+      const id = req.user!.id;
+      
+      // Filtra apenas os campos permitidos para atualização de perfil
+      const allowedFields = ['name', 'email', 'department', 'position', 'bio', 'avatar', 'timezone', 'phone', 'mobile_phone'];
+      const profileData: Record<string, any> = {};
+      
+      Object.keys(req.body).forEach(key => {
+        if (allowedFields.includes(key)) {
+          profileData[key] = req.body[key];
+        }
+      });
+      
+      // Verifica se o usuário existe
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Atualiza apenas os campos do perfil
+      const updatedUser = await storage.updateUser(id, profileData);
+      
+      // Remove a senha da resposta
+      const userWithoutPassword = { ...updatedUser };
+      delete (userWithoutPassword as any).password;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Falha ao atualizar perfil do usuário" });
+    }
+  });
+  
   // Excluir um usuário (somente admin)
   app.delete("/api/users/:id", authenticateJWT, requireRole(['admin']), async (req, res) => {
     try {
