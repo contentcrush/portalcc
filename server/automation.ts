@@ -458,6 +458,9 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
           }
           
           // Criar novo evento para a data de vencimento
+          // Se tem horário específico, não é um evento de dia inteiro
+          const allDayEvent = !task.due_time;
+          
           await db.insert(events).values({
             title: `Tarefa: ${task.title}`,
             description: task.description || `Prazo para conclusão da tarefa`,
@@ -467,13 +470,17 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
             task_id: task.id,
             type: 'prazo',
             start_date: task.due_date,
-            end_date: task.due_date,
-            all_day: true,
+            end_date: task.due_time ? addHours(task.due_date, 1) : task.due_date, // Dura 1 hora se tiver horário específico
+            all_day: allDayEvent,
             color,
           });
           
           eventsCreated++;
-          console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+          if (task.due_time) {
+            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`);
+          } else {
+            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+          }
         }
       }
 
