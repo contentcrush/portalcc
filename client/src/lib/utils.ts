@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { ReactNode } from "react";
 import { 
   format, 
   parseISO, 
@@ -853,4 +854,26 @@ export function getProgressBarColor(progress: number): string {
   } else {
     return 'bg-red-500'; // vermelho para progresso baixo
   }
+}
+
+type ToastParams = {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+};
+
+/**
+ * Função utilitária para criar toasts de sucesso com estilo padrão
+ * Usa a variante 'success' com fundo verde claro em todo o sistema
+ * 
+ * @param params Objeto contendo título, descrição e ação opcional do toast
+ * @returns Objeto de configuração do toast com a variante success aplicada
+ */
+export function createSuccessToast({ title, description, action }: ToastParams) {
+  return {
+    title,
+    description,
+    action,
+    variant: "success",
+  };
 }
