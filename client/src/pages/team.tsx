@@ -231,10 +231,9 @@ export function UserEditDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-      toast({
+      showSuccessToast({
         title: "Usuário criado",
-        description: "O usuário foi criado com sucesso.",
-        variant: "default",
+        description: "O usuário foi criado com sucesso."
       });
       onClose();
     },
