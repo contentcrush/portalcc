@@ -1,6 +1,8 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ReactNode } from "react";
+import { toast } from "@/hooks/use-toast";
+import { ToastActionElement, type ToastProps } from "@/components/ui/toast";
 import { 
   format, 
   parseISO, 
@@ -859,8 +861,23 @@ export function getProgressBarColor(progress: number): string {
 type ToastParams = {
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ToastActionElement;
 };
+
+/**
+ * Função utilitária para criar e exibir toasts de sucesso com estilo padrão
+ * Usa a variante 'success' com fundo verde claro em todo o sistema
+ * 
+ * @param params Objeto contendo título, descrição e ação opcional do toast
+ */
+export function showSuccessToast({ title, description, action }: ToastParams) {
+  toast({
+    title,
+    description,
+    action,
+    variant: "success",
+  });
+}
 
 /**
  * Função utilitária para criar toasts de sucesso com estilo padrão
