@@ -1483,14 +1483,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completed: req.body.completed === true || req.body.completed === "true" ? true : false
         };
         
-        // Processamento das datas com tratamento específico de fuso horário
+        // Datas já processadas pelo schema Zod com ajuste de início/fim do dia em UTC
         if (req.body.start_date) {
           try {
-            // Converter para Date objeto se for string e ajustar para o início do dia em UTC
-            const localDate = new Date(req.body.start_date);
-            // Definir para início do dia (00:00:00 UTC)
-            localDate.setUTCHours(0, 0, 0, 0);
-            taskData.start_date = localDate;
+            taskData.start_date = req.body.start_date;
           } catch (e) {
             console.error("Erro ao processar start_date:", e);
             taskData.start_date = null;
@@ -1499,11 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (req.body.due_date) {
           try {
-            // Converter para Date objeto se for string e ajustar para o final do dia em UTC
-            const localDate = new Date(req.body.due_date);
-            // Definir para final do dia (23:59:59.999 UTC)
-            localDate.setUTCHours(23, 59, 59, 999);
-            taskData.due_date = localDate;
+            taskData.due_date = req.body.due_date;
           } catch (e) {
             console.error("Erro ao processar due_date:", e);
             taskData.due_date = null;

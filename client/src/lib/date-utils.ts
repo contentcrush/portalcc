@@ -1,12 +1,6 @@
-import { DateTime } from 'luxon';
-import { parseISO, format as dateFormat } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { parseISO, format, addDays, differenceInCalendarDays, isAfter, isBefore, subDays } from 'date-fns';
+import { formatInTimeZone, toZonedTime, getTimezoneOffset } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
-
-// Declare o módulo luxon para evitar erros de tipagem
-declare module 'luxon' {
-  export const DateTime: any;
-}
 
 // Obtém o timezone do navegador do usuário
 export const getUserTimeZone = (): string => {
@@ -44,18 +38,17 @@ export const formatDateTimeToLocal = (
 // Formata data com hora e exibe o identificador de fuso horário
 export const formatDateTimeWithTZ = (
   isoDate: string | Date | null | undefined,
-  formatString: string = 'dd/MM/yyyy HH:mm (z)'
+  formatString: string = 'dd/MM/yyyy HH:mm (zzzz)'
 ): string => {
   if (!isoDate) return '-';
   
   try {
-    // Usar Luxon para formatação com timezone explícito
-    const date = typeof isoDate === 'string' 
-      ? DateTime.fromISO(isoDate) 
-      : DateTime.fromJSDate(isoDate as Date);
+    // Converter para Date se for string
+    const date = typeof isoDate === 'string' ? parseISO(isoDate) : isoDate;
+    const userTZ = getUserTimeZone();
     
-    // Converter para o timezone do usuário e formatar
-    return date.setZone(getUserTimeZone()).toFormat(formatString);
+    // Usar formatInTimeZone para formatação com timezone explícito
+    return formatInTimeZone(date, userTZ, formatString, { locale: ptBR });
   } catch (error) {
     console.error('Erro ao formatar data com timezone:', error);
     return '-';
@@ -64,11 +57,14 @@ export const formatDateTimeWithTZ = (
 
 // Retorna uma data ISO em UTC a partir de uma data local
 export const localDateToUTC = (localDate: Date): string => {
-  // Usar o Luxon para converter do timezone local para UTC
-  return DateTime.fromJSDate(localDate)
-    .setZone(getUserTimeZone())
-    .toUTC()
-    .toISO();
+  const userTZ = getUserTimeZone();
+  const offset = getTimezoneOffset(userTZ) / (1000 * 60 * 60); // Converter de ms para horas
+  
+  // Clonar a data e ajustar para UTC
+  const utcDate = new Date(localDate);
+  utcDate.setHours(utcDate.getHours() - offset);
+  
+  return utcDate.toISOString();
 };
 
 // Converte uma data UTC para o timezone do usuário
@@ -86,23 +82,23 @@ export const formatDateDifference = (
   if (!startDate || !endDate) return '-';
   
   try {
-    // Converter para objetos DateTime do Luxon
+    // Converter para Date objects
     const start = typeof startDate === 'string' 
-      ? DateTime.fromISO(startDate) 
-      : DateTime.fromJSDate(startDate as Date);
+      ? parseISO(startDate) 
+      : startDate as Date;
     
     const end = typeof endDate === 'string' 
-      ? DateTime.fromISO(endDate) 
-      : DateTime.fromJSDate(endDate as Date);
+      ? parseISO(endDate) 
+      : endDate as Date;
     
-    // Calcular a diferença
-    const diff = end.diff(start, ['days']).toObject();
+    // Calcular a diferença em dias
+    const diffDays = differenceInCalendarDays(end, start);
     
-    if (!diff.days) return '-';
+    if (diffDays < 0) return '-'; // Datas inválidas
     
-    return diff.days === 1 
+    return diffDays === 1 
       ? '1 dia' 
-      : `${Math.floor(diff.days)} dias`;
+      : `${diffDays} dias`;
   } catch (error) {
     console.error('Erro ao calcular diferença entre datas:', error);
     return '-';
