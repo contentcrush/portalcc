@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject, type Client, type Project } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency } from "@/lib/utils";
+import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency, showSuccessToast } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import {
   Select,
@@ -474,9 +474,9 @@ export default function Clients() {
       
       if (response.ok) {
         queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-        toast({
+        showSuccessToast({
           title: `Cliente ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
-          description: `O cliente foi marcado como ${!currentStatus ? 'ativo' : 'inativo'}.`,
+          description: `O cliente foi marcado como ${!currentStatus ? 'ativo' : 'inativo'}.`
         });
       } else {
         throw new Error('Falha ao atualizar status do cliente');
