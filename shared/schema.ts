@@ -50,6 +50,7 @@ export const users = pgTable("users", {
   permissions: json("permissions").$type<string[]>().default([]),
   last_login: timestamp("last_login"),
   is_active: boolean("is_active").default(true),
+  timezone: text("timezone"), // Fuso horário do usuário
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
