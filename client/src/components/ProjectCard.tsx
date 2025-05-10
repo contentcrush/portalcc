@@ -6,7 +6,7 @@ import {
   formatCurrency, 
   getInitials, 
   calculateDaysRemaining,
-  createSuccessToast
+  showSuccessToast
 } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,10 +84,10 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
       return await res.json();
     },
     onSuccess: () => {
-      toast(createSuccessToast({
+      showSuccessToast({
         title: "Projeto duplicado com sucesso",
         description: "Uma cópia do projeto foi criada"
-      }));
+      });
       // Atualiza a lista de projetos
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
@@ -106,10 +106,10 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
       return apiRequest("DELETE", `/api/projects/${project.id}`);
     },
     onSuccess: () => {
-      toast(createSuccessToast({
+      showSuccessToast({
         title: "Projeto excluído com sucesso",
         description: "O projeto foi removido permanentemente"
-      }));
+      });
       // Atualiza a lista de projetos
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },

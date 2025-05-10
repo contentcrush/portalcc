@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ReactNode } from "react";
 import { toast } from "@/hooks/use-toast";
-import { ToastActionElement, type ToastProps } from "@/components/ui/toast";
+import { ToastActionElement } from "@/components/ui/toast";
 import { 
   format, 
   parseISO, 
@@ -875,7 +875,7 @@ export function showSuccessToast({ title, description, action }: ToastParams) {
     title,
     description,
     action,
-    variant: "success",
+    variant: "success" as const,
   });
 }
 
@@ -891,6 +891,6 @@ export function createSuccessToast({ title, description, action }: ToastParams) 
     title,
     description,
     action,
-    variant: "success",
+    variant: "success" as const,
   };
 }
