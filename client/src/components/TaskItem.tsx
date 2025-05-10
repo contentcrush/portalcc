@@ -169,6 +169,14 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
   const getFullDate = (date: Date) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
+  
+  // Formatação da data e hora no formato DD/MM/YYYY HH:MM
+  const getFullDateTime = (date: Date) => {
+    const dateObj = new Date(date);
+    const formattedDate = dateObj.toLocaleDateString('pt-BR');
+    const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${formattedDate} ${formattedTime}`;
+  };
 
   const getPriorityClass = () => {
     switch(task.priority) {
@@ -288,8 +296,13 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   isDueSoon ? 'text-orange-500' : ''}`}
                 >
                   <CalendarDays className="h-3 w-3" />
-                  <span title={getFullDate(task.due_date)}>
+                  <span title={getFullDateTime(task.due_date)}>
                     {getFormattedDueDate()}
+                    {task.due_time && (
+                      <span className="ml-1 text-xs font-medium">
+                        {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
                   </span>
                 </div>
               )}

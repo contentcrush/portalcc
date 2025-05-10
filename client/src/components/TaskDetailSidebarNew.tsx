@@ -468,7 +468,18 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span className="text-sm font-medium">{task.due_date ? formatDate(task.due_date) : '-'}</span>
+              <span className="text-sm font-medium">
+                {task.due_date ? (
+                  <>
+                    {formatDate(task.due_date)}
+                    {task.due_time && (
+                      <span className="ml-1 text-sm">
+                        {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </>
+                ) : '-'}
+              </span>
             </div>
           </div>
           

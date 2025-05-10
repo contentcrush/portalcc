@@ -46,6 +46,7 @@ export default function QuickActions() {
     status: string;
     priority: string;
     due_date: string;
+    due_time?: boolean;
     project_id?: number;
     project?: {
       id: number;
@@ -260,7 +261,14 @@ export default function QuickActions() {
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="h-3 w-3 mr-1" />
-                    {format(dueDate, 'dd/MM/yyyy')}
+                    <span>
+                      {format(dueDate, 'dd/MM/yyyy')}
+                      {task.due_time && (
+                        <span className="ml-1 font-medium">
+                          {format(dueDate, 'HH:mm')}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   
                   <PriorityBadge 
