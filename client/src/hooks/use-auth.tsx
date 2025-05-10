@@ -13,6 +13,11 @@ type AuthResponse = {
   token: string;
 };
 
+type PasswordChangeData = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
@@ -21,6 +26,7 @@ type AuthContextType = {
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<AuthResponse, Error, InsertUser>;
   updateProfileMutation: UseMutationResult<SelectUser, Error, Partial<SelectUser>>;
+  changePasswordMutation: UseMutationResult<{ message: string, user: SelectUser }, Error, PasswordChangeData>;
 };
 
 type LoginData = {
@@ -151,6 +157,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Os tokens são gerenciados automaticamente via cookies HTTP-only pelo servidor
 
+  // Mutação para alterar a senha
+  const changePasswordMutation = useMutation({
+    mutationFn: async (passwordData: PasswordChangeData) => {
+      const userId = authData?.user?.id;
+      if (!userId) throw new Error("Usuário não autenticado");
+      
+      const res = await apiRequest("POST", `/api/users/${userId}/change-password`, passwordData);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Senha alterada com sucesso",
+        description: "Sua senha foi atualizada. Use a nova senha no próximo login.",
+        variant: "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Falha na alteração de senha",
+        description: error.message || "Não foi possível alterar a senha. Verifique se a senha atual está correta.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <AuthContext.Provider
       value={{
@@ -161,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
         registerMutation,
         updateProfileMutation,
+        changePasswordMutation,
       }}
     >
       {children}

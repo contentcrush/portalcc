@@ -401,7 +401,8 @@ function RBACSettings() {
 
 // Componente para a aba de Perfil
 function ProfileSettings() {
-  const { user, updateProfileMutation } = useAuth();
+  const { user, updateProfileMutation, changePasswordMutation } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -455,22 +456,32 @@ function ProfileSettings() {
     
     // Validar se as senhas coincidem
     if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: "Erro na validação",
+        description: "A nova senha e a confirmação não coincidem",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Aqui implementaria a mudança de senha quando estiver disponível na API
-    console.log("Alteração de senha solicitada");
-    
-    // Limpar formulário
-    if (passwordFormRef.current) {
-      passwordFormRef.current.reset();
-    }
-    setFormData(prev => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    }));
+    // Enviar requisição para alterar a senha
+    changePasswordMutation.mutate({
+      currentPassword: formData.currentPassword,
+      newPassword: formData.newPassword
+    }, {
+      onSuccess: () => {
+        // Limpar formulário
+        if (passwordFormRef.current) {
+          passwordFormRef.current.reset();
+        }
+        setFormData(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        }));
+      }
+    });
   };
   
   // Status de carregamento
