@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Check } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, showSuccessToast } from "@/lib/utils";
 
 import {
   Dialog,
@@ -103,11 +103,11 @@ export function PaymentRegistrationDialog({
       return response.json().catch(() => ({}));
     },
     onSuccess: () => {
-      toast({
+      showSuccessToast({
         title: type === "document" ? "Pagamento registrado" : "Despesa aprovada",
         description: type === "document" 
           ? "O pagamento foi registrado com sucesso." 
-          : "A despesa foi aprovada com sucesso.",
+          : "A despesa foi aprovada com sucesso."
       });
       
       // Recarregar os dados

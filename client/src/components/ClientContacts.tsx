@@ -145,9 +145,9 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
-      toast({
+      showSuccessToast({
         title: "Contato atualizado",
-        description: "O contato foi atualizado com sucesso.",
+        description: "O contato foi atualizado com sucesso."
       });
       setIsEditOpen(false);
       setSelectedContact(null);
@@ -173,9 +173,9 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
-      toast({
+      showSuccessToast({
         title: "Contato excluído",
-        description: "O contato foi excluído com sucesso.",
+        description: "O contato foi excluído com sucesso."
       });
       setIsDeleteOpen(false);
       setSelectedContact(null);
@@ -200,9 +200,9 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
-      toast({
+      showSuccessToast({
         title: "Contato principal atualizado",
-        description: "O contato principal foi atualizado com sucesso.",
+        description: "O contato principal foi atualizado com sucesso."
       });
     },
     onError: (error: Error) => {

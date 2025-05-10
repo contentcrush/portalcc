@@ -12,6 +12,7 @@ import { PlusCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { showSuccessToast } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import EventDialog from './EventDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
