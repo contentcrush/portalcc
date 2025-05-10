@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,9 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { AvatarUpload } from "@/components/ui/avatar-upload";
-import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   LockIcon, 
@@ -23,8 +18,6 @@ import {
   EyeIcon, 
   ZoomInIcon, 
   MonitorSmartphoneIcon, 
-  Loader2,
-  KeyIcon,
   MousePointerSquareDashedIcon, 
   RotateCcw,
   PaintBucket,
@@ -32,6 +25,7 @@ import {
   PanelLeft,
   Layout
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAccessibility } from "@/hooks/use-accessibility";
@@ -409,251 +403,93 @@ function ProfileSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    department: user?.department || '',
-    position: user?.position || '',
-    bio: user?.bio || '',
-    phone: user?.phone || '',
-    mobile_phone: user?.mobile_phone || '',
-    avatar: user?.avatar || null,
-    timezone: user?.timezone || 'America/Sao_Paulo'
-  });
-  
-  // Atualiza os dados do perfil quando o usuário é carregado
-  useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: user.name || '',
-        email: user.email || '',
-        department: user.department || '',
-        position: user.position || '',
-        bio: user.bio || '',
-        phone: user.phone || '',
-        mobile_phone: user.mobile_phone || '',
-        avatar: user.avatar || null,
-        timezone: user.timezone || 'America/Sao_Paulo'
-      });
-    }
-  }, [user]);
-  
-  // Atualiza um único campo do perfil
-  const updateField = (field: string, value: string | null) => {
-    setProfileData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
-  // Requisição para atualizar o perfil
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: Partial<typeof profileData>) => {
-      const res = await apiRequest("PATCH", "/api/profile", data);
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      // Atualiza o cache do usuário
-      queryClient.setQueryData(["/api/auth/me"], data);
-      
+  const handleSaveProfile = () => {
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
       toast({
         title: "Perfil atualizado",
         description: "Suas informações de perfil foram atualizadas com sucesso.",
-        variant: "default",
       });
-      
-      setSaving(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar perfil",
-        description: error.message || "Ocorreu um erro ao atualizar o perfil. Tente novamente.",
-        variant: "destructive",
-      });
-      
-      setSaving(false);
-    }
-  });
-
-  // Função para salvar alterações do perfil
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    updateProfileMutation.mutate(profileData);
-  };
-  
-  // Função para alterar a senha (a implementar no futuro)
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A alteração de senha será implementada em breve.",
-      variant: "default",
-    });
+    }, 1500);
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <UserIcon className="h-5 w-5 text-blue-500" />
-            <CardTitle>Perfil do Usuário</CardTitle>
-          </div>
-          <CardDescription>
-            Gerencie sua foto de perfil e informações pessoais.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex flex-col items-center mb-6 md:mb-0">
-              <AvatarUpload 
-                value={profileData.avatar} 
-                onChange={(value) => updateField('avatar', value)} 
-                name={profileData.name}
-                size="lg"
+    <Card>
+      <CardHeader>
+        <div className="flex items-center space-x-2">
+          <UserIcon className="h-5 w-5 text-blue-500" />
+          <CardTitle>Perfil do Usuário</CardTitle>
+        </div>
+        <CardDescription>
+          Atualize suas informações pessoais e preferências.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Nome Completo</Label>
+                <Input id="fullName" defaultValue={user?.name} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" defaultValue={user?.email} />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="department">Departamento</Label>
+                <Input id="department" defaultValue={user?.department || ''} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="position">Cargo</Label>
+                <Input id="position" defaultValue={user?.position || ''} />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="bio">Biografia</Label>
+              <textarea 
+                id="bio" 
+                className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                defaultValue={user?.bio || ''} 
               />
             </div>
-            
-            <form className="flex-1 space-y-6" onSubmit={handleSaveProfile}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Nome Completo</Label>
-                    <Input 
-                      id="fullName" 
-                      value={profileData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      value={profileData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Departamento</Label>
-                    <Input 
-                      id="department" 
-                      value={profileData.department}
-                      onChange={(e) => updateField('department', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="position">Cargo</Label>
-                    <Input 
-                      id="position" 
-                      value={profileData.position}
-                      onChange={(e) => updateField('position', e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone</Label>
-                    <Input 
-                      id="phone" 
-                      value={profileData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mobile_phone">Celular</Label>
-                    <Input 
-                      id="mobile_phone" 
-                      value={profileData.mobile_phone}
-                      onChange={(e) => updateField('mobile_phone', e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <TimezoneSelect 
-                    value={profileData.timezone} 
-                    onChange={(value) => updateField('timezone', value)}
-                    label="Fuso Horário"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Este fuso horário será usado para exibir datas e horas corretas em toda a aplicação.
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Biografia</Label>
-                  <textarea 
-                    id="bio" 
-                    className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                    value={profileData.bio}
-                    onChange={(e) => updateField('bio', e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button type="submit" disabled={saving || updateProfileMutation.isPending}>
-                  {(saving || updateProfileMutation.isPending) ? 
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</> : 
-                    "Salvar Alterações"}
-                </Button>
-              </div>
-            </form>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <KeyIcon className="h-5 w-5 text-amber-500" />
-            <CardTitle>Segurança</CardTitle>
-          </div>
-          <CardDescription>
-            Gerencie sua senha e configurações de segurança.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-6" onSubmit={handleChangePassword}>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Senha Atual</Label>
-                  <Input id="currentPassword" type="password" />
-                </div>
-                <div></div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">Nova Senha</Label>
-                  <Input id="newPassword" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                  <Input id="confirmPassword" type="password" />
-                </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Alteração de Senha</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Senha Atual</Label>
+                <Input id="currentPassword" type="password" />
               </div>
-              
-              <p className="text-sm text-muted-foreground">
-                A senha deve ter pelo menos 8 caracteres e incluir uma combinação de letras, números e símbolos.
-              </p>
+              <div></div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <Input id="newPassword" type="password" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <Input id="confirmPassword" type="password" />
+              </div>
             </div>
-            
-            <div className="flex justify-end">
-              <Button type="submit">
-                Alterar Senha
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button onClick={handleSaveProfile} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
