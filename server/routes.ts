@@ -1472,7 +1472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Preparação dos dados para inserção
-        const taskData = {
+        const taskData: any = {
           title: req.body.title || "Nova Tarefa",
           description: req.body.description || null,
           project_id: req.body.project_id ? parseInt(req.body.project_id) : null,
@@ -1480,14 +1480,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: req.body.status || "pending",
           priority: req.body.priority || "medium",
           estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
-          completed: req.body.completed === true || req.body.completed === "true" ? true : false
+          completed: req.body.completed === true || req.body.completed === "true" ? true : false,
+          start_date: null,
+          due_date: null
         };
         
         // Processamento das datas com tratamento específico
         if (req.body.start_date) {
           try {
             // Converter para Date objeto se for string
-            taskData.start_date = new Date(req.body.start_date);
+            let startDate = new Date(req.body.start_date);
+            
+            // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
+            // Se for apenas data (sem hora), definir para final do dia em UTC
+            if (startDate.getUTCHours() === 0 && 
+                startDate.getUTCMinutes() === 0 && 
+                startDate.getUTCSeconds() === 0) {
+              // Definir para 23:59:59 UTC
+              startDate.setUTCHours(23, 59, 59, 999);
+            }
+            
+            taskData.start_date = startDate;
           } catch (e) {
             taskData.start_date = null;
           }
@@ -1496,7 +1509,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.due_date) {
           try {
             // Converter para Date objeto se for string
-            taskData.due_date = new Date(req.body.due_date);
+            let dueDate = new Date(req.body.due_date);
+            
+            // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
+            // Se for apenas data (sem hora), definir para final do dia em UTC
+            if (dueDate.getUTCHours() === 0 && 
+                dueDate.getUTCMinutes() === 0 && 
+                dueDate.getUTCSeconds() === 0) {
+              // Definir para 23:59:59 UTC
+              dueDate.setUTCHours(23, 59, 59, 999);
+            }
+            
+            taskData.due_date = dueDate;
           } catch (e) {
             taskData.due_date = null;
           }
@@ -1541,8 +1565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      // Importando Luxon para tratamento correto de datas com timezone
-      const { DateTime } = require("luxon");
+      // Importando date-fns para tratamento correto de datas
+      const { parseISO } = require("date-fns");
       
       // Limpa campos de data quando são strings vazias
       const cleanedData = { ...req.body };
@@ -1550,23 +1574,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (cleanedData.due_date === '') cleanedData.due_date = null;
       if (cleanedData.estimated_hours === '') cleanedData.estimated_hours = null;
       
-      // Conversão de datas de string para Date utilizando Luxon para garantir consistência de timezone
+      // Conversão de datas de string para Date
       if (cleanedData.start_date && typeof cleanedData.start_date === 'string') {
-        // Converte a data de input (formato YYYY-MM-DD) para objeto DateTime em UTC
-        const dtStart = DateTime.fromISO(cleanedData.start_date).setZone('UTC');
-        if (dtStart.isValid) {
-          cleanedData.start_date = dtStart.toJSDate();
-        } else {
+        try {
+          // Converte a data de input (formato YYYY-MM-DD) para objeto Date
+          let startDate = parseISO(cleanedData.start_date);
+          
+          // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
+          // Se for apenas data (sem hora), definir para final do dia em UTC
+          if (startDate.getUTCHours() === 0 && 
+              startDate.getUTCMinutes() === 0 && 
+              startDate.getUTCSeconds() === 0) {
+            // Definir para 23:59:59 UTC
+            startDate.setUTCHours(23, 59, 59, 999);
+          }
+          
+          cleanedData.start_date = startDate;
+        } catch (e) {
           cleanedData.start_date = null;
         }
       }
       
       if (cleanedData.due_date && typeof cleanedData.due_date === 'string') {
-        // Converte a data de input (formato YYYY-MM-DD) para objeto DateTime em UTC
-        const dtDue = DateTime.fromISO(cleanedData.due_date).setZone('UTC');
-        if (dtDue.isValid) {
-          cleanedData.due_date = dtDue.toJSDate();
-        } else {
+        try {
+          // Converte a data de input (formato YYYY-MM-DD) para objeto Date
+          let dueDate = parseISO(cleanedData.due_date);
+          
+          // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
+          // Se for apenas data (sem hora), definir para final do dia em UTC
+          if (dueDate.getUTCHours() === 0 && 
+              dueDate.getUTCMinutes() === 0 && 
+              dueDate.getUTCSeconds() === 0) {
+            // Definir para 23:59:59 UTC
+            dueDate.setUTCHours(23, 59, 59, 999);
+          }
+          
+          cleanedData.due_date = dueDate;
+        } catch (e) {
           cleanedData.due_date = null;
         }
       }
