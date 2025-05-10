@@ -101,17 +101,17 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
       if (isCreateMode) {
         // Criar novo evento
         await apiRequest('POST', '/api/events', eventData);
-        toast({
+        showSuccessToast({
           title: "Evento criado",
-          description: "O evento foi criado com sucesso",
+          description: "O evento foi criado com sucesso"
         });
       } else {
         // Atualizar evento existente
         if (eventData.id) {
           await apiRequest('PATCH', `/api/events/${eventData.id}`, eventData);
-          toast({
+          showSuccessToast({
             title: "Evento atualizado",
-            description: "O evento foi atualizado com sucesso",
+            description: "O evento foi atualizado com sucesso"
           });
         }
       }
@@ -132,9 +132,9 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
   const handleDeleteEvent = async (eventId: number) => {
     try {
       await apiRequest('DELETE', `/api/events/${eventId}`);
-      toast({
+      showSuccessToast({
         title: "Evento excluído",
-        description: "O evento foi excluído com sucesso",
+        description: "O evento foi excluído com sucesso"
       });
       
       // Invalidar consulta para recarregar eventos
