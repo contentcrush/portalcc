@@ -473,25 +473,59 @@ export const insertExpenseSchema = expenseBaseSchema.extend({
 });
 // Schema base para eventos
 const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
-// Schema personalizado com transformações para datas usando Luxon
+// Schema personalizado com transformações para datas usando date-fns
 export const insertEventSchema = eventBaseSchema.extend({
   start_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
     if (val === null) return val;
-    // Converte para DateTime e depois para UTC antes de salvar
+    
     if (typeof val === 'string') {
-      return DateTime.fromISO(val).toUTC().toJSDate();
+      // Converte a string para um objeto Date
+      const date = parseISO(val);
+      
+      // Verifica se a data não tem informação de hora (é meia-noite no fuso local)
+      if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+        // Definir para 23:59:59 UTC para garantir que a data seja considerada como fim do dia
+        date.setUTCHours(23, 59, 59, 999);
+      }
+      
+      return date;
     }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
+    
+    // Se já for um objeto Date, garante que está em UTC com horário ajustado
+    if (val.getUTCHours() === 0 && val.getUTCMinutes() === 0 && val.getUTCSeconds() === 0) {
+      // Criar uma nova instância para não modificar o objeto original
+      const date = new Date(val);
+      date.setUTCHours(23, 59, 59, 999);
+      return date;
+    }
+    
+    return val; // Retorna a data como está se já tem horário definido
   }),
   end_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
     if (val === null) return val;
-    // Converte para DateTime e depois para UTC antes de salvar
+    
     if (typeof val === 'string') {
-      return DateTime.fromISO(val).toUTC().toJSDate();
+      // Converte a string para um objeto Date
+      const date = parseISO(val);
+      
+      // Verifica se a data não tem informação de hora (é meia-noite no fuso local)
+      if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+        // Definir para 23:59:59 UTC para garantir que a data seja considerada como fim do dia
+        date.setUTCHours(23, 59, 59, 999);
+      }
+      
+      return date;
     }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
+    
+    // Se já for um objeto Date, garante que está em UTC com horário ajustado
+    if (val.getUTCHours() === 0 && val.getUTCMinutes() === 0 && val.getUTCSeconds() === 0) {
+      // Criar uma nova instância para não modificar o objeto original
+      const date = new Date(val);
+      date.setUTCHours(23, 59, 59, 999);
+      return date;
+    }
+    
+    return val; // Retorna a data como está se já tem horário definido
   })
 });
 
