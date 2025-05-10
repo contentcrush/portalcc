@@ -145,9 +145,9 @@ export function FinancialRecordActions({
 
   // Função para exportar PDF
   const handleExportPDF = () => {
-    toast({
+    showSuccessToast({
       title: "Exportando documento",
-      description: "O documento está sendo preparado para download.",
+      description: "O documento está sendo preparado para download."
     });
     
     // Aqui você poderia implementar a lógica real de exportação

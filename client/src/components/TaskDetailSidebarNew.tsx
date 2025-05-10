@@ -145,9 +145,9 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-      toast({
+      showSuccessToast({
         title: "Arquivo excluído",
-        description: "Arquivo foi excluído com sucesso",
+        description: "Arquivo foi excluído com sucesso"
       });
     },
     onError: (error) => {
