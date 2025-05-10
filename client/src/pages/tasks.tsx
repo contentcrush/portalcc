@@ -133,17 +133,17 @@ export default function Tasks() {
   });
 
   // Fetch tasks
-  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<TaskWithDetails[]>({
     queryKey: ['/api/tasks'],
   });
 
   // Fetch projects for dropdown
-  const { data: projects } = useQuery({
+  const { data: projects = [] } = useQuery<any[]>({
     queryKey: ['/api/projects'],
   });
 
   // Fetch users for dropdown
-  const { data: users } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ['/api/users'],
   });
 
