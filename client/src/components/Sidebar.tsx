@@ -177,32 +177,58 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </nav>
       
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 space-y-3">
-        {/* Informações do usuário */}
-        <div className="flex items-center gap-3 px-2 py-2">
-          <UserAvatar user={user} className="h-10 w-10" />
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
-          </div>
-          <a href="#" onClick={handleLogout} className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-gray-100">
-            <LogOut className="h-4 w-4" />
+      {/* Footer - Nova versão clean e minimalista */}
+      <div className="p-4 border-t border-gray-200">
+        {/* Card para perfil e configurações com novo design */}
+        <div className="rounded-xl bg-gray-50 overflow-hidden">
+          {/* Informações do usuário - Novo design */}
+          <a
+            href="/profile"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate("/settings");
+            }}
+            className="flex items-center gap-3 p-3 hover:bg-gray-100 transition-colors border-b border-gray-200"
+          >
+            <UserAvatar user={user} className="h-10 w-10 ring-2 ring-white shadow-sm" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 truncate">{user?.name || "Usuário"}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
+            </div>
+            <div className="text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </a>
+
+          {/* Link para configurações - Novo design */}
+          <a
+            href="/settings"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate("/settings");
+            }}
+            className="flex items-center gap-3 p-3 hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 text-gray-600">
+              <DynamicIcon name="settings" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900">Configurações</p>
+            </div>
+            <div className="text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </a>
         </div>
-
-        {/* Link para configurações */}
-        <a
-          href="/settings"
-          onClick={(e) => {
-            e.preventDefault();
-            onNavigate("/settings");
-          }}
-          className="sidebar-item"
+        
+        {/* Botão de logout separado */}
+        <button 
+          onClick={handleLogout} 
+          className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <DynamicIcon name="settings" />
-          <span className="ml-3">Configurações</span>
-        </a>
+          <LogOut className="h-4 w-4" />
+          <span>Sair</span>
+        </button>
       </div>
     </aside>
   );
