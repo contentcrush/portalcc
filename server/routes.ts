@@ -1470,45 +1470,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Recebendo dados do cliente:", JSON.stringify(req.body, null, 2));
       
-      // Importando Luxon para tratamento correto de datas com timezone
-      const { DateTime } = require("luxon");
-      
-      // Processar datas vindas do cliente para garantir timezone correto em UTC
-      const processedData = { ...req.body };
-      
-      // Processar data de início caso exista
-      if (processedData.start_date && typeof processedData.start_date === 'string') {
-        const dtStart = DateTime.fromISO(processedData.start_date).setZone('UTC');
-        if (dtStart.isValid) {
-          processedData.start_date = dtStart.toJSDate();
-        } else {
-          processedData.start_date = null;
-        }
-      }
-      
-      // Processar data de entrega caso exista
-      if (processedData.due_date && typeof processedData.due_date === 'string') {
-        const dtDue = DateTime.fromISO(processedData.due_date).setZone('UTC');
-        if (dtDue.isValid) {
-          processedData.due_date = dtDue.toJSDate();
-        } else {
-          processedData.due_date = null;
-        }
-      }
-      
-      // Tentar validar manualmente para verificar onde está o erro
       try {
-        const validatedData = insertTaskSchema.parse(processedData);
-        console.log("Dados validados com sucesso:", JSON.stringify(validatedData, null, 2));
+        // Preparação dos dados para inserção
+        const taskData = {
+          title: req.body.title || "Nova Tarefa",
+          description: req.body.description || null,
+          project_id: req.body.project_id ? parseInt(req.body.project_id) : null,
+          assigned_to: req.body.assigned_to ? parseInt(req.body.assigned_to) : null,
+          status: req.body.status || "pending",
+          priority: req.body.priority || "medium",
+          estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
+          completed: req.body.completed === true || req.body.completed === "true" ? true : false
+        };
         
-        const task = await storage.createTask(validatedData);
+        // Processamento das datas com tratamento específico
+        if (req.body.start_date) {
+          try {
+            // Converter para Date objeto se for string
+            taskData.start_date = new Date(req.body.start_date);
+          } catch (e) {
+            taskData.start_date = null;
+          }
+        }
+        
+        if (req.body.due_date) {
+          try {
+            // Converter para Date objeto se for string
+            taskData.due_date = new Date(req.body.due_date);
+          } catch (e) {
+            taskData.due_date = null;
+          }
+        }
+        
+        console.log("Dados processados para inserção:", JSON.stringify(taskData, null, 2));
+        
+        // Criar a tarefa no banco de dados
+        const task = await storage.createTask(taskData);
+        console.log("Tarefa criada com sucesso:", JSON.stringify(task, null, 2));
+        
         res.status(201).json(task);
-      } catch (validationError) {
-        console.error("Erro de validação:", validationError);
-        res.status(400).json({ 
-          message: "Erro de validação na criação da tarefa", 
-          errors: validationError.errors || validationError.message 
-        });
+      } catch (error: any) { // Usando typecasting para evitar erros de tipo
+        console.error("Erro detalhado na criação da tarefa:", error);
+        
+        // Se for um erro de validação do Zod ou Drizzle
+        if (error.errors) {
+          console.error("Erros de validação:", JSON.stringify(error.errors, null, 2));
+          res.status(400).json({ 
+            message: "Erro de validação na criação da tarefa", 
+            errors: error.errors
+          });
+        } else if (error.code) {
+          // Erro de banco de dados
+          console.error("Erro de banco de dados:", error.code, error.message);
+          res.status(400).json({ 
+            message: `Erro de banco de dados: ${error.code}`, 
+            detail: error.message
+          });
+        } else {
+          // Outros erros inesperados
+          throw error;
+        }
       }
     } catch (error) {
       console.error("Erro ao criar tarefa:", error);

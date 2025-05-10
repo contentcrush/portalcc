@@ -351,31 +351,18 @@ export const insertProjectMemberSchema = projectMemberBaseSchema.extend({
 });
 export const insertProjectStageSchema = createInsertSchema(projectStages).omit({ id: true, completion_date: true });
 
-// Schema base para tarefas
+// Schema base para tarefas - simplificado para aceitar valores nulos e strings como datas
 const taskBaseSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });
-// Schema personalizado com transformações para datas usando Luxon para garantir consistência de timezone
 
+// Schema simplificado para tarefas
 export const insertTaskSchema = taskBaseSchema.extend({
-  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null || val === undefined) return undefined;
-    // Converte para DateTime e depois para UTC antes de salvar
-    if (typeof val === 'string') {
-      // Para inputs do tipo date, o formato é YYYY-MM-DD
-      return DateTime.fromISO(val).toUTC().toJSDate();
-    }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
-  }).optional(),
-  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
-    if (val === null || val === undefined) return undefined;
-    // Converte para DateTime e depois para UTC antes de salvar
-    if (typeof val === 'string') {
-      // Para inputs do tipo date, o formato é YYYY-MM-DD
-      return DateTime.fromISO(val).toUTC().toJSDate();
-    }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
-  }).optional()
+  // Campos não obrigatórios com valores nulos permitidos
+  project_id: z.number().nullable().optional(),
+  assigned_to: z.number().nullable().optional(),
+  priority: z.string().nullable().optional(),
+  estimated_hours: z.number().nullable().optional(),
+  start_date: z.union([z.string(), z.date(), z.null()]).nullable().optional(),
+  due_date: z.union([z.string(), z.date(), z.null()]).nullable().optional()
 });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ 
   id: true, 
