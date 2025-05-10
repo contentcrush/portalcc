@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DateTime } from "luxon";
+import { parseISO, format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { 
   formatDate, 
   formatDueDateWithDaysRemaining, 
@@ -282,15 +283,15 @@ export default function Tasks() {
     const task = tasks?.find((t) => t.id === taskId);
     if (task) {
       setSelectedTask(task);
-      // Format dates for form input using Luxon to handle timezone properly
+      // Format dates for form input using date-fns to handle timezone properly
       const formattedTask = {
         ...task,
         // Converte de UTC para o timezone local e formata como YYYY-MM-DD para o input date
         due_date: task.due_date 
-          ? DateTime.fromISO(new Date(task.due_date).toISOString()).toLocal().toFormat('yyyy-MM-dd') 
+          ? format(toZonedTime(new Date(task.due_date), Intl.DateTimeFormat().resolvedOptions().timeZone), 'yyyy-MM-dd')
           : undefined,
         start_date: task.start_date 
-          ? DateTime.fromISO(new Date(task.start_date).toISOString()).toLocal().toFormat('yyyy-MM-dd')
+          ? format(toZonedTime(new Date(task.start_date), Intl.DateTimeFormat().resolvedOptions().timeZone), 'yyyy-MM-dd')
           : undefined,
       };
       form.reset(formattedTask);
