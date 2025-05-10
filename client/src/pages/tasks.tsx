@@ -15,7 +15,8 @@ import {
   getTaskSortFunction,
   truncateText,
   getInitials,
-  generateAvatarColor
+  generateAvatarColor,
+  showSuccessToast
 } from "@/lib/utils";
 import {
   Select,
@@ -238,10 +239,7 @@ export default function Tasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({
-        title: "Tarefa atualizada",
-        description: "Status de conclusão atualizado com sucesso",
-      });
+      showSuccessToast("Tarefa atualizada", "Status de conclusão atualizado com sucesso");
     },
     onError: (error) => {
       toast({
