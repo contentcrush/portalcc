@@ -10,6 +10,14 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ClientAvatar } from "@/components/ClientAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import logoImage from "@/assets/CNTN_CRUSH_no_bg.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
@@ -177,38 +185,47 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </nav>
       
-      {/* Footer - versão compacta e responsiva */}
-      <div className="p-2 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          {/* Perfil compacto - clicável para ir às configurações */}
-          <a
-            href="/settings"
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate("/settings");
-            }}
-            className="group flex items-center gap-2 py-2 px-3 rounded-md hover:bg-gray-100 transition-all flex-1"
-          >
-            <UserAvatar user={user} className="h-8 w-8 shrink-0 ring-1 ring-gray-200 group-hover:ring-primary/40 transition-all" />
-            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
-              <p className="text-xs text-gray-500 truncate sm:before:content-['·'] sm:before:mx-1 sm:before:text-gray-300">
-                {user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}
-              </p>
-            </div>
-            <LucideIcons.ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-primary transition-colors shrink-0" />
-          </a>
-          
-          {/* Botão de logout compacto */}
-          <button 
-            onClick={handleLogout}
-            aria-label="Sair"
-            className="p-2 text-gray-500 hover:text-red-600 transition-colors rounded-md hover:bg-gray-100 ml-1 flex items-center gap-1"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only text-xs sm:text-sm">Sair</span>
-          </button>
-        </div>
+      {/* Footer com menu dropdown */}
+      <div className="px-4 py-3 border-t border-gray-200">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="w-full focus:outline-none" asChild>
+            <button className="flex items-center gap-3 w-full p-2 rounded-md hover:bg-gray-100 transition-colors text-left">
+              <UserAvatar 
+                user={user} 
+                className="h-8 w-8 shrink-0 border-2 border-gray-100" 
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}
+                </p>
+              </div>
+              <LucideIcons.ChevronDown className="h-4 w-4 text-gray-400 transition-colors" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => onNavigate("/settings")}>
+              <LucideIcons.User className="mr-2" />
+              Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNavigate("/settings?tab=personalization")}>
+              <LucideIcons.Palette className="mr-2" />
+              Personalização
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNavigate("/settings?tab=notifications")}>
+              <LucideIcons.Bell className="mr-2" />
+              Notificações
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="text-red-500 focus:text-red-500 hover:text-red-600"
+            >
+              <LogOut className="mr-2" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
