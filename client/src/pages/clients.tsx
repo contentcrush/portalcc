@@ -210,7 +210,7 @@ export default function Clients() {
       form.reset();
       
       // Toast com CTA para criar novo projeto
-      toast({
+      showSuccessToast({
         title: "Cliente criado com sucesso",
         description: (
           <div className="flex flex-col gap-2">
@@ -256,7 +256,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', selectedClient?.id, 'projects'] });
       setIsNewProjectDialogOpen(false);
       projectForm.reset();
-      toast({
+      showSuccessToast({
         title: "Projeto criado com sucesso",
         description: `${newProject.name} foi criado para o cliente ${selectedClient?.name}.`,
       });
@@ -487,7 +487,7 @@ export default function Clients() {
       setIsDeleteClientDialogOpen(false);
       setSelectedClient(null);
       
-      toast({
+      showSuccessToast({
         title: "Cliente excluído com sucesso",
         description: `O cliente foi excluído junto com ${data.deletedItems.projects} projeto(s), ${data.deletedItems.interactions} interação(ões) e ${data.deletedItems.financialDocuments} documento(s) financeiro(s).`,
       });
