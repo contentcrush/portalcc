@@ -1483,21 +1483,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completed: req.body.completed === true || req.body.completed === "true" ? true : false
         };
         
-        // Processamento das datas com tratamento específico
+        // Processamento das datas com tratamento específico de fuso horário
         if (req.body.start_date) {
           try {
-            // Converter para Date objeto se for string
-            taskData.start_date = new Date(req.body.start_date);
+            // Converter para Date objeto se for string e ajustar para o início do dia em UTC
+            const localDate = new Date(req.body.start_date);
+            // Definir para início do dia (00:00:00 UTC)
+            localDate.setUTCHours(0, 0, 0, 0);
+            taskData.start_date = localDate;
           } catch (e) {
+            console.error("Erro ao processar start_date:", e);
             taskData.start_date = null;
           }
         }
         
         if (req.body.due_date) {
           try {
-            // Converter para Date objeto se for string
-            taskData.due_date = new Date(req.body.due_date);
+            // Converter para Date objeto se for string e ajustar para o final do dia em UTC
+            const localDate = new Date(req.body.due_date);
+            // Definir para final do dia (23:59:59.999 UTC)
+            localDate.setUTCHours(23, 59, 59, 999);
+            taskData.due_date = localDate;
           } catch (e) {
+            console.error("Erro ao processar due_date:", e);
             taskData.due_date = null;
           }
         }
