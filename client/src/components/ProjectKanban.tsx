@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { ClientAvatar } from './ClientAvatar';
-import { getNormalizedProjectStatus, getProgressBarColor } from '@/lib/utils';
+import { getNormalizedProjectStatus, getProgressBarColor, showSuccessToast } from '@/lib/utils';
 
 // Define types for our columns
 type StatusColumn = {
@@ -108,9 +108,9 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      toast({
+      showSuccessToast({
         title: 'Projeto atualizado',
-        description: 'Status do projeto foi atualizado com sucesso',
+        description: 'Status do projeto foi atualizado com sucesso'
       });
     },
     onError: (error: Error) => {
