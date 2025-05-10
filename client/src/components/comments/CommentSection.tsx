@@ -8,7 +8,7 @@ import { Send } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/contexts/SocketContext";
-import { cn } from "@/lib/utils";
+import { cn, showSuccessToast } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface CommentSectionProps {
@@ -63,6 +63,10 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
         queryKey: [`/api/tasks/${taskId}/comments`] 
       });
       setCommentText("");
+      showSuccessToast({
+        title: "Comentário adicionado",
+        description: "Seu comentário foi adicionado com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -81,6 +85,10 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
+      showSuccessToast({
+        title: "Comentário atualizado",
+        description: "Seu comentário foi atualizado com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -100,6 +108,10 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
+      showSuccessToast({
+        title: "Comentário excluído",
+        description: "O comentário foi excluído com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
