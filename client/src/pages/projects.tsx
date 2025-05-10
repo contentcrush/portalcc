@@ -140,7 +140,7 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   });
 
   // Apply filters
-  const filteredProjects = projects?.filter(project => {
+  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
     // Search term filter
     if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
@@ -164,13 +164,17 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     }
     
     return true;
-  });
+  }) : [];
 
   // Combine project with client data
-  const projectsWithClient = filteredProjects?.map(project => {
-    const client = clients?.find(c => c.id === project.client_id);
-    return { ...project, client };
-  });
+  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
+    ? filteredProjects.map((project: any) => {
+        const client = clients && clients.length > 0 
+          ? clients.find((c: any) => c.id === project.client_id) 
+          : null;
+        return { ...project, client };
+      })
+    : [];
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -254,11 +258,11 @@ export default function Projects({ params }: { params?: { id?: string } }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {clients?.map(client => (
+              {clients && clients.length > 0 ? clients.map((client: any) => (
                 <SelectItem key={client.id} value={client.id.toString()}>
                   {client.name}
                 </SelectItem>
-              ))}
+              )) : null}
             </SelectContent>
           </Select>
           
