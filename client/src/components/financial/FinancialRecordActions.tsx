@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { showSuccessToast } from "@/lib/utils";
 
 // Tipos para os registros financeiros
 interface FinancialDocument {
@@ -115,9 +116,9 @@ export function FinancialRecordActions({
       return null; // Não esperamos nenhum conteúdo para resposta DELETE
     },
     onSuccess: () => {
-      toast({
+      showSuccessToast({
         title: "Registro excluído com sucesso",
-        description: "O registro financeiro foi removido permanentemente.",
+        description: "O registro financeiro foi removido permanentemente."
       });
       
       // Recarregar os dados após excluir
@@ -152,9 +153,9 @@ export function FinancialRecordActions({
     // Aqui você poderia implementar a lógica real de exportação
     // Por enquanto, vamos simular com um timeout
     setTimeout(() => {
-      toast({
+      showSuccessToast({
         title: "PDF gerado com sucesso",
-        description: "O documento foi exportado e está pronto para download.",
+        description: "O documento foi exportado e está pronto para download."
       });
     }, 1500);
   };

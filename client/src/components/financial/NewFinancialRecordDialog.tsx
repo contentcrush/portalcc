@@ -50,7 +50,7 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, showSuccessToast } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 // Schema para validação do formulário
@@ -237,9 +237,9 @@ export function NewFinancialRecordDialog({
       return response.json();
     },
     onSuccess: () => {
-      toast({
+      showSuccessToast({
         title: "Registro salvo com sucesso",
-        description: "O registro financeiro foi salvo com sucesso.",
+        description: "O registro financeiro foi salvo com sucesso."
       });
       
       // Recarregar os dados
