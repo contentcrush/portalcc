@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { 
   LockIcon, 
   UserIcon, 
@@ -260,10 +261,9 @@ function RBACSettings() {
       'creator': 'Creator'
     };
     
-    toast({
+    showSuccessToast({
       title: `Permissão ${value ? 'ativada' : 'desativada'}`,
-      description: `${permission?.name} para ${roleMap[role]} foi ${value ? 'ativada' : 'desativada'}.`,
-      duration: 3000,
+      description: `${permission?.name} para ${roleMap[role]} foi ${value ? 'ativada' : 'desativada'}.`
     });
     
     // Aqui seria feita uma requisição ao backend para persistir as alterações
@@ -716,9 +716,9 @@ function NotificationSettings() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      toast({
+      showSuccessToast({
         title: "Preferências de notificação atualizadas",
-        description: "Suas preferências de notificação foram salvas com sucesso.",
+        description: "Suas preferências de notificação foram salvas com sucesso."
       });
     }, 1500);
   };
@@ -849,9 +849,9 @@ function AccessibilitySettings() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      toast({
+      showSuccessToast({
         title: "Configurações de acessibilidade atualizadas",
-        description: "Suas preferências de acessibilidade foram salvas com sucesso.",
+        description: "Suas preferências de acessibilidade foram salvas com sucesso."
       });
       setPreviewMode(null);
     }, 1500);
@@ -1048,9 +1048,9 @@ function LocalizationSettings() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      toast({
+      showSuccessToast({
         title: "Configurações de idioma atualizadas",
-        description: "Suas preferências de idioma e região foram salvas com sucesso.",
+        description: "Suas preferências de idioma e região foram salvas com sucesso."
       });
     }, 1500);
   };
