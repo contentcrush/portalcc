@@ -59,6 +59,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/crypto-js": "^4.2.2",
     "@types/jsonwebtoken": "^9.0.9",
+    "@types/luxon": "^3.6.2",
     "@types/socket.io": "^3.0.1",
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",

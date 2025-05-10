@@ -2,6 +2,7 @@ import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, js
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { DateTime } from "luxon";
 
 // Enum para roles/funções de usuário
 export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'editor', 'viewer']);
@@ -352,14 +353,29 @@ export const insertProjectStageSchema = createInsertSchema(projectStages).omit({
 
 // Schema base para tarefas
 const taskBaseSchema = createInsertSchema(tasks).omit({ id: true, creation_date: true, completion_date: true });
-// Schema personalizado com transformações para datas
+// Schema personalizado com transformações para datas usando Luxon para garantir consistência de timezone
+
 export const insertTaskSchema = taskBaseSchema.extend({
-  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
-    val === null || val === undefined ? undefined : typeof val === 'string' ? new Date(val) : val
-  ).optional(),
-  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
-    val === null || val === undefined ? undefined : typeof val === 'string' ? new Date(val) : val
-  ).optional()
+  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null || val === undefined) return undefined;
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      // Para inputs do tipo date, o formato é YYYY-MM-DD
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  }).optional(),
+  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null || val === undefined) return undefined;
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      // Para inputs do tipo date, o formato é YYYY-MM-DD
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  }).optional()
 });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ 
   id: true, 
@@ -408,32 +424,55 @@ export const insertClientInteractionSchema = createInsertSchema(clientInteractio
 // Schema base para documentos financeiros
 const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit({ id: true, creation_date: true, payment_date: true });
 
-// Schema personalizado com transformações para datas
+// Schema personalizado com transformações para datas usando Luxon
 export const insertFinancialDocumentSchema = financialDocumentBaseSchema.extend({
-  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
-    val === null || val === undefined ? null : typeof val === 'string' ? new Date(val) : val
-  ).nullable().optional(),
+  due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null || val === undefined) return null;
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  }).nullable().optional(),
 });
 // Schema base para despesas
 const expenseBaseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
 
-// Schema personalizado com transformações para datas
+// Schema personalizado com transformações para datas usando Luxon
 export const insertExpenseSchema = expenseBaseSchema.extend({
-  date: z.union([z.string(), z.date()]).transform(val => 
-    typeof val === 'string' ? new Date(val) : val
-  ),
+  date: z.union([z.string(), z.date()]).transform(val => {
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  }),
   paid: z.boolean().optional().default(false),
 });
 // Schema base para eventos
 const eventBaseSchema = createInsertSchema(events).omit({ id: true, creation_date: true });
-// Schema personalizado com transformações para datas
+// Schema personalizado com transformações para datas usando Luxon
 export const insertEventSchema = eventBaseSchema.extend({
-  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
-    typeof val === 'string' ? new Date(val) : val
-  ),
-  end_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
-    typeof val === 'string' ? new Date(val) : val
-  )
+  start_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null) return val;
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  }),
+  end_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null) return val;
+    // Converte para DateTime e depois para UTC antes de salvar
+    if (typeof val === 'string') {
+      return DateTime.fromISO(val).toUTC().toJSDate();
+    }
+    // Se já for um objeto Date, converte para UTC
+    return DateTime.fromJSDate(val).toUTC().toJSDate();
+  })
 });
 
 // Select types
