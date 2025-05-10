@@ -553,25 +553,31 @@ export function hasInteractiveStages(project: Project | undefined | null): boole
 export function calculateTaskDaysOverdue(task: Task): number {
   if (!task.due_date || task.completed) return 0;
   
-  // Usar Luxon para lidar corretamente com fusos horários
+  // Obter timezone do usuário
   const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   
-  // Converter para DateTime do Luxon
-  const dueDate = typeof task.due_date === 'string' 
-    ? DateTime.fromISO(task.due_date).setZone(userTz).startOf('day')
-    : DateTime.fromJSDate(task.due_date as Date).setZone(userTz).startOf('day');
+  // Converter para Date
+  const dueDateObj = typeof task.due_date === 'string' 
+    ? parseISO(task.due_date)
+    : task.due_date as Date;
+    
+  // Verificar se a data é válida
+  if (!isValid(dueDateObj)) return 0;
   
-  if (!dueDate.isValid) return 0;
+  // Converter para o timezone do usuário e remover a parte de hora
+  const dueDateInUserTz = toZonedTime(dueDateObj, userTz);
+  const dueDateStart = startOfDay(dueDateInUserTz);
   
   // Obter a data atual no timezone do usuário
-  const today = DateTime.now().setZone(userTz).startOf('day');
+  const now = new Date();
+  const todayInUserTz = toZonedTime(now, userTz);
+  const todayStart = startOfDay(todayInUserTz);
   
   // Se ainda não está atrasada, retornar 0
-  if (dueDate > today) return 0;
+  if (dueDateStart > todayStart) return 0;
   
-  // Calcular a diferença em dias
-  const diff = today.diff(dueDate, 'days');
-  return Math.floor(diff.days);
+  // Calcular a diferença em dias (função do date-fns)
+  return differenceInCalendarDays(todayStart, dueDateStart);
 }
 
 export function isTaskOverdue(task: Task): boolean {
