@@ -16,6 +16,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { parseISO } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
