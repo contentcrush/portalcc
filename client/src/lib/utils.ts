@@ -77,11 +77,21 @@ export function formatCurrency(value: number | null | undefined): string {
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
-  
-  if (!isValid(dateObj)) return "";
-  
-  return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+  try {
+    // Timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    if (!isValid(dateObj)) return "";
+    
+    // Formatar data no timezone do usuário
+    return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy", { locale: ptBR });
+  } catch (error) {
+    console.error("Erro ao formatar data:", error, date);
+    return "";
+  }
 }
 
 // Importações necessárias para formatação de datas
@@ -91,64 +101,91 @@ import { formatDateToLocal } from './date-utils';
 export function formatDueDateWithDaysRemaining(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  // Converter para DateTime do Luxon para lidar corretamente com fusos
-  const dateTime = typeof date === 'string' 
-    ? DateTime.fromISO(date)
-    : DateTime.fromJSDate(date as Date);
-  
-  if (!dateTime.isValid) return "";
-  
-  // Usar timezone local do usuário
-  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const localDate = dateTime.setZone(userTz);
-  
-  // Data atual no timezone do usuário
-  const today = DateTime.now().setZone(userTz).startOf('day');
-  const dueDate = localDate.startOf('day');
-  
-  // Calcular diferença em dias
-  const diffDays = Math.ceil(dueDate.diff(today, 'days').days);
-  
-  // Formatação da data no formato local
-  const formattedDate = formatDateToLocal(date);
-  
-  if (diffDays < 0) {
-    return `Atrasada em ${Math.abs(diffDays)} dias (${formattedDate})`;
-  } else if (diffDays === 0) {
-    return `Vence hoje (${formattedDate})`;
-  } else if (diffDays === 1) {
-    return `Vence amanhã (${formattedDate})`;
-  } else {
-    return `Vence em ${diffDays} dias (${formattedDate})`;
+  try {
+    // Obter o timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    // Converter para o timezone do usuário
+    const localDate = toZonedTime(dateObj, userTz);
+    
+    // Remover hora/minuto/segundo para comparação de dias
+    const dueDate = startOfDay(localDate);
+    const today = startOfDay(new Date());
+    
+    // Calcular diferença em dias
+    const diffDays = differenceInCalendarDays(dueDate, today);
+    
+    // Formatação da data para exibição (DD/MM/YYYY)
+    const formattedDate = formatInTimeZone(localDate, userTz, "dd/MM/yyyy", { locale: ptBR });
+    
+    if (diffDays < 0) {
+      return `Atrasada em ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'} (${formattedDate})`;
+    } else if (diffDays === 0) {
+      return `Vence hoje (${formattedDate})`;
+    } else if (diffDays === 1) {
+      return `Vence amanhã (${formattedDate})`;
+    } else {
+      return `Vence em ${diffDays} dias (${formattedDate})`;
+    }
+  } catch (error) {
+    console.error("Erro ao formatar data de vencimento:", error, date);
+    return "Data inválida";
   }
 }
 
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
-  
-  if (!isValid(dateObj)) return "";
-  
-  return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  try {
+    // Timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    if (!isValid(dateObj)) return "";
+    
+    // Formatar data e hora no timezone do usuário
+    return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch (error) {
+    console.error("Erro ao formatar data e hora:", error, date);
+    return "";
+  }
 }
 
 export function getRelativeDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   
-  const dateObj = typeof date === "string" ? parseISO(date) : date;
-  
-  if (!isValid(dateObj)) return "";
-  
-  if (isToday(dateObj)) {
-    return `Hoje, ${format(dateObj, "HH:mm", { locale: ptBR })}`;
+  try {
+    // Timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    if (!isValid(dateObj)) return "";
+    
+    // Converter para o timezone do usuário para comparações corretas
+    const localDate = toZonedTime(dateObj, userTz);
+    
+    // Verificar se é hoje ou amanhã no timezone do usuário
+    if (isToday(localDate)) {
+      return `Hoje, ${formatInTimeZone(localDate, userTz, "HH:mm", { locale: ptBR })}`;
+    }
+    
+    if (isTomorrow(localDate)) {
+      return `Amanhã, ${formatInTimeZone(localDate, userTz, "HH:mm", { locale: ptBR })}`;
+    }
+    
+    // Formato padrão para outras datas
+    return formatInTimeZone(localDate, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch (error) {
+    console.error("Erro ao formatar data relativa:", error, date);
+    return "";
   }
-  
-  if (isTomorrow(dateObj)) {
-    return `Amanhã, ${format(dateObj, "HH:mm", { locale: ptBR })}`;
-  }
-  
-  return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
 /**
@@ -334,22 +371,23 @@ export function calculateProjectProgress(project: Project): {
 export function calculateDaysRemaining(endDate: Date | string | null | undefined): number {
   if (!endDate) return 0;
   
-  // Usar Luxon para lidar corretamente com fusos horários
-  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  // Converter para DateTime do Luxon
-  const targetDate = typeof endDate === 'string' 
-    ? DateTime.fromISO(endDate).setZone(userTz).startOf('day')
-    : DateTime.fromJSDate(endDate as Date).setZone(userTz).startOf('day');
-  
-  if (!targetDate.isValid) return 0;
-  
-  // Obter a data atual no timezone do usuário
-  const today = DateTime.now().setZone(userTz).startOf('day');
-  
-  // Calcular a diferença em dias
-  const diff = targetDate.diff(today, 'days');
-  return Math.ceil(diff.days);
+  try {
+    // Obter o timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof endDate === "string" ? parseISO(endDate) : endDate;
+    
+    // Converter para o timezone do usuário e remover o componente de hora
+    const targetDate = startOfDay(toZonedTime(dateObj, userTz));
+    const today = startOfDay(new Date());
+    
+    // Calcular diferença em dias
+    return differenceInCalendarDays(targetDate, today);
+  } catch (error) {
+    console.error("Erro ao calcular dias restantes:", error, endDate);
+    return 0;
+  }
 }
 
 export function truncateText(text: string, maxLength: number): string {
