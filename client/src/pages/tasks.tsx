@@ -871,7 +871,7 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
       <CardContent className="px-4 py-3" onClick={onView}>
         <div className="flex items-start gap-4">
           {/* Task Completion Checkbox */}
-          <div className="pt-1">
+          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
             <Checkbox 
               checked={isCompleted} 
               onCheckedChange={() => onToggleComplete()}
