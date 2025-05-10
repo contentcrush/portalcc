@@ -2,7 +2,7 @@ import { pgTable, text, serial, integer, timestamp, boolean, doublePrecision, js
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { DateTime } from "luxon";
+import { parseISO } from "date-fns";
 
 // Enum para roles/funções de usuário
 export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'editor', 'viewer']);
@@ -415,26 +415,59 @@ const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit(
 export const insertFinancialDocumentSchema = financialDocumentBaseSchema.extend({
   due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
     if (val === null || val === undefined) return null;
-    // Converte para DateTime e depois para UTC antes de salvar
+    
     if (typeof val === 'string') {
-      return DateTime.fromISO(val).toUTC().toJSDate();
+      // Converte a string para um objeto Date
+      const date = parseISO(val);
+      
+      // Verifica se a data não tem informação de hora (é meia-noite no fuso local)
+      if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+        // Definir para 23:59:59 UTC para garantir que a data seja considerada como fim do dia
+        date.setUTCHours(23, 59, 59, 999);
+      }
+      
+      return date;
     }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
+    
+    // Se já for um objeto Date, garante que está em UTC com horário ajustado
+    if (val.getUTCHours() === 0 && val.getUTCMinutes() === 0 && val.getUTCSeconds() === 0) {
+      // Criar uma nova instância para não modificar o objeto original
+      const date = new Date(val);
+      date.setUTCHours(23, 59, 59, 999);
+      return date;
+    }
+    
+    return val; // Retorna a data como está se já tem horário definido
   }).nullable().optional(),
 });
 // Schema base para despesas
 const expenseBaseSchema = createInsertSchema(expenses).omit({ id: true, creation_date: true });
 
-// Schema personalizado com transformações para datas usando Luxon
+// Schema personalizado com transformações para datas usando date-fns
 export const insertExpenseSchema = expenseBaseSchema.extend({
   date: z.union([z.string(), z.date()]).transform(val => {
-    // Converte para DateTime e depois para UTC antes de salvar
     if (typeof val === 'string') {
-      return DateTime.fromISO(val).toUTC().toJSDate();
+      // Converte a string para um objeto Date
+      const date = parseISO(val);
+      
+      // Verifica se a data não tem informação de hora (é meia-noite no fuso local)
+      if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+        // Definir para 23:59:59 UTC para garantir que a data seja considerada como fim do dia
+        date.setUTCHours(23, 59, 59, 999);
+      }
+      
+      return date;
     }
-    // Se já for um objeto Date, converte para UTC
-    return DateTime.fromJSDate(val).toUTC().toJSDate();
+    
+    // Se já for um objeto Date, garante que está em UTC com horário ajustado
+    if (val.getUTCHours() === 0 && val.getUTCMinutes() === 0 && val.getUTCSeconds() === 0) {
+      // Criar uma nova instância para não modificar o objeto original
+      const date = new Date(val);
+      date.setUTCHours(23, 59, 59, 999);
+      return date;
+    }
+    
+    return val; // Retorna a data como está se já tem horário definido
   }),
   paid: z.boolean().optional().default(false),
 });

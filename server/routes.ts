@@ -1617,8 +1617,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verifica se o campo de conclusão foi marcado
       if (cleanedData.completed === true && cleanedData.completion_date === undefined) {
-        // Usar UTC para a data de conclusão
-        cleanedData.completion_date = DateTime.utc().toJSDate();
+        // Usar UTC para a data de conclusão - criando um objeto Date com a data atual em UTC
+        const now = new Date();
+        cleanedData.completion_date = new Date(Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          now.getUTCHours(),
+          now.getUTCMinutes(),
+          now.getUTCSeconds()
+        ));
       } else if (cleanedData.completed === false) {
         cleanedData.completion_date = null;
       }
