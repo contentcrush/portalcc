@@ -140,6 +140,7 @@ export const tasks = pgTable("tasks", {
   status: text("status").notNull().default("pending"),
   priority: text("priority").default("medium"),
   due_date: timestamp("due_date"),
+  due_time: text("due_time"), // Adicionado campo para hora de entrega (formato HH:MM)
   start_date: timestamp("start_date"),
   estimated_hours: doublePrecision("estimated_hours"),
   completed: boolean("completed").default(false),
