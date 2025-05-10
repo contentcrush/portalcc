@@ -22,6 +22,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { showSuccessToast } from "@/lib/utils";
 
 import { 
   Card, 
@@ -254,10 +255,9 @@ export function UserEditDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-      toast({
+      showSuccessToast({
         title: "Usuário atualizado",
-        description: "O usuário foi atualizado com sucesso.",
-        variant: "default",
+        description: "O usuário foi atualizado com sucesso."
       });
       onClose();
     },
@@ -1177,10 +1177,9 @@ export default function Team() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-      toast({
+      showSuccessToast({
         title: "Usuário excluído",
-        description: "O usuário foi excluído com sucesso.",
-        variant: "default",
+        description: "O usuário foi excluído com sucesso."
       });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
