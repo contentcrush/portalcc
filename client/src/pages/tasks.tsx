@@ -156,7 +156,7 @@ export default function Tasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({
+      showSuccessToast({
         title: "Tarefa criada",
         description: "Tarefa criada com sucesso",
       });
