@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Download, Plus, Send, ChevronDown, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDate } from "@/lib/utils";
+import { formatDate, showSuccessToast } from "@/lib/utils";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
@@ -80,9 +80,9 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
-      toast({
+      showSuccessToast({
         title: "Tarefa atualizada",
-        description: "Tarefa atualizada com sucesso",
+        description: "Tarefa atualizada com sucesso"
       });
     },
     onError: (error) => {
@@ -122,9 +122,9 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
       setIsUploadingFile(false);
-      toast({
+      showSuccessToast({
         title: "Arquivo anexado",
-        description: "Arquivo anexado à tarefa com sucesso",
+        description: "Arquivo anexado à tarefa com sucesso"
       });
     },
     onError: (error) => {

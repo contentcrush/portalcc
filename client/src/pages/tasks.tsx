@@ -177,7 +177,10 @@ export default function Tasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      showSuccessToast("Tarefa atualizada", "Tarefa atualizada com sucesso");
+      showSuccessToast({ 
+        title: "Tarefa atualizada", 
+        description: "Tarefa atualizada com sucesso" 
+      });
       setIsDialogOpen(false);
       setSelectedTask(null);
       form.reset();
