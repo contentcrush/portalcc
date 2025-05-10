@@ -1133,20 +1133,24 @@ export default function Team() {
   });
   
   // Filter users based on search term
-  const filteredUsers = users?.filter((user: any) => {
-    if (searchTerm === "") return true;
-    
-    return (
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.department && user.department.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  });
+  const filteredUsers = users && users.length > 0 
+    ? users.filter((user: any) => {
+        if (searchTerm === "") return true;
+        
+        return (
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.department && user.department.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      })
+    : [];
 
   // Get tasks for a user
   const getTasksForUser = (userId: number) => {
-    return tasks?.filter((task: any) => task.assigned_to === userId) || [];
+    return tasks && tasks.length > 0 
+      ? tasks.filter((task: any) => task.assigned_to === userId) 
+      : [];
   };
   
   // Navigation
@@ -1249,82 +1253,90 @@ export default function Team() {
           <CardContent>
             <div className="space-y-2">
               {/* Lista de usuários */}
-              {users?.map((user: any) => (
-                <div 
-                  key={user.id} 
-                  className="p-4 border rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <UserAvatar user={user} className="h-12 w-12" />
-                    <div>
-                      <div className="font-medium flex items-center space-x-2">
-                        <span>{user.name}</span>
-                        <Badge variant={
-                          user.role === "admin" ? "destructive" : 
-                          user.role === "manager" ? "default" : 
-                          user.role === "editor" ? "secondary" : 
-                          "outline"
-                        } className="ml-2">
-                          {user.role === "admin" ? "Admin" : 
-                          user.role === "manager" ? "Gestor" : 
-                          user.role === "editor" ? "Editor" : 
-                          "Visualizador"}
-                        </Badge>
-                        {/* Debug info (remover após depuração) */}
-                        {process.env.NODE_ENV === 'development' && (
-                          <span className="text-[8px] text-black/50 bg-gray-100 px-1 rounded">Role: {user.role}</span>
-                        )}
+              {users && users.length > 0 ? (
+                <>
+                  {users.map((user: any) => (
+                    <div 
+                      key={user.id} 
+                      className="p-4 border rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <UserAvatar user={user} className="h-12 w-12" />
+                        <div>
+                          <div className="font-medium flex items-center space-x-2">
+                            <span>{user.name}</span>
+                            <Badge variant={
+                              user.role === "admin" ? "destructive" : 
+                              user.role === "manager" ? "default" : 
+                              user.role === "editor" ? "secondary" : 
+                              "outline"
+                            } className="ml-2">
+                              {user.role === "admin" ? "Admin" : 
+                              user.role === "manager" ? "Gestor" : 
+                              user.role === "editor" ? "Editor" : 
+                              "Visualizador"}
+                            </Badge>
+                            {/* Debug info (remover após depuração) */}
+                            {process.env.NODE_ENV === 'development' && (
+                              <span className="text-[8px] text-black/50 bg-gray-100 px-1 rounded">Role: {user.role}</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground flex items-center">
+                            <Mail className="h-3.5 w-3.5 mr-1 inline" />
+                            <span>{user.email}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <span>@{user.username}</span>
+                            {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
+                              <Button variant="link" size="sm" onClick={() => handleViewProfile(user)} className="h-5 p-0 text-muted-foreground hover:text-primary ml-2">
+                                Ver Perfil Completo
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center">
-                        <Mail className="h-3.5 w-3.5 mr-1 inline" />
-                        <span>{user.email}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <span>@{user.username}</span>
+                      
+                      <div className="flex items-center space-x-2">
                         {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
-                          <Button variant="link" size="sm" onClick={() => handleViewProfile(user)} className="h-5 p-0 text-muted-foreground hover:text-primary ml-2">
-                            Ver Perfil Completo
+                          <Button 
+                            variant="ghost"
+                            size="sm" 
+                            onClick={() => handleViewProfile(user)}
+                            className="h-9"
+                          >
+                            <UserCog className="h-4 w-4 mr-2" />
+                            Ver Perfil
                           </Button>
                         )}
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                          className="h-9"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          size="sm" 
+                          onClick={() => handleDeleteUser(user)}
+                          className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={user.id === currentUser?.id}
+                          title={user.id === currentUser?.id ? "Você não pode remover seu próprio usuário" : ""}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remover
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {(currentUser?.role === "admin" || currentUser?.role === "manager") && (
-                      <Button 
-                        variant="ghost"
-                        size="sm" 
-                        onClick={() => handleViewProfile(user)}
-                        className="h-9"
-                      >
-                        <UserCog className="h-4 w-4 mr-2" />
-                        Ver Perfil
-                      </Button>
-                    )}
-                    <Button 
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditUser(user)}
-                      className="h-9"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button 
-                      variant="ghost"
-                      size="sm" 
-                      onClick={() => handleDeleteUser(user)}
-                      className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      disabled={user.id === currentUser?.id}
-                      title={user.id === currentUser?.id ? "Você não pode remover seu próprio usuário" : ""}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover
-                    </Button>
-                  </div>
+                  ))}
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum usuário encontrado
                 </div>
-              ))}
+              )}
               
               {/* Card para adicionar novo usuário */}
               <div className="p-4 border border-dashed rounded-md flex justify-center items-center hover:border-primary/40 transition-colors">
