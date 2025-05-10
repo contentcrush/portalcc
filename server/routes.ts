@@ -1470,9 +1470,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Recebendo dados do cliente:", JSON.stringify(req.body, null, 2));
       
+      // Importando Luxon para tratamento correto de datas com timezone
+      const { DateTime } = require("luxon");
+      
+      // Processar datas vindas do cliente para garantir timezone correto em UTC
+      const processedData = { ...req.body };
+      
+      // Processar data de início caso exista
+      if (processedData.start_date && typeof processedData.start_date === 'string') {
+        const dtStart = DateTime.fromISO(processedData.start_date).setZone('UTC');
+        if (dtStart.isValid) {
+          processedData.start_date = dtStart.toJSDate();
+        } else {
+          processedData.start_date = null;
+        }
+      }
+      
+      // Processar data de entrega caso exista
+      if (processedData.due_date && typeof processedData.due_date === 'string') {
+        const dtDue = DateTime.fromISO(processedData.due_date).setZone('UTC');
+        if (dtDue.isValid) {
+          processedData.due_date = dtDue.toJSDate();
+        } else {
+          processedData.due_date = null;
+        }
+      }
+      
       // Tentar validar manualmente para verificar onde está o erro
       try {
-        const validatedData = insertTaskSchema.parse(req.body);
+        const validatedData = insertTaskSchema.parse(processedData);
         console.log("Dados validados com sucesso:", JSON.stringify(validatedData, null, 2));
         
         const task = await storage.createTask(validatedData);
@@ -1494,24 +1520,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      // Importando Luxon para tratamento correto de datas com timezone
+      const { DateTime } = require("luxon");
+      
       // Limpa campos de data quando são strings vazias
       const cleanedData = { ...req.body };
       if (cleanedData.start_date === '') cleanedData.start_date = null;
       if (cleanedData.due_date === '') cleanedData.due_date = null;
       if (cleanedData.estimated_hours === '') cleanedData.estimated_hours = null;
       
-      // Conversão de datas de string para Date
+      // Conversão de datas de string para Date utilizando Luxon para garantir consistência de timezone
       if (cleanedData.start_date && typeof cleanedData.start_date === 'string') {
-        cleanedData.start_date = new Date(cleanedData.start_date);
+        // Converte a data de input (formato YYYY-MM-DD) para objeto DateTime em UTC
+        const dtStart = DateTime.fromISO(cleanedData.start_date).setZone('UTC');
+        if (dtStart.isValid) {
+          cleanedData.start_date = dtStart.toJSDate();
+        } else {
+          cleanedData.start_date = null;
+        }
       }
       
       if (cleanedData.due_date && typeof cleanedData.due_date === 'string') {
-        cleanedData.due_date = new Date(cleanedData.due_date);
+        // Converte a data de input (formato YYYY-MM-DD) para objeto DateTime em UTC
+        const dtDue = DateTime.fromISO(cleanedData.due_date).setZone('UTC');
+        if (dtDue.isValid) {
+          cleanedData.due_date = dtDue.toJSDate();
+        } else {
+          cleanedData.due_date = null;
+        }
       }
       
       // Verifica se o campo de conclusão foi marcado
       if (cleanedData.completed === true && cleanedData.completion_date === undefined) {
-        cleanedData.completion_date = new Date();
+        // Usar UTC para a data de conclusão
+        cleanedData.completion_date = DateTime.utc().toJSDate();
       } else if (cleanedData.completed === false) {
         cleanedData.completion_date = null;
       }
