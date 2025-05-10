@@ -205,12 +205,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => onNavigate("/settings")}>
-              <LucideIcons.User className="mr-2" />
-              Perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onNavigate("/settings?tab=personalization")}>
-              <LucideIcons.Palette className="mr-2" />
-              Personalização
+              <LucideIcons.Settings className="mr-2" />
+              Configurações
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onNavigate("/settings?tab=notifications")}>
               <LucideIcons.Bell className="mr-2" />
