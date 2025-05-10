@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccessToast } from '@/lib/utils';
 import { format, addDays, differenceInDays, parseISO, isBefore, isAfter } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,9 +78,9 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      toast({
+      showSuccessToast({
         title: 'Projeto atualizado',
-        description: 'Datas do projeto atualizadas com sucesso',
+        description: 'Datas do projeto atualizadas com sucesso'
       });
     },
     onError: (error) => {

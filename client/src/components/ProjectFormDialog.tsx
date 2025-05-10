@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { insertProjectSchema } from "@shared/schema";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -178,10 +179,9 @@ export function ProjectFormDialog() {
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       
       // Mostrar uma mensagem de sucesso
-      toast({
+      showSuccessToast({
         title: "Projeto criado com sucesso",
-        description: `${newProject.name} foi adicionado aos seus projetos.`,
-        variant: "default",
+        description: `${newProject.name} foi adicionado aos seus projetos.`
       });
       
       // Fechar o diálogo
@@ -225,10 +225,9 @@ export function ProjectFormDialog() {
       // já que a alteração do projeto pode ter criado ou atualizado uma fatura
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       
-      toast({
+      showSuccessToast({
         title: "Projeto atualizado",
-        description: `As alterações em ${updatedProject.name} foram salvas.`,
-        variant: "default",
+        description: `As alterações em ${updatedProject.name} foram salvas.`
       });
       
       closeProjectForm();
