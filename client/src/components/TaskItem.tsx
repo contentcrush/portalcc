@@ -300,7 +300,7 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                     {getFormattedDueDate()}
                     {task.due_time && (
                       <span className="ml-1 text-xs font-medium">
-                        {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        às {task.due_time}
                       </span>
                     )}
                   </span>

@@ -46,7 +46,7 @@ export default function QuickActions() {
     status: string;
     priority: string;
     due_date: string;
-    due_time?: boolean;
+    due_time?: string;
     project_id?: number;
     project?: {
       id: number;
@@ -265,7 +265,7 @@ export default function QuickActions() {
                       {format(dueDate, 'dd/MM/yyyy')}
                       {task.due_time && (
                         <span className="ml-1 font-medium">
-                          {format(dueDate, 'HH:mm')}
+                          às {task.due_time}
                         </span>
                       )}
                     </span>
