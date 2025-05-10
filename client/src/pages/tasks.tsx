@@ -281,7 +281,7 @@ export default function Tasks() {
 
   // Task selection handler for editing via dialog
   const handleEditTask = (taskId: number) => {
-    const task = tasks?.find((t) => t.id === taskId);
+    const task = tasks?.find((t: TaskWithDetails) => t.id === taskId);
     if (task) {
       setSelectedTask(task);
       // Format dates for form input using date-fns to handle timezone properly
@@ -332,7 +332,7 @@ export default function Tasks() {
   };
 
   // Filter tasks based on criteria
-  let filteredTasks = tasks?.filter(task => {
+  let filteredTasks = tasks?.filter((task: TaskWithDetails) => {
     // Search term filter
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
