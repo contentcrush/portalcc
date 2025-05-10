@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { Loader2, Plus, UserPlus, Phone, Mail, Star, X, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -115,9 +116,9 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
-      toast({
+      showSuccessToast({
         title: "Contato adicionado",
-        description: "O contato foi adicionado com sucesso.",
+        description: "O contato foi adicionado com sucesso."
       });
       setIsAddOpen(false);
       addForm.reset();
