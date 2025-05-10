@@ -1,4 +1,4 @@
-import { parseISO, format, addDays, differenceInCalendarDays, isAfter, isBefore, subDays } from 'date-fns';
+import { parseISO, format, addDays, differenceInCalendarDays, isAfter, isBefore, subDays, parse, isValid } from 'date-fns';
 import { formatInTimeZone, toZonedTime, getTimezoneOffset } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
 
@@ -112,20 +112,11 @@ export const formatDateForReport = (
   if (!isoDate) return '-';
   
   const date = typeof isoDate === 'string' ? parseISO(isoDate) : isoDate;
-  
-  // Formatar com nome do mês abreviado e incluir GMT
   const userTZ = getUserTimeZone();
-  const format = 'dd MMM yyyy, HH:mm';
   
   try {
-    const formatted = formatInTimeZone(date, userTZ, format, { locale: ptBR });
-    
-    // Adicionar GMT ou fuso específico para maior clareza
-    const tzOffset = DateTime.fromJSDate(
-      typeof isoDate === 'string' ? parseISO(isoDate) : isoDate
-    ).setZone(userTZ).toFormat('ZZZZ');
-    
-    return `${formatted} (${tzOffset})`;
+    // Usar formatInTimeZone para formatação completa com horário e timezone
+    return formatInTimeZone(date, userTZ, 'dd MMM yyyy, HH:mm (zzzz)', { locale: ptBR });
   } catch (error) {
     console.error('Erro ao formatar data para relatório:', error);
     return '-';
@@ -139,14 +130,19 @@ export const brDateStringToISOUTC = (dateString: string): string | null => {
   }
   
   try {
-    // Converter de DD/MM/YYYY para YYYY-MM-DD
-    const [day, month, year] = dateString.split('/');
-    const isoLocal = `${year}-${month}-${day}T00:00:00.000`;
+    // Extrair dia, mês e ano
+    const [day, month, year] = dateString.split('/').map(Number);
     
-    // Converter para UTC
-    return DateTime.fromISO(isoLocal, { zone: getUserTimeZone() })
-      .toUTC()
-      .toISO();
+    // Criar data UTC no final do dia (23:59:59.999)
+    const utcDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    
+    // Verificar se a data é válida
+    if (isNaN(utcDate.getTime())) {
+      console.error('Data inválida:', dateString);
+      return null;
+    }
+    
+    return utcDate.toISOString();
   } catch (error) {
     console.error('Erro ao converter data brasileira para ISO UTC:', error);
     return null;
