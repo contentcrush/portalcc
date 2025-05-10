@@ -8,7 +8,7 @@ import { Send } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useSocket } from "@/contexts/SocketContext";
-import { cn } from "@/lib/utils";
+import { cn, showSuccessToast } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProjectCommentSectionProps {
@@ -88,6 +88,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
         queryKey: [`/api/projects/${projectId}/comments`] 
       });
       setCommentText("");
+      showSuccessToast({
+        title: "Comentário adicionado",
+        description: "Seu comentário foi adicionado com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -114,6 +118,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
       queryClient.invalidateQueries({ 
         queryKey: [`/api/projects/${projectId}/comments`] 
       });
+      showSuccessToast({
+        title: "Resposta adicionada",
+        description: "Sua resposta foi adicionada com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -132,6 +140,10 @@ export function ProjectCommentSection({ projectId, className = "" }: ProjectComm
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/comments`] });
+      showSuccessToast({
+        title: "Comentário atualizado",
+        description: "Seu comentário foi atualizado com sucesso."
+      });
     },
     onError: (error: Error) => {
       toast({
