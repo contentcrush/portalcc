@@ -324,10 +324,10 @@ export default function Tasks() {
   };
   
   // Handle task checkbox toggle
-  const handleToggleTaskCompletion = (taskId: number, currentStatus: boolean) => {
+  const handleToggleTaskCompletion = (taskId: number, currentStatus: boolean | null) => {
     toggleTaskCompletionMutation.mutate({
       id: taskId,
-      completed: !currentStatus
+      completed: !(currentStatus || false)
     });
   };
 
@@ -623,7 +623,7 @@ export default function Tasks() {
                               <SelectValue placeholder="Selecionar projeto" />
                             </SelectTrigger>
                             <SelectContent>
-                              {projects?.map(project => (
+                              {projects?.map((project: any) => (
                                 <SelectItem key={project.id} value={project.id.toString()}>
                                   {project.name}
                                 </SelectItem>
@@ -651,7 +651,7 @@ export default function Tasks() {
                               <SelectValue placeholder="Atribuir a" />
                             </SelectTrigger>
                             <SelectContent>
-                              {users?.map(user => (
+                              {users?.map((user: any) => (
                                 <SelectItem key={user.id} value={user.id.toString()}>
                                   {user.name}
                                 </SelectItem>
