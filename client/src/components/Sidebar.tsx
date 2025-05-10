@@ -178,31 +178,36 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       </nav>
       
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 space-y-3">
-        {/* Informações do usuário */}
-        <div className="flex items-center gap-3 px-2 py-2">
-          <UserAvatar user={user} className="h-10 w-10" />
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
-          </div>
-          <a href="#" onClick={handleLogout} className="text-gray-500 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-gray-100">
-            <LogOut className="h-4 w-4" />
-          </a>
-        </div>
-
-        {/* Link para configurações */}
+      <div className="p-4 border-t border-gray-200">
+        {/* Botão unificado de perfil e configurações */}
         <a
           href="/settings"
           onClick={(e) => {
             e.preventDefault();
             onNavigate("/settings");
           }}
-          className="sidebar-item"
+          className="group flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-all"
         >
-          <DynamicIcon name="settings" />
-          <span className="ml-3">Configurações</span>
+          <UserAvatar user={user} className="h-10 w-10 ring-2 ring-gray-200 group-hover:ring-primary/50 transition-all" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{user?.name || "Usuário"}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.role === "admin" ? "Administrador" : user?.position || "Usuário"}</p>
+          </div>
+          <div className="text-gray-400 group-hover:text-primary transition-colors">
+            <LucideIcons.ChevronRight className="h-5 w-5" />
+          </div>
         </a>
+        
+        {/* Botão de logout separado como um botão discreto */}
+        <div className="mt-2 px-3">
+          <button 
+            onClick={handleLogout} 
+            className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-100"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </button>
+        </div>
       </div>
     </aside>
   );
