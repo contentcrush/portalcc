@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePreferences, UserPreference } from "@/hooks/use-preferences";
 import { Check, Settings, PanelLeft, Layout, Palette } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 
 interface WorkspaceCustomizationWizardProps {
   trigger?: React.ReactNode;
@@ -62,9 +63,9 @@ export function WorkspaceCustomizationWizard({ trigger }: WorkspaceCustomization
   const savePreferences = () => {
     updatePreferences(localPrefs);
     setOpen(false);
-    toast({
+    showSuccessToast({
       title: "Espaço de trabalho personalizado",
-      description: "Suas configurações foram salvas com sucesso.",
+      description: "Suas configurações foram salvas com sucesso."
     });
   };
 
