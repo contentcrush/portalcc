@@ -94,6 +94,7 @@ const taskFormSchema = insertTaskSchema.extend({
   title: z.string().min(3, {
     message: "O título deve ter pelo menos 3 caracteres",
   }),
+  due_time: z.string().nullable().optional(),
   // Schema already handles date transformations
 });
 
@@ -129,6 +130,7 @@ export default function Tasks() {
       estimated_hours: undefined,
       due_date: undefined,
       start_date: undefined,
+      due_time: undefined,
     },
   });
 
@@ -275,6 +277,7 @@ export default function Tasks() {
       estimated_hours: undefined,
       due_date: undefined,
       start_date: undefined,
+      due_time: undefined,
     });
     setIsDialogOpen(true);
   };
@@ -294,6 +297,8 @@ export default function Tasks() {
         start_date: task.start_date 
           ? format(toZonedTime(new Date(task.start_date), Intl.DateTimeFormat().resolvedOptions().timeZone), 'yyyy-MM-dd')
           : undefined,
+        // Mantém o due_time existente ou define como undefined
+        due_time: task.due_time || undefined,
       };
       form.reset(formattedTask);
       setIsDialogOpen(true);
