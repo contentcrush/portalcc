@@ -890,20 +890,21 @@ export default function Clients() {
       
       {/* List View */}
       {!isLoading && viewMode === 'list' && (
-        <Card className="border border-border/40 shadow-sm">
-          <ScrollArea className="h-[calc(100vh-270px)] w-full">
-            <Table>
-              <TableHeader className="bg-muted/20">
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Projetos</TableHead>
-                  <TableHead>Receita</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedClients?.map(client => (
+        <ClientListPreloader clients={sortedClients || []} showProgress={true}>
+          <Card className="border border-border/40 shadow-sm">
+            <ScrollArea className="h-[calc(100vh-270px)] w-full">
+              <Table>
+                <TableHeader className="bg-muted/20">
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Projetos</TableHead>
+                    <TableHead>Receita</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedClients?.map(client => (
                   <TableRow 
                     key={client.id}
                     className="cursor-pointer hover:bg-muted/20"
@@ -1006,6 +1007,7 @@ export default function Clients() {
             </Table>
           </ScrollArea>
         </Card>
+        </ClientListPreloader>
       )}
       
       {/* Sheet para novo cliente (melhor experiência mobile) */}
