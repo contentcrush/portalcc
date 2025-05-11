@@ -563,10 +563,10 @@ export default function Tasks() {
               </div>
               <div className="flex justify-end">
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm"
                   onClick={() => setShowAllCompleted(!showAllCompleted)} 
-                  className="text-xs text-muted-foreground hover:text-primary"
+                  className="text-xs text-muted-foreground hover:text-primary bg-white"
                 >
                   {showAllCompleted ? (
                     <>
@@ -629,8 +629,8 @@ export default function Tasks() {
                 
                 {filteredTasks && filteredTasks.filter(task => task.completed).length > 6 && (
                   <Button 
-                    variant="ghost" 
-                    className="w-full text-sm text-muted-foreground hover:text-primary"
+                    variant="outline" 
+                    className="w-full text-sm text-muted-foreground hover:text-primary bg-white"
                     onClick={() => setShowAllCompleted(true)}
                   >
                     <ChevronDown className="h-4 w-4 mr-1" />

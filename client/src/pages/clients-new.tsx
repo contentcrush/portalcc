@@ -238,7 +238,7 @@ export default function Clients() {
                 size="sm" 
                 className="w-full justify-center"
                 onClick={() => {
-                  // Preparar e abrir o formulário de novo projeto
+                  // Preparar e abrir o formulário de novo projeto - removendo qualquer delay
                   setSelectedClient(newClientData);
                   projectForm.reset({
                     name: "",
@@ -255,12 +255,11 @@ export default function Clients() {
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Criar novo projeto
+                Criar novo projeto para este cliente
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="ml-auto"
                 onClick={() => navigate(`/clients/${newClient.id}`)}
               >
                 <FileText className="h-4 w-4 mr-2" />
