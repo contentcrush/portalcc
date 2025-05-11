@@ -201,122 +201,128 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [activeTab, setActiveTab] = useState<string>("projects");
   
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projetos</h1>
-          <p className="text-sm text-gray-500">Gerenciamento de projetos de vídeo</p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="mr-4"
-          >
-            <TabsList>
-              <TabsTrigger value="projects" className="flex items-center">
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Lista
-              </TabsTrigger>
-              <TabsTrigger value="kanban" className="flex items-center">
-                <KanbanSquare className="h-4 w-4 mr-2" />
-                Kanban
-              </TabsTrigger>
-              <TabsTrigger value="gantt" className="flex items-center">
-                <GanttChart className="h-4 w-4 mr-2" />
-                Timeline
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+    <div className="space-y-4 p-2 md:p-0 md:space-y-6">
+      {/* Cabeçalho com design mobile-first */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex flex-col space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Projetos</h1>
+              <p className="text-xs md:text-sm text-gray-500">Gerenciamento de projetos de vídeo</p>
+            </div>
+            
+            <Button 
+              onClick={openProjectForm} 
+              size="sm" 
+              className="shrink-0 bg-rose-500 hover:bg-rose-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          </div>
           
-          <Button onClick={openProjectForm}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Projeto
-          </Button>
-        </div>
-      </div>
-      
-      {/* Filter and search */}
-      <div className="flex flex-wrap items-center justify-between bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0">
-        <div className="w-full md:w-auto">
-          <div className="relative">
+          {/* Barra de pesquisa com design consistente */}
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar projetos"
-              className="pl-10 w-full md:w-80"
+              className="pl-10 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {clients && clients.length > 0 ? clients.map((client: any) => (
-                <SelectItem key={client.id} value={client.id.toString()}>
-                  {client.name}
-                </SelectItem>
-              )) : null}
-            </SelectContent>
-          </Select>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {PROJECT_STATUS_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Data" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="recent">Mais recentes</SelectItem>
-              <SelectItem value="older">Mais antigos</SelectItem>
-              <SelectItem value="upcoming">Prazo próximo</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <div className="flex bg-white rounded-md border">
-            <Button 
-              variant={view === "list" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setView("list")}
-              className="rounded-r-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant={view === "grid" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setView("grid")}
-              className="rounded-l-none"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
+          {/* Filtros com layout responsivo */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
+                <SelectValue placeholder="Cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {clients && clients.length > 0 ? clients.map((client: any) => (
+                  <SelectItem key={client.id} value={client.id.toString()}>
+                    {client.name}
+                  </SelectItem>
+                )) : null}
+              </SelectContent>
+            </Select>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {PROJECT_STATUS_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
+                <SelectValue placeholder="Data" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="recent">Mais recentes</SelectItem>
+                <SelectItem value="older">Mais antigos</SelectItem>
+                <SelectItem value="upcoming">Prazo próximo</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <div className="flex bg-white rounded-md border h-9 ml-auto">
+              <Button 
+                variant={view === "list" ? "secondary" : "ghost"} 
+                size="icon"
+                onClick={() => setView("list")}
+                className="rounded-r-none h-full aspect-square"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={view === "grid" ? "secondary" : "ghost"} 
+                size="icon"
+                onClick={() => setView("grid")}
+                className="rounded-l-none h-full aspect-square"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
+          
+          {/* Tabs para alternar entre visualizações */}
+          <Tabs 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="projects" className="flex items-center justify-center">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                <span className="text-xs sm:text-sm">Lista</span>
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center justify-center">
+                <KanbanSquare className="h-4 w-4 mr-2" />
+                <span className="text-xs sm:text-sm">Kanban</span>
+              </TabsTrigger>
+              <TabsTrigger value="gantt" className="flex items-center justify-center">
+                <GanttChart className="h-4 w-4 mr-2" />
+                <span className="text-xs sm:text-sm">Timeline</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
       
-      {/* Loading state */}
+      {/* Loading state - otimizado para mobile */}
       {isLoading && (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex justify-center items-center h-40 md:h-64 bg-white rounded-lg shadow-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
         </div>
       )}
       
