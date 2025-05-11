@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initWebSocket, onWebSocketMessage } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { format, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -139,10 +140,9 @@ export default function Financial() {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       
       // Notificar o usuário
-      toast({
+      showSuccessToast({
         title: 'Dados financeiros atualizados',
-        description: data.message || 'Os registros financeiros foram atualizados',
-        variant: 'default',
+        description: data.message || 'Os registros financeiros foram atualizados'
       });
     });
     
