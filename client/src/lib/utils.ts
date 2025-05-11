@@ -881,22 +881,24 @@ export function getProgressBarColor(progress: number): string {
 
 type ToastParams = {
   title: string;
-  description?: string;
+  description?: string | React.ReactNode;
   action?: ToastActionElement;
+  duration?: number;
 };
 
 /**
  * Função utilitária para criar e exibir toasts de sucesso com estilo padrão
  * Usa a variante 'success' com fundo verde claro em todo o sistema
  * 
- * @param params Objeto contendo título, descrição e ação opcional do toast
+ * @param params Objeto contendo título, descrição, ação opcional e duração do toast
  */
-export function showSuccessToast({ title, description, action }: ToastParams) {
+export function showSuccessToast({ title, description, action, duration = 3000 }: ToastParams) {
   toast({
     title,
     description,
     action,
     variant: "success" as const,
+    duration,
   });
 }
 
