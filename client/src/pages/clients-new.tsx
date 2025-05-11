@@ -221,7 +221,7 @@ export default function Clients() {
       form.reset();
       
       // Toast com CTA para criar novo projeto
-      toast({
+      showSuccessToast({
         title: "Cliente criado com sucesso",
         description: (
           <div className="flex flex-col gap-2">
