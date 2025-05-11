@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { showSuccessToast } from "@/lib/utils";
 import { Loader2, Plus, UserPlus, Phone, Mail, Star, X, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -39,6 +38,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertClientContactSchema, type ClientContact } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { showSuccessToast } from "@/lib/utils";
 
 const contactFormSchema = z.object({
   name: z.string().min(2, {
@@ -56,15 +56,16 @@ const contactFormSchema = z.object({
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 interface ClientContactsProps {
-  clientId: number;
-  clientName: string;
+  clientId?: number;
+  className?: string;
 }
 
-export default function ClientContacts({ clientId, clientName }: ClientContactsProps) {
+export default function ClientContacts({ clientId, className = "" }: ClientContactsProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -88,7 +89,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       phone: "",
       is_primary: false,
       notes: "",
-    }
+    },
   });
 
   // Form para editar contato
@@ -101,16 +102,28 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
       phone: "",
       is_primary: false,
       notes: "",
-    }
+    },
   });
 
-  // Mutation para adicionar contato
-  const addMutation = useMutation({
+  // Mutation para adicionar novo contato
+  const addContactMutation = useMutation({
     mutationFn: async (data: ContactFormValues) => {
+      if (!clientId) throw new Error("ID do cliente não informado");
+      
+      const contactData = {
+        client_id: clientId,
+        name: data.name,
+        position: data.position || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        is_primary: data.is_primary,
+        notes: data.notes || null,
+      };
+      
       const response = await apiRequest(
-        "POST", 
+        'POST', 
         `/api/clients/${clientId}/contacts`, 
-        data
+        contactData
       );
       return await response.json();
     },
@@ -133,13 +146,23 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
   });
 
   // Mutation para editar contato
-  const editMutation = useMutation({
+  const editContactMutation = useMutation({
     mutationFn: async (data: ContactFormValues) => {
-      if (!selectedContact) return null;
+      if (!clientId || !selectedContact) throw new Error("Dados incompletos");
+      
+      const contactData = {
+        name: data.name,
+        position: data.position || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        is_primary: data.is_primary,
+        notes: data.notes || null,
+      };
+      
       const response = await apiRequest(
-        "PUT", 
-        `/api/client-contacts/${selectedContact.id}`, 
-        data
+        'PATCH', 
+        `/api/clients/${clientId}/contacts/${selectedContact.id}`, 
+        contactData
       );
       return await response.json();
     },
@@ -162,14 +185,15 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
   });
 
   // Mutation para excluir contato
-  const deleteMutation = useMutation({
+  const deleteContactMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedContact) return null;
-      await apiRequest(
-        "DELETE", 
-        `/api/client-contacts/${selectedContact.id}`
+      if (!clientId || !selectedContact) throw new Error("Dados incompletos");
+      
+      const response = await apiRequest(
+        'DELETE', 
+        `/api/clients/${clientId}/contacts/${selectedContact.id}`
       );
-      return true;
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/contacts`] });
@@ -189,12 +213,14 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     }
   });
 
-  // Mutation para definir contato como primário
-  const setPrimaryMutation = useMutation({
+  // Mutation para marcar contato como principal
+  const setPrimaryContactMutation = useMutation({
     mutationFn: async (contactId: number) => {
+      if (!clientId) throw new Error("ID do cliente não informado");
+      
       const response = await apiRequest(
-        "POST", 
-        `/api/client-contacts/${contactId}/set-primary`
+        'PATCH', 
+        `/api/clients/${clientId}/contacts/${contactId}/primary`
       );
       return await response.json();
     },
@@ -214,298 +240,307 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
     }
   });
 
-  const onAddSubmit = (data: ContactFormValues) => {
-    addMutation.mutate(data);
+  // Preenche o formulário de edição quando um contato é selecionado
+  useEffect(() => {
+    if (selectedContact) {
+      editForm.reset({
+        name: selectedContact.name,
+        position: selectedContact.position || "",
+        email: selectedContact.email || "",
+        phone: selectedContact.phone || "",
+        is_primary: selectedContact.is_primary,
+        notes: selectedContact.notes || "",
+      });
+    }
+  }, [selectedContact, editForm]);
+
+  // Manipuladores de eventos
+  const handleAddSubmit = (data: ContactFormValues) => {
+    addContactMutation.mutate(data);
   };
 
-  const onEditSubmit = (data: ContactFormValues) => {
-    editMutation.mutate(data);
+  const handleEditSubmit = (data: ContactFormValues) => {
+    editContactMutation.mutate(data);
   };
 
-  const handleEditClick = (contact: ClientContact) => {
-    setSelectedContact(contact);
-    editForm.reset({
-      name: contact.name,
-      position: contact.position || "",
-      email: contact.email || "",
-      phone: contact.phone || "",
-      is_primary: contact.is_primary || false,
-      notes: contact.notes || "",
-    });
-    setIsEditOpen(true);
-  };
-
-  const handleDeleteClick = (contact: ClientContact) => {
-    setSelectedContact(contact);
-    setIsDeleteOpen(true);
+  const handleDelete = () => {
+    deleteContactMutation.mutate();
   };
 
   const handleSetPrimary = (contactId: number) => {
-    setPrimaryMutation.mutate(contactId);
+    setPrimaryContactMutation.mutate(contactId);
   };
 
-  // Renderizar contatos
+  // Renderiza o componente
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Contatos</h3>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
-              <UserPlus className="h-4 w-4" />
-              <span>Adicionar</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Contato</DialogTitle>
-              <DialogDescription>
-                Adicione um novo contato para {clientName}.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...addForm}>
-              <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
-                <FormField
-                  control={addForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome do contato" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addForm.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cargo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Cargo do contato" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={addForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Email do contato" type="email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={addForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Telefone do contato" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={addForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Observações sobre o contato" 
-                          className="min-h-[80px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addForm.control}
-                  name="is_primary"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Contato principal</FormLabel>
-                        <FormDescription>
-                          Este é o contato principal para este cliente
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsAddOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit"
-                    disabled={addMutation.isPending}
-                  >
-                    {addMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Adicionando...
-                      </>
-                    ) : (
-                      "Adicionar"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {isLoadingContacts ? (
-        <div className="flex justify-center py-6">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    <Card className={className}>
+      <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-lg font-semibold">Contatos</CardTitle>
+          <CardDescription>Gerenciar contatos do cliente</CardDescription>
         </div>
-      ) : error ? (
-        <div className="text-center py-6 text-destructive">
-          Erro ao carregar contatos. Por favor, tente novamente.
-        </div>
-      ) : contacts && contacts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {contacts.map((contact) => (
-            <Card key={contact.id} className="relative">
-              <CardHeader className="pb-2">
+        <Button 
+          onClick={() => setIsAddOpen(true)} 
+          variant="outline" 
+          size="sm" 
+          className="gap-1"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="sr-only md:not-sr-only md:inline-block">Adicionar</span>
+        </Button>
+      </CardHeader>
+      <CardContent className="p-4">
+        {isLoadingContacts && (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        
+        {error && (
+          <div className="text-center py-6 text-destructive">
+            Erro ao carregar contatos. Tente novamente.
+          </div>
+        )}
+        
+        {contacts && contacts.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground">
+            Nenhum contato cadastrado.
+          </div>
+        )}
+        
+        {contacts && contacts.length > 0 && (
+          <div className="space-y-3">
+            {contacts.map((contact) => (
+              <div 
+                key={contact.id} 
+                className="rounded-lg border p-3 flex flex-col gap-1.5"
+              >
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {contact.name}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{contact.name}</h4>
                       {contact.is_primary && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Star className="h-3 w-3 mr-1 text-amber-500" /> 
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-300 bg-yellow-50 text-xs h-5">
+                          <Star className="h-3 w-3 mr-1 fill-yellow-500 text-yellow-500" />
                           Principal
                         </Badge>
                       )}
-                    </CardTitle>
+                    </div>
+                    
                     {contact.position && (
-                      <CardDescription>{contact.position}</CardDescription>
+                      <p className="text-sm text-muted-foreground">{contact.position}</p>
                     )}
                   </div>
+                  
                   <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7" 
+                    {!contact.is_primary && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        title="Marcar como principal"
+                        onClick={() => handleSetPrimary(contact.id)}
+                      >
+                        <Star className="h-4 w-4" />
+                        <span className="sr-only">Marcar como principal</span>
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
                       title="Editar contato"
-                      onClick={() => handleEditClick(contact)}
+                      onClick={() => {
+                        setSelectedContact(contact);
+                        setIsEditOpen(true);
+                      }}
                     >
                       <Edit className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-destructive" 
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-destructive"
                       title="Excluir contato"
-                      onClick={() => handleDeleteClick(contact)}
+                      onClick={() => {
+                        setSelectedContact(contact);
+                        setIsDeleteOpen(true);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Excluir</span>
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pb-2">
-                <div className="space-y-1.5">
+                
+                <div className="flex flex-col gap-1 text-sm">
                   {contact.email && (
-                    <div className="flex items-center text-sm">
-                      <Mail className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5" />
                       <a href={`mailto:${contact.email}`} className="hover:underline">
                         {contact.email}
                       </a>
                     </div>
                   )}
+                  
                   {contact.phone && (
-                    <div className="flex items-center text-sm">
-                      <Phone className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5" />
                       <a href={`tel:${contact.phone}`} className="hover:underline">
                         {contact.phone}
                       </a>
                     </div>
                   )}
-                  {contact.notes && (
-                    <div className="text-sm mt-2 text-muted-foreground">
-                      {contact.notes}
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-              {!contact.is_primary && (
-                <CardFooter className="pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-xs w-full"
-                    onClick={() => handleSetPrimary(contact.id)}
-                    disabled={setPrimaryMutation.isPending}
-                  >
-                    {setPrimaryMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <Star className="h-3 w-3 mr-1" />
-                    )}
-                    Definir como principal
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center p-6 border rounded-lg bg-muted/30">
-          <p className="text-muted-foreground">Nenhum contato cadastrado.</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2"
-            onClick={() => setIsAddOpen(true)}
-          >
-            <UserPlus className="h-4 w-4 mr-1" />
-            Adicionar contato
-          </Button>
-        </div>
-      )}
-
-      {/* Dialog de edição de contato */}
+                
+                {contact.notes && (
+                  <div className="mt-2 text-sm border-t pt-2 text-muted-foreground">
+                    {contact.notes}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      
+      {/* Dialog para adicionar contato */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Contato</DialogTitle>
+            <DialogDescription>
+              Adicione um novo contato para este cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...addForm}>
+            <form onSubmit={addForm.handleSubmit(handleAddSubmit)} className="space-y-4">
+              <FormField
+                control={addForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome do contato" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={addForm.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cargo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Cargo ou função" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={addForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={addForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Telefone" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={addForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Informações adicionais sobre o contato" 
+                        className="resize-none" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={addForm.control}
+                name="is_primary"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Contato principal</FormLabel>
+                      <FormDescription>
+                        Marque esta opção para definir como contato principal do cliente.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit" disabled={addContactMutation.isPending}>
+                  {addContactMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Adicionar
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog para editar contato */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Contato</DialogTitle>
             <DialogDescription>
-              Edite as informações do contato.
+              Atualize as informações do contato.
             </DialogDescription>
           </DialogHeader>
+          
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
               <FormField
                 control={editForm.control}
                 name="name"
@@ -519,6 +554,7 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={editForm.control}
                 name="position"
@@ -526,13 +562,14 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                   <FormItem>
                     <FormLabel>Cargo</FormLabel>
                     <FormControl>
-                      <Input placeholder="Cargo do contato" {...field} />
+                      <Input placeholder="Cargo ou função" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editForm.control}
                   name="email"
@@ -540,12 +577,13 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Email do contato" type="email" {...field} />
+                        <Input placeholder="Email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={editForm.control}
                   name="phone"
@@ -553,13 +591,14 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input placeholder="Telefone do contato" {...field} />
+                        <Input placeholder="Telefone" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+              
               <FormField
                 control={editForm.control}
                 name="notes"
@@ -568,8 +607,8 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                     <FormLabel>Observações</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Observações sobre o contato" 
-                        className="min-h-[80px]"
+                        placeholder="Informações adicionais sobre o contato" 
+                        className="resize-none" 
                         {...field} 
                       />
                     </FormControl>
@@ -577,11 +616,12 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={editForm.control}
                 name="is_primary"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -591,85 +631,70 @@ export default function ClientContacts({ clientId, clientName }: ClientContactsP
                     <div className="space-y-1 leading-none">
                       <FormLabel>Contato principal</FormLabel>
                       <FormDescription>
-                        Este é o contato principal para este cliente
+                        Marque esta opção para definir como contato principal do cliente.
                       </FormDescription>
                     </div>
                   </FormItem>
                 )}
               />
+              
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsEditOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={editMutation.isPending}
-                >
-                  {editMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar"
+                <Button type="submit" disabled={editContactMutation.isPending}>
+                  {editContactMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
+                  Salvar alterações
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog de confirmação de exclusão */}
+      
+      {/* Dialog para confirmar exclusão */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Excluir Contato</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir este contato? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <p className="font-medium">
-            {selectedContact?.name}
-            {selectedContact?.is_primary && (
-              <Badge variant="secondary" className="ml-2">
-                Contato Principal
-              </Badge>
+          
+          <div className="mt-2 border rounded-md p-3">
+            <p className="font-medium">{selectedContact?.name}</p>
+            {selectedContact?.position && (
+              <p className="text-sm text-muted-foreground">{selectedContact.position}</p>
             )}
-          </p>
-          {selectedContact?.position && (
-            <p className="text-sm text-muted-foreground">{selectedContact.position}</p>
-          )}
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            {selectedContact?.email && (
+              <p className="text-sm mt-1">Email: {selectedContact.email}</p>
+            )}
+            {selectedContact?.phone && (
+              <p className="text-sm">Telefone: {selectedContact.phone}</p>
+            )}
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
               onClick={() => setIsDeleteOpen(false)}
             >
               Cancelar
             </Button>
-            <Button 
-              type="button"
+            
+            <Button
               variant="destructive"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
+              onClick={handleDelete}
+              disabled={deleteContactMutation.isPending}
             >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Excluindo...
-                </>
-              ) : (
-                "Excluir"
+              {deleteContactMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
+              Excluir
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }
