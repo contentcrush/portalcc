@@ -595,6 +595,30 @@ export function notifyUser(targetUserId: number, notification: {
 }
 
 /**
+ * Registra um handler para atualizações de cliente
+ */
+export function onClientUpdated(callback: (data: any) => void): () => void {
+  // Registrar handler para 'client_updated'
+  return onWebSocketMessage('client_updated', callback);
+}
+
+/**
+ * Registra um handler para atualizações de projeto
+ */
+export function onProjectUpdated(callback: (data: any) => void): () => void {
+  // Registrar handler para 'project_updated'
+  return onWebSocketMessage('project_updated', callback);
+}
+
+/**
+ * Registra um handler para atualizações de tarefa
+ */
+export function onTaskUpdated(callback: (data: any) => void): () => void {
+  // Registrar handler para 'task_updated'
+  return onWebSocketMessage('task_updated', callback);
+}
+
+/**
  * Fecha todas as conexões
  */
 export function closeConnections(): void {

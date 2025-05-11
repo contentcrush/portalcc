@@ -20,6 +20,9 @@ import {
   onDeletedProjectComment,
   onNewProjectCommentReaction,
   onDeletedProjectCommentReaction,
+  onClientUpdated,
+  onProjectUpdated,
+  onTaskUpdated,
   notifyUser,
   closeConnections,
   getMessageHandlersForType
@@ -52,6 +55,11 @@ interface SocketContextType {
   // Métodos para reações em comentários de projetos
   registerProjectCommentReactionListener: (callback: (data: any) => void) => () => void;
   registerDeletedProjectCommentReactionListener: (callback: (data: { id: number, comment_id: number }) => void) => () => void;
+  
+  // Listeners para atualizações de entidades
+  registerClientUpdatesListener: (callback: (data: any) => void) => () => void;
+  registerProjectUpdatesListener: (callback: (data: any) => void) => () => void;
+  registerTaskUpdatesListener: (callback: (data: any) => void) => () => void;
   
   // Notificações
   sendNotification: (targetUserId: number, notification: {
@@ -372,6 +380,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     registerProjectCommentReactionListener: (callback: (data: any) => void) => onNewProjectCommentReaction(callback),
     registerDeletedProjectCommentReactionListener: (callback: (data: { id: number, comment_id: number }) => void) => 
       onDeletedProjectCommentReaction(callback),
+    
+    // Listeners para atualizações de entidades
+    registerClientUpdatesListener: (callback: (data: any) => void) => onClientUpdated(callback),
+    registerProjectUpdatesListener: (callback: (data: any) => void) => onProjectUpdated(callback),
+    registerTaskUpdatesListener: (callback: (data: any) => void) => onTaskUpdated(callback),
     
     // Notificações
     sendNotification: (targetUserId: number, notification: {
