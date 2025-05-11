@@ -2604,12 +2604,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Expenses - Adicionando autenticação e permissões
-  app.get("/api/expenses", authenticateJWT, async (_req, res) => {
+  // Expenses - Com paginação, filtros e autenticação
+  app.get("/api/expenses", authenticateJWT, async (req, res) => {
     try {
-      const expenses = await storage.getExpenses();
-      res.json(expenses);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.category) {
+        filters.category = req.query.category;
+      }
+      if (req.query.project_id) {
+        filters.project_id = parseInt(req.query.project_id as string);
+      }
+      if (req.query.client_id) {
+        filters.client_id = parseInt(req.query.client_id as string);
+      }
+      if (req.query.paid !== undefined) {
+        filters.paid = req.query.paid === 'true';
+      }
+      if (req.query.start_date) {
+        filters.start_date = new Date(req.query.start_date as string);
+      }
+      if (req.query.end_date) {
+        filters.end_date = new Date(req.query.end_date as string);
+      }
+      
+      // Obter despesas com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getExpenses(queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar despesas:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
     }
   });
@@ -2617,9 +2656,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/expenses", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      const expenses = await storage.getExpensesByProject(projectId);
-      res.json(expenses);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.category) {
+        filters.category = req.query.category;
+      }
+      if (req.query.paid !== undefined) {
+        filters.paid = req.query.paid === 'true';
+      }
+      if (req.query.start_date) {
+        filters.start_date = new Date(req.query.start_date as string);
+      }
+      if (req.query.end_date) {
+        filters.end_date = new Date(req.query.end_date as string);
+      }
+      
+      // Obter despesas do projeto com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getExpensesByProject(projectId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar despesas do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project expenses" });
     }
   });
