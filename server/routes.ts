@@ -38,14 +38,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
-  // Users - requer autenticação e permissões adequadas
-  app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
+  // Users - Com paginação, filtros e autenticação
+  app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
-      const users = await storage.getUsers();
-      // Remove senhas da resposta
-      const usersWithoutPassword = users.map(({ password, ...user }) => user);
-      res.json(usersWithoutPassword);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'name';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.role) {
+        filters.role = req.query.role;
+      }
+      if (req.query.department) {
+        filters.department = req.query.department;
+      }
+      
+      // Obter usuários com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getUsers(queryOptions);
+      
+      // Se o resultado for paginado, processar cada item para remover senhas
+      if ('data' in result) {
+        const usersWithoutPassword = result.data.map(({ password, ...user }) => user);
+        res.json({
+          ...result,
+          data: usersWithoutPassword
+        });
+      } else {
+        // Caso contrário, processar a array diretamente
+        const usersWithoutPassword = result.map(({ password, ...user }) => user);
+        res.json(usersWithoutPassword);
+      }
     } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
@@ -1663,9 +1700,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Acesso negado. Você só pode visualizar suas próprias tarefas." });
       }
       
-      const tasks = await storage.getTasksByUser(userId);
-      res.json(tasks);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.priority) {
+        filters.priority = req.query.priority;
+      }
+      if (req.query.project_id) {
+        filters.project_id = parseInt(req.query.project_id as string);
+      }
+      if (req.query.client_id) {
+        filters.client_id = parseInt(req.query.client_id as string);
+      }
+      if (req.query.completed !== undefined) {
+        filters.completed = req.query.completed === 'true';
+      }
+      
+      // Obter tarefas do usuário com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getTasksByUser(userId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar tarefas do usuário:", error);
       res.status(500).json({ message: "Failed to fetch user tasks" });
     }
   });
@@ -2192,12 +2265,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Financial Documents - Adicionando autenticação e permissões
-  app.get("/api/financial-documents", authenticateJWT, async (_req, res) => {
+  // Financial Documents - Com paginação, filtros e autenticação
+  app.get("/api/financial-documents", authenticateJWT, async (req, res) => {
     try {
-      const documents = await storage.getFinancialDocuments();
-      res.json(documents);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.document_type) {
+        filters.document_type = req.query.document_type;
+      }
+      if (req.query.client_id) {
+        filters.client_id = parseInt(req.query.client_id as string);
+      }
+      if (req.query.project_id) {
+        filters.project_id = parseInt(req.query.project_id as string);
+      }
+      if (req.query.paid !== undefined) {
+        filters.paid = req.query.paid === 'true';
+      }
+      
+      // Obter documentos financeiros com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getFinancialDocuments(queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar documentos financeiros:", error);
       res.status(500).json({ message: "Failed to fetch financial documents" });
     }
   });
@@ -2205,9 +2314,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      const documents = await storage.getFinancialDocumentsByClient(clientId);
-      res.json(documents);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.document_type) {
+        filters.document_type = req.query.document_type;
+      }
+      if (req.query.project_id) {
+        filters.project_id = parseInt(req.query.project_id as string);
+      }
+      if (req.query.paid !== undefined) {
+        filters.paid = req.query.paid === 'true';
+      }
+      
+      // Obter documentos financeiros do cliente com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getFinancialDocumentsByClient(clientId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar documentos financeiros do cliente:", error);
       res.status(500).json({ message: "Failed to fetch client financial documents" });
     }
   });
@@ -2215,9 +2358,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      const documents = await storage.getFinancialDocumentsByProject(projectId);
-      res.json(documents);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.document_type) {
+        filters.document_type = req.query.document_type;
+      }
+      if (req.query.paid !== undefined) {
+        filters.paid = req.query.paid === 'true';
+      }
+      
+      // Obter documentos financeiros do projeto com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getFinancialDocumentsByProject(projectId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar documentos financeiros do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project financial documents" });
     }
   });
