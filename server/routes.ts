@@ -3338,21 +3338,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/comments", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      const comments = await storage.getProjectComments(projectId);
       
-      // Obter reações para os comentários
-      const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'creation_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
       
-      // Mapear as reações aos comentários para retornar tudo junto
-      const commentsWithReactions = comments.map(comment => ({
-        ...comment,
-        reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
-      }));
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.parent_id) {
+        filters.parent_id = parseInt(req.query.parent_id as string);
+      }
+      if (req.query.user_id) {
+        filters.user_id = parseInt(req.query.user_id as string);
+      }
+      if (req.query.edited !== undefined) {
+        filters.edited = req.query.edited === 'true';
+      }
+      if (req.query.start_date) {
+        filters.start_date = new Date(req.query.start_date as string);
+      }
+      if (req.query.end_date) {
+        filters.end_date = new Date(req.query.end_date as string);
+      }
       
-      res.json(commentsWithReactions);
+      // Verificar se é solicitada paginação ou se é para retornar todos os comentários
+      if (req.query.paginated === 'false') {
+        // Resposta sem paginação para compatibilidade com o cliente atual
+        const comments = await storage.getProjectComments(projectId) as ProjectComment[];
+        
+        // Obter reações para os comentários
+        const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
+        
+        // Mapear as reações aos comentários para retornar tudo junto
+        const commentsWithReactions = comments.map(comment => ({
+          ...comment,
+          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+        }));
+        
+        res.json(commentsWithReactions);
+      } else {
+        // Resposta com paginação
+        const queryOptions: QueryOptions = {
+          page,
+          limit,
+          sortBy,
+          sortOrder,
+          search,
+          filters
+        };
+        
+        const result = await storage.getProjectComments(projectId, queryOptions) as PaginatedResult<ProjectComment>;
+        
+        // Obter reações para os comentários
+        const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
+        
+        // Mapear as reações aos comentários paginados
+        const commentsWithReactions = result.data.map(comment => ({
+          ...comment,
+          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+        }));
+        
+        // Responder com os dados paginados e com reações
+        res.json({
+          ...result,
+          data: commentsWithReactions
+        });
+      }
     } catch (error) {
-      console.error("Error fetching project comments:", error);
-      res.status(500).json({ message: "Failed to fetch project comments" });
+      console.error("Erro ao buscar comentários do projeto:", error);
+      res.status(500).json({ message: "Falha ao buscar comentários do projeto" });
     }
   });
 
