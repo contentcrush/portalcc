@@ -107,6 +107,19 @@ export function formatDate(date: Date | string | null | undefined): string {
   }
 }
 
+/**
+ * Formata uma data com horário específico (devido ao campo due_time)
+ * @param date A data (Date ou string ISO)
+ * @param time O horário específico no formato HH:MM
+ * @returns Data formatada com o horário
+ */
+export function formatDateWithTime(date: Date | string | null | undefined, time: string | null | undefined): string {
+  if (!date) return "";
+  if (!time) return formatDate(date);
+  
+  return `${formatDate(date)} às ${time}`;
+}
+
 // Importações necessárias para formatação de datas
 import { formatDateToLocal } from './date-utils';
 
@@ -149,7 +162,7 @@ export function formatDueDateWithDaysRemaining(date: Date | string | null | unde
   }
 }
 
-export function formatDateTime(date: Date | string | null | undefined): string {
+export function formatDateTime(date: Date | string | null | undefined, time?: string | null): string {
   if (!date) return "";
   
   try {
@@ -161,7 +174,15 @@ export function formatDateTime(date: Date | string | null | undefined): string {
     
     if (!isValid(dateObj)) return "";
     
-    // Formatar data e hora no timezone do usuário
+    // Formatar apenas a data
+    const formattedDate = formatInTimeZone(dateObj, userTz, "dd/MM/yyyy", { locale: ptBR });
+    
+    // Se tiver horário específico, adicionar
+    if (time) {
+      return `${formattedDate} às ${time}`;
+    }
+    
+    // Sem horário específico, formatar com hora do objeto Date
     return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   } catch (error) {
     console.error("Erro ao formatar data e hora:", error, date);
