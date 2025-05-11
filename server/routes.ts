@@ -22,6 +22,9 @@ import { parseISO } from "date-fns";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
+  
+  // Configurar suporte aprimorado para autenticação mobile
+  setupMobileAuth(app);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -8,6 +8,13 @@ import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccessToast } from "@/lib/utils";
+import { 
+  isMobileDevice, 
+  saveTokensToLocalStorage, 
+  clearTokensFromLocalStorage,
+  refreshMobileTokens,
+  hasMobileTokens
+} from "@/lib/mobile-auth";
 
 type AuthResponse = {
   user: SelectUser;
@@ -42,21 +49,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: authData,
     error,
     isLoading,
+    refetch
   } = useQuery<{ user: SelectUser, token: string } | null, Error>({
     queryKey: ["/api/auth/me"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
     refetchOnWindowFocus: false,
   });
+  
+  // Verificar tokens móveis ao iniciar
+  useEffect(() => {
+    // Só tentamos autenticar via tokens móveis se não houver uma sessão ativa
+    // e estivermos em um dispositivo móvel
+    if (!authData && isMobileDevice() && hasMobileTokens()) {
+      console.log('Tentando autenticar via tokens mobile');
+      refreshMobileTokens()
+        .then(success => {
+          if (success) {
+            console.log('Autenticação via tokens mobile bem-sucedida');
+            refetch();
+          } else {
+            console.log('Falha na autenticação via tokens mobile');
+          }
+        })
+        .catch(err => {
+          console.error('Erro na autenticação via tokens mobile:', err);
+        });
+    }
+  }, [authData, refetch]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/auth/login", credentials);
       return await res.json();
     },
-    onSuccess: (data: { user: SelectUser, token: string }) => {
+    onSuccess: (data: { user: SelectUser, token: string, refreshToken?: string, expiresIn?: number }) => {
       queryClient.setQueryData(["/api/auth/me"], data);
-      // O token agora é armazenado em cookies HTTP-only pelo servidor
+      
+      // Se estamos em dispositivo móvel e temos tokens adicionais, salvamos no localStorage
+      if (isMobileDevice() && data.refreshToken) {
+        saveTokensToLocalStorage(
+          data.token, 
+          data.refreshToken, 
+          data.expiresIn || 15 * 60
+        );
+        console.log('Tokens salvos para autenticação mobile');
+      }
+      
       showSuccessToast({
         title: "Login bem-sucedido",
         description: `Bem-vindo de volta, ${data.user.name}!`

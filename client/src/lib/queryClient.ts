@@ -10,14 +10,42 @@ async function throwIfResNotOk(res: Response) {
 // Objeto global para armazenar listeners de websocket para invalidação de cache
 export const cacheInvalidationListeners: { [key: string]: (() => void)[] } = {};
 
+import { 
+  isMobileDevice, 
+  getMobileAuthHeader, 
+  hasMobileTokens, 
+  refreshMobileTokens,
+  getAccessTokenFromLocalStorage
+} from './mobile-auth';
+
 // Adicionar os cabeçalhos necessários às requisições
 function getAuthHeaders(hasContentType: boolean = false): HeadersInit {
+  // Headers básicos
   const headers: HeadersInit = hasContentType ? { "Content-Type": "application/json" } : {};
+  
+  // Se for dispositivo móvel, adicionar o token de acesso no header Authorization
+  if (isMobileDevice() && hasMobileTokens()) {
+    const mobileHeaders = getMobileAuthHeader();
+    if (mobileHeaders) {
+      return { ...headers, ...mobileHeaders };
+    }
+  }
+  
   return headers;
 }
 
 // Função para renovar o token expirado
 async function refreshToken(): Promise<boolean> {
+  // Para dispositivos móveis, tentamos usar a renovação otimizada
+  if (isMobileDevice()) {
+    const mobileRefreshResult = await refreshMobileTokens();
+    if (mobileRefreshResult) {
+      console.log('Token renovado com sucesso usando fluxo mobile');
+      return true;
+    }
+  }
+  
+  // Fluxo padrão para navegadores desktop ou fallback para mobile
   try {
     const res = await fetch('/api/auth/refresh', {
       method: 'POST',
