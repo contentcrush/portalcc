@@ -220,7 +220,13 @@ export default function Clients() {
       setIsCollapseOpen(false); // Resetar collapse
       form.reset();
       
-      // Toast com CTA para criar novo projeto
+      // Salvar as informações do cliente recém-criado
+      const newClientData = {
+        id: newClient.id,
+        name: newClient.name
+      };
+      
+      // Toast com CTA para criar novo projeto - sem redirecionamento imediato
       showSuccessToast({
         title: "Cliente criado com sucesso",
         description: (
@@ -231,10 +237,22 @@ export default function Clients() {
               size="sm" 
               className="mt-2 w-full justify-center"
               onClick={() => {
-                handleNewProjectClick({
-                  id: newClient.id,
-                  name: newClient.name
-                });
+                // Manter o usuário na mesma página e abrir o formulário de novo projeto
+                setTimeout(() => {
+                  setSelectedClient(newClientData);
+                  projectForm.reset({
+                    name: "",
+                    description: "",
+                    client_id: newClientData.id,
+                    status: "draft",
+                    budget: undefined,
+                    startDate: undefined,
+                    endDate: undefined,
+                    progress: 0,
+                    thumbnail: "",
+                  });
+                  setIsNewProjectDialogOpen(true);
+                }, 100);
               }}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -242,7 +260,7 @@ export default function Clients() {
             </Button>
           </div>
         ),
-        duration: 5000,
+        duration: 6000,
       });
       
       navigate(`/clients/${newClient.id}`);

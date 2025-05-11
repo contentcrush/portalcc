@@ -559,6 +559,26 @@ export default function Tasks() {
                   </Badge>
                 )}
               </div>
+              <div className="flex justify-end">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowAllCompleted(!showAllCompleted)} 
+                  className="text-xs text-muted-foreground hover:text-primary"
+                >
+                  {showAllCompleted ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                      Mostrar menos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                      Mostrar todas
+                    </>
+                  )}
+                </Button>
+              </div>
             </header>
             
             {/* Lista de Tarefas Concluídas */}
@@ -592,9 +612,9 @@ export default function Tasks() {
                 )}
               </div>
             ) : (
-              // Preview of Completed Tasks (3 max)
+              // Preview of Completed Tasks (mostrando até 6 tarefas)
               <div className="space-y-3">
-                {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 3).map(task => (
+                {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 6).map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -604,6 +624,17 @@ export default function Tasks() {
                     onEdit={() => handleEditTask(task.id)}
                   />
                 ))}
+                
+                {filteredTasks && filteredTasks.filter(task => task.completed).length > 6 && (
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-sm text-muted-foreground hover:text-primary"
+                    onClick={() => setShowAllCompleted(true)}
+                  >
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    Ver todas as {filteredTasks.filter(task => task.completed).length} tarefas concluídas
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
