@@ -16,29 +16,6 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-k
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 dias
 
-/**
- * Função utilitária para configurar cookies com suporte aprimorado para dispositivos móveis
- */
-function setCookies(res: Response, accessToken: string, refreshToken: string) {
-  // Configurar cookie do token de acesso com melhor compatibilidade mobile
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Importante para compatibilidade com navegadores móveis
-    maxAge: 15 * 60 * 1000, // 15 minutos
-    path: '/' // Acessível em todo o site
-  });
-  
-  // Configurar cookie do token de refresh com melhor compatibilidade mobile
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Importante para compatibilidade com navegadores móveis
-    path: '/api/auth/refresh',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-  });
-}
-
 // Interface para payload do token JWT
 interface JwtPayload {
   userId: number;
@@ -333,31 +310,27 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies com melhor suporte mobile
-      setCookies(res, accessToken, refreshToken);
+      // Configurar cookies
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60 * 1000 // 15 minutos
+      });
+      
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/api/auth/refresh',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      });
       
       // Retornar usuário sem a senha
       const { password: _, ...userWithoutPassword } = user;
       
-      // Detectar se é um dispositivo móvel
-      const userAgent = req.headers['user-agent'] || '';
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      
-      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
-      if (isMobile) {
-        return res.status(201).json({
-          user: userWithoutPassword,
-          token: accessToken,
-          refreshToken: refreshToken, 
-          expiresIn: 15 * 60 // 15 minutos em segundos
-        });
-      } else {
-        // Para navegadores desktop, não incluir o refresh token na resposta
-        return res.status(201).json({
-          user: userWithoutPassword,
-          token: accessToken
-        });
-      }
+      return res.status(201).json({
+        user: userWithoutPassword,
+        token: accessToken
+      });
     } catch (error) {
       console.error('Erro ao registrar usuário:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
@@ -413,31 +386,27 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies com melhor suporte mobile
-      setCookies(res, accessToken, refreshToken);
+      // Configurar cookies
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60 * 1000 // 15 minutos
+      });
+      
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/api/auth/refresh',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      });
       
       // Retornar usuário sem a senha
       const { password: _, ...userWithoutPassword } = user;
       
-      // Detectar se é um dispositivo móvel
-      const userAgent = req.headers['user-agent'] || '';
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      
-      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
-      if (isMobile) {
-        return res.status(200).json({
-          user: userWithoutPassword,
-          token: accessToken,
-          refreshToken: refreshToken, 
-          expiresIn: 15 * 60 // 15 minutos em segundos
-        });
-      } else {
-        // Para navegadores desktop, não incluir o refresh token na resposta
-        return res.status(200).json({
-          user: userWithoutPassword,
-          token: accessToken
-        });
-      }
+      return res.status(200).json({
+        user: userWithoutPassword,
+        token: accessToken
+      });
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
@@ -447,13 +416,7 @@ export function setupAuth(app: Express) {
   // Logout
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
     try {
-      // Obter token de refresh do cookie ou do corpo da requisição (para dispositivos móveis)
-      let refreshToken = req.cookies.refreshToken;
-      
-      // Para dispositivos móveis, o token pode vir no corpo da requisição
-      if (!refreshToken && req.body && req.body.refreshToken) {
-        refreshToken = req.body.refreshToken;
-      }
+      const refreshToken = req.cookies.refreshToken;
       
       if (refreshToken) {
         // Revogar refresh token
@@ -461,19 +424,8 @@ export function setupAuth(app: Express) {
       }
       
       // Limpar cookies
-      res.clearCookie('accessToken', { 
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-      });
-      
-      res.clearCookie('refreshToken', { 
-        path: '/api/auth/refresh',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-      });
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
       
       return res.status(200).json({ message: 'Logout bem-sucedido' });
     } catch (error) {
@@ -485,13 +437,7 @@ export function setupAuth(app: Express) {
   // Refresh do token
   app.post('/api/auth/refresh', async (req: Request, res: Response) => {
     try {
-      // Obter token de refresh do cookie ou do corpo da requisição (para dispositivos móveis)
-      let refreshToken = req.cookies.refreshToken;
-      
-      // Para dispositivos móveis, o token pode vir no corpo da requisição
-      if (!refreshToken && req.body && req.body.refreshToken) {
-        refreshToken = req.body.refreshToken;
-      }
+      const refreshToken = req.cookies.refreshToken;
       
       if (!refreshToken) {
         return res.status(401).json({ message: 'Refresh token não fornecido' });
@@ -502,19 +448,8 @@ export function setupAuth(app: Express) {
       
       if (!user) {
         // Limpar cookies
-        res.clearCookie('accessToken', { 
-          path: '/',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax'
-        });
-        
-        res.clearCookie('refreshToken', { 
-          path: '/api/auth/refresh',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax'
-        });
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
         
         return res.status(403).json({ message: 'Refresh token inválido ou expirado' });
       }
@@ -538,25 +473,21 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies com melhor suporte mobile
-      setCookies(res, accessToken, newRefreshToken);
+      // Configurar cookies
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 15 * 60 * 1000 // 15 minutos
+      });
       
-      // Detectar se é um dispositivo móvel para incluir refresh token na resposta
-      const userAgent = req.headers['user-agent'] || '';
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/api/auth/refresh',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      });
       
-      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
-      if (isMobile) {
-        const { password: _, ...userWithoutPassword } = user;
-        return res.status(200).json({
-          user: userWithoutPassword,
-          token: accessToken,
-          refreshToken: newRefreshToken,
-          expiresIn: 15 * 60 // 15 minutos em segundos
-        });
-      } else {
-        return res.status(200).json({ token: accessToken });
-      }
+      return res.status(200).json({ token: accessToken });
     } catch (error) {
       console.error('Erro ao atualizar token:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
