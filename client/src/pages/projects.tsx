@@ -201,142 +201,136 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [activeTab, setActiveTab] = useState<string>("projects");
   
   return (
-    <div className="space-y-4 p-2 md:p-0 md:space-y-6">
-      {/* Cabeçalho com design mobile-first */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex flex-col space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Projetos</h1>
-              <p className="text-xs md:text-sm text-gray-500">Gerenciamento de projetos de vídeo</p>
-            </div>
-            
-            <Button 
-              onClick={openProjectForm} 
-              size="sm" 
-              className="shrink-0 bg-rose-500 hover:bg-rose-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Novo Projeto</span>
-              <span className="sm:hidden">Novo</span>
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Projetos</h1>
+          <p className="text-sm text-gray-500">Gerenciamento de projetos de vídeo</p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <Tabs 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="mr-4"
+          >
+            <TabsList>
+              <TabsTrigger value="projects" className="flex items-center">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Lista
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center">
+                <KanbanSquare className="h-4 w-4 mr-2" />
+                Kanban
+              </TabsTrigger>
+              <TabsTrigger value="gantt" className="flex items-center">
+                <GanttChart className="h-4 w-4 mr-2" />
+                Timeline
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           
-          {/* Barra de pesquisa com design consistente */}
-          <div className="relative w-full">
+          <Button onClick={openProjectForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Projeto
+          </Button>
+        </div>
+      </div>
+      
+      {/* Filter and search */}
+      <div className="flex flex-wrap items-center justify-between bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0">
+        <div className="w-full md:w-auto">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar projetos"
-              className="pl-10 w-full"
+              className="pl-10 w-full md:w-80"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {clients && clients.length > 0 ? clients.map((client: any) => (
+                <SelectItem key={client.id} value={client.id.toString()}>
+                  {client.name}
+                </SelectItem>
+              )) : null}
+            </SelectContent>
+          </Select>
           
-          {/* Filtros com layout responsivo */}
-          <div className="flex flex-wrap gap-2">
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
-                <SelectValue placeholder="Cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {clients && clients.length > 0 ? clients.map((client: any) => (
-                  <SelectItem key={client.id} value={client.id.toString()}>
-                    {client.name}
-                  </SelectItem>
-                )) : null}
-              </SelectContent>
-            </Select>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {PROJECT_STATUS_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full sm:w-32 text-sm h-9">
-                <SelectValue placeholder="Data" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="recent">Mais recentes</SelectItem>
-                <SelectItem value="older">Mais antigos</SelectItem>
-                <SelectItem value="upcoming">Prazo próximo</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <div className="flex bg-white rounded-md border h-9 ml-auto">
-              <Button 
-                variant={view === "list" ? "secondary" : "ghost"} 
-                size="icon"
-                onClick={() => setView("list")}
-                className="rounded-r-none h-full aspect-square"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant={view === "grid" ? "secondary" : "ghost"} 
-                size="icon"
-                onClick={() => setView("grid")}
-                className="rounded-l-none h-full aspect-square"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-            </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {PROJECT_STATUS_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Data" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="older">Mais antigos</SelectItem>
+              <SelectItem value="upcoming">Prazo próximo</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex bg-white rounded-md border">
+            <Button 
+              variant={view === "list" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setView("list")}
+              className="rounded-r-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={view === "grid" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setView("grid")}
+              className="rounded-l-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
           </div>
-          
-          {/* Tabs para alternar entre visualizações */}
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="projects" className="flex items-center justify-center">
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                <span className="text-xs sm:text-sm">Lista</span>
-              </TabsTrigger>
-              <TabsTrigger value="kanban" className="flex items-center justify-center">
-                <KanbanSquare className="h-4 w-4 mr-2" />
-                <span className="text-xs sm:text-sm">Kanban</span>
-              </TabsTrigger>
-              <TabsTrigger value="gantt" className="flex items-center justify-center">
-                <GanttChart className="h-4 w-4 mr-2" />
-                <span className="text-xs sm:text-sm">Timeline</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
       </div>
       
-      {/* Loading state - otimizado para mobile */}
+      {/* Loading state */}
       {isLoading && (
-        <div className="flex justify-center items-center h-40 md:h-64 bg-white rounded-lg shadow-sm">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       )}
       
-      {/* Empty state - otimizado para mobile */}
+      {/* Empty state */}
       {projectsWithClient && projectsWithClient.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-4 md:p-8 text-center">
-          <div className="mx-auto w-10 h-10 md:w-12 md:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-3 md:mb-4">
-            <Filter className="h-5 w-5 md:h-6 md:w-6 text-rose-500" />
+        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Filter className="h-6 w-6 text-primary" />
           </div>
-          <h3 className="text-base md:text-lg font-medium mb-1 md:mb-2">Nenhum projeto encontrado</h3>
-          <p className="text-sm text-muted-foreground mb-3 md:mb-4">
+          <h3 className="text-lg font-medium mb-2">Nenhum projeto encontrado</h3>
+          <p className="text-muted-foreground mb-4">
             Tente ajustar os filtros ou adicione um novo projeto.
           </p>
-          <Button onClick={openProjectForm} className="bg-rose-500 hover:bg-rose-600">
+          <Button onClick={openProjectForm}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -346,9 +340,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       {/* Conteúdo da aba Projetos (grid e list) */}
       {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
         <>
-          {/* Project grid - otimizado para mobile */}
+          {/* Project grid */}
           {view === "grid" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projectsWithClient.map(project => (
                 <ProjectCard 
                   key={project.id} 
@@ -357,56 +351,50 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                 />
               ))}
               
-              {/* Card de adicionar projeto */}
-              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-4 md:p-6 hover:border-rose-300 transition-colors h-full">
-                <div className="bg-rose-100 rounded-full p-3 mb-3">
-                  <Plus className="h-6 w-6 md:h-8 md:w-8 text-rose-500" />
+              {/* Add new project card */}
+              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
+                <div className="bg-primary/10 rounded-full p-3 mb-3">
+                  <Plus className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="font-medium text-gray-900 mb-1 text-center">Novo Projeto</h3>
-                <p className="text-xs md:text-sm text-gray-500 text-center mb-3 md:mb-4">Crie um novo projeto de vídeo</p>
-                <Button onClick={openProjectForm} size="sm" className="bg-rose-500 hover:bg-rose-600">
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Adicionar Projeto</span>
-                  <span className="sm:hidden">Adicionar</span>
-                </Button>
+                <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
+                <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
+                <Button onClick={openProjectForm}>Adicionar Projeto</Button>
               </div>
             </div>
           )}
           
-          {/* Project list view - otimizado para mobile */}
+          {/* Project list view */}
           {view === "list" && (
-            <div className="space-y-2 md:space-y-3">
+            <div className="space-y-3">
               {projectsWithClient.map(project => (
                 <div 
                   key={project.id}
-                  className="bg-white border rounded-lg p-3 md:p-4 flex items-center justify-between hover:shadow-md hover:border-rose-200 transition-all cursor-pointer"
+                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
                   onClick={() => handleOpenProjectDetails(project.id)}
                 >
-                  <div className="flex items-center flex-1 min-w-0">
-                    {/* Thumbnail com fallback */}
+                  <div className="flex items-center">
                     {project.thumbnail ? (
                       <img 
                         src={project.thumbnail} 
                         alt={project.name} 
-                        className="w-10 h-10 md:w-12 md:h-12 object-cover rounded mr-3 md:mr-4 flex-shrink-0" 
+                        className="w-12 h-12 object-cover rounded mr-4" 
                       />
                     ) : (
-                      <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-200 rounded flex items-center justify-center mr-3 md:mr-4 flex-shrink-0">
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mr-4">
                         <span className="text-gray-500 font-medium">
                           {project.name.charAt(0)}
                         </span>
                       </div>
                     )}
                     
-                    {/* Informações do projeto */}
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-sm md:text-base hover:text-rose-600 truncate">
+                    <div>
+                      <h3 className="font-medium hover:text-primary">
                         {project.name}
                       </h3>
-                      <div className="flex flex-wrap items-center text-xs md:text-sm text-muted-foreground gap-1 md:gap-2">
-                        <span className="truncate max-w-[120px] md:max-w-none">{project.client?.name || 'Cliente não especificado'}</span>
-                        <span className="hidden md:inline mx-1">•</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <span>{project.client?.name || 'Cliente não especificado'}</span>
+                        <span className="mx-2">•</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
                           project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
                           project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
                           project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
@@ -422,27 +410,22 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                   </div>
                   
                   <div className="flex items-center">
-                    {/* Prazo - visível apenas em telas maiores */}
-                    <div className="text-right mr-2 md:mr-6 hidden sm:block">
-                      <div className="font-medium text-xs md:text-sm">
-                        {project.endDate ? new Date(project.endDate).toLocaleDateString('pt-BR') : '-'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Prazo</div>
+                    <div className="text-right mr-6 hidden md:block">
+                      <div className="font-medium">{new Date(project.endDate).toLocaleDateString('pt-BR')}</div>
+                      <div className="text-sm text-muted-foreground">Prazo</div>
                     </div>
                     
-                    {/* Orçamento - escondido em telas muito pequenas */}
-                    <div className="text-right mr-2 md:mr-6 hidden sm:block">
-                      <div className="font-medium text-xs md:text-sm">
+                    <div className="text-right mr-6">
+                      <div className="font-medium">
                         {new Intl.NumberFormat('pt-BR', { 
                           style: 'currency', 
                           currency: 'BRL' 
                         }).format(project.budget || 0)}
                       </div>
-                      <div className="text-xs text-muted-foreground">Orçamento</div>
+                      <div className="text-sm text-muted-foreground">Orçamento</div>
                     </div>
                     
-                    {/* Barra de progresso - apenas telas médias e maiores */}
-                    <div className="w-16 md:w-24 mr-2 md:mr-6 hidden md:block">
+                    <div className="w-24 mr-6 hidden md:block">
                       <div className="flex justify-between text-xs mb-1">
                         <span>Progresso</span>
                         <span>{project.progress}%</span>
@@ -455,14 +438,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                       </div>
                     </div>
                     
-                    {/* Menu de ações */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 focus:ring-0"
-                          onClick={(e) => e.stopPropagation()}
+                    <div className="flex space-x-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -495,38 +478,36 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="hidden xs:flex bg-white hover:bg-gray-50 ml-1"
                         onClick={(e) => {
                           e.stopPropagation(); // Previne o evento de propagar para o parent
                           handleOpenProjectDetails(project.id);
                         }}
                       >
-                        <span className="hidden sm:inline">Detalhes</span>
-                        <span className="sm:hidden">Ver</span>
+                        Detalhes
                       </Button>
                     </div>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
           
-          {/* Pagination - otimizada para mobile */}
-          <div className="mt-4 md:mt-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-xs md:text-sm text-muted-foreground order-2 sm:order-1">
-              Mostrando <span className="font-medium">{Math.min(1, projectsWithClient.length)}-{projectsWithClient.length}</span> de <span className="font-medium">{projectsWithClient.length}</span> projetos
+          {/* Pagination */}
+          <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando 1-{projectsWithClient.length} de {projectsWithClient.length} projetos
             </p>
-            <div className="flex items-center order-1 sm:order-2">
-              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-r-none border-rose-200">
+            <div className="flex items-center">
+              <Button variant="outline" size="icon" className="rounded-r-none">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="default" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-none bg-rose-500 hover:bg-rose-600 border-rose-200">
+              <Button variant="default" size="icon" className="rounded-none w-8">
                 1
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-none border-rose-200">
+              <Button variant="outline" size="icon" className="rounded-none w-8">
                 2
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-l-none border-rose-200">
+              <Button variant="outline" size="icon" className="rounded-l-none">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
