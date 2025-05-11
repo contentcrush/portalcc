@@ -47,6 +47,7 @@ export default function QuickActions() {
     priority: string;
     due_date: string;
     due_time?: string;
+    completed?: boolean;
     project_id?: number;
     project?: {
       id: number;

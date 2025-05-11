@@ -297,14 +297,14 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   isDueSoon ? 'text-orange-500' : ''}`}
                 >
                   <CalendarDays className="h-3 w-3" />
-                  <span title={formatDateWithTime(task.due_date, task.due_time)}>
-                    {getFormattedDueDate()}
-                    {task.due_time && (
+                  <div className="flex flex-nowrap items-center" title={formatDateWithTime(task.due_date, task.due_time)}>
+                    <span>{getFormattedDueDate()}</span>
+                    {task.due_time && task.due_time.trim() !== '' && (
                       <span className="ml-1 text-xs font-medium whitespace-nowrap">
                         às {task.due_time}
                       </span>
                     )}
-                  </span>
+                  </div>
                 </div>
               )}
               
