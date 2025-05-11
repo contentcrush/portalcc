@@ -2148,14 +2148,96 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Task Comments
-  async getTaskComments(taskId: number): Promise<TaskComment[]> {
-    return await db.select()
+  async getTaskComments(taskId: number, options?: QueryOptions): Promise<PaginatedResult<TaskComment> | TaskComment[]> {
+    // Se não foram fornecidas opções de paginação, retorna todos os comentários
+    if (!options) {
+      return await db.select()
+        .from(taskComments)
+        .where(and(
+          eq(taskComments.task_id, taskId),
+          eq(taskComments.deleted, false)
+        ))
+        .orderBy(taskComments.creation_date);
+    }
+    
+    // Desestrutura as opções
+    const { page = 1, limit = 20, sortBy = 'creation_date', sortOrder = 'asc', search = '', filters = {} } = options;
+    
+    // Construir a query base
+    let query = db.select()
+      .from(taskComments)
+      .where(and(
+        eq(taskComments.task_id, taskId),
+        eq(taskComments.deleted, false)
+      ));
+    
+    // Aplicar filtros de busca
+    if (search) {
+      query = query.where(
+        sql`${taskComments.comment} ILIKE ${`%${search}%`}`
+      );
+    }
+    
+    // Aplicar filtros adicionais
+    if (filters) {
+      if (filters.parent_id) {
+        query = query.where(eq(taskComments.parent_id, filters.parent_id));
+      }
+      if (filters.user_id) {
+        query = query.where(eq(taskComments.user_id, filters.user_id));
+      }
+      if (filters.edited !== undefined) {
+        query = query.where(eq(taskComments.edited, filters.edited));
+      }
+      if (filters.start_date) {
+        query = query.where(sql`${taskComments.creation_date} >= ${filters.start_date}`);
+      }
+      if (filters.end_date) {
+        query = query.where(sql`${taskComments.creation_date} <= ${filters.end_date}`);
+      }
+    }
+    
+    // Contar o total de itens para paginação
+    const [{ count: totalItems }] = await db.select({ count: count() })
       .from(taskComments)
       .where(and(
         eq(taskComments.task_id, taskId),
         eq(taskComments.deleted, false)
       ))
-      .orderBy(taskComments.creation_date);
+      .execute();
+    
+    // Aplicar ordenação
+    const orderColumn = taskComments[sortBy as keyof typeof taskComments] || taskComments.creation_date;
+    if (sortOrder === 'desc') {
+      query = query.orderBy(desc(orderColumn));
+    } else {
+      query = query.orderBy(asc(orderColumn));
+    }
+    
+    // Aplicar paginação
+    const offset = (page - 1) * limit;
+    query = query.limit(limit).offset(offset);
+    
+    // Executar a query
+    const data = await query;
+    
+    // Calcular metadados de paginação
+    const totalPages = Math.ceil(totalItems / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+    
+    return {
+      data,
+      meta: {
+        totalItems,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+        hasNextPage,
+        hasPreviousPage
+      }
+    };
   }
   
   async getTaskCommentById(commentId: number): Promise<TaskComment | undefined> {
@@ -2622,14 +2704,96 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Project Comments
-  async getProjectComments(projectId: number): Promise<ProjectComment[]> {
-    return await db.select()
+  async getProjectComments(projectId: number, options?: QueryOptions): Promise<PaginatedResult<ProjectComment> | ProjectComment[]> {
+    // Se não foram fornecidas opções de paginação, retorna todos os comentários
+    if (!options) {
+      return await db.select()
+        .from(projectComments)
+        .where(and(
+          eq(projectComments.project_id, projectId),
+          eq(projectComments.deleted, false)
+        ))
+        .orderBy(asc(projectComments.creation_date));
+    }
+    
+    // Desestrutura as opções
+    const { page = 1, limit = 20, sortBy = 'creation_date', sortOrder = 'asc', search = '', filters = {} } = options;
+    
+    // Construir a query base
+    let query = db.select()
+      .from(projectComments)
+      .where(and(
+        eq(projectComments.project_id, projectId),
+        eq(projectComments.deleted, false)
+      ));
+    
+    // Aplicar filtros de busca
+    if (search) {
+      query = query.where(
+        sql`${projectComments.comment} ILIKE ${`%${search}%`}`
+      );
+    }
+    
+    // Aplicar filtros adicionais
+    if (filters) {
+      if (filters.parent_id) {
+        query = query.where(eq(projectComments.parent_id, filters.parent_id));
+      }
+      if (filters.user_id) {
+        query = query.where(eq(projectComments.user_id, filters.user_id));
+      }
+      if (filters.edited !== undefined) {
+        query = query.where(eq(projectComments.edited, filters.edited));
+      }
+      if (filters.start_date) {
+        query = query.where(sql`${projectComments.creation_date} >= ${filters.start_date}`);
+      }
+      if (filters.end_date) {
+        query = query.where(sql`${projectComments.creation_date} <= ${filters.end_date}`);
+      }
+    }
+    
+    // Contar o total de itens para paginação
+    const [{ count: totalItems }] = await db.select({ count: count() })
       .from(projectComments)
       .where(and(
         eq(projectComments.project_id, projectId),
         eq(projectComments.deleted, false)
       ))
-      .orderBy(asc(projectComments.creation_date));
+      .execute();
+    
+    // Aplicar ordenação
+    const orderColumn = projectComments[sortBy as keyof typeof projectComments] || projectComments.creation_date;
+    if (sortOrder === 'desc') {
+      query = query.orderBy(desc(orderColumn));
+    } else {
+      query = query.orderBy(asc(orderColumn));
+    }
+    
+    // Aplicar paginação
+    const offset = (page - 1) * limit;
+    query = query.limit(limit).offset(offset);
+    
+    // Executar a query
+    const data = await query;
+    
+    // Calcular metadados de paginação
+    const totalPages = Math.ceil(totalItems / limit);
+    const hasNextPage = page < totalPages;
+    const hasPreviousPage = page > 1;
+    
+    return {
+      data,
+      meta: {
+        totalItems,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+        hasNextPage,
+        hasPreviousPage
+      }
+    };
   }
   
   async getProjectCommentById(commentId: number): Promise<ProjectComment | undefined> {
