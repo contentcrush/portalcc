@@ -134,7 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/auth/logout");
+      // Para dispositivos móveis, incluir o refresh token no corpo da requisição
+      if (isMobileDevice()) {
+        const refreshToken = localStorage.getItem('content_crush_refresh_token');
+        if (refreshToken) {
+          await apiRequest("POST", "/api/auth/logout", { refreshToken });
+        } else {
+          await apiRequest("POST", "/api/auth/logout");
+        }
+        // Limpar tokens do localStorage
+        clearTokensFromLocalStorage();
+      } else {
+        await apiRequest("POST", "/api/auth/logout");
+      }
       // Os cookies são removidos pelo servidor na resposta
     },
     onSuccess: () => {
@@ -149,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.href = "/auth";
     },
     onError: (error: Error) => {
+      // Limpar tokens do localStorage mesmo em caso de erro
+      if (isMobileDevice()) {
+        clearTokensFromLocalStorage();
+      }
+      
       toast({
         title: "Falha no logout",
         description: error.message || "Não foi possível desconectar",
