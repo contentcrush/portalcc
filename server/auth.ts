@@ -333,19 +333,8 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000 // 15 minutos
-      });
-      
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        path: '/api/auth/refresh',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-      });
+      // Configurar cookies com melhor suporte mobile
+      setCookies(res, accessToken, refreshToken);
       
       // Retornar usuário sem a senha
       const { password: _, ...userWithoutPassword } = user;
@@ -409,27 +398,31 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000 // 15 minutos
-      });
-      
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        path: '/api/auth/refresh',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-      });
+      // Configurar cookies com melhor suporte mobile
+      setCookies(res, accessToken, refreshToken);
       
       // Retornar usuário sem a senha
       const { password: _, ...userWithoutPassword } = user;
       
-      return res.status(200).json({
-        user: userWithoutPassword,
-        token: accessToken
-      });
+      // Detectar se é um dispositivo móvel
+      const userAgent = req.headers['user-agent'] || '';
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      
+      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
+      if (isMobile) {
+        return res.status(200).json({
+          user: userWithoutPassword,
+          token: accessToken,
+          refreshToken: refreshToken, 
+          expiresIn: 15 * 60 // 15 minutos em segundos
+        });
+      } else {
+        // Para navegadores desktop, não incluir o refresh token na resposta
+        return res.status(200).json({
+          user: userWithoutPassword,
+          token: accessToken
+        });
+      }
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
