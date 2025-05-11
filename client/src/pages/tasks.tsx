@@ -991,8 +991,13 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
                   <Calendar 
                     className="h-3 w-3 mr-0.5"
                   />
-                  <span>
+                  <span className="whitespace-nowrap">
                     {formatDueDateWithDaysRemaining(task.due_date)}
+                    {task.due_time && (
+                      <span className="ml-1 font-medium">
+                        às {task.due_time}
+                      </span>
+                    )}
                   </span>
                 </div>
               )}
