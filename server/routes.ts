@@ -38,51 +38,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
-  // Users - Com paginação, filtros e autenticação
-  app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
+  // Users - requer autenticação e permissões adequadas
+  app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'name';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.role) {
-        filters.role = req.query.role;
-      }
-      if (req.query.department) {
-        filters.department = req.query.department;
-      }
-      
-      // Obter usuários com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getUsers(queryOptions);
-      
-      // Se o resultado for paginado, processar cada item para remover senhas
-      if ('data' in result) {
-        const usersWithoutPassword = result.data.map(({ password, ...user }) => user);
-        res.json({
-          ...result,
-          data: usersWithoutPassword
-        });
-      } else {
-        // Caso contrário, processar a array diretamente
-        const usersWithoutPassword = result.map(({ password, ...user }) => user);
-        res.json(usersWithoutPassword);
-      }
+      const users = await storage.getUsers();
+      // Remove senhas da resposta
+      const usersWithoutPassword = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPassword);
     } catch (error) {
-      console.error("Erro ao buscar usuários:", error);
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
@@ -354,36 +317,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clients - Com paginação, filtros e autenticação
-  app.get("/api/clients", authenticateJWT, async (req, res) => {
+  // Clients - Adicionando autenticação e permissões
+  app.get("/api/clients", authenticateJWT, async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'name';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.type) {
-        filters.type = req.query.type;
-      }
-      
-      // Obter clientes com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getClients(queryOptions);
-      res.json(result);
+      const clients = await storage.getClients();
+      res.json(clients);
     } catch (error) {
-      console.error("Erro ao buscar clientes:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
     }
   });
@@ -607,34 +546,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/projects", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'name';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      
-      // Obter projetos do cliente com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getProjectsByClient(clientId, queryOptions);
-      res.json(result);
+      const projects = await storage.getProjectsByClient(clientId);
+      res.json(projects);
     } catch (error) {
-      console.error("Erro ao buscar projetos do cliente:", error);
       res.status(500).json({ message: "Failed to fetch client projects" });
     }
   });
@@ -654,35 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/contacts", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'name';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.is_primary !== undefined) {
-        filters.is_primary = req.query.is_primary === 'true';
-      }
-      if (req.query.position) {
-        filters.position = req.query.position;
-      }
-      
-      // Obter contatos do cliente com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getClientContacts(clientId, queryOptions);
-      res.json(result);
+      const contacts = await storage.getClientContacts(clientId);
+      res.json(contacts);
     } catch (error) {
       console.error("Erro ao buscar contatos do cliente:", error);
       res.status(500).json({ message: "Falha ao buscar contatos do cliente" });
@@ -918,41 +805,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/interactions", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.type) {
-        filters.type = req.query.type;
-      }
-      if (req.query.start_date) {
-        filters.start_date = new Date(req.query.start_date as string);
-      }
-      if (req.query.end_date) {
-        filters.end_date = new Date(req.query.end_date as string);
-      }
-      
-      // Obter interações do cliente com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getClientInteractions(clientId, queryOptions);
-      res.json(result);
+      const interactions = await storage.getClientInteractions(clientId);
+      res.json(interactions);
     } catch (error) {
-      console.error("Erro ao buscar interações do cliente:", error);
-      res.status(500).json({ message: "Falha ao buscar interações do cliente" });
+      res.status(500).json({ message: "Failed to fetch client interactions" });
     }
   });
 
@@ -1002,39 +858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
-  // Projects - Com paginação, filtros e autenticação
-  app.get("/api/projects", authenticateJWT, async (req, res) => {
+  // Projects - Adicionando autenticação e permissões
+  app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'name';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.client_id) {
-        filters.client_id = parseInt(req.query.client_id as string);
-      }
-      
-      // Obter projetos com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getProjects(queryOptions);
-      res.json(result);
+      const projects = await storage.getProjects();
+      res.json(projects);
     } catch (error) {
-      console.error("Erro ao buscar projetos:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
@@ -1641,49 +1470,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tasks - Com paginação, filtros e autenticação
-  app.get("/api/tasks", authenticateJWT, async (req, res) => {
+  // Tasks - Adicionando autenticação e permissões
+  app.get("/api/tasks", authenticateJWT, async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.priority) {
-        filters.priority = req.query.priority;
-      }
-      if (req.query.project_id) {
-        filters.project_id = parseInt(req.query.project_id as string);
-      }
-      if (req.query.client_id) {
-        filters.client_id = parseInt(req.query.client_id as string);
-      }
-      if (req.query.user_id) {
-        filters.user_id = parseInt(req.query.user_id as string);
-      }
-      if (req.query.completed !== undefined) {
-        filters.completed = req.query.completed === 'true';
-      }
-      
-      // Obter tarefas com paginação e detalhes de projeto/cliente
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getTasksWithDetails(queryOptions);
-      res.json(result);
+      // Obter tarefas com detalhes de projeto e cliente
+      const tasks = await storage.getTasksWithDetails();
+      res.json(tasks);
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
@@ -1708,43 +1500,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/tasks", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.priority) {
-        filters.priority = req.query.priority;
-      }
-      if (req.query.user_id) {
-        filters.user_id = parseInt(req.query.user_id as string);
-      }
-      if (req.query.completed !== undefined) {
-        filters.completed = req.query.completed === 'true';
-      }
-      
-      // Obter tarefas do projeto com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getTasksByProject(projectId, queryOptions);
-      res.json(result);
+      const tasks = await storage.getTasksByProject(projectId);
+      res.json(tasks);
     } catch (error) {
-      console.error("Erro ao buscar tarefas do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project tasks" });
     }
   });
@@ -1758,45 +1516,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Acesso negado. Você só pode visualizar suas próprias tarefas." });
       }
       
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.priority) {
-        filters.priority = req.query.priority;
-      }
-      if (req.query.project_id) {
-        filters.project_id = parseInt(req.query.project_id as string);
-      }
-      if (req.query.client_id) {
-        filters.client_id = parseInt(req.query.client_id as string);
-      }
-      if (req.query.completed !== undefined) {
-        filters.completed = req.query.completed === 'true';
-      }
-      
-      // Obter tarefas do usuário com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getTasksByUser(userId, queryOptions);
-      res.json(result);
+      const tasks = await storage.getTasksByUser(userId);
+      res.json(tasks);
     } catch (error) {
-      console.error("Erro ao buscar tarefas do usuário:", error);
       res.status(500).json({ message: "Failed to fetch user tasks" });
     }
   });
@@ -2002,78 +1724,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tasks/:id/comments", authenticateJWT, async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
+      const comments = await storage.getTaskComments(taskId);
       
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'creation_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
+      // Obter reações para os comentários
+      const reactions = await storage.getCommentReactionsByTaskId(taskId);
       
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.parent_id) {
-        filters.parent_id = parseInt(req.query.parent_id as string);
-      }
-      if (req.query.user_id) {
-        filters.user_id = parseInt(req.query.user_id as string);
-      }
-      if (req.query.edited !== undefined) {
-        filters.edited = req.query.edited === 'true';
-      }
-      if (req.query.start_date) {
-        filters.start_date = new Date(req.query.start_date as string);
-      }
-      if (req.query.end_date) {
-        filters.end_date = new Date(req.query.end_date as string);
-      }
+      // Mapear as reações aos comentários para retornar tudo junto
+      const commentsWithReactions = comments.map(comment => ({
+        ...comment,
+        reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+      }));
       
-      // Verificar se é solicitada paginação ou se é para retornar todos os comentários
-      if (req.query.paginated === 'false') {
-        // Resposta sem paginação para compatibilidade com o cliente atual
-        const comments = await storage.getTaskComments(taskId) as TaskComment[];
-        
-        // Obter reações para os comentários
-        const reactions = await storage.getCommentReactionsByTaskId(taskId);
-        
-        // Mapear as reações aos comentários para retornar tudo junto
-        const commentsWithReactions = comments.map(comment => ({
-          ...comment,
-          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
-        }));
-        
-        res.json(commentsWithReactions);
-      } else {
-        // Resposta com paginação
-        const queryOptions: QueryOptions = {
-          page,
-          limit,
-          sortBy,
-          sortOrder,
-          search,
-          filters
-        };
-        
-        const result = await storage.getTaskComments(taskId, queryOptions) as PaginatedResult<TaskComment>;
-        
-        // Obter reações para os comentários
-        const reactions = await storage.getCommentReactionsByTaskId(taskId);
-        
-        // Mapear as reações aos comentários paginados
-        const commentsWithReactions = result.data.map(comment => ({
-          ...comment,
-          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
-        }));
-        
-        // Responder com os dados paginados e com reações
-        res.json({
-          ...result,
-          data: commentsWithReactions
-        });
-      }
+      res.json(commentsWithReactions);
     } catch (error) {
-      console.error("Erro ao buscar comentários da tarefa:", error);
-      res.status(500).json({ message: "Falha ao buscar comentários da tarefa" });
+      console.error("Error fetching task comments:", error);
+      res.status(500).json({ message: "Failed to fetch task comments" });
     }
   });
 
@@ -2380,48 +2045,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Financial Documents - Com paginação, filtros e autenticação
-  app.get("/api/financial-documents", authenticateJWT, async (req, res) => {
+  // Financial Documents - Adicionando autenticação e permissões
+  app.get("/api/financial-documents", authenticateJWT, async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.document_type) {
-        filters.document_type = req.query.document_type;
-      }
-      if (req.query.client_id) {
-        filters.client_id = parseInt(req.query.client_id as string);
-      }
-      if (req.query.project_id) {
-        filters.project_id = parseInt(req.query.project_id as string);
-      }
-      if (req.query.paid !== undefined) {
-        filters.paid = req.query.paid === 'true';
-      }
-      
-      // Obter documentos financeiros com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getFinancialDocuments(queryOptions);
-      res.json(result);
+      const documents = await storage.getFinancialDocuments();
+      res.json(documents);
     } catch (error) {
-      console.error("Erro ao buscar documentos financeiros:", error);
       res.status(500).json({ message: "Failed to fetch financial documents" });
     }
   });
@@ -2429,43 +2058,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.document_type) {
-        filters.document_type = req.query.document_type;
-      }
-      if (req.query.project_id) {
-        filters.project_id = parseInt(req.query.project_id as string);
-      }
-      if (req.query.paid !== undefined) {
-        filters.paid = req.query.paid === 'true';
-      }
-      
-      // Obter documentos financeiros do cliente com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getFinancialDocumentsByClient(clientId, queryOptions);
-      res.json(result);
+      const documents = await storage.getFinancialDocumentsByClient(clientId);
+      res.json(documents);
     } catch (error) {
-      console.error("Erro ao buscar documentos financeiros do cliente:", error);
       res.status(500).json({ message: "Failed to fetch client financial documents" });
     }
   });
@@ -2473,40 +2068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/financial-documents", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'due_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.status) {
-        filters.status = req.query.status;
-      }
-      if (req.query.document_type) {
-        filters.document_type = req.query.document_type;
-      }
-      if (req.query.paid !== undefined) {
-        filters.paid = req.query.paid === 'true';
-      }
-      
-      // Obter documentos financeiros do projeto com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getFinancialDocumentsByProject(projectId, queryOptions);
-      res.json(result);
+      const documents = await storage.getFinancialDocumentsByProject(projectId);
+      res.json(documents);
     } catch (error) {
-      console.error("Erro ao buscar documentos financeiros do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project financial documents" });
     }
   });
@@ -2719,51 +2283,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Expenses - Com paginação, filtros e autenticação
-  app.get("/api/expenses", authenticateJWT, async (req, res) => {
+  // Expenses - Adicionando autenticação e permissões
+  app.get("/api/expenses", authenticateJWT, async (_req, res) => {
     try {
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.category) {
-        filters.category = req.query.category;
-      }
-      if (req.query.project_id) {
-        filters.project_id = parseInt(req.query.project_id as string);
-      }
-      if (req.query.client_id) {
-        filters.client_id = parseInt(req.query.client_id as string);
-      }
-      if (req.query.paid !== undefined) {
-        filters.paid = req.query.paid === 'true';
-      }
-      if (req.query.start_date) {
-        filters.start_date = new Date(req.query.start_date as string);
-      }
-      if (req.query.end_date) {
-        filters.end_date = new Date(req.query.end_date as string);
-      }
-      
-      // Obter despesas com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getExpenses(queryOptions);
-      res.json(result);
+      const expenses = await storage.getExpenses();
+      res.json(expenses);
     } catch (error) {
-      console.error("Erro ao buscar despesas:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
     }
   });
@@ -2771,43 +2296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/expenses", authenticateJWT, requirePermission('view_financials'), async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
-      const search = req.query.search as string || '';
-      
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.category) {
-        filters.category = req.query.category;
-      }
-      if (req.query.paid !== undefined) {
-        filters.paid = req.query.paid === 'true';
-      }
-      if (req.query.start_date) {
-        filters.start_date = new Date(req.query.start_date as string);
-      }
-      if (req.query.end_date) {
-        filters.end_date = new Date(req.query.end_date as string);
-      }
-      
-      // Obter despesas do projeto com paginação
-      const queryOptions: QueryOptions = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        search,
-        filters
-      };
-      
-      const result = await storage.getExpensesByProject(projectId, queryOptions);
-      res.json(result);
+      const expenses = await storage.getExpensesByProject(projectId);
+      res.json(expenses);
     } catch (error) {
-      console.error("Erro ao buscar despesas do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project expenses" });
     }
   });
@@ -3338,78 +2829,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/comments", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
+      const comments = await storage.getProjectComments(projectId);
       
-      // Extrair parâmetros de paginação, ordenação e busca da query
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const sortBy = req.query.sortBy as string || 'creation_date';
-      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
-      const search = req.query.search as string || '';
+      // Obter reações para os comentários
+      const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
       
-      // Construir filtros opcionais
-      const filters: Record<string, any> = {};
-      if (req.query.parent_id) {
-        filters.parent_id = parseInt(req.query.parent_id as string);
-      }
-      if (req.query.user_id) {
-        filters.user_id = parseInt(req.query.user_id as string);
-      }
-      if (req.query.edited !== undefined) {
-        filters.edited = req.query.edited === 'true';
-      }
-      if (req.query.start_date) {
-        filters.start_date = new Date(req.query.start_date as string);
-      }
-      if (req.query.end_date) {
-        filters.end_date = new Date(req.query.end_date as string);
-      }
+      // Mapear as reações aos comentários para retornar tudo junto
+      const commentsWithReactions = comments.map(comment => ({
+        ...comment,
+        reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
+      }));
       
-      // Verificar se é solicitada paginação ou se é para retornar todos os comentários
-      if (req.query.paginated === 'false') {
-        // Resposta sem paginação para compatibilidade com o cliente atual
-        const comments = await storage.getProjectComments(projectId) as ProjectComment[];
-        
-        // Obter reações para os comentários
-        const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
-        
-        // Mapear as reações aos comentários para retornar tudo junto
-        const commentsWithReactions = comments.map(comment => ({
-          ...comment,
-          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
-        }));
-        
-        res.json(commentsWithReactions);
-      } else {
-        // Resposta com paginação
-        const queryOptions: QueryOptions = {
-          page,
-          limit,
-          sortBy,
-          sortOrder,
-          search,
-          filters
-        };
-        
-        const result = await storage.getProjectComments(projectId, queryOptions) as PaginatedResult<ProjectComment>;
-        
-        // Obter reações para os comentários
-        const reactions = await storage.getProjectCommentReactionsByProjectId(projectId);
-        
-        // Mapear as reações aos comentários paginados
-        const commentsWithReactions = result.data.map(comment => ({
-          ...comment,
-          reactions: reactions.filter(reaction => reaction.comment_id === comment.id)
-        }));
-        
-        // Responder com os dados paginados e com reações
-        res.json({
-          ...result,
-          data: commentsWithReactions
-        });
-      }
+      res.json(commentsWithReactions);
     } catch (error) {
-      console.error("Erro ao buscar comentários do projeto:", error);
-      res.status(500).json({ message: "Falha ao buscar comentários do projeto" });
+      console.error("Error fetching project comments:", error);
+      res.status(500).json({ message: "Failed to fetch project comments" });
     }
   });
 

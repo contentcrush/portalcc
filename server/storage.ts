@@ -17,27 +17,6 @@ import {
   type InsertProjectAttachment
 } from "../shared/schema";
 
-// Interface para paginação
-export interface PaginatedResult<T> {
-  data: T[];
-  meta: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-  };
-}
-
-// Interface para parâmetros de filtro e ordenação
-export interface QueryOptions {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  search?: string;
-  filters?: Record<string, any>;
-}
-
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -45,10 +24,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
-  getUsers(options?: QueryOptions): Promise<PaginatedResult<User> | User[]>;
-  getProjectsByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
-  getTasksByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
-  getTransactionsByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<FinancialDocument> | FinancialDocument[]>;
+  getUsers(): Promise<User[]>;
+  getProjectsByUserId(userId: number): Promise<Project[]>;
+  getTasksByUserId(userId: number): Promise<Task[]>;
+  getTransactionsByUserId(userId: number): Promise<FinancialDocument[]>;
   
   // User Preferences
   getUserPreferences(userId: number): Promise<UserPreference | undefined>;
@@ -83,7 +62,7 @@ export interface IStorage {
   
   // Clients
   getClient(id: number): Promise<Client | undefined>;
-  getClients(options?: QueryOptions): Promise<PaginatedResult<Client> | Client[]>;
+  getClients(): Promise<Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: number): Promise<{ 
@@ -106,8 +85,8 @@ export interface IStorage {
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
-  getProjects(options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
-  getProjectsByClient(clientId: number, options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
+  getProjects(): Promise<Project[]>;
+  getProjectsByClient(clientId: number): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
   updateProjectStatus(id: number, status: string): Promise<Project | undefined>;
@@ -127,10 +106,10 @@ export interface IStorage {
   
   // Tasks
   getTask(id: number): Promise<Task | undefined>;
-  getTasks(options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
-  getTasksWithDetails(options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
-  getTasksByProject(projectId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
-  getTasksByUser(userId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
+  getTasks(): Promise<Task[]>;
+  getTasksWithDetails(): Promise<Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
+  getTasksByProject(projectId: number): Promise<Task[]>;
+  getTasksByUser(userId: number): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
@@ -2148,96 +2127,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Task Comments
-  async getTaskComments(taskId: number, options?: QueryOptions): Promise<PaginatedResult<TaskComment> | TaskComment[]> {
-    // Se não foram fornecidas opções de paginação, retorna todos os comentários
-    if (!options) {
-      return await db.select()
-        .from(taskComments)
-        .where(and(
-          eq(taskComments.task_id, taskId),
-          eq(taskComments.deleted, false)
-        ))
-        .orderBy(taskComments.creation_date);
-    }
-    
-    // Desestrutura as opções
-    const { page = 1, limit = 20, sortBy = 'creation_date', sortOrder = 'asc', search = '', filters = {} } = options;
-    
-    // Construir a query base
-    let query = db.select()
-      .from(taskComments)
-      .where(and(
-        eq(taskComments.task_id, taskId),
-        eq(taskComments.deleted, false)
-      ));
-    
-    // Aplicar filtros de busca
-    if (search) {
-      query = query.where(
-        sql`${taskComments.comment} ILIKE ${`%${search}%`}`
-      );
-    }
-    
-    // Aplicar filtros adicionais
-    if (filters) {
-      if (filters.parent_id) {
-        query = query.where(eq(taskComments.parent_id, filters.parent_id));
-      }
-      if (filters.user_id) {
-        query = query.where(eq(taskComments.user_id, filters.user_id));
-      }
-      if (filters.edited !== undefined) {
-        query = query.where(eq(taskComments.edited, filters.edited));
-      }
-      if (filters.start_date) {
-        query = query.where(sql`${taskComments.creation_date} >= ${filters.start_date}`);
-      }
-      if (filters.end_date) {
-        query = query.where(sql`${taskComments.creation_date} <= ${filters.end_date}`);
-      }
-    }
-    
-    // Contar o total de itens para paginação
-    const [{ count: totalItems }] = await db.select({ count: count() })
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    return await db.select()
       .from(taskComments)
       .where(and(
         eq(taskComments.task_id, taskId),
         eq(taskComments.deleted, false)
       ))
-      .execute();
-    
-    // Aplicar ordenação
-    const orderColumn = taskComments[sortBy as keyof typeof taskComments] || taskComments.creation_date;
-    if (sortOrder === 'desc') {
-      query = query.orderBy(desc(orderColumn));
-    } else {
-      query = query.orderBy(asc(orderColumn));
-    }
-    
-    // Aplicar paginação
-    const offset = (page - 1) * limit;
-    query = query.limit(limit).offset(offset);
-    
-    // Executar a query
-    const data = await query;
-    
-    // Calcular metadados de paginação
-    const totalPages = Math.ceil(totalItems / limit);
-    const hasNextPage = page < totalPages;
-    const hasPreviousPage = page > 1;
-    
-    return {
-      data,
-      meta: {
-        totalItems,
-        itemCount: data.length,
-        itemsPerPage: limit,
-        totalPages,
-        currentPage: page,
-        hasNextPage,
-        hasPreviousPage
-      }
-    };
+      .orderBy(taskComments.creation_date);
   }
   
   async getTaskCommentById(commentId: number): Promise<TaskComment | undefined> {
@@ -2481,81 +2378,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client Interactions
-  async getClientInteractions(clientId: number, options?: QueryOptions): Promise<PaginatedResult<ClientInteraction> | ClientInteraction[]> {
-    // Se não foram fornecidas opções de paginação, retorna todas as interações do cliente
-    if (!options) {
-      return await db.select()
-        .from(clientInteractions)
-        .where(eq(clientInteractions.client_id, clientId))
-        .orderBy(desc(clientInteractions.date));
-    }
-    
-    // Desestrutura as opções
-    const { page = 1, limit = 20, sortBy = 'date', sortOrder = 'desc', search = '', filters = {} } = options;
-    
-    // Construir a query base
-    let query = db.select()
-      .from(clientInteractions)
-      .where(eq(clientInteractions.client_id, clientId));
-    
-    // Aplicar filtros de busca
-    if (search) {
-      query = query.where(
-        or(
-          sql`${clientInteractions.title} ILIKE ${`%${search}%`}`,
-          sql`${clientInteractions.description} ILIKE ${`%${search}%`}`,
-          sql`${clientInteractions.type} ILIKE ${`%${search}%`}`
-        )
-      );
-    }
-    
-    // Aplicar filtros adicionais
-    if (filters) {
-      if (filters.type) {
-        query = query.where(eq(clientInteractions.type, filters.type));
-      }
-      if (filters.start_date) {
-        query = query.where(sql`${clientInteractions.date} >= ${filters.start_date}`);
-      }
-      if (filters.end_date) {
-        query = query.where(sql`${clientInteractions.date} <= ${filters.end_date}`);
-      }
-    }
-    
-    // Contar o total de itens para paginação
-    const [{ count: totalItems }] = await db.select({ count: count() })
-      .from(clientInteractions)
-      .where(eq(clientInteractions.client_id, clientId))
-      .execute();
-    
-    // Aplicar ordenação
-    const orderColumn = clientInteractions[sortBy as keyof typeof clientInteractions] || clientInteractions.date;
-    if (sortOrder === 'desc') {
-      query = query.orderBy(desc(orderColumn));
-    } else {
-      query = query.orderBy(asc(orderColumn));
-    }
-    
-    // Aplicar paginação
-    const offset = (page - 1) * limit;
-    query = query.limit(limit).offset(offset);
-    
-    // Executar a query
-    const data = await query;
-    
-    // Calcular metadados de paginação
-    const totalPages = Math.ceil(Number(totalItems) / limit);
-    
-    // Retornar resultado paginado
-    return {
-      data,
-      meta: {
-        currentPage: page,
-        totalPages,
-        totalItems: Number(totalItems),
-        itemsPerPage: limit
-      }
-    };
+  async getClientInteractions(clientId: number): Promise<ClientInteraction[]> {
+    return await db.select().from(clientInteractions).where(eq(clientInteractions.client_id, clientId));
   }
 
   async createClientInteraction(insertInteraction: InsertClientInteraction): Promise<ClientInteraction> {
@@ -2704,96 +2528,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Project Comments
-  async getProjectComments(projectId: number, options?: QueryOptions): Promise<PaginatedResult<ProjectComment> | ProjectComment[]> {
-    // Se não foram fornecidas opções de paginação, retorna todos os comentários
-    if (!options) {
-      return await db.select()
-        .from(projectComments)
-        .where(and(
-          eq(projectComments.project_id, projectId),
-          eq(projectComments.deleted, false)
-        ))
-        .orderBy(asc(projectComments.creation_date));
-    }
-    
-    // Desestrutura as opções
-    const { page = 1, limit = 20, sortBy = 'creation_date', sortOrder = 'asc', search = '', filters = {} } = options;
-    
-    // Construir a query base
-    let query = db.select()
-      .from(projectComments)
-      .where(and(
-        eq(projectComments.project_id, projectId),
-        eq(projectComments.deleted, false)
-      ));
-    
-    // Aplicar filtros de busca
-    if (search) {
-      query = query.where(
-        sql`${projectComments.comment} ILIKE ${`%${search}%`}`
-      );
-    }
-    
-    // Aplicar filtros adicionais
-    if (filters) {
-      if (filters.parent_id) {
-        query = query.where(eq(projectComments.parent_id, filters.parent_id));
-      }
-      if (filters.user_id) {
-        query = query.where(eq(projectComments.user_id, filters.user_id));
-      }
-      if (filters.edited !== undefined) {
-        query = query.where(eq(projectComments.edited, filters.edited));
-      }
-      if (filters.start_date) {
-        query = query.where(sql`${projectComments.creation_date} >= ${filters.start_date}`);
-      }
-      if (filters.end_date) {
-        query = query.where(sql`${projectComments.creation_date} <= ${filters.end_date}`);
-      }
-    }
-    
-    // Contar o total de itens para paginação
-    const [{ count: totalItems }] = await db.select({ count: count() })
+  async getProjectComments(projectId: number): Promise<ProjectComment[]> {
+    return await db.select()
       .from(projectComments)
       .where(and(
         eq(projectComments.project_id, projectId),
         eq(projectComments.deleted, false)
       ))
-      .execute();
-    
-    // Aplicar ordenação
-    const orderColumn = projectComments[sortBy as keyof typeof projectComments] || projectComments.creation_date;
-    if (sortOrder === 'desc') {
-      query = query.orderBy(desc(orderColumn));
-    } else {
-      query = query.orderBy(asc(orderColumn));
-    }
-    
-    // Aplicar paginação
-    const offset = (page - 1) * limit;
-    query = query.limit(limit).offset(offset);
-    
-    // Executar a query
-    const data = await query;
-    
-    // Calcular metadados de paginação
-    const totalPages = Math.ceil(totalItems / limit);
-    const hasNextPage = page < totalPages;
-    const hasPreviousPage = page > 1;
-    
-    return {
-      data,
-      meta: {
-        totalItems,
-        itemCount: data.length,
-        itemsPerPage: limit,
-        totalPages,
-        currentPage: page,
-        hasNextPage,
-        hasPreviousPage
-      }
-    };
+      .orderBy(asc(projectComments.creation_date));
   }
   
   async getProjectCommentById(commentId: number): Promise<ProjectComment | undefined> {
@@ -2900,89 +2642,16 @@ export class DatabaseStorage implements IStorage {
     return contact || undefined;
   }
 
-  async getClientContacts(clientId: number, options?: QueryOptions): Promise<PaginatedResult<ClientContact> | ClientContact[]> {
-    // Se não foram fornecidas opções de paginação, retorna todos os contatos do cliente
-    if (!options) {
-      return await db.select()
-        .from(clientContacts)
-        .where(eq(clientContacts.client_id, clientId))
-        .orderBy(desc(clientContacts.is_primary), asc(clientContacts.name));
-    }
-    
-    // Desestrutura as opções
-    const { page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc', search = '', filters = {} } = options;
-    
-    // Construir a query base
-    let query = db.select()
-      .from(clientContacts)
-      .where(eq(clientContacts.client_id, clientId));
-    
-    // Aplicar filtros de busca
-    if (search) {
-      query = query.where(
-        or(
-          sql`${clientContacts.name} ILIKE ${`%${search}%`}`,
-          sql`${clientContacts.position} ILIKE ${`%${search}%`}`,
-          sql`${clientContacts.email} ILIKE ${`%${search}%`}`,
-          sql`${clientContacts.phone} ILIKE ${`%${search}%`}`
-        )
-      );
-    }
-    
-    // Aplicar filtros adicionais
-    if (filters) {
-      if (filters.is_primary !== undefined) {
-        query = query.where(eq(clientContacts.is_primary, filters.is_primary));
-      }
-      if (filters.position) {
-        query = query.where(sql`${clientContacts.position} ILIKE ${`%${filters.position}%`}`);
-      }
-    }
-    
-    // Contar o total de itens para paginação
-    const [{ count: totalItems }] = await db.select({ count: count() })
+  async getClientContacts(clientId: number): Promise<ClientContact[]> {
+    return await db.select()
       .from(clientContacts)
       .where(eq(clientContacts.client_id, clientId))
-      .execute();
-    
-    // Aplicar ordenação
-    const orderColumn = clientContacts[sortBy as keyof typeof clientContacts] || clientContacts.name;
-    if (sortOrder === 'desc') {
-      query = query.orderBy(desc(orderColumn));
-    } else {
-      query = query.orderBy(asc(orderColumn));
-    }
-    
-    // Manter os contatos primários sempre no topo independente da ordenação, exceto se a ordenação for por is_primary
-    if (sortBy !== 'is_primary') {
-      query = query.orderBy(desc(clientContacts.is_primary));
-    }
-    
-    // Aplicar paginação
-    const offset = (page - 1) * limit;
-    query = query.limit(limit).offset(offset);
-    
-    // Executar a query
-    const data = await query;
-    
-    // Calcular metadados de paginação
-    const totalPages = Math.ceil(Number(totalItems) / limit);
-    
-    // Retornar resultado paginado
-    return {
-      data,
-      meta: {
-        currentPage: page,
-        totalPages,
-        totalItems: Number(totalItems),
-        itemsPerPage: limit
-      }
-    };
+      .orderBy(desc(clientContacts.is_primary), asc(clientContacts.name));
   }
 
   async createClientContact(contact: InsertClientContact): Promise<ClientContact> {
     // Se este for o primeiro contato para o cliente, defina como primário
-    const existingContacts = await this.getClientContacts(contact.client_id) as ClientContact[];
+    const existingContacts = await this.getClientContacts(contact.client_id);
     const isPrimary = existingContacts.length === 0 ? true : contact.is_primary || false;
     
     // Se este contato estiver sendo definido como primário, remova essa flag de todos os outros
