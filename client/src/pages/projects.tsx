@@ -422,22 +422,27 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                   </div>
                   
                   <div className="flex items-center">
-                    <div className="text-right mr-6 hidden md:block">
-                      <div className="font-medium">{new Date(project.endDate).toLocaleDateString('pt-BR')}</div>
-                      <div className="text-sm text-muted-foreground">Prazo</div>
+                    {/* Prazo - visível apenas em telas maiores */}
+                    <div className="text-right mr-2 md:mr-6 hidden sm:block">
+                      <div className="font-medium text-xs md:text-sm">
+                        {project.endDate ? new Date(project.endDate).toLocaleDateString('pt-BR') : '-'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Prazo</div>
                     </div>
                     
-                    <div className="text-right mr-6">
-                      <div className="font-medium">
+                    {/* Orçamento - escondido em telas muito pequenas */}
+                    <div className="text-right mr-2 md:mr-6 hidden sm:block">
+                      <div className="font-medium text-xs md:text-sm">
                         {new Intl.NumberFormat('pt-BR', { 
                           style: 'currency', 
                           currency: 'BRL' 
                         }).format(project.budget || 0)}
                       </div>
-                      <div className="text-sm text-muted-foreground">Orçamento</div>
+                      <div className="text-xs text-muted-foreground">Orçamento</div>
                     </div>
                     
-                    <div className="w-24 mr-6 hidden md:block">
+                    {/* Barra de progresso - apenas telas médias e maiores */}
+                    <div className="w-16 md:w-24 mr-2 md:mr-6 hidden md:block">
                       <div className="flex justify-between text-xs mb-1">
                         <span>Progresso</span>
                         <span>{project.progress}%</span>
@@ -450,14 +455,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                       </div>
                     </div>
                     
-                    <div className="flex space-x-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
+                    {/* Menu de ações */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 focus:ring-0"
+                          onClick={(e) => e.stopPropagation()}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -490,12 +495,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                       <Button 
                         variant="outline" 
                         size="sm"
+                        className="hidden xs:flex bg-white hover:bg-gray-50 ml-1"
                         onClick={(e) => {
                           e.stopPropagation(); // Previne o evento de propagar para o parent
                           handleOpenProjectDetails(project.id);
                         }}
                       >
-                        Detalhes
+                        <span className="hidden sm:inline">Detalhes</span>
+                        <span className="sm:hidden">Ver</span>
                       </Button>
                     </div>
                   </div>
@@ -504,22 +511,22 @@ export default function Projects({ params }: { params?: { id?: string } }) {
             </div>
           )}
           
-          {/* Pagination */}
-          <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Mostrando 1-{projectsWithClient.length} de {projectsWithClient.length} projetos
+          {/* Pagination - otimizada para mobile */}
+          <div className="mt-4 md:mt-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs md:text-sm text-muted-foreground order-2 sm:order-1">
+              Mostrando <span className="font-medium">{Math.min(1, projectsWithClient.length)}-{projectsWithClient.length}</span> de <span className="font-medium">{projectsWithClient.length}</span> projetos
             </p>
-            <div className="flex items-center">
-              <Button variant="outline" size="icon" className="rounded-r-none">
+            <div className="flex items-center order-1 sm:order-2">
+              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-r-none border-rose-200">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="default" size="icon" className="rounded-none w-8">
+              <Button variant="default" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-none bg-rose-500 hover:bg-rose-600 border-rose-200">
                 1
               </Button>
-              <Button variant="outline" size="icon" className="rounded-none w-8">
+              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-none border-rose-200">
                 2
               </Button>
-              <Button variant="outline" size="icon" className="rounded-l-none">
+              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-l-none border-rose-200">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
