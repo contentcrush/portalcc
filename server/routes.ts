@@ -317,12 +317,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clients - Adicionando autenticação e permissões
-  app.get("/api/clients", authenticateJWT, async (_req, res) => {
+  // Clients - Com paginação, filtros e autenticação
+  app.get("/api/clients", authenticateJWT, async (req, res) => {
     try {
-      const clients = await storage.getClients();
-      res.json(clients);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'name';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.type) {
+        filters.type = req.query.type;
+      }
+      
+      // Obter clientes com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getClients(queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar clientes:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
     }
   });
@@ -858,12 +882,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
-  // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", authenticateJWT, async (_req, res) => {
+  // Projects - Com paginação, filtros e autenticação
+  app.get("/api/projects", authenticateJWT, async (req, res) => {
     try {
-      const projects = await storage.getProjects();
-      res.json(projects);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'name';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.client_id) {
+        filters.client_id = parseInt(req.query.client_id as string);
+      }
+      
+      // Obter projetos com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getProjects(queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar projetos:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });

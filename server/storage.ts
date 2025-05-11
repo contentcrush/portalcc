@@ -17,6 +17,27 @@ import {
   type InsertProjectAttachment
 } from "../shared/schema";
 
+// Interface para paginação
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
+// Interface para parâmetros de filtro e ordenação
+export interface QueryOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+  filters?: Record<string, any>;
+}
+
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -24,10 +45,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
-  getUsers(): Promise<User[]>;
-  getProjectsByUserId(userId: number): Promise<Project[]>;
-  getTasksByUserId(userId: number): Promise<Task[]>;
-  getTransactionsByUserId(userId: number): Promise<FinancialDocument[]>;
+  getUsers(options?: QueryOptions): Promise<PaginatedResult<User> | User[]>;
+  getProjectsByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
+  getTasksByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
+  getTransactionsByUserId(userId: number, options?: QueryOptions): Promise<PaginatedResult<FinancialDocument> | FinancialDocument[]>;
   
   // User Preferences
   getUserPreferences(userId: number): Promise<UserPreference | undefined>;
@@ -62,7 +83,7 @@ export interface IStorage {
   
   // Clients
   getClient(id: number): Promise<Client | undefined>;
-  getClients(): Promise<Client[]>;
+  getClients(options?: QueryOptions): Promise<PaginatedResult<Client> | Client[]>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: number): Promise<{ 
@@ -85,8 +106,8 @@ export interface IStorage {
   
   // Projects
   getProject(id: number): Promise<Project | undefined>;
-  getProjects(): Promise<Project[]>;
-  getProjectsByClient(clientId: number): Promise<Project[]>;
+  getProjects(options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
+  getProjectsByClient(clientId: number, options?: QueryOptions): Promise<PaginatedResult<Project> | Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
   updateProjectStatus(id: number, status: string): Promise<Project | undefined>;
@@ -106,10 +127,10 @@ export interface IStorage {
   
   // Tasks
   getTask(id: number): Promise<Task | undefined>;
-  getTasks(): Promise<Task[]>;
-  getTasksWithDetails(): Promise<Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
-  getTasksByProject(projectId: number): Promise<Task[]>;
-  getTasksByUser(userId: number): Promise<Task[]>;
+  getTasks(options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
+  getTasksWithDetails(options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
+  getTasksByProject(projectId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
+  getTasksByUser(userId: number, options?: QueryOptions): Promise<PaginatedResult<Task> | Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;
