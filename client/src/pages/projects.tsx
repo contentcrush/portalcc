@@ -507,7 +507,7 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                     </div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           )}
           
