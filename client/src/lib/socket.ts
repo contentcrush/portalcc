@@ -16,15 +16,50 @@ let socket: Socket | null = null;
 // Lista de handlers para mensagens
 type MessageHandler = (data: any) => void;
 const messageHandlers: { [key: string]: MessageHandler[] } = {
+  // Mensagens do sistema
   chat: [],
   notification: [],
   system: [],
+  
+  // Mensagens financeiras
   financial_updated: [],
   financial_update: [], // Suporte para o formato antigo
   financial: [],        // Suporte para correspondência parcial
+  
+  // Mensagens de calendário
   calendar_updated: [],
   calendar_update: [],  // Suporte para o formato antigo
   calendar: [],         // Suporte para correspondência parcial
+  
+  // Atualizações de entidades
+  client_updated: [],
+  client_update: [],
+  client: [],
+  
+  project_updated: [],
+  project_update: [],
+  project: [],
+  
+  task_updated: [],
+  task_update: [],
+  task: [],
+  
+  // Comentários
+  comment_updated: [],
+  comment_deleted: [],
+  comment_created: [],
+  comment: [],
+  
+  // Reações a comentários
+  reaction_updated: [],
+  reaction_deleted: [],
+  reaction_created: [],
+  reaction: [],
+  
+  // Usuários
+  user_updated: [],
+  user_status: [],
+  user: [],
 };
 
 // Função auxiliar para acessar os handlers de mensagem a partir de outros arquivos
