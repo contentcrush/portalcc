@@ -138,6 +138,13 @@ export default function Tasks() {
   // Fetch tasks
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<TaskWithDetails[]>({
     queryKey: ['/api/tasks'],
+    onSuccess: (data) => {
+      // Log temporário para depuração
+      if (data && data.length > 0) {
+        console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
+        console.log("DEBUG - Tipo de due_time:", typeof data[0].due_time);
+      }
+    }
   });
 
   // Fetch projects for dropdown
