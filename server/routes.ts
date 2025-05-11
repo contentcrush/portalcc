@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePassword, hashPassword } from "./auth";
+import { setupMobileAuth } from "./auth-mobile-fix";
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";

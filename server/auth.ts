@@ -16,6 +16,29 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-k
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 dias
 
+/**
+ * Função utilitária para configurar cookies com suporte aprimorado para dispositivos móveis
+ */
+function setCookies(res: Response, accessToken: string, refreshToken: string) {
+  // Configurar cookie do token de acesso com melhor compatibilidade mobile
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', // Importante para compatibilidade com navegadores móveis
+    maxAge: 15 * 60 * 1000, // 15 minutos
+    path: '/' // Acessível em todo o site
+  });
+  
+  // Configurar cookie do token de refresh com melhor compatibilidade mobile
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', // Importante para compatibilidade com navegadores móveis
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+  });
+}
+
 // Interface para payload do token JWT
 interface JwtPayload {
   userId: number;
