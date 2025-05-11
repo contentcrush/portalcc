@@ -723,30 +723,31 @@ export default function Clients() {
       
       {/* Grid View */}
       {!isLoading && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedClients?.map(client => (
-            <div
-              key={client.id}
-              onClick={() => navigate(`/clients/${client.id}`)}
-              className="group cursor-pointer"
-            >
-              <Card className="overflow-hidden h-full transition-all border border-border/40 hover:border-primary/20 hover:shadow-md">
-                <div className="absolute top-2 right-2 z-30">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/clients/${client.id}`);
-                      }}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver detalhes
-                      </DropdownMenuItem>
+        <ClientListPreloader clients={sortedClients || []} showProgress={true}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedClients?.map(client => (
+              <div
+                key={client.id}
+                onClick={() => navigate(`/clients/${client.id}`)}
+                className="group cursor-pointer"
+              >
+                <Card className="overflow-hidden h-full transition-all border border-border/40 hover:border-primary/20 hover:shadow-md">
+                  <div className="absolute top-2 right-2 z-30">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/clients/${client.id}`);
+                        }}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Ver detalhes
+                        </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();
                         handleNewProjectClick(client);
@@ -884,6 +885,7 @@ export default function Clients() {
             </div>
           ))}
         </div>
+        </ClientListPreloader>
       )}
       
       {/* List View */}
@@ -1293,22 +1295,17 @@ export default function Clients() {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="state"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Estado</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Ex: SP" 
-                                  {...getSafeFieldProps(field)} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        {/* Usando campo customizado que não está no schema */}
+                        <FormItem>
+                          <FormLabel>Estado</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: SP"
+                              {...register("city")}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       </div>
                     </div>
                   </div>
