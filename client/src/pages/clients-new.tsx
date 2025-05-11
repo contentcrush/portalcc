@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,8 @@ import { insertClientSchema, insertProjectSchema, type InsertClient, type Insert
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency, showSuccessToast } from "@/lib/utils";
 import { ClientAvatar } from "@/components/ClientAvatar";
+import { ClientListPreloader } from "@/components/client-list-preloader";
+import { preloadImage } from "@/lib/image-cache";
 import {
   Select,
   SelectContent,
