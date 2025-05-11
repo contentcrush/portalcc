@@ -125,25 +125,45 @@ export function UserAvatar({
     }
   }, [avatarUrl, user.name, user.id]);
 
-  // Se estamos usando o shadcn/ui Avatar component (preferido)
+  // Calcular iniciais para fallback
+  const initials = user.name.split(' ').map(part => part.charAt(0)).join('').substring(0, 2).toUpperCase();
+  
+  // Definir cor de fundo consistente baseada no nome
+  const colors = [
+    '#4F46E5', '#0EA5E9', '#10B981', '#F59E0B', 
+    '#EC4899', '#8B5CF6', '#6366F1', '#14B8A6'
+  ];
+  const colorIndex = user.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+  const bgColor = colors[colorIndex];
+  
   return (
     <div className={cn("relative inline-block", containerClassName)} style={{ width: size, height: size }}>
       <Avatar className={cn("h-full w-full", className)}>
-        <AvatarImage 
-          src={avatarUrl} 
-          alt={user.name}
-          onLoad={() => {
-            setIsLoaded(true);
-            setIsError(false);
-            console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Imagem carregada com sucesso`);
-          }}
-          onError={() => {
-            setIsLoaded(false);
-            setIsError(true);
-            console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Erro ao carregar imagem`);
-          }}
-        />
-        <AvatarFallback>{user.name.split(' ').map(part => part.charAt(0)).join('').substring(0, 2).toUpperCase()}</AvatarFallback>
+        {avatarUrl ? (
+          <LazyImage
+            src={avatarUrl}
+            alt={user.name}
+            className="h-full w-full"
+            imageClassName="rounded-full"
+            containerClassName="rounded-full"
+            fallbackSrc={fallbackSrc}
+            placeholderColor={bgColor}
+            onLoad={() => {
+              setIsLoaded(true);
+              setIsError(false);
+              console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Imagem carregada com sucesso`);
+            }}
+            onError={() => {
+              setIsLoaded(false);
+              setIsError(true);
+              console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Erro ao carregar imagem`);
+            }}
+          />
+        ) : (
+          <AvatarFallback style={{ backgroundColor: bgColor }}>
+            {initials}
+          </AvatarFallback>
+        )}
       </Avatar>
       
       {/* Indicador de status */}

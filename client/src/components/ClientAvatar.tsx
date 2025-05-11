@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { getInitials, generateAvatarColor, cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { preloadImage, isImageCached } from "@/lib/image-cache";
+import { preloadImage, isImageCached, getCachedImageUrl } from "@/lib/image-cache";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface ClientAvatarProps {
   name?: string;
@@ -123,18 +124,25 @@ export function ClientAvatar({
   // Cor de fundo do avatar baseada no nome
   const backgroundColor = generateAvatarColor(clientName || "");
 
+  // Calcular o tamanho numérico para o avatar
+  const avatarSize = SIZE_MAP[size];
+
   return (
     <Avatar className={cn(SIZE_CLASSES[size], className, "border border-gray-200")}>
       {!error && validLogo ? (
-        <img 
+        // Usar o LazyImage para melhor integração com o cache e lazy loading
+        <LazyImage 
           src={validLogo} 
           alt={`Logo de ${clientName}`}
           className="h-full w-full object-cover"
-          loading="lazy" // Habilitar lazy loading nativo do navegador
+          imageClassName="rounded-full"
+          containerClassName="rounded-full"
           onError={() => {
             console.error(`ClientAvatar: Erro ao carregar logo para "${clientName}"`);
             setError(true);
           }}
+          placeholderColor={backgroundColor}
+          fallbackSrc={fallbackSrc}
         />
       ) : (
         <AvatarFallback 
