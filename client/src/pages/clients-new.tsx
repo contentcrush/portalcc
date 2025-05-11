@@ -1301,7 +1301,7 @@ export default function Clients() {
                           <FormControl>
                             <Input
                               placeholder="Ex: SP"
-                              {...register("city")}
+                              {...getSafeFieldProps(form.register("city"))}
                             />
                           </FormControl>
                           <FormMessage />
