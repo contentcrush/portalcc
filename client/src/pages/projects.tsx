@@ -326,17 +326,17 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       )}
       
-      {/* Empty state */}
+      {/* Empty state - otimizado para mobile */}
       {projectsWithClient && projectsWithClient.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Filter className="h-6 w-6 text-primary" />
+        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-4 md:p-8 text-center">
+          <div className="mx-auto w-10 h-10 md:w-12 md:h-12 rounded-full bg-rose-100 flex items-center justify-center mb-3 md:mb-4">
+            <Filter className="h-5 w-5 md:h-6 md:w-6 text-rose-500" />
           </div>
-          <h3 className="text-lg font-medium mb-2">Nenhum projeto encontrado</h3>
-          <p className="text-muted-foreground mb-4">
+          <h3 className="text-base md:text-lg font-medium mb-1 md:mb-2">Nenhum projeto encontrado</h3>
+          <p className="text-sm text-muted-foreground mb-3 md:mb-4">
             Tente ajustar os filtros ou adicione um novo projeto.
           </p>
-          <Button onClick={openProjectForm}>
+          <Button onClick={openProjectForm} className="bg-rose-500 hover:bg-rose-600">
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
           </Button>
@@ -346,9 +346,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       {/* Conteúdo da aba Projetos (grid e list) */}
       {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
         <>
-          {/* Project grid */}
+          {/* Project grid - otimizado para mobile */}
           {view === "grid" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               {projectsWithClient.map(project => (
                 <ProjectCard 
                   key={project.id} 
@@ -357,50 +357,56 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                 />
               ))}
               
-              {/* Add new project card */}
-              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
-                <div className="bg-primary/10 rounded-full p-3 mb-3">
-                  <Plus className="h-8 w-8 text-primary" />
+              {/* Card de adicionar projeto */}
+              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-4 md:p-6 hover:border-rose-300 transition-colors h-full">
+                <div className="bg-rose-100 rounded-full p-3 mb-3">
+                  <Plus className="h-6 w-6 md:h-8 md:w-8 text-rose-500" />
                 </div>
-                <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
-                <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
-                <Button onClick={openProjectForm}>Adicionar Projeto</Button>
+                <h3 className="font-medium text-gray-900 mb-1 text-center">Novo Projeto</h3>
+                <p className="text-xs md:text-sm text-gray-500 text-center mb-3 md:mb-4">Crie um novo projeto de vídeo</p>
+                <Button onClick={openProjectForm} size="sm" className="bg-rose-500 hover:bg-rose-600">
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Adicionar Projeto</span>
+                  <span className="sm:hidden">Adicionar</span>
+                </Button>
               </div>
             </div>
           )}
           
-          {/* Project list view */}
+          {/* Project list view - otimizado para mobile */}
           {view === "list" && (
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {projectsWithClient.map(project => (
                 <div 
                   key={project.id}
-                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                  className="bg-white border rounded-lg p-3 md:p-4 flex items-center justify-between hover:shadow-md hover:border-rose-200 transition-all cursor-pointer"
                   onClick={() => handleOpenProjectDetails(project.id)}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center flex-1 min-w-0">
+                    {/* Thumbnail com fallback */}
                     {project.thumbnail ? (
                       <img 
                         src={project.thumbnail} 
                         alt={project.name} 
-                        className="w-12 h-12 object-cover rounded mr-4" 
+                        className="w-10 h-10 md:w-12 md:h-12 object-cover rounded mr-3 md:mr-4 flex-shrink-0" 
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mr-4">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-200 rounded flex items-center justify-center mr-3 md:mr-4 flex-shrink-0">
                         <span className="text-gray-500 font-medium">
                           {project.name.charAt(0)}
                         </span>
                       </div>
                     )}
                     
-                    <div>
-                      <h3 className="font-medium hover:text-primary">
+                    {/* Informações do projeto */}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-sm md:text-base hover:text-rose-600 truncate">
                         {project.name}
                       </h3>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <span>{project.client?.name || 'Cliente não especificado'}</span>
-                        <span className="mx-2">•</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      <div className="flex flex-wrap items-center text-xs md:text-sm text-muted-foreground gap-1 md:gap-2">
+                        <span className="truncate max-w-[120px] md:max-w-none">{project.client?.name || 'Cliente não especificado'}</span>
+                        <span className="hidden md:inline mx-1">•</span>
+                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${
                           project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
                           project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
                           project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
