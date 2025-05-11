@@ -135,6 +135,10 @@ export function CommentSection({ taskId, className = "" }: CommentSectionProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
+      showSuccessToast({
+        title: "Reação adicionada",
+        description: "Sua reação foi adicionada ao comentário"
+      });
     },
     onError: (error: Error) => {
       toast({
