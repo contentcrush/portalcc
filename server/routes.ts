@@ -570,9 +570,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/projects", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      const projects = await storage.getProjectsByClient(clientId);
-      res.json(projects);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'name';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      
+      // Obter projetos do cliente com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getProjectsByClient(clientId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar projetos do cliente:", error);
       res.status(500).json({ message: "Failed to fetch client projects" });
     }
   });
@@ -1521,12 +1546,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tasks - Adicionando autenticação e permissões
-  app.get("/api/tasks", authenticateJWT, async (_req, res) => {
+  // Tasks - Com paginação, filtros e autenticação
+  app.get("/api/tasks", authenticateJWT, async (req, res) => {
     try {
-      // Obter tarefas com detalhes de projeto e cliente
-      const tasks = await storage.getTasksWithDetails();
-      res.json(tasks);
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.priority) {
+        filters.priority = req.query.priority;
+      }
+      if (req.query.project_id) {
+        filters.project_id = parseInt(req.query.project_id as string);
+      }
+      if (req.query.client_id) {
+        filters.client_id = parseInt(req.query.client_id as string);
+      }
+      if (req.query.user_id) {
+        filters.user_id = parseInt(req.query.user_id as string);
+      }
+      if (req.query.completed !== undefined) {
+        filters.completed = req.query.completed === 'true';
+      }
+      
+      // Obter tarefas com paginação e detalhes de projeto/cliente
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getTasksWithDetails(queryOptions);
+      res.json(result);
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
@@ -1551,9 +1613,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects/:id/tasks", authenticateJWT, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      const tasks = await storage.getTasksByProject(projectId);
-      res.json(tasks);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'due_date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.status) {
+        filters.status = req.query.status;
+      }
+      if (req.query.priority) {
+        filters.priority = req.query.priority;
+      }
+      if (req.query.user_id) {
+        filters.user_id = parseInt(req.query.user_id as string);
+      }
+      if (req.query.completed !== undefined) {
+        filters.completed = req.query.completed === 'true';
+      }
+      
+      // Obter tarefas do projeto com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getTasksByProject(projectId, queryOptions);
+      res.json(result);
     } catch (error) {
+      console.error("Erro ao buscar tarefas do projeto:", error);
       res.status(500).json({ message: "Failed to fetch project tasks" });
     }
   });
