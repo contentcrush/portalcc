@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { motion } from "framer-motion";
 import { 
   formatDate, 
   formatDueDateWithDaysRemaining, 
@@ -16,8 +17,10 @@ import {
   truncateText,
   getInitials,
   generateAvatarColor,
-  showSuccessToast
+  showSuccessToast,
+  animations
 } from "@/lib/utils";
+import { AnimatedElement } from "@/components/ui/animated-element";
 import {
   Select,
   SelectContent,
@@ -964,23 +967,52 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
   const isDueSoon = isTaskDueSoon(task);
   const isCompleted = task.completed;
   
+  // Referência para controlar animação
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Handler para toggle com animação
+  const handleToggleComplete = () => {
+    // Aplicar animação baseada no novo status (inverso do atual)
+    if (cardRef.current) {
+      const animationType = !isCompleted ? 'taskComplete' : 'fadeIn';
+      
+      // Aplicar animação usando a API do Framer Motion
+      motion.animate(
+        cardRef.current,
+        animations[animationType].animate,
+        { 
+          duration: 0.7,
+          ease: "easeInOut"
+        }
+      );
+    }
+    
+    // Chamar handler original
+    setTimeout(() => {
+      onToggleComplete();
+    }, 100);
+  };
+  
   return (
-    <Card className={cn(
-      "border overflow-hidden transition-all duration-200",
-      {
-        "border-green-300 bg-green-50": isCompleted,
-        "border-red-300 bg-red-50": !isCompleted && isOverdue,
-        "border-amber-300 bg-amber-50": !isCompleted && !isOverdue && isDueSoon,
-        "border-gray-200 hover:border-gray-300": !isCompleted && !isOverdue && !isDueSoon,
-      }
-    )}>
+    <Card 
+      ref={cardRef}
+      className={cn(
+        "border overflow-hidden transition-all duration-200",
+        {
+          "border-green-300 bg-green-50": isCompleted,
+          "border-red-300 bg-red-50": !isCompleted && isOverdue,
+          "border-amber-300 bg-amber-50": !isCompleted && !isOverdue && isDueSoon,
+          "border-gray-200 hover:border-gray-300": !isCompleted && !isOverdue && !isDueSoon,
+        }
+      )}
+    >
       <CardContent className="px-4 py-3" onClick={onView}>
         <div className="flex items-start gap-4">
           {/* Task Completion Checkbox */}
           <div className="pt-1" onClick={(e) => e.stopPropagation()}>
             <Checkbox 
               checked={isCompleted} 
-              onCheckedChange={() => onToggleComplete()}
+              onCheckedChange={handleToggleComplete}
               className={cn(
                 "transition-colors duration-200",
                 isCompleted ? "text-green-500 border-green-500" : ""

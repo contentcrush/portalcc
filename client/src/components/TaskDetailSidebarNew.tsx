@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Download, Plus, Send, ChevronDown, Trash2 } from "lucide-react";
+import { X, Download, Plus, Send, ChevronDown, Trash2, CheckCircle2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDate, formatDateWithTime, showSuccessToast } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { formatDate, formatDateWithTime, showSuccessToast, animations } from "@/lib/utils";
+import { AnimatedElement } from "@/components/ui/animated-element";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
@@ -41,6 +43,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const [descriptionValue, setDescriptionValue] = useState("");
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const taskDetailsRef = useRef<HTMLDivElement>(null);
 
   // Fetch task details
   const { data: task, isLoading: isLoadingTask } = useQuery({
