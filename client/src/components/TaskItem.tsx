@@ -299,7 +299,9 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   <CalendarDays className="h-3 w-3" />
                   <div className="flex flex-nowrap items-center" title={formatDateWithTime(task.due_date, task.due_time)}>
                     <span>{getFormattedDueDate()}</span>
-                    {task.due_time && task.due_time.trim() !== '' && (
+                    {/* Console log para debug */}
+                    <span className="hidden">{console.log("Task due_time:", task.due_time, typeof task.due_time)}</span>
+                    {task.due_time && task.due_time !== null && (
                       <span className="ml-1 text-xs font-medium whitespace-nowrap">
                         às {task.due_time}
                       </span>
