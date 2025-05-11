@@ -62,7 +62,9 @@ import {
   Clock,
   CheckCircle,
   AlarmClock,
-  Trash2
+  Trash2,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 
 import {

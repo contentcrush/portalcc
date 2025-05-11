@@ -226,19 +226,19 @@ export default function Clients() {
         name: newClient.name
       };
       
-      // Toast com CTA para criar novo projeto - sem redirecionamento imediato
+      // Toast com CTA para criar novo projeto - remoção do redirecionamento automático
       showSuccessToast({
         title: "Cliente criado com sucesso",
         description: (
           <div className="flex flex-col gap-2">
             <p>{newClient.name} foi adicionado à sua base de clientes.</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-2 w-full justify-center"
-              onClick={() => {
-                // Manter o usuário na mesma página e abrir o formulário de novo projeto
-                setTimeout(() => {
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-center"
+                onClick={() => {
+                  // Preparar e abrir o formulário de novo projeto
                   setSelectedClient(newClientData);
                   projectForm.reset({
                     name: "",
@@ -252,18 +252,25 @@ export default function Clients() {
                     thumbnail: "",
                   });
                   setIsNewProjectDialogOpen(true);
-                }, 100);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Criar novo projeto para este cliente
-            </Button>
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar novo projeto
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={() => navigate(`/clients/${newClient.id}`)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Ver detalhes
+              </Button>
+            </div>
           </div>
         ),
-        duration: 6000,
+        duration: 8000,
       });
-      
-      navigate(`/clients/${newClient.id}`);
     },
     onError: (error) => {
       toast({
