@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDateWithTime } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PRIORITY_COLOR_CLASSES } from "@/lib/constants";
@@ -261,7 +261,7 @@ export default function QuickActions() {
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="h-3 w-3 mr-1" />
-                    <span>
+                    <span title={formatDateWithTime(task.due_date, task.due_time)}>
                       {format(dueDate, 'dd/MM/yyyy')}
                       {task.due_time && (
                         <span className="ml-1 font-medium">

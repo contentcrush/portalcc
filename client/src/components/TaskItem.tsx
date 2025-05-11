@@ -297,7 +297,7 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   isDueSoon ? 'text-orange-500' : ''}`}
                 >
                   <CalendarDays className="h-3 w-3" />
-                  <span title={getFullDateTime(task.due_date)}>
+                  <span title={formatDateWithTime(task.due_date, task.due_time)}>
                     {getFormattedDueDate()}
                     {task.due_time && (
                       <span className="ml-1 text-xs font-medium">

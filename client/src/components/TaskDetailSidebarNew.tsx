@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Download, Plus, Send, ChevronDown, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDate, showSuccessToast } from "@/lib/utils";
+import { formatDate, formatDateWithTime, showSuccessToast } from "@/lib/utils";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
@@ -470,14 +470,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
               </svg>
               <span className="text-sm font-medium">
                 {task.due_date ? (
-                  <>
-                    {formatDate(task.due_date)}
-                    {task.due_time && (
-                      <span className="ml-1 text-sm">
-                        às {task.due_time}
-                      </span>
-                    )}
-                  </>
+                  formatDateWithTime(task.due_date, task.due_time)
                 ) : '-'}
               </span>
             </div>
