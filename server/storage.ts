@@ -2030,74 +2030,97 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTasksWithDetails(): Promise<Task[]> {
-    // Primeiro, obtemos todas as tarefas
-    const allTasks = await db.select().from(tasks);
-    
-    // Se não houver tarefas, retorna array vazio
-    if (allTasks.length === 0) {
-      return [];
-    }
-    
-    // Obter todos os projetos relacionados às tarefas
-    const projectIds = [...new Set(allTasks.map(task => task.project_id))];
-    const projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
-    
-    // Transformar projetos em um map para consulta rápida
-    const projectsMap = new Map<number, typeof projects.$inferSelect>();
-    projectsData.forEach(project => {
-      projectsMap.set(project.id, project);
-    });
-    
-    // Obter todos os clientes relacionados aos projetos
-    const clientIds = [...new Set(projectsData.map(project => project.client_id))];
-    const clientsData = await db.select().from(clients).where(inArray(clients.id, clientIds));
-    
-    // Transformar clientes em um map para consulta rápida
-    const clientsMap = new Map<number, typeof clients.$inferSelect>();
-    clientsData.forEach(client => {
-      clientsMap.set(client.id, client);
-    });
-    
-    // Obter todos os usuários assignados às tarefas
-    const userIds = [...new Set(allTasks.map(task => task.assigned_to).filter(id => id !== null) as number[])];
-    const usersData = userIds.length > 0 
-      ? await db.select().from(users).where(inArray(users.id, userIds))
-      : [];
-    
-    // Transformar usuários em um map para consulta rápida
-    const usersMap = new Map<number, typeof users.$inferSelect>();
-    usersData.forEach(user => {
-      usersMap.set(user.id, user);
-    });
-    
-    // Para cada tarefa, adicionar detalhes do projeto, cliente e usuário assignado
-    const tasksWithDetails = allTasks.map(task => {
-      const taskWithDetails = { ...task } as any;
+    try {
+      // Primeiro, obtemos todas as tarefas
+      const allTasks = await db.select().from(tasks);
       
-      // Adicionar projeto
-      const project = projectsMap.get(task.project_id);
-      if (project) {
-        taskWithDetails.project = project;
-        
-        // Adicionar cliente
-        const client = clientsMap.get(project.client_id);
-        if (client) {
-          taskWithDetails.client = client;
-        }
+      // Se não houver tarefas, retorna array vazio
+      if (allTasks.length === 0) {
+        return [];
       }
       
-      // Adicionar usuário assignado
-      if (task.assigned_to) {
-        const user = usersMap.get(task.assigned_to);
-        if (user) {
+      // Filtramos os IDs de projeto não nulos
+      const projectIds = [...new Set(allTasks
+        .map(task => task.project_id)
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
+
+      // Obtemos os projetos relacionados
+      let projectsData: any[] = [];
+      if (projectIds.length > 0) {
+        projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
+      }
+      
+      // Transformar projetos em um map para consulta rápida
+      const projectsMap = new Map<number, typeof projects.$inferSelect>();
+      projectsData.forEach(project => {
+        projectsMap.set(project.id, project);
+      });
+      
+      // Obter todos os clientes relacionados aos projetos (se houver projetos)
+      const clientIds = [...new Set(projectsData
+        .map(project => project.client_id)
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
+      
+      let clientsData: any[] = [];
+      if (clientIds.length > 0) {
+        clientsData = await db.select().from(clients).where(inArray(clients.id, clientIds));
+      }
+      
+      // Transformar clientes em um map para consulta rápida
+      const clientsMap = new Map<number, typeof clients.$inferSelect>();
+      clientsData.forEach(client => {
+        clientsMap.set(client.id, client);
+      });
+      
+      // Obter todos os usuários assignados às tarefas (filtrando nulos)
+      const userIds = [...new Set(allTasks
+        .map(task => task.assigned_to)
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
+      
+      let usersData: any[] = [];
+      if (userIds.length > 0) {
+        usersData = await db.select().from(users).where(inArray(users.id, userIds));
+      }
+      
+      // Transformar usuários em um map para consulta rápida
+      const usersMap = new Map<number, typeof users.$inferSelect>();
+      usersData.forEach(user => {
+        usersMap.set(user.id, user);
+      });
+      
+      // Para cada tarefa, adicionar detalhes do projeto, cliente e usuário assignado
+      const tasksWithDetails = allTasks.map(task => {
+        const taskWithDetails = { ...task } as any;
+        
+        // Adicionar projeto (se task.project_id não for nulo)
+        if (task.project_id && projectsMap.has(task.project_id)) {
+          const project = projectsMap.get(task.project_id);
+          taskWithDetails.project = project;
+          
+          // Adicionar cliente (se project.client_id não for nulo)
+          if (project && project.client_id && clientsMap.has(project.client_id)) {
+            const client = clientsMap.get(project.client_id);
+            taskWithDetails.client = client;
+          }
+        }
+        
+        // Adicionar usuário assignado (se task.assigned_to não for nulo)
+        if (task.assigned_to && usersMap.has(task.assigned_to)) {
+          const user = usersMap.get(task.assigned_to);
           taskWithDetails.assignedUser = user;
         }
-      }
+        
+        return taskWithDetails;
+      });
       
-      return taskWithDetails;
-    });
-    
-    return tasksWithDetails;
+      return tasksWithDetails;
+    } catch (error) {
+      console.error("Erro detalhado ao buscar tarefas:", error);
+      throw error;
+    }
   }
 
   async getTasksByProject(projectId: number): Promise<Task[]> {
