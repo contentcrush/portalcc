@@ -339,10 +339,25 @@ export function setupAuth(app: Express) {
       // Retornar usuário sem a senha
       const { password: _, ...userWithoutPassword } = user;
       
-      return res.status(201).json({
-        user: userWithoutPassword,
-        token: accessToken
-      });
+      // Detectar se é um dispositivo móvel
+      const userAgent = req.headers['user-agent'] || '';
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      
+      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
+      if (isMobile) {
+        return res.status(201).json({
+          user: userWithoutPassword,
+          token: accessToken,
+          refreshToken: refreshToken, 
+          expiresIn: 15 * 60 // 15 minutos em segundos
+        });
+      } else {
+        // Para navegadores desktop, não incluir o refresh token na resposta
+        return res.status(201).json({
+          user: userWithoutPassword,
+          token: accessToken
+        });
+      }
     } catch (error) {
       console.error('Erro ao registrar usuário:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
@@ -432,7 +447,13 @@ export function setupAuth(app: Express) {
   // Logout
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      // Obter token de refresh do cookie ou do corpo da requisição (para dispositivos móveis)
+      let refreshToken = req.cookies.refreshToken;
+      
+      // Para dispositivos móveis, o token pode vir no corpo da requisição
+      if (!refreshToken && req.body && req.body.refreshToken) {
+        refreshToken = req.body.refreshToken;
+      }
       
       if (refreshToken) {
         // Revogar refresh token
@@ -440,8 +461,19 @@ export function setupAuth(app: Express) {
       }
       
       // Limpar cookies
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+      res.clearCookie('accessToken', { 
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+      
+      res.clearCookie('refreshToken', { 
+        path: '/api/auth/refresh',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
       
       return res.status(200).json({ message: 'Logout bem-sucedido' });
     } catch (error) {
@@ -453,7 +485,13 @@ export function setupAuth(app: Express) {
   // Refresh do token
   app.post('/api/auth/refresh', async (req: Request, res: Response) => {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      // Obter token de refresh do cookie ou do corpo da requisição (para dispositivos móveis)
+      let refreshToken = req.cookies.refreshToken;
+      
+      // Para dispositivos móveis, o token pode vir no corpo da requisição
+      if (!refreshToken && req.body && req.body.refreshToken) {
+        refreshToken = req.body.refreshToken;
+      }
       
       if (!refreshToken) {
         return res.status(401).json({ message: 'Refresh token não fornecido' });
@@ -464,8 +502,19 @@ export function setupAuth(app: Express) {
       
       if (!user) {
         // Limpar cookies
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+        res.clearCookie('accessToken', { 
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        });
+        
+        res.clearCookie('refreshToken', { 
+          path: '/api/auth/refresh',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        });
         
         return res.status(403).json({ message: 'Refresh token inválido ou expirado' });
       }
@@ -489,21 +538,25 @@ export function setupAuth(app: Express) {
         req.headers['user-agent']
       );
       
-      // Configurar cookies
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000 // 15 minutos
-      });
+      // Configurar cookies com melhor suporte mobile
+      setCookies(res, accessToken, newRefreshToken);
       
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        path: '/api/auth/refresh',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-      });
+      // Detectar se é um dispositivo móvel para incluir refresh token na resposta
+      const userAgent = req.headers['user-agent'] || '';
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
       
-      return res.status(200).json({ token: accessToken });
+      // Para dispositivos móveis, incluir também o refresh token para armazenamento local
+      if (isMobile) {
+        const { password: _, ...userWithoutPassword } = user;
+        return res.status(200).json({
+          user: userWithoutPassword,
+          token: accessToken,
+          refreshToken: newRefreshToken,
+          expiresIn: 15 * 60 // 15 minutos em segundos
+        });
+      } else {
+        return res.status(200).json({ token: accessToken });
+      }
     } catch (error) {
       console.error('Erro ao atualizar token:', error);
       return res.status(500).json({ message: 'Erro interno do servidor' });
