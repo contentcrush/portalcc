@@ -3777,26 +3777,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ 
     server: httpServer, 
     path: '/ws',
-    // Adicionar verificação de headers na conexão
+    // Adicionar verificação de tokens na conexão
     verifyClient: (info, cb) => {
       try {
-        // Extrair o token do cabeçalho Authorization
-        const authorization = info.req.headers.authorization;
+        let token = null;
         
-        if (!authorization) {
+        // Extrair token do parâmetro de consulta na URL
+        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+        if (url.searchParams.has('token')) {
+          token = url.searchParams.get('token');
+          console.log('Token JWT encontrado no parâmetro de consulta da URL do WebSocket');
+        }
+        
+        // Extrair token do cabeçalho Authorization (fallback)
+        if (!token && info.req.headers.authorization) {
+          const authorization = info.req.headers.authorization;
+          const parts = authorization.split(' ');
+          
+          if (parts.length === 2 && parts[0] === 'Bearer') {
+            token = parts[1];
+            console.log('Token JWT encontrado no cabeçalho Authorization do WebSocket');
+          }
+        }
+        
+        if (!token) {
           // Se não houver token, permitir a conexão, mas o cliente não estará autenticado
+          console.log('Nenhum token JWT encontrado na conexão WebSocket');
           cb(true);
           return;
         }
-        
-        const parts = authorization.split(' ');
-        if (parts.length !== 2 || parts[0] !== 'Bearer') {
-          // Formato inválido do token
-          cb(true);
-          return;
-        }
-        
-        const token = parts[1];
         
         // Verificar o token (usando a mesma chave JWT do auth.ts)
         const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-jwt-secret-key-2025';
@@ -3806,7 +3815,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const decoded = jwt.verify(token, JWT_SECRET);
           // Armazenar o usuário decodificado para usar posteriormente
           info.req.user = decoded;
+          console.log(`WebSocket autenticado para usuário ID: ${decoded.userId || decoded.id}`);
         } catch (error) {
+          console.warn('Token inválido ou expirado na conexão WebSocket:', error.message);
           // Não fazemos nada, apenas permitimos a conexão não autenticada
         }
         

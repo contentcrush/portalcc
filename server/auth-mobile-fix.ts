@@ -4,6 +4,7 @@ import { User } from "@shared/schema";
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import { users } from '@shared/schema';
+import { comparePassword } from './auth';
 
 // Chave para assinatura de tokens
 const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-super-secret-key';
@@ -133,8 +134,13 @@ export function setupMobileAuth(app: Express) {
         return res.status(401).json({ message: 'Usuário não encontrado' });
       }
       
-      // Verificar senha (usando a mesma função de auth.ts)
-      // TODO: implementar verificação de senha compatível com auth.ts
+      // Verificar senha usando a mesma função de auth.ts
+      const validPassword = await comparePassword(password, user.password);
+      
+      if (!validPassword) {
+        console.log(`Falha de login mobile para usuário: ${username} - Senha inválida`);
+        return res.status(401).json({ message: 'Credenciais inválidas' });
+      }
       
       // Gerar tokens
       const { accessToken, refreshToken } = generateTokens(user);

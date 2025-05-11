@@ -101,21 +101,22 @@ export function initWebSocket(): Promise<WebSocket> {
     try {
       console.log('Iniciando nova conexão WebSocket:', wsUrl);
       
+      // Infelizmente não podemos enviar headers personalizados no WebSocket nativo do navegador
+      // Então vamos usar a abordagem de enviar o token como parte da URL para autenticação
+      let wsUrlWithAuth = wsUrl;
+      
       // Verificar se temos um token de autenticação mobile
       const authHeader = getMobileAuthHeader();
       
-      // Configurar cabeçalhos personalizados para o WebSocket
-      const headers = authHeader ? { 'Authorization': authHeader.Authorization } : undefined;
-      
-      // Criar WebSocket com cabeçalhos personalizados se disponíveis
-      ws = headers 
-        ? new WebSocket(wsUrl, { headers })
-        : new WebSocket(wsUrl);
-      
-      // Se temos um cabeçalho de autorização, registrar que estamos usando token mobile
-      if (headers) {
+      // Se temos um token, adicionar à URL como parâmetro de consulta
+      if (authHeader) {
+        const token = authHeader.Authorization.replace('Bearer ', '');
+        wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(token)}`;
         console.log('Conectando WebSocket com token de autenticação mobile');
       }
+      
+      // Criar WebSocket com URL que pode incluir o token
+      ws = new WebSocket(wsUrlWithAuth);
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
