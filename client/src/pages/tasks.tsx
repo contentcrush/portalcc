@@ -216,7 +216,7 @@ export default function Tasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({
+      showSuccessToast({
         title: "Tarefa excluída",
         description: "Tarefa excluída com sucesso",
       });
