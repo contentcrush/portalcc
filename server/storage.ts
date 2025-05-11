@@ -2399,8 +2399,81 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client Interactions
-  async getClientInteractions(clientId: number): Promise<ClientInteraction[]> {
-    return await db.select().from(clientInteractions).where(eq(clientInteractions.client_id, clientId));
+  async getClientInteractions(clientId: number, options?: QueryOptions): Promise<PaginatedResult<ClientInteraction> | ClientInteraction[]> {
+    // Se não foram fornecidas opções de paginação, retorna todas as interações do cliente
+    if (!options) {
+      return await db.select()
+        .from(clientInteractions)
+        .where(eq(clientInteractions.client_id, clientId))
+        .orderBy(desc(clientInteractions.date));
+    }
+    
+    // Desestrutura as opções
+    const { page = 1, limit = 20, sortBy = 'date', sortOrder = 'desc', search = '', filters = {} } = options;
+    
+    // Construir a query base
+    let query = db.select()
+      .from(clientInteractions)
+      .where(eq(clientInteractions.client_id, clientId));
+    
+    // Aplicar filtros de busca
+    if (search) {
+      query = query.where(
+        or(
+          sql`${clientInteractions.title} ILIKE ${`%${search}%`}`,
+          sql`${clientInteractions.description} ILIKE ${`%${search}%`}`,
+          sql`${clientInteractions.type} ILIKE ${`%${search}%`}`
+        )
+      );
+    }
+    
+    // Aplicar filtros adicionais
+    if (filters) {
+      if (filters.type) {
+        query = query.where(eq(clientInteractions.type, filters.type));
+      }
+      if (filters.start_date) {
+        query = query.where(sql`${clientInteractions.date} >= ${filters.start_date}`);
+      }
+      if (filters.end_date) {
+        query = query.where(sql`${clientInteractions.date} <= ${filters.end_date}`);
+      }
+    }
+    
+    // Contar o total de itens para paginação
+    const [{ count: totalItems }] = await db.select({ count: count() })
+      .from(clientInteractions)
+      .where(eq(clientInteractions.client_id, clientId))
+      .execute();
+    
+    // Aplicar ordenação
+    const orderColumn = clientInteractions[sortBy as keyof typeof clientInteractions] || clientInteractions.date;
+    if (sortOrder === 'desc') {
+      query = query.orderBy(desc(orderColumn));
+    } else {
+      query = query.orderBy(asc(orderColumn));
+    }
+    
+    // Aplicar paginação
+    const offset = (page - 1) * limit;
+    query = query.limit(limit).offset(offset);
+    
+    // Executar a query
+    const data = await query;
+    
+    // Calcular metadados de paginação
+    const totalPages = Math.ceil(Number(totalItems) / limit);
+    
+    // Retornar resultado paginado
+    return {
+      data,
+      meta: {
+        currentPage: page,
+        totalPages,
+        totalItems: Number(totalItems),
+        itemsPerPage: limit
+      }
+    };
   }
 
   async createClientInteraction(insertInteraction: InsertClientInteraction): Promise<ClientInteraction> {
@@ -2663,16 +2736,89 @@ export class DatabaseStorage implements IStorage {
     return contact || undefined;
   }
 
-  async getClientContacts(clientId: number): Promise<ClientContact[]> {
-    return await db.select()
+  async getClientContacts(clientId: number, options?: QueryOptions): Promise<PaginatedResult<ClientContact> | ClientContact[]> {
+    // Se não foram fornecidas opções de paginação, retorna todos os contatos do cliente
+    if (!options) {
+      return await db.select()
+        .from(clientContacts)
+        .where(eq(clientContacts.client_id, clientId))
+        .orderBy(desc(clientContacts.is_primary), asc(clientContacts.name));
+    }
+    
+    // Desestrutura as opções
+    const { page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc', search = '', filters = {} } = options;
+    
+    // Construir a query base
+    let query = db.select()
+      .from(clientContacts)
+      .where(eq(clientContacts.client_id, clientId));
+    
+    // Aplicar filtros de busca
+    if (search) {
+      query = query.where(
+        or(
+          sql`${clientContacts.name} ILIKE ${`%${search}%`}`,
+          sql`${clientContacts.position} ILIKE ${`%${search}%`}`,
+          sql`${clientContacts.email} ILIKE ${`%${search}%`}`,
+          sql`${clientContacts.phone} ILIKE ${`%${search}%`}`
+        )
+      );
+    }
+    
+    // Aplicar filtros adicionais
+    if (filters) {
+      if (filters.is_primary !== undefined) {
+        query = query.where(eq(clientContacts.is_primary, filters.is_primary));
+      }
+      if (filters.position) {
+        query = query.where(sql`${clientContacts.position} ILIKE ${`%${filters.position}%`}`);
+      }
+    }
+    
+    // Contar o total de itens para paginação
+    const [{ count: totalItems }] = await db.select({ count: count() })
       .from(clientContacts)
       .where(eq(clientContacts.client_id, clientId))
-      .orderBy(desc(clientContacts.is_primary), asc(clientContacts.name));
+      .execute();
+    
+    // Aplicar ordenação
+    const orderColumn = clientContacts[sortBy as keyof typeof clientContacts] || clientContacts.name;
+    if (sortOrder === 'desc') {
+      query = query.orderBy(desc(orderColumn));
+    } else {
+      query = query.orderBy(asc(orderColumn));
+    }
+    
+    // Manter os contatos primários sempre no topo independente da ordenação, exceto se a ordenação for por is_primary
+    if (sortBy !== 'is_primary') {
+      query = query.orderBy(desc(clientContacts.is_primary));
+    }
+    
+    // Aplicar paginação
+    const offset = (page - 1) * limit;
+    query = query.limit(limit).offset(offset);
+    
+    // Executar a query
+    const data = await query;
+    
+    // Calcular metadados de paginação
+    const totalPages = Math.ceil(Number(totalItems) / limit);
+    
+    // Retornar resultado paginado
+    return {
+      data,
+      meta: {
+        currentPage: page,
+        totalPages,
+        totalItems: Number(totalItems),
+        itemsPerPage: limit
+      }
+    };
   }
 
   async createClientContact(contact: InsertClientContact): Promise<ClientContact> {
     // Se este for o primeiro contato para o cliente, defina como primário
-    const existingContacts = await this.getClientContacts(contact.client_id);
+    const existingContacts = await this.getClientContacts(contact.client_id) as ClientContact[];
     const isPrimary = existingContacts.length === 0 ? true : contact.is_primary || false;
     
     // Se este contato estiver sendo definido como primário, remova essa flag de todos os outros

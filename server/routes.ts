@@ -654,8 +654,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/contacts", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      const contacts = await storage.getClientContacts(clientId);
-      res.json(contacts);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'name';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.is_primary !== undefined) {
+        filters.is_primary = req.query.is_primary === 'true';
+      }
+      if (req.query.position) {
+        filters.position = req.query.position;
+      }
+      
+      // Obter contatos do cliente com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getClientContacts(clientId, queryOptions);
+      res.json(result);
     } catch (error) {
       console.error("Erro ao buscar contatos do cliente:", error);
       res.status(500).json({ message: "Falha ao buscar contatos do cliente" });
@@ -891,10 +918,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clients/:id/interactions", authenticateJWT, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      const interactions = await storage.getClientInteractions(clientId);
-      res.json(interactions);
+      
+      // Extrair parâmetros de paginação, ordenação e busca da query
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const sortBy = req.query.sortBy as string || 'date';
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
+      const search = req.query.search as string || '';
+      
+      // Construir filtros opcionais
+      const filters: Record<string, any> = {};
+      if (req.query.type) {
+        filters.type = req.query.type;
+      }
+      if (req.query.start_date) {
+        filters.start_date = new Date(req.query.start_date as string);
+      }
+      if (req.query.end_date) {
+        filters.end_date = new Date(req.query.end_date as string);
+      }
+      
+      // Obter interações do cliente com paginação
+      const queryOptions: QueryOptions = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        search,
+        filters
+      };
+      
+      const result = await storage.getClientInteractions(clientId, queryOptions);
+      res.json(result);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch client interactions" });
+      console.error("Erro ao buscar interações do cliente:", error);
+      res.status(500).json({ message: "Falha ao buscar interações do cliente" });
     }
   });
 
