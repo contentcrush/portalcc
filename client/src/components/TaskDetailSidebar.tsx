@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -98,7 +99,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/attachments`] });
-      toast({
+      showSuccessToast({
         title: "Anexo adicionado",
         description: "O arquivo foi anexado com sucesso.",
       });
@@ -121,7 +122,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
-      toast({
+      showSuccessToast({
         title: "Comentário adicionado",
         description: "Seu comentário foi adicionado com sucesso.",
       });
@@ -150,7 +151,7 @@ export default function TaskDetailSidebar({ taskId, onClose, onEdit }: TaskDetai
       if (task?.project_id) {
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${task.project_id}/tasks`] });
       }
-      toast({
+      showSuccessToast({
         title: variables.completed ? "Tarefa concluída" : "Tarefa reaberta",
         description: task?.title,
       });
