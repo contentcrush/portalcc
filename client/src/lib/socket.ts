@@ -1,4 +1,5 @@
 import { Socket, io } from 'socket.io-client';
+import { getMobileAuthHeader } from './mobile-auth';
 
 // Determinar a URL base para conexão
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -99,7 +100,22 @@ export function initWebSocket(): Promise<WebSocket> {
 
     try {
       console.log('Iniciando nova conexão WebSocket:', wsUrl);
-      ws = new WebSocket(wsUrl);
+      
+      // Verificar se temos um token de autenticação mobile
+      const authHeader = getMobileAuthHeader();
+      
+      // Configurar cabeçalhos personalizados para o WebSocket
+      const headers = authHeader ? { 'Authorization': authHeader.Authorization } : undefined;
+      
+      // Criar WebSocket com cabeçalhos personalizados se disponíveis
+      ws = headers 
+        ? new WebSocket(wsUrl, { headers })
+        : new WebSocket(wsUrl);
+      
+      // Se temos um cabeçalho de autorização, registrar que estamos usando token mobile
+      if (headers) {
+        console.log('Conectando WebSocket com token de autenticação mobile');
+      }
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
