@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File, Download } from "lucide-react";
-import { formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages } from "@/lib/utils";
+import { formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages, showSuccessToast } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { TEAM_ROLE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -162,7 +162,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/stages`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
-      toast({
+      showSuccessToast({
         title: "Etapa atualizada",
         description: "A etapa do projeto foi atualizada com sucesso."
       });
@@ -192,7 +192,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      toast({
+      showSuccessToast({
         title: "Projeto duplicado com sucesso",
         description: `O projeto "${data.name}" foi criado.`
       });
@@ -219,7 +219,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       
-      toast({
+      showSuccessToast({
         title: "Projeto excluído com sucesso",
         description: "O projeto e todos seus dados relacionados foram removidos permanentemente."
       });
