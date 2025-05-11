@@ -300,7 +300,7 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   <span title={formatDateWithTime(task.due_date, task.due_time)}>
                     {getFormattedDueDate()}
                     {task.due_time && (
-                      <span className="ml-1 text-xs font-medium">
+                      <span className="ml-1 text-xs font-medium whitespace-nowrap">
                         às {task.due_time}
                       </span>
                     )}

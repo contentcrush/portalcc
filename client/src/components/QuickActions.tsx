@@ -69,7 +69,7 @@ export default function QuickActions() {
     select: (data: Task[]) => {
       // Incluir apenas tarefas não concluídas
       const pendingTasks = [...data].filter(task => 
-        task.status !== 'concluído' && task.due_date
+        task.status !== 'concluido' && !task.completed && task.due_date
       );
       
       // Mapear tarefas com informações de projeto e responsável
