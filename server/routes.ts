@@ -18,6 +18,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
+import jwt from 'jsonwebtoken';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -3775,11 +3776,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar WebSocket Server (usando 'ws' para WebSockets nativos)
   const wss = new WebSocketServer({ 
     server: httpServer, 
-    path: '/ws' 
+    path: '/ws',
+    // Adicionar verificação de headers na conexão
+    verifyClient: (info, cb) => {
+      try {
+        // Extrair o token do cabeçalho Authorization
+        const authorization = info.req.headers.authorization;
+        
+        if (!authorization) {
+          // Se não houver token, permitir a conexão, mas o cliente não estará autenticado
+          cb(true);
+          return;
+        }
+        
+        const parts = authorization.split(' ');
+        if (parts.length !== 2 || parts[0] !== 'Bearer') {
+          // Formato inválido do token
+          cb(true);
+          return;
+        }
+        
+        const token = parts[1];
+        
+        // Verificar o token (usando a mesma chave JWT do auth.ts)
+        const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-jwt-secret-key-2025';
+        
+        // Não lançamos erro, só marcamos a conexão como autenticada ou não
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          // Armazenar o usuário decodificado para usar posteriormente
+          info.req.user = decoded;
+        } catch (error) {
+          // Não fazemos nada, apenas permitimos a conexão não autenticada
+        }
+        
+        // Permitir a conexão em todos os casos
+        cb(true);
+      } catch (error) {
+        console.error('Erro na verificação da conexão WebSocket:', error);
+        cb(true); // Permitir mesmo com erro, mas não estará autenticado
+      }
+    }
   });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
     console.log('Nova conexão WebSocket estabelecida');
+    
+    // Anexar o usuário autenticado ao objeto WebSocket para referência
+    if (req.user) {
+      ws.user = req.user;
+      console.log(`WebSocket autenticado para usuário ID: ${req.user.userId || req.user.id}`);
+    }
     
     ws.on('message', async (message) => {
       try {
