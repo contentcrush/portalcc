@@ -450,7 +450,9 @@ export function onNewComment(callback: (comment: any) => void): () => void {
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('new-comment', callback);
+    if (socket) {
+      socket.off('new-comment', callback);
+    }
   };
 }
 
@@ -467,7 +469,9 @@ export function onNewProjectComment(callback: (comment: any) => void): () => voi
   
   // Retorna função para remover o listener
   return () => {
-    socket.off('new-project-comment', callback);
+    if (socket) {
+      socket.off('new-project-comment', callback);
+    }
   };
 }
 

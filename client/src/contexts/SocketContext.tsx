@@ -177,18 +177,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       });
     });
     
-    // Registrar handlers para eventos financeiros e de calendário no nível global
+    // Handlers para eventos financeiros
     const unregisterFinancialHandler = onWebSocketMessage('financial_updated', (data) => {
       console.log('Evento global financial_updated recebido:', data);
       // Não precisamos fazer nada aqui, apenas garantir que o socket está registrado
     });
     
-    const unregisterCalendarHandler = onWebSocketMessage('calendar_updated', (data) => {
-      console.log('Evento global calendar_updated recebido:', data);
-      // Não precisamos fazer nada aqui, apenas garantir que o socket está registrado
-    });
-    
-    // Registrar também para os formatos antigos para compatibilidade
     const unregisterOldFinancialHandler = onWebSocketMessage('financial_update', (data) => {
       console.log('Evento global financial_update (formato antigo) recebido:', data);
       // Reenviar como financial_updated para manter compatibilidade
@@ -196,7 +190,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         const newEvent = { ...data, type: 'financial_updated' };
         try {
           // Processar manualmente a mensagem como se tivesse vindo do servidor
-          // Usando a função auxiliar para acessar os handlers
           const handlers = getMessageHandlersForType('financial_updated');
           if (handlers && handlers.length > 0) {
             handlers.forEach(h => h(newEvent));
@@ -207,16 +200,94 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     });
     
+    // Handlers para eventos de calendário
+    const unregisterCalendarHandler = onWebSocketMessage('calendar_updated', (data) => {
+      console.log('Evento global calendar_updated recebido:', data);
+      // Não precisamos fazer nada aqui, apenas garantir que o socket está registrado
+    });
+    
+    // Handlers para clientes
+    const unregisterClientUpdatedHandler = onWebSocketMessage('client_updated', (data) => {
+      console.log('Evento client_updated recebido:', data);
+      // Aqui podemos invalidar a cache ou atualizar o estado diretamente
+      // Em produção, isso poderia disparar uma atualização de dados
+    });
+    
+    const unregisterClientUpdateHandler = onWebSocketMessage('client_update', (data) => {
+      console.log('Evento client_update recebido:', data);
+      // Compatibilidade para o formato antigo de atualização de cliente
+      if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+        const newEvent = { ...data, type: 'client_updated' };
+        try {
+          const handlers = getMessageHandlersForType('client_updated');
+          if (handlers && handlers.length > 0) {
+            handlers.forEach(h => h(newEvent));
+          }
+        } catch (error) {
+          console.error('Erro ao processar evento client_update para client_updated:', error);
+        }
+      }
+    });
+    
+    // Handlers para projetos
+    const unregisterProjectUpdatedHandler = onWebSocketMessage('project_updated', (data) => {
+      console.log('Evento project_updated recebido:', data);
+      // Aqui podemos invalidar a cache ou atualizar o estado diretamente
+    });
+    
+    // Handlers para tarefas
+    const unregisterTaskUpdatedHandler = onWebSocketMessage('task_updated', (data) => {
+      console.log('Evento task_updated recebido:', data);
+      // Aqui podemos invalidar a cache ou atualizar o estado diretamente
+    });
+    
+    // Handlers para comentários
+    const unregisterCommentUpdatedHandler = onWebSocketMessage('comment_updated', (data) => {
+      console.log('Evento comment_updated recebido:', data);
+    });
+    
+    // Handlers para reações de comentários
+    const unregisterReactionUpdatedHandler = onWebSocketMessage('reaction_updated', (data) => {
+      console.log('Evento reaction_updated recebido:', data);
+    });
+    
+    // Handlers para usuários
+    const unregisterUserUpdatedHandler = onWebSocketMessage('user_updated', (data) => {
+      console.log('Evento user_updated recebido:', data);
+    });
+    
+    const unregisterUserStatusHandler = onWebSocketMessage('user_status', (data) => {
+      console.log('Evento user_status recebido:', data);
+    });
+    
     // Limpar conexões quando o componente desmontar
     return () => {
       mounted = false;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
+      
+      // Desregistrar todos os handlers de eventos
       unregisterNotifHandler();
       unregisterFinancialHandler();
       unregisterCalendarHandler();
       unregisterOldFinancialHandler();
+      
+      // Desregistrar handlers para entidades
+      unregisterClientUpdatedHandler();
+      unregisterClientUpdateHandler();
+      unregisterProjectUpdatedHandler();
+      unregisterTaskUpdatedHandler();
+      
+      // Desregistrar handlers para comentários e reações
+      unregisterCommentUpdatedHandler();
+      unregisterReactionUpdatedHandler();
+      
+      // Desregistrar handlers para usuários
+      unregisterUserUpdatedHandler();
+      unregisterUserStatusHandler();
+      
+      // Fechar todas as conexões
       closeConnections();
     };
   }, [user, toast, isConnected]);
