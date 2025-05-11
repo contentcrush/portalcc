@@ -6,6 +6,7 @@
  */
 
 import { queryClient } from "./queryClient";
+import { toast } from "@/hooks/use-toast";
 
 // Chaves para armazenamento local
 const ACCESS_TOKEN_KEY = 'content_crush_access_token';
@@ -131,6 +132,71 @@ export async function refreshMobileTokens(): Promise<boolean> {
     return false;
   } catch (error) {
     console.error('Erro ao renovar tokens mobile:', error);
+    return false;
+  }
+}
+
+// Realiza login direto em dispositivos móveis
+export async function performMobileLogin(username: string, password: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/mobile-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      toast({
+        title: "Falha na autenticação",
+        description: errorData.message || "Não foi possível fazer login. Verifique suas credenciais.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    const data = await response.json();
+    
+    // Salvar tokens no localStorage para dispositivos móveis
+    if (data.token && data.refreshToken) {
+      saveTokensToLocalStorage(data.token, data.refreshToken, data.expiresIn || 15 * 60);
+      
+      // Atualizar dados do usuário no cache
+      if (data.user) {
+        queryClient.setQueryData(['/api/auth/me'], { 
+          user: data.user
+        });
+        
+        toast({
+          title: "Login efetuado com sucesso",
+          description: `Bem-vindo de volta, ${data.user.name}!`,
+          variant: "default"
+        });
+        
+        // Se for administrador, mostrar informação adicional
+        if (data.user.role === 'admin') {
+          toast({
+            title: "Acesso administrativo",
+            description: "Você está conectado com privilégios de administrador.",
+            variant: "default"
+          });
+        }
+      }
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Erro ao fazer login mobile:', error);
+    toast({
+      title: "Erro de conexão",
+      description: "Não foi possível conectar ao servidor. Verifique sua conexão com a internet.",
+      variant: "destructive"
+    });
     return false;
   }
 }

@@ -5,13 +5,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { isMobileDevice, performMobileLogin } from "@/lib/mobile-auth";
 
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { EyeIcon, EyeOffIcon, KeyRound, Lock, User, Users } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { EyeIcon, EyeOffIcon, KeyRound, Lock, User, Users, Smartphone, AlertCircle, Info } from "lucide-react";
 
 // Validação para o formulário de login
 const loginSchema = z.object({
@@ -70,8 +73,17 @@ export default function AuthPage() {
   });
 
   // Submissão do formulário de login
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    // Se for dispositivo móvel, usar método específico mobile que armazena tokens
+    if (isMobileDevice()) {
+      const success = await performMobileLogin(data.username, data.password);
+      if (success) {
+        setLocation("/");
+      }
+    } else {
+      // Login normal para desktop
+      loginMutation.mutate(data);
+    }
   };
 
   // Submissão do formulário de registro
@@ -141,6 +153,32 @@ export default function AuthPage() {
 
               {/* Tab de Login */}
               <TabsContent value="login" className="mt-0">
+                {isMobileDevice() && (
+                  <Alert className="mb-4">
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    <AlertTitle>Dispositivo móvel detectado</AlertTitle>
+                    <AlertDescription>
+                      Utilizando autenticação otimizada para dispositivos móveis.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {isMobileDevice() && (
+                  <div className="mb-4">
+                    <Alert variant="default" className="bg-blue-50 border-blue-200">
+                      <Info className="h-4 w-4 text-blue-500 mr-2" />
+                      <AlertTitle className="text-blue-700">Usuários recomendados para teste:</AlertTitle>
+                      <AlertDescription className="text-blue-600 text-sm">
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                          <li><strong>Admin:</strong> bruno.silva / password</li>
+                          <li><strong>Editor:</strong> ana.oliveira / password</li>
+                          <li><strong>Viewer:</strong> Teste / password</li>
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+                
                 <Form {...loginForm}>
                   <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                     <FormField
@@ -205,7 +243,14 @@ export default function AuthPage() {
                       className="w-full bg-rose-500 hover:bg-rose-600" 
                       disabled={loginMutation.isPending}
                     >
-                      {loginMutation.isPending ? "Entrando..." : "Entrar"}
+                      {isMobileDevice() ? (
+                        <div className="flex items-center justify-center">
+                          <Smartphone className="mr-2 h-4 w-4" />
+                          <span>{loginMutation.isPending ? "Entrando..." : "Entrar com Mobile Auth"}</span>
+                        </div>
+                      ) : (
+                        <span>{loginMutation.isPending ? "Entrando..." : "Entrar"}</span>
+                      )}
                     </Button>
                   </form>
                 </Form>
