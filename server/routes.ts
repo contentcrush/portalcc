@@ -1568,11 +1568,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Converter para Date objeto se for string
             let dueDate = new Date(req.body.due_date);
             
-            // Se temos um horário específico no formato combinado (data + hora)
+            // Se temos um horário específico no campo temporário (due_time_temp)
             // Mantenha o horário fornecido
-            if (req.body.due_time) {
-              // Extrair horas e minutos do campo due_time (formato: "HH:MM")
-              const [hours, minutes] = req.body.due_time.split(':').map(Number);
+            if (req.body.due_time_temp) {
+              // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
+              const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
               
               // Definir horas e minutos na data de vencimento
               dueDate.setUTCHours(hours, minutes, 0, 0);
@@ -1638,7 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanedData = { ...req.body };
       if (cleanedData.start_date === '') cleanedData.start_date = null;
       if (cleanedData.due_date === '') cleanedData.due_date = null;
-      if (cleanedData.due_time === '') cleanedData.due_time = null;
+      if (cleanedData.due_time_temp === '') cleanedData.due_time_temp = null;
       if (cleanedData.estimated_hours === '') cleanedData.estimated_hours = null;
       
       // Conversão de datas de string para Date
@@ -1667,11 +1667,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Converte a data de input (formato YYYY-MM-DD) para objeto Date
           let dueDate = parseISO(cleanedData.due_date);
           
-          // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
-          // Se for apenas data (sem hora), definir para final do dia em UTC
-          if (dueDate.getUTCHours() === 0 && 
-              dueDate.getUTCMinutes() === 0 && 
-              dueDate.getUTCSeconds() === 0) {
+          // Se temos um horário específico no campo temporário due_time_temp, use-o
+          if (cleanedData.due_time_temp) {
+            // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
+            const [hours, minutes] = cleanedData.due_time_temp.split(':').map(Number);
+            
+            // Definir horas e minutos na data de vencimento
+            dueDate.setUTCHours(hours, minutes, 0, 0);
+          }
+          // Se não temos horário específico e a data está em meia-noite UTC,
+          // definimos para o final do dia (23:59:59)
+          else if (dueDate.getUTCHours() === 0 && 
+                  dueDate.getUTCMinutes() === 0 && 
+                  dueDate.getUTCSeconds() === 0) {
             // Definir para 23:59:59 UTC
             dueDate.setUTCHours(23, 59, 59, 999);
           }
