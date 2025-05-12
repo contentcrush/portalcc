@@ -99,8 +99,11 @@ const taskFormSchema = insertTaskSchema.extend({
   title: z.string().min(3, {
     message: "O título deve ter pelo menos 3 caracteres",
   }),
-  due_time: z.string().nullable().optional(),
   // Schema already handles date transformations
+  
+  // Campo temporário usado apenas para capturar a hora durante a edição do formulário
+  // Não será enviado para o backend
+  due_time_temp: z.string().nullable().optional(),
 });
 
 export default function Tasks() {
@@ -136,7 +139,7 @@ export default function Tasks() {
       estimated_hours: undefined,
       due_date: undefined,
       start_date: undefined,
-      due_time: undefined,
+      due_time_temp: undefined,
     },
   });
 
@@ -275,10 +278,30 @@ export default function Tasks() {
 
   // Form submission handler
   const onSubmit = (data: z.infer<typeof taskFormSchema>) => {
+    // Vamos processar os dados para combinar data e hora em um único timestamp
+    const processedData = { ...data };
+    
+    // Remover o campo temporário que usamos apenas para a interface
+    delete processedData.due_time_temp;
+    
+    // Se temos data e hora, vamos combiná-las em um único timestamp ISO
+    if (processedData.due_date && data.due_time_temp) {
+      // Extrair a data do campo due_date
+      const datePart = processedData.due_date as string;
+      // Extrair a hora do campo due_time_temp
+      const timePart = data.due_time_temp;
+      
+      // Criar um objeto Date combinando data e hora
+      const combinedDateTime = new Date(`${datePart}T${timePart}:00`);
+      
+      // Atualizar o campo due_date com o timestamp combinado
+      processedData.due_date = combinedDateTime;
+    }
+    
     if (selectedTask) {
-      updateTaskMutation.mutate({ id: selectedTask.id, data });
+      updateTaskMutation.mutate({ id: selectedTask.id, data: processedData });
     } else {
-      createTaskMutation.mutate(data);
+      createTaskMutation.mutate(processedData);
     }
   };
 
@@ -295,7 +318,7 @@ export default function Tasks() {
       estimated_hours: undefined,
       due_date: undefined,
       start_date: undefined,
-      due_time: undefined,
+      due_time_temp: undefined,
     });
     setIsDialogOpen(true);
   };
@@ -305,19 +328,39 @@ export default function Tasks() {
     const task = tasks?.find((t: TaskWithDetails) => t.id === taskId);
     if (task) {
       setSelectedTask(task);
+      
+      // Extrai a hora da data de vencimento (se disponível)
+      let due_time_temp = undefined;
+      let formattedDueDate = undefined;
+      
+      if (task.due_date) {
+        const dueDate = new Date(task.due_date);
+        const localDueDate = toZonedTime(dueDate, Intl.DateTimeFormat().resolvedOptions().timeZone);
+        
+        // Para o campo de data, formatamos apenas a data (YYYY-MM-DD)
+        formattedDueDate = format(localDueDate, 'yyyy-MM-dd');
+        
+        // Se o horário não for meia-noite, extraímos ele para o campo de horas
+        const hours = localDueDate.getHours();
+        const minutes = localDueDate.getMinutes();
+        
+        if (hours !== 0 || minutes !== 0) {
+          due_time_temp = format(localDueDate, 'HH:mm');
+        }
+      }
+      
       // Format dates for form input using date-fns to handle timezone properly
       const formattedTask = {
         ...task,
         // Converte de UTC para o timezone local e formata como YYYY-MM-DD para o input date
-        due_date: task.due_date 
-          ? format(toZonedTime(new Date(task.due_date), Intl.DateTimeFormat().resolvedOptions().timeZone), 'yyyy-MM-dd')
-          : undefined,
+        due_date: formattedDueDate,
         start_date: task.start_date 
           ? format(toZonedTime(new Date(task.start_date), Intl.DateTimeFormat().resolvedOptions().timeZone), 'yyyy-MM-dd')
           : undefined,
-        // Mantém o due_time existente ou define como undefined
-        due_time: task.due_time || undefined,
+        // Campo temporário para edição de horas
+        due_time_temp: due_time_temp,
       };
+      
       form.reset(formattedTask);
       setIsDialogOpen(true);
     }
