@@ -278,40 +278,69 @@ export default function Tasks() {
 
   // Form submission handler
   const onSubmit = (data: z.infer<typeof taskFormSchema>) => {
-    // Vamos processar os dados para combinar data e hora em um único timestamp
+    // Criamos uma cópia dos dados para processar
     const processedData = { ...data };
     
     // Adicionando logs para depuração
     console.log("Dados recebidos do formulário:", JSON.stringify(data, null, 2));
     
-    // Remover o campo temporário que usamos apenas para a interface
+    // Processar a data e hora de entrega
     const dueTimeTemp = processedData.due_time_temp;
-    delete processedData.due_time_temp;
+    delete processedData.due_time_temp; // Remover campo temporário
     
-    // Se não temos data de entrega, mas temos data de início e hora de entrega,
-    // usamos a data de início como data de entrega
-    if (!processedData.due_date && processedData.start_date && dueTimeTemp) {
-      console.log("Usando start_date como due_date:", processedData.start_date);
-      processedData.due_date = processedData.start_date;
-    }
-    
-    // Se temos data e hora, vamos combiná-las em um único timestamp ISO
-    if (processedData.due_date && dueTimeTemp) {
-      // Extrair a data do campo due_date
-      const datePart = processedData.due_date as string;
-      // Extrair a hora do campo due_time_temp
-      const timePart = dueTimeTemp;
-      
-      console.log("Combinando data:", datePart, "com hora:", timePart);
-      
-      // Criar um objeto Date combinando data e hora
-      const combinedDateTime = new Date(`${datePart}T${timePart}:00`);
-      
-      // Atualizar o campo due_date com o timestamp combinado
-      processedData.due_date = combinedDateTime;
-      
-      // Log para debug
-      console.log("Data e hora combinadas:", combinedDateTime);
+    try {
+      // Caso 1: Não temos data de entrega, mas temos data de início e hora
+      if (!processedData.due_date && processedData.start_date && dueTimeTemp) {
+        console.log("Caso 1: Usando start_date como due_date com hora específica");
+        
+        // Criar data base a partir da data de início (que deve estar em formato YYYY-MM-DD)
+        const startDateStr = processedData.start_date as string;
+        
+        // Dividir a hora em horas e minutos
+        const [hours, minutes] = dueTimeTemp.split(':').map(Number);
+        
+        // Criar objeto de data a partir da data de início
+        const baseDate = new Date(`${startDateStr}T00:00:00`);
+        
+        // Definir as horas e minutos
+        baseDate.setHours(hours, minutes, 0, 0);
+        
+        processedData.due_date = baseDate;
+        console.log("Data base criada:", baseDate.toISOString());
+      }
+      // Caso 2: Temos data de entrega e hora
+      else if (processedData.due_date && dueTimeTemp) {
+        console.log("Caso 2: Combinando due_date existente com hora específica");
+        
+        let baseDate: Date;
+        
+        // Verificar se a data está em formato string ou já é um objeto Date
+        if (typeof processedData.due_date === 'string') {
+          // Se for uma string ISO, parseamos diretamente
+          if (processedData.due_date.includes('T')) {
+            baseDate = new Date(processedData.due_date);
+          } 
+          // Se for uma string simples (YYYY-MM-DD), criamos uma data às 00:00
+          else {
+            baseDate = new Date(`${processedData.due_date}T00:00:00`);
+          }
+        } else {
+          // Se já for um objeto Date, usamos diretamente
+          baseDate = new Date(processedData.due_date);
+        }
+        
+        // Dividir a hora em horas e minutos
+        const [hours, minutes] = dueTimeTemp.split(':').map(Number);
+        
+        // Atualizar apenas as horas e minutos, mantendo a data
+        baseDate.setHours(hours, minutes, 0, 0);
+        
+        processedData.due_date = baseDate;
+        console.log("Data combinada:", baseDate.toISOString());
+      }
+    } catch (error) {
+      console.error("Erro ao processar data/hora:", error);
+      // Em caso de erro, mantenha os dados originais
     }
     
     // Log final dos dados processados antes de enviar
@@ -900,6 +929,13 @@ export default function Tasks() {
                             value={field.value || ''}
                           />
                         </FormControl>
+                        <FormDescription>
+                          {!field.value && form.getValues("due_time_temp") && (
+                            <div className="text-amber-500 text-xs mt-1">
+                              ⚠️ Preencha a data ou a hora será aplicada à data de início.
+                            </div>
+                          )}
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -992,9 +1028,11 @@ export default function Tasks() {
                 
                 <div className="pt-5 pb-4">
                   {form.getValues("due_time_temp") && !form.getValues("due_date") && form.getValues("start_date") && (
-                    <p className="text-xs text-amber-500 mb-2">
-                      ⚠️ Hora de entrega será aplicada à Data de início pois não há Data de entrega especificada.
-                    </p>
+                    <div className="px-3 py-2 mb-3 rounded bg-amber-50 border border-amber-200">
+                      <p className="text-xs text-amber-700">
+                        <strong>⚠️ Aviso:</strong> Quando você especifica apenas uma hora de entrega sem data, o sistema usará a data de início como referência.
+                      </p>
+                    </div>
                   )}
                   <DialogFooter className="flex flex-row justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

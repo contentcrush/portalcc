@@ -1563,41 +1563,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // CORREÇÃO: Se temos due_time_temp mas não temos due_date, use start_date como base
-        if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
-          console.log("CORREÇÃO: Usando start_date como base para due_date com due_time_temp");
-          req.body.due_date = req.body.start_date;
-        }
-        
+        // Processamento robusto de data/hora
         if (req.body.due_date) {
           try {
-            // Converter para Date objeto se for string
-            let dueDate = new Date(req.body.due_date);
+            console.log("Processando data de entrega:", req.body.due_date);
+            
+            // Primeiro, verificamos se a data está em formato ISO ou de objetos Date serializados
+            let dueDate: Date;
+            
+            if (typeof req.body.due_date === 'string') {
+              // Para string ISO
+              dueDate = new Date(req.body.due_date);
+            } else if (req.body.due_date instanceof Date) {
+              // Para data direta (raro, mas possível em alguns casos)
+              dueDate = req.body.due_date;
+            } else if (typeof req.body.due_date === 'object') {
+              // Para objeto Date serializado pelo JSON
+              dueDate = new Date(req.body.due_date);
+            } else {
+              throw new Error(`Formato de data inválido: ${typeof req.body.due_date}`);
+            }
+            
+            // Validar se a data é válida
+            if (isNaN(dueDate.getTime())) {
+              throw new Error(`Data inválida: ${req.body.due_date}`);
+            }
+            
+            console.log("Data parseada inicialmente:", dueDate.toISOString());
             
             // Se temos um horário específico no campo temporário (due_time_temp)
-            // Mantenha o horário fornecido
             if (req.body.due_time_temp) {
-              // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
-              const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
-              
-              console.log("CORREÇÃO: Aplicando hora específica:", hours, ":", minutes, "à data:", dueDate.toISOString());
-              
-              // Definir horas e minutos na data de vencimento
-              dueDate.setUTCHours(hours, minutes, 0, 0);
-              
-              console.log("CORREÇÃO: Data resultante após aplicar hora:", dueDate.toISOString());
+              try {
+                // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
+                const timeStr = req.body.due_time_temp;
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                
+                if (isNaN(hours) || isNaN(minutes)) {
+                  throw new Error(`Formato de hora inválido: ${timeStr}`);
+                }
+                
+                console.log(`Aplicando hora específica: ${hours}:${minutes} à data:`, dueDate.toISOString());
+                
+                // Criar uma nova data mantendo o ano, mês e dia, mas atualizando horas e minutos
+                const year = dueDate.getFullYear();
+                const month = dueDate.getMonth();
+                const day = dueDate.getDate();
+                
+                // Criar nova data com as horas específicas
+                dueDate = new Date(year, month, day, hours, minutes, 0, 0);
+                
+                console.log("Data após aplicar hora:", dueDate.toISOString());
+              } catch (timeError) {
+                console.error("Erro ao processar hora:", timeError);
+                // Se falhar o processamento da hora, mantemos a data original
+              }
             } 
-            // Se não temos horário específico e a data está em meia-noite UTC,
+            // Se não temos horário específico e a data está em meia-noite local,
             // definimos para o final do dia (23:59:59)
-            else if (dueDate.getUTCHours() === 0 && 
-                     dueDate.getUTCMinutes() === 0 && 
-                     dueDate.getUTCSeconds() === 0) {
-              dueDate.setUTCHours(23, 59, 59, 999);
+            else if (dueDate.getHours() === 0 && 
+                     dueDate.getMinutes() === 0 && 
+                     dueDate.getSeconds() === 0) {
+              dueDate.setHours(23, 59, 59, 999);
+              console.log("Data ajustada para final do dia:", dueDate.toISOString());
             }
             
             taskData.due_date = dueDate;
           } catch (e) {
             console.error("Erro ao processar due_date:", e);
+            taskData.due_date = null;
+          }
+        } 
+        // Se não temos data de entrega, mas temos data de início e hora, usamos a data de início
+        else if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
+          try {
+            console.log("Usando start_date como base para due_date com due_time_temp");
+            
+            // Criar data a partir da data de início
+            let baseDate = new Date(req.body.start_date);
+            
+            // Extrair horas e minutos
+            const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
+            
+            // Definir horas e minutos
+            baseDate.setHours(hours, minutes, 0, 0);
+            
+            console.log("Data resultante:", baseDate.toISOString());
+            
+            taskData.due_date = baseDate;
+          } catch (e) {
+            console.error("Erro ao processar start_date + due_time_temp:", e);
             taskData.due_date = null;
           }
         }
