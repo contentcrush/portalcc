@@ -299,9 +299,10 @@ export default function TaskItem({ task, onSelect, onEdit, isCompleted = false }
                   <CalendarDays className="h-3 w-3" />
                   <div className="flex flex-nowrap items-center" title={formatDateWithTime(task.due_date)}>
                     <span>{getFormattedDueDate()}</span>
-                    {task.due_time && (
+                    {/* Extrair e mostrar o horário diretamente do due_date timestamp */}
+                    {task.due_date && new Date(task.due_date).getHours() !== 23 && (
                       <span className="ml-1 text-xs font-medium whitespace-nowrap">
-                        às {task.due_time}
+                        às {new Date(task.due_date).getHours().toString().padStart(2, '0')}:{new Date(task.due_date).getMinutes().toString().padStart(2, '0')}
                       </span>
                     )}
                   </div>

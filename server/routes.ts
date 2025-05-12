@@ -1592,10 +1592,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        console.log("Dados processados para inserção:", JSON.stringify(taskData, null, 2));
+        // Remover campos temporários que não existem no banco de dados
+        const { due_time_temp, ...dataToSave } = taskData;
+        
+        console.log("Dados processados para inserção:", JSON.stringify(dataToSave, null, 2));
         
         // Criar a tarefa no banco de dados
-        const task = await storage.createTask(taskData);
+        const task = await storage.createTask(dataToSave);
         console.log("Tarefa criada com sucesso:", JSON.stringify(task, null, 2));
         
         res.status(201).json(task);
@@ -1706,9 +1709,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleanedData.completion_date = null;
       }
       
-      console.log("Atualizando tarefa:", id, cleanedData);
+      // Remover campos temporários que não existem no banco de dados
+      // due_time_temp é usado apenas na interface para facilitar a entrada de dados
+      const { due_time_temp, ...dataToUpdate } = cleanedData;
       
-      const updatedTask = await storage.updateTask(id, cleanedData);
+      console.log("Atualizando tarefa:", id, dataToUpdate);
+      
+      const updatedTask = await storage.updateTask(id, dataToUpdate);
       
       if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
