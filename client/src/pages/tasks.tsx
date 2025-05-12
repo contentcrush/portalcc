@@ -890,7 +890,7 @@ export default function Tasks() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="due_time"
+                    name="due_time_temp"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Hora de entrega</FormLabel>
