@@ -281,21 +281,28 @@ export default function Tasks() {
     // Vamos processar os dados para combinar data e hora em um único timestamp
     const processedData = { ...data };
     
+    // Adicionando logs para depuração
+    console.log("Dados recebidos do formulário:", JSON.stringify(data, null, 2));
+    
     // Remover o campo temporário que usamos apenas para a interface
+    const dueTimeTemp = processedData.due_time_temp;
     delete processedData.due_time_temp;
     
     // Se não temos data de entrega, mas temos data de início e hora de entrega,
     // usamos a data de início como data de entrega
-    if (!processedData.due_date && processedData.start_date && data.due_time_temp) {
+    if (!processedData.due_date && processedData.start_date && dueTimeTemp) {
+      console.log("Usando start_date como due_date:", processedData.start_date);
       processedData.due_date = processedData.start_date;
     }
     
     // Se temos data e hora, vamos combiná-las em um único timestamp ISO
-    if (processedData.due_date && data.due_time_temp) {
+    if (processedData.due_date && dueTimeTemp) {
       // Extrair a data do campo due_date
       const datePart = processedData.due_date as string;
       // Extrair a hora do campo due_time_temp
-      const timePart = data.due_time_temp;
+      const timePart = dueTimeTemp;
+      
+      console.log("Combinando data:", datePart, "com hora:", timePart);
       
       // Criar um objeto Date combinando data e hora
       const combinedDateTime = new Date(`${datePart}T${timePart}:00`);
@@ -306,6 +313,9 @@ export default function Tasks() {
       // Log para debug
       console.log("Data e hora combinadas:", combinedDateTime);
     }
+    
+    // Log final dos dados processados antes de enviar
+    console.log("Dados finais para envio:", JSON.stringify(processedData, null, 2));
     
     if (selectedTask) {
       updateTaskMutation.mutate({ id: selectedTask.id, data: processedData });

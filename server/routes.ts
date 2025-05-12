@@ -1563,6 +1563,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // CORREÇÃO: Se temos due_time_temp mas não temos due_date, use start_date como base
+        if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
+          console.log("CORREÇÃO: Usando start_date como base para due_date com due_time_temp");
+          req.body.due_date = req.body.start_date;
+        }
+        
         if (req.body.due_date) {
           try {
             // Converter para Date objeto se for string
@@ -1574,8 +1580,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
               const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
               
+              console.log("CORREÇÃO: Aplicando hora específica:", hours, ":", minutes, "à data:", dueDate.toISOString());
+              
               // Definir horas e minutos na data de vencimento
               dueDate.setUTCHours(hours, minutes, 0, 0);
+              
+              console.log("CORREÇÃO: Data resultante após aplicar hora:", dueDate.toISOString());
             } 
             // Se não temos horário específico e a data está em meia-noite UTC,
             // definimos para o final do dia (23:59:59)
@@ -1593,7 +1603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Remover campos temporários que não existem no banco de dados
-        const { due_time_temp, ...dataToSave } = taskData;
+        delete req.body.due_time_temp;
+        const cleanTaskData = { ...taskData };
         
         console.log("Dados processados para inserção:", JSON.stringify(dataToSave, null, 2));
         
