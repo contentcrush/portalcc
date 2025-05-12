@@ -150,7 +150,7 @@ export default function Tasks() {
       // Log temporário para depuração
       if (data && data.length > 0) {
         console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
-        console.log("DEBUG - Tipo de due_time:", typeof data[0].due_time);
+        console.log("DEBUG - Formato de due_date:", data[0].due_date ? new Date(data[0].due_date).toISOString() : "null");
       }
     }
   });
