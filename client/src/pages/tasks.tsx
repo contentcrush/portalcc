@@ -284,6 +284,12 @@ export default function Tasks() {
     // Remover o campo temporário que usamos apenas para a interface
     delete processedData.due_time_temp;
     
+    // Se não temos data de entrega, mas temos data de início e hora de entrega,
+    // usamos a data de início como data de entrega
+    if (!processedData.due_date && processedData.start_date && data.due_time_temp) {
+      processedData.due_date = processedData.start_date;
+    }
+    
     // Se temos data e hora, vamos combiná-las em um único timestamp ISO
     if (processedData.due_date && data.due_time_temp) {
       // Extrair a data do campo due_date
@@ -296,6 +302,9 @@ export default function Tasks() {
       
       // Atualizar o campo due_date com o timestamp combinado
       processedData.due_date = combinedDateTime;
+      
+      // Log para debug
+      console.log("Data e hora combinadas:", combinedDateTime);
     }
     
     if (selectedTask) {
