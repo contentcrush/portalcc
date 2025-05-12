@@ -509,7 +509,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
               </svg>
               <span className="text-sm font-medium">
                 {task.due_date ? (
-                  formatDateWithTime(task.due_date, task.due_time)
+                  formatDateWithTime(task.due_date)
                 ) : '-'}
               </span>
             </div>

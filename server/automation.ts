@@ -458,8 +458,16 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
           }
           
           // Criar novo evento para a data de vencimento
-          // Se tem horário específico, não é um evento de dia inteiro
-          const allDayEvent = !task.due_time;
+          // Verificar se a hora está definida analisando o objeto Date
+          const hasSpecificTime = task.due_date && (
+            task.due_date.getUTCHours() !== 23 || 
+            task.due_date.getUTCMinutes() !== 59 || 
+            task.due_date.getUTCSeconds() !== 59
+          );
+          
+          // Se não tem horário específico (está definido como final do dia - 23:59:59),
+          // então é um evento de dia inteiro
+          const allDayEvent = !hasSpecificTime;
           
           await db.insert(events).values({
             title: `Tarefa: ${task.title}`,
@@ -470,16 +478,16 @@ export async function syncTaskEvents(): Promise<{ success: boolean, message: str
             task_id: task.id,
             type: 'prazo',
             start_date: task.due_date,
-            end_date: task.due_time ? addHours(task.due_date, 1) : task.due_date, // Dura 1 hora se tiver horário específico
+            end_date: hasSpecificTime ? addHours(task.due_date!, 1) : task.due_date, // Dura 1 hora se tiver horário específico
             all_day: allDayEvent,
             color,
           });
           
           eventsCreated++;
-          if (task.due_time) {
-            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`);
+          if (hasSpecificTime) {
+            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date!, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`);
           } else {
-            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date, 'dd/MM/yyyy', { locale: ptBR })}`);
+            console.log(`[Automação] Evento de prazo criado para tarefa ${task.title}: ${format(task.due_date!, 'dd/MM/yyyy', { locale: ptBR })}`);
           }
         }
       }

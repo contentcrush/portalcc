@@ -109,16 +109,39 @@ export function formatDate(date: Date | string | null | undefined): string {
 }
 
 /**
- * Formata uma data com horário específico (devido ao campo due_time)
+ * Formata uma data com horário (analisa o timestamp para detectar se tem hora específica)
  * @param date A data (Date ou string ISO)
- * @param time O horário específico no formato HH:MM
- * @returns Data formatada com o horário
+ * @returns Data formatada com o horário se disponível
  */
-export function formatDateWithTime(date: Date | string | null | undefined, time: string | null | undefined): string {
+export function formatDateWithTime(date: Date | string | null | undefined): string {
   if (!date) return "";
-  if (!time) return formatDate(date);
   
-  return `${formatDate(date)} às ${time}`;
+  try {
+    // Timezone do usuário
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Converter para objeto Date
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+    
+    if (!isValid(dateObj)) return "";
+    
+    // Verificar se a data tem um horário específico (diferente de 23:59:59)
+    const hasSpecificTime = dateObj && (
+      dateObj.getUTCHours() !== 23 || 
+      dateObj.getUTCMinutes() !== 59 || 
+      dateObj.getUTCSeconds() !== 59
+    );
+    
+    // Formatar data com ou sem horário dependendo se tem horário específico
+    if (hasSpecificTime) {
+      return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } else {
+      return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy", { locale: ptBR });
+    }
+  } catch (error) {
+    console.error("Erro ao formatar data com horário:", error, date);
+    return "";
+  }
 }
 
 // Importações necessárias para formatação de datas

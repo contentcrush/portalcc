@@ -262,7 +262,7 @@ export default function QuickActions() {
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="h-3 w-3 mr-1" />
-                    <span title={formatDateWithTime(task.due_date, task.due_time)}>
+                    <span title={formatDateWithTime(task.due_date)}>
                       {format(dueDate, 'dd/MM/yyyy')}
                       {task.due_time && (
                         <span className="ml-1 font-medium">
