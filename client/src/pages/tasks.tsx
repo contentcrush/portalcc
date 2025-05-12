@@ -1103,9 +1103,10 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
                   />
                   <span className="whitespace-nowrap">
                     {formatDueDateWithDaysRemaining(task.due_date)}
-                    {task.due_time && (
+                    {/* Extrair hora diretamente do due_date se não for fim do dia (23:59:59) */}
+                    {task.due_date && new Date(task.due_date).getHours() !== 23 && (
                       <span className="ml-1 font-medium">
-                        às {task.due_time}
+                        às {new Date(task.due_date).getHours().toString().padStart(2, '0')}:{new Date(task.due_date).getMinutes().toString().padStart(2, '0')}
                       </span>
                     )}
                   </span>
@@ -1137,10 +1138,10 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
               )}
               
               {/* Completion date for completed tasks (condensed) */}
-              {isCompleted && task.completed_at && (
+              {isCompleted && task.completion_date && (
                 <div className="flex items-center gap-1 text-green-600 ml-auto">
                   <CheckCircle className="h-3 w-3" />
-                  <span>{formatDate(task.completed_at)}</span>
+                  <span>{formatDate(task.completion_date)}</span>
                 </div>
               )}
             </div>

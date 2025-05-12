@@ -186,7 +186,7 @@ export function formatDueDateWithDaysRemaining(date: Date | string | null | unde
   }
 }
 
-export function formatDateTime(date: Date | string | null | undefined, time?: string | null): string {
+export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "";
   
   try {
@@ -198,16 +198,19 @@ export function formatDateTime(date: Date | string | null | undefined, time?: st
     
     if (!isValid(dateObj)) return "";
     
-    // Formatar apenas a data
-    const formattedDate = formatInTimeZone(dateObj, userTz, "dd/MM/yyyy", { locale: ptBR });
+    // Verificar se a data tem um horário específico (diferente de 23:59:59)
+    const hasSpecificTime = dateObj && (
+      dateObj.getUTCHours() !== 23 || 
+      dateObj.getUTCMinutes() !== 59 || 
+      dateObj.getUTCSeconds() !== 59
+    );
     
-    // Se tiver horário específico, adicionar
-    if (time) {
-      return `${formattedDate} às ${time}`;
+    // Formatar com ou sem horário dependendo se tem horário específico
+    if (hasSpecificTime) {
+      return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } else {
+      return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy", { locale: ptBR });
     }
-    
-    // Sem horário específico, formatar com hora do objeto Date
-    return formatInTimeZone(dateObj, userTz, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   } catch (error) {
     console.error("Erro ao formatar data e hora:", error, date);
     return "";
