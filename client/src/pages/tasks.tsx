@@ -1102,13 +1102,17 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
                     className="h-3 w-3 mr-0.5"
                   />
                   <span className="whitespace-nowrap">
-                    {formatDueDateWithDaysRemaining(task.due_date)}
-                    {/* Extrair hora diretamente do due_date se não for fim do dia (23:59:59) */}
-                    {task.due_date && new Date(task.due_date).getHours() !== 23 && (
-                      <span className="ml-1 font-medium">
-                        às {new Date(task.due_date).getHours().toString().padStart(2, '0')}:{new Date(task.due_date).getMinutes().toString().padStart(2, '0')}
-                      </span>
-                    )}
+                    {/* Usar formatDateWithTime que já detecta se tem hora específica */}
+                    {task.due_date ? (
+                      <>
+                        {formatDueDateWithDaysRemaining(task.due_date)}
+                        {new Date(task.due_date).getUTCHours() !== 23 && (
+                          <span className="ml-1 font-medium">
+                            às {format(new Date(task.due_date), 'HH:mm')}
+                          </span>
+                        )}
+                      </>
+                    ) : '-'}
                   </span>
                 </div>
               )}
