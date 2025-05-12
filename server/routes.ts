@@ -1539,8 +1539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
           completed: req.body.completed === true || req.body.completed === "true" ? true : false,
           start_date: null,
-          due_date: null,
-          due_time: req.body.due_time || null
+          due_date: null
         };
         
         // Processamento das datas com tratamento específico
@@ -1569,17 +1568,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Converter para Date objeto se for string
             let dueDate = new Date(req.body.due_date);
             
-            // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
-            // Se for apenas data (sem hora), definir para final do dia em UTC
-            if (dueDate.getUTCHours() === 0 && 
-                dueDate.getUTCMinutes() === 0 && 
-                dueDate.getUTCSeconds() === 0) {
-              // Definir para 23:59:59 UTC
+            // Se temos um horário específico no formato combinado (data + hora)
+            // Mantenha o horário fornecido
+            if (req.body.due_time) {
+              // Extrair horas e minutos do campo due_time (formato: "HH:MM")
+              const [hours, minutes] = req.body.due_time.split(':').map(Number);
+              
+              // Definir horas e minutos na data de vencimento
+              dueDate.setUTCHours(hours, minutes, 0, 0);
+            } 
+            // Se não temos horário específico e a data está em meia-noite UTC,
+            // definimos para o final do dia (23:59:59)
+            else if (dueDate.getUTCHours() === 0 && 
+                     dueDate.getUTCMinutes() === 0 && 
+                     dueDate.getUTCSeconds() === 0) {
               dueDate.setUTCHours(23, 59, 59, 999);
             }
             
             taskData.due_date = dueDate;
           } catch (e) {
+            console.error("Erro ao processar due_date:", e);
             taskData.due_date = null;
           }
         }
