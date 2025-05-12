@@ -918,6 +918,15 @@ export default function Tasks() {
                             type="time" 
                             {...field}
                             value={field.value || ''}
+                            onChange={(e) => {
+                              // Atualizar o valor do campo
+                              field.onChange(e.target.value);
+                              
+                              // Se temos hora de entrega mas não temos data de entrega, usar data de início
+                              if (e.target.value && !form.getValues("due_date") && form.getValues("start_date")) {
+                                form.setValue("due_date", form.getValues("start_date"));
+                              }
+                            }}
                           />
                         </FormControl>
                         <FormDescription>
@@ -982,6 +991,11 @@ export default function Tasks() {
                 )}
                 
                 <div className="pt-5 pb-4">
+                  {form.getValues("due_time_temp") && !form.getValues("due_date") && form.getValues("start_date") && (
+                    <p className="text-xs text-amber-500 mb-2">
+                      ⚠️ Hora de entrega será aplicada à Data de início pois não há Data de entrega especificada.
+                    </p>
+                  )}
                   <DialogFooter className="flex flex-row justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancelar

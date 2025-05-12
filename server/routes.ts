@@ -1604,12 +1604,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Remover campos temporários que não existem no banco de dados
         delete req.body.due_time_temp;
-        const cleanTaskData = { ...taskData };
         
-        console.log("Dados processados para inserção:", JSON.stringify(dataToSave, null, 2));
+        console.log("Dados processados para inserção:", JSON.stringify(taskData, null, 2));
         
         // Criar a tarefa no banco de dados
-        const task = await storage.createTask(dataToSave);
+        const task = await storage.createTask(taskData);
         console.log("Tarefa criada com sucesso:", JSON.stringify(task, null, 2));
         
         res.status(201).json(task);
