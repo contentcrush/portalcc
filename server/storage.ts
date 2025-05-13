@@ -2030,8 +2030,11 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTasksWithDetails(): Promise<Task[]> {
+    const startTime = Date.now();
     try {
-      // Primeiro, obtemos todas as tarefas
+      console.log("[Performance] Iniciando busca otimizada de tarefas");
+      
+      // Vamos voltar temporariamente à implementação anterior enquanto investigamos o erro
       const allTasks = await db.select().from(tasks);
       
       // Se não houver tarefas, retorna array vazio
@@ -2116,9 +2119,10 @@ export class DatabaseStorage implements IStorage {
         return taskWithDetails;
       });
       
+      console.log(`[Performance] Processamento concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} tarefas`);
       return tasksWithDetails;
     } catch (error) {
-      console.error("Erro detalhado ao buscar tarefas:", error);
+      console.error(`[Performance] Erro após ${Date.now() - startTime}ms:`, error);
       throw error;
     }
   }

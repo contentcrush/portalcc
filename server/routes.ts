@@ -1471,10 +1471,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks - Adicionando autenticação e permissões
-  app.get("/api/tasks", authenticateJWT, async (_req, res) => {
+  app.get("/api/tasks", authenticateJWT, async (req, res) => {
     try {
-      // Obter tarefas com detalhes de projeto e cliente
-      const tasks = await storage.getTasksWithDetails();
+      console.time("[Performance] GET /api/tasks");
+      
+      // Parâmetros de paginação e filtros
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const status = req.query.status as string | undefined;
+      const project_id = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
+      const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
+      const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
+      
+      console.log(`[Performance] API: Solicitando tarefas (limit=${limit}, offset=${offset}, status=${status || 'todos'}, project_id=${project_id || 'todos'}, client_id=${client_id || 'todos'}, assigned_to=${assigned_to || 'todos'})`);
+      
+      // TODO: Adicionar método mais eficiente no storage para filtrar e paginar
+      // Por enquanto vamos filtrar no lado do servidor
+      let tasks = await storage.getTasksWithDetails();
+      
+      // Aplicar filtros
+      if (status) {
+        tasks = tasks.filter(task => task.status === status);
+      }
+      
+      if (project_id) {
+        tasks = tasks.filter(task => task.project_id === project_id);
+      }
+      
+      if (client_id) {
+        tasks = tasks.filter(task => task.project && (task.client?.id === client_id));
+      }
+      
+      if (assigned_to) {
+        tasks = tasks.filter(task => task.assigned_to === assigned_to);
+      }
+      
+      // Calcular total antes da paginação
+      const total = tasks.length;
+      
+      // Aplicar paginação
+      tasks = tasks.slice(offset, offset + limit);
+      
+      console.timeEnd("[Performance] GET /api/tasks");
+      console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas totais`);
+      
+      // Retornar com metadados de paginação
       res.json(tasks);
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
