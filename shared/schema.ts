@@ -136,8 +136,8 @@ export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  project_id: integer("project_id").references(() => projects.id),
-  assigned_to: integer("assigned_to").references(() => users.id),
+  project_id: integer("project_id"),
+  assigned_to: integer("assigned_to"),
   status: text("status").notNull().default("pending"),
   priority: text("priority").default("medium"),
   due_date: timestamp("due_date"), // Armazena data e hora de vencimento
