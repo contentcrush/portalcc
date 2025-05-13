@@ -577,11 +577,9 @@ export default function Tasks() {
               <div className="flex items-center gap-3">
                 <AlarmClock className="h-5 w-5 text-amber-500" />
                 <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
-                {tasks && (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    {tasks.filter(t => !t.completed).length}
-                  </Badge>
-                )}
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  {pendingTasks.length}
+                </Badge>
               </div>
               
               <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
@@ -637,17 +635,46 @@ export default function Tasks() {
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                 </div>
-              ) : filteredTasks && filteredTasks.filter(task => !task.completed).length > 0 ? (
-                filteredTasks.filter(task => !task.completed).map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
-                    onView={() => handleViewTaskDetails(task.id)}
-                    onDelete={() => handleDeleteTask(task.id)}
-                    onEdit={() => handleEditTask(task.id)}
-                  />
-                ))
+              ) : pendingTasks.length > 0 ? (
+                <>
+                  <div className="space-y-3">
+                    {pendingTasks.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
+                        onView={() => handleViewTaskDetails(task.id)}
+                        onDelete={() => handleDeleteTask(task.id)}
+                        onEdit={() => handleEditTask(task.id)}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Controles de paginação */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 text-sm text-gray-500">
+                    <div>
+                      <span>{formatTaskRange()}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handlePageChange('prev')}
+                        disabled={currentPage === 0}
+                      >
+                        Anterior
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handlePageChange('next')}
+                        disabled={tasks.length < pageSize}
+                      >
+                        Próxima
+                      </Button>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="bg-gray-50 rounded-lg p-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
@@ -669,11 +696,9 @@ export default function Tasks() {
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <h2 className="text-lg font-semibold">Tarefas Concluídas</h2>
-                {tasks && (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    {tasks.filter(t => t.completed).length}
-                  </Badge>
-                )}
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  {completedTasks.length}
+                </Badge>
               </div>
               <div className="flex justify-end">
                 <Button 
@@ -704,8 +729,8 @@ export default function Tasks() {
                   <div className="flex justify-center items-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                   </div>
-                ) : filteredTasks && filteredTasks.filter(task => task.completed).length > 0 ? (
-                  filteredTasks.filter(task => task.completed).map(task => (
+                ) : completedTasks.length > 0 ? (
+                  completedTasks.map(task => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -730,7 +755,7 @@ export default function Tasks() {
             ) : (
               // Preview of Completed Tasks (mostrando até 6 tarefas)
               <div className="space-y-3">
-                {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 6).map(task => (
+                {completedTasks.slice(0, 6).map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -741,14 +766,14 @@ export default function Tasks() {
                   />
                 ))}
                 
-                {filteredTasks && filteredTasks.filter(task => task.completed).length > 6 && (
+                {completedTasks.length > 6 && (
                   <Button 
                     variant="outline" 
                     className="w-full text-sm text-muted-foreground hover:text-primary bg-white"
                     onClick={() => setShowAllCompleted(true)}
                   >
                     <ChevronDown className="h-4 w-4 mr-1" />
-                    Ver todas as {filteredTasks.filter(task => task.completed).length} tarefas concluídas
+                    Ver todas as {completedTasks.length} tarefas concluídas
                   </Button>
                 )}
               </div>
