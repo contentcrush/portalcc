@@ -143,14 +143,58 @@ export default function Tasks() {
     },
   });
 
-  // Fetch tasks
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  // Prepare query params for tasks endpoint
+  const buildTaskQueryParams = () => {
+    const params = new URLSearchParams();
+    
+    // Add pagination params
+    params.append('limit', pageSize.toString());
+    params.append('offset', (currentPage * pageSize).toString());
+    
+    // Add filters if they are active (not 'all')
+    if (statusFilter !== 'all') params.append('status', statusFilter);
+    if (projectFilter !== 'all') params.append('project_id', projectFilter);
+    if (clientFilter !== 'all') params.append('client_id', clientFilter);
+    if (userFilter !== 'all') params.append('assigned_to', userFilter);
+    
+    return params.toString();
+  };
+
+  // Fetch tasks with filters and pagination
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<TaskWithDetails[]>({
-    queryKey: ['/api/tasks'],
-    onSuccess: (data) => {
-      // Log temporário para depuração
-      if (data && data.length > 0) {
-        console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
-        console.log("DEBUG - Formato de due_date:", data[0].due_date ? new Date(data[0].due_date).toISOString() : "null");
+    queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize],
+    queryFn: async () => {
+      const queryParams = buildTaskQueryParams();
+      const endpoint = `/api/tasks${queryParams ? `?${queryParams}` : ''}`;
+      console.log('Fetching tasks with endpoint:', endpoint);
+      
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error('Failed to fetch tasks');
+        
+        const data = await response.json();
+        // The API currently doesn't return total count, so we estimate based on results
+        if (data.length < pageSize) {
+          setTotalTasks(currentPage * pageSize + data.length);
+        } else {
+          setTotalTasks((currentPage + 1) * pageSize + 1); // Assume there's at least 1 more page
+        }
+        
+        // Log for debugging
+        if (data && data.length > 0) {
+          console.log(`Loaded ${data.length} tasks for page ${currentPage}`);
+          console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        throw error;
       }
     }
   });
@@ -445,52 +489,28 @@ export default function Tasks() {
     });
   };
 
-  // Filter tasks based on criteria
-  let filteredTasks = tasks?.filter((task: TaskWithDetails) => {
-    // Search term filter
-    if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    
-    // Status filter
-    if (statusFilter !== "all" && task.status !== statusFilter) {
-      return false;
-    }
-    
-    // Priority filter
-    if (priorityFilter !== "all" && task.priority !== priorityFilter) {
-      return false;
-    }
-    
-    // Project filter
-    if (projectFilter !== "all" && task.project_id !== parseInt(projectFilter)) {
-      return false;
-    }
-    
-    // User filter
-    if (userFilter !== "all" && task.assigned_to !== parseInt(userFilter)) {
-      return false;
-    }
-    
-    // Client filter
-    if (clientFilter !== "all") {
-      // Precisamos verificar o cliente associado ao projeto
-      const project = projects.find(p => p.id === task.project_id);
-      if (!project || project.client_id !== parseInt(clientFilter)) {
-        return false;
-      }
-    }
-    
-    // Removemos os filtros baseados no activeTab para permitir
-    // que ambas as seções (pendentes e concluídas) sejam exibidas simultaneamente
-    
-    return true;
-  });
+  // Agora estamos filtrando no backend, portanto não precisamos filtrar novamente no frontend
+  // Apenas separamos as tarefas concluídas das pendentes para exibição
+  const pendingTasks = tasks?.filter(task => !task.completed) || [];
+  const completedTasks = tasks?.filter(task => task.completed) || [];
   
-  // Sort tasks by the intelligent priority algorithm
-  if (filteredTasks) {
-    filteredTasks = [...filteredTasks].sort(getTaskSortFunction());
-  }
+  // O estado total de tarefas já está sendo gerenciado pelo hook useQuery
+  
+  const handlePageChange = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    } else if (direction === 'next' && tasks?.length === pageSize) {
+      // Se temos um número de tarefas igual ao pageSize, assumimos que há mais páginas
+      setCurrentPage(currentPage + 1);
+    }
+  };
+  
+  // Função para formatar o intervalo de tarefas exibido
+  const formatTaskRange = () => {
+    const start = currentPage * pageSize + 1;
+    const end = start + (tasks?.length || 0) - 1;
+    return `${start}-${end} de ${totalTasks || '?'}`;
+  };
 
   return (
     <div className="space-y-4 relative">
