@@ -2807,11 +2807,11 @@ export class DatabaseStorage implements IStorage {
         this.#taskCache.lastUpdated = Date.now();
       }
       
-      console.log(`[Performance] Processamento filtrado concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} de ${total} tarefas`);
+      console.log(`[Performance] Processamento filtrado concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} de ${totalCount} tarefas`);
       
       return {
         tasks: tasksWithDetails,
-        total
+        total: totalCount
       };
     } catch (error) {
       console.error(`[Performance] Erro em consulta filtrada após ${Date.now() - startTime}ms:`, error);
