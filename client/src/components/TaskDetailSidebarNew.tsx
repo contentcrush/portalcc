@@ -79,8 +79,20 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       return apiRequest('PATCH', `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Invalidar apenas a consulta específica da tarefa atual
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      
+      // Invalidar as listas de tarefas que contêm apenas os parâmetros necessários
+      // para refletir mudanças na UI sem fazer múltiplas requisições
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/tasks'],
+        predicate: (query) => {
+          // Só invalidar se a chave contém exatamente 1 elemento ('/api/tasks') 
+          // ou no máximo 2 elementos ('/api/tasks' + algum filtro)
+          return query.queryKey.length <= 2;
+        }
+      });
+      
       showSuccessToast({
         title: "Tarefa atualizada",
         description: "Tarefa atualizada com sucesso"
