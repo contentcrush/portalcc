@@ -2057,11 +2057,22 @@ export class DatabaseStorage implements IStorage {
            (now - this.#taskCache.lastUpdated) < this.#taskCache.TTL;
   }
 
+  // Cache para contagem de tarefas por status
+  #taskCountCache = {
+    lastUpdated: 0,
+    data: new Map<string, any>(),
+    TTL: 30000 // 30 segundos de validade
+  };
+  
   // Invalida o cache quando uma tarefa é modificada
   #invalidateTaskCache() {
     this.#taskCache.data = null;
     this.#taskCache.filtered.clear();
     this.#taskCache.lastUpdated = 0;
+    
+    // Limpar também o cache de contagem
+    this.#taskCountCache.data.clear();
+    this.#taskCountCache.lastUpdated = 0;
   }
 
   async getTasksWithDetails(): Promise<Task[]> {
@@ -2186,6 +2197,89 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Função para contar tarefas por status com filtros
+  async getTaskCountByStatus(filters: {
+    status?: string;
+    project_id?: number;
+    client_id?: number;
+    assigned_to?: number;
+  }): Promise<{ [key: string]: number }> {
+    const { status, project_id, client_id, assigned_to } = filters;
+    const startTime = Date.now();
+    
+    // Gerar uma chave única para este conjunto de filtros
+    const filterKey = `count:${JSON.stringify({ status, project_id, client_id, assigned_to })}`;
+    
+    // Verificar se temos este resultado em cache
+    if (this.#taskCountCache.data.has(filterKey) && 
+        (Date.now() - this.#taskCountCache.lastUpdated) < this.#taskCountCache.TTL) {
+      console.log("[Performance] Usando contagem em cache para filtros:", filterKey);
+      return this.#taskCountCache.data.get(filterKey);
+    }
+    
+    console.log("[Performance] Calculando contagem de tarefas por status no banco:", filterKey);
+    
+    // Construir a consulta base
+    let query = db.select({
+      status: tasks.status,
+      count: sql`count(*)`.as('count')
+    })
+    .from(tasks);
+    
+    // Condições para os filtros
+    const conditions: SQL<unknown>[] = [];
+    
+    if (project_id !== undefined) {
+      conditions.push(eq(tasks.project_id, project_id));
+    }
+    
+    if (assigned_to !== undefined) {
+      conditions.push(eq(tasks.assigned_to, assigned_to));
+    }
+    
+    // Se tiver filtro de cliente, precisamos fazer join com projects
+    if (client_id !== undefined) {
+      query = query
+        .leftJoin(projects, eq(tasks.project_id, projects.id))
+        .where(eq(projects.client_id, client_id));
+    }
+    
+    // Adicionar as condições à consulta
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    // Agrupar por status para contar
+    query = query.groupBy(tasks.status);
+    
+    // Executar a consulta
+    const results = await query;
+    
+    // Transformar resultados em um objeto { status: count }
+    const countsByStatus = {
+      pending: 0,
+      in_progress: 0,
+      review: 0,
+      completed: 0
+    };
+    
+    // Preencher com os resultados da consulta
+    results.forEach(result => {
+      const status = result.status as keyof typeof countsByStatus;
+      if (status in countsByStatus) {
+        countsByStatus[status] = Number(result.count);
+      }
+    });
+    
+    // Salvar no cache
+    this.#taskCountCache.data.set(filterKey, countsByStatus);
+    this.#taskCountCache.lastUpdated = Date.now();
+    
+    console.log(`[Performance] Contagem de tarefas por status concluída em ${Date.now() - startTime}ms`);
+    
+    return countsByStatus;
+  }
+
   // Nova função otimizada com filtros aplicados diretamente no SQL
   async getFilteredTasksWithDetails(filters: {
     status?: string;
