@@ -13,6 +13,7 @@ import { formatDate, formatDateWithTime, showSuccessToast, animations } from "@/
 import { AnimatedElement } from "@/components/ui/animated-element";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
+import type { UserLike } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
 import { TASK_STATUS_OPTIONS } from "@/lib/constants";
 import { CommentSection } from "@/components/comments/CommentSection";
@@ -68,13 +69,10 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     // Outros campos do projeto conforme necessário
   };
 
-  // Definindo o tipo compatível com o componente UserAvatar
-  type UserType = {
-    id: number;
-    name: string;
+  // Usando o tipo UserLike importado para compatibilidade com UserAvatar
+  type UserType = UserLike & {
     username: string;
     email: string;
-    avatar: string | null;
     role: "admin" | "manager" | "editor" | "viewer";
     department: string | null;
     address: string | null;
@@ -97,9 +95,11 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   });
 
   // Fetch assigned user - tipado para compatibilizar com UserAvatar
-  const { data: assignedUser = null } = useQuery<UserType | null>({
+  const { data: assignedUser = null } = useQuery<UserType>({
     queryKey: [`/api/users/${task?.assigned_to}`],
-    enabled: !!task?.assigned_to
+    enabled: !!task?.assigned_to,
+    // Garantir que undefined vire null para compatibilidade
+    select: (data) => data || null as unknown as UserType
   });
 
   // Definir tipos para comentários e anexos

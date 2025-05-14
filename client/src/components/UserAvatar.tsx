@@ -3,10 +3,12 @@ import { User } from "@shared/schema";
 import { Building, User as UserIcon } from "lucide-react";
 
 // Interface genérica para qualquer tipo de usuário que tenha ao menos id, name e avatar
-interface UserLike {
+export interface UserLike {
   id: number;
   name: string;
   avatar?: string | null;
+  avatar_url?: string | null;
+  user_type?: string;
 }
 
 interface UserAvatarProps {
@@ -59,11 +61,20 @@ export function UserAvatar({ user, className = "" }: UserAvatarProps) {
   
   const fallbackClass = getAvatarFallbackColor(user.name || "User");
   
+  // Verificar qual campo de avatar utilizar, com fallback seguro
+  const avatarSrc = 
+    (('avatar_url' in user) ? user.avatar_url : null) || 
+    user.avatar || 
+    "";
+    
+  // Verificar tipo de usuário com segurança
+  const isPJ = ('user_type' in user) && user.user_type === 'pj';
+  
   return (
     <Avatar className={className}>
-      <AvatarImage src={user.avatar_url || user.avatar || ""} alt={user.name || "User"} />
+      <AvatarImage src={avatarSrc} alt={user.name || "User"} />
       <AvatarFallback className={fallbackClass + " text-white"}>
-        {user.user_type === 'pj' ? (
+        {isPJ ? (
           <Building className="h-5 w-5" />
         ) : (
           getInitials(user.name || "User")
