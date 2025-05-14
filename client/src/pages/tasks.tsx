@@ -255,19 +255,54 @@ export default function Tasks() {
       const completionData = { 
         completed: completed,
         // Atualiza o status baseado no estado de conclusão
-        status: completed ? "concluido" : "pendente"
+        status: completed ? "concluido" : "pendente",
+        // Adiciona data de conclusão quando completa, ou remove quando desmarca
+        completion_date: completed ? new Date().toISOString() : null
       };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
     },
+    // Usar otimistic updates para atualização imediata na UI
+    onMutate: async ({ id, completed }) => {
+      // Cancelar consultas pendentes para evitar sobrescrever o update otimista
+      await queryClient.cancelQueries({ queryKey: ['/api/tasks'] });
+      
+      // Guardar estado anterior para fallback em caso de erro
+      const previousTasks = queryClient.getQueryData(['/api/tasks']);
+      
+      // Atualizar a tarefa no cache de forma otimista
+      queryClient.setQueryData(['/api/tasks'], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((task: any) => {
+          if (task.id === id) {
+            return { 
+              ...task, 
+              completed: completed,
+              status: completed ? "concluido" : "pendente",
+              completion_date: completed ? new Date().toISOString() : null
+            };
+          }
+          return task;
+        });
+      });
+      
+      return { previousTasks };
+    },
     onSuccess: () => {
+      // Ainda invalidamos a query para garantir sincronização com o servidor
+      // mas o usuário já viu a mudança instantaneamente
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Status de conclusão atualizado com sucesso" 
       });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Em caso de erro, restaurar os dados ao estado anterior
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['/api/tasks'], context.previousTasks);
+      }
+      
       toast({
         title: "Erro ao atualizar tarefa",
         description: error.message,
@@ -1098,17 +1133,15 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
         element.classList.add('animate-fade-in');
       }
       
-      // Remover classes de animação após terminar
+      // Remover classes de animação após terminar (tempo reduzido para 400ms)
       setTimeout(() => {
         element.classList.remove('animate-pulse');
         element.classList.remove('animate-fade-in');
-      }, 700);
+      }, 400);
     }
     
-    // Chamar handler original
-    setTimeout(() => {
-      onToggleComplete();
-    }, 100);
+    // Chamar handler original imediatamente
+    onToggleComplete();
   };
   
   return (
