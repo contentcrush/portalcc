@@ -118,6 +118,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     file_name: string;
     file_path: string;
     file_type: string;
+    file_size: number; // Adicionado file_size que é usado no componente
     created_at: string;
     // Outros campos conforme necessário
   };
@@ -758,7 +759,7 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                          <p className="text-xs text-gray-500">{attachment.file_size ? `${attachment.file_size} KB` : ''}</p>
+                          <p className="text-xs text-gray-500">{attachment.file_size ? `${Math.round(attachment.file_size / 1024)} KB` : ''}</p>
                         </div>
                       </div>
                       <div className="flex">

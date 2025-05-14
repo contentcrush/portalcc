@@ -2,8 +2,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "@shared/schema";
 import { Building, User as UserIcon } from "lucide-react";
 
+// Interface genérica para qualquer tipo de usuário que tenha ao menos id, name e avatar
+interface UserLike {
+  id: number;
+  name: string;
+  avatar?: string | null;
+}
+
 interface UserAvatarProps {
-  user: User | null;
+  user: User | UserLike | null;
   className?: string;
 }
 
