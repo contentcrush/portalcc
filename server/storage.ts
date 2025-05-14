@@ -1299,6 +1299,59 @@ export class MemStorage implements IStorage {
       (task) => task.assigned_to === userId,
     );
   }
+  
+  async getTaskCountByStatus(filters: {
+    status?: string;
+    project_id?: number;
+    client_id?: number;
+    assigned_to?: number;
+  }): Promise<{ [key: string]: number }> {
+    const { status, project_id, client_id, assigned_to } = filters;
+    
+    // Filtrar as tarefas com base nos critérios
+    let filteredTasks = Array.from(this.tasksData.values());
+    
+    if (status) {
+      filteredTasks = filteredTasks.filter(task => task.status === status);
+    }
+    
+    if (project_id) {
+      filteredTasks = filteredTasks.filter(task => task.project_id === project_id);
+    }
+    
+    if (assigned_to) {
+      filteredTasks = filteredTasks.filter(task => task.assigned_to === assigned_to);
+    }
+    
+    if (client_id) {
+      // Para filtrar por cliente, precisamos relacionar com projetos
+      const projectsForClient = Array.from(this.projectsData.values())
+        .filter(project => project.client_id === client_id)
+        .map(project => project.id);
+      
+      filteredTasks = filteredTasks.filter(task => 
+        task.project_id && projectsForClient.includes(task.project_id)
+      );
+    }
+    
+    // Contar por status
+    const countsByStatus = {
+      pending: 0,
+      in_progress: 0,
+      review: 0,
+      completed: 0
+    };
+    
+    // Contabilizar
+    filteredTasks.forEach(task => {
+      const taskStatus = task.status as keyof typeof countsByStatus;
+      if (taskStatus in countsByStatus) {
+        countsByStatus[taskStatus]++;
+      }
+    });
+    
+    return countsByStatus;
+  }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = this.taskId++;

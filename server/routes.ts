@@ -1519,6 +1519,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint de contagem de tarefas por status com filtros opcionais
+  app.get("/api/tasks/count-by-status", authenticateJWT, async (req, res) => {
+    try {
+      console.time("[Performance] GET /api/tasks/count-by-status");
+      
+      // Extrair filtros dos parâmetros de consulta
+      const status = req.query.status as string | undefined;
+      const project_id = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
+      const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
+      const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
+      
+      // Usar a função otimizada para contagem por status
+      const counts = await storage.getTaskCountByStatus({
+        status,
+        project_id,
+        client_id,
+        assigned_to
+      });
+      
+      console.timeEnd("[Performance] GET /api/tasks/count-by-status");
+      
+      res.json(counts);
+    } catch (error) {
+      console.error("Erro ao obter contagem de tarefas:", error);
+      res.status(500).json({ message: "Falha ao obter contagem de tarefas por status" });
+    }
+  });
+
   app.get("/api/tasks/:id", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
