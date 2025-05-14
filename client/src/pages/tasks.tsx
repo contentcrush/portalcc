@@ -228,7 +228,10 @@ export default function Tasks() {
       return apiRequest('POST', '/api/tasks', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Invalidar apenas a consulta específica com os filtros atuais
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
+      });
       showSuccessToast({
         title: "Tarefa criada",
         description: "Tarefa criada com sucesso",
@@ -251,7 +254,10 @@ export default function Tasks() {
       return apiRequest('PATCH', `/api/tasks/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Invalidar apenas a consulta específica com os filtros atuais
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
+      });
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Tarefa atualizada com sucesso" 
@@ -275,7 +281,10 @@ export default function Tasks() {
       return apiRequest('DELETE', `/api/tasks/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Invalidar apenas a consulta específica com os filtros atuais
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
+      });
       showSuccessToast({
         title: "Tarefa excluída",
         description: "Tarefa excluída com sucesso",
@@ -313,7 +322,10 @@ export default function Tasks() {
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      // Invalidar apenas a consulta específica com os filtros atuais
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
+      });
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Status de conclusão atualizado com sucesso" 
