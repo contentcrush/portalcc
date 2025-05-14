@@ -1471,6 +1471,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks - Adicionando autenticação e permissões
+  // Endpoint de contagem de tarefas por status com filtros opcionais
+  // IMPORTANTE: Este endpoint precisa vir ANTES do endpoint com parâmetros (/api/tasks/:id)
+  app.get("/api/tasks/count-by-status", authenticateJWT, async (req, res) => {
+    try {
+      console.time("[Performance] GET /api/tasks/count-by-status");
+      
+      // Extrair filtros dos parâmetros de consulta
+      const status = req.query.status as string | undefined;
+      const project_id = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
+      const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
+      const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
+      
+      // Usar a função otimizada para contagem por status
+      const counts = await storage.getTaskCountByStatus({
+        status,
+        project_id,
+        client_id,
+        assigned_to
+      });
+      
+      console.timeEnd("[Performance] GET /api/tasks/count-by-status");
+      console.log("[Performance] API: Contagem de tarefas por status concluída");
+      
+      res.json(counts);
+    } catch (error) {
+      console.error("Erro ao obter contagem de tarefas:", error);
+      res.status(500).json({ message: "Falha ao obter contagem de tarefas por status" });
+    }
+  });
+
   app.get("/api/tasks", authenticateJWT, async (req, res) => {
     try {
       console.time("[Performance] GET /api/tasks");
@@ -1516,34 +1546,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
-    }
-  });
-
-  // Endpoint de contagem de tarefas por status com filtros opcionais
-  app.get("/api/tasks/count-by-status", authenticateJWT, async (req, res) => {
-    try {
-      console.time("[Performance] GET /api/tasks/count-by-status");
-      
-      // Extrair filtros dos parâmetros de consulta
-      const status = req.query.status as string | undefined;
-      const project_id = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
-      const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
-      const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
-      
-      // Usar a função otimizada para contagem por status
-      const counts = await storage.getTaskCountByStatus({
-        status,
-        project_id,
-        client_id,
-        assigned_to
-      });
-      
-      console.timeEnd("[Performance] GET /api/tasks/count-by-status");
-      
-      res.json(counts);
-    } catch (error) {
-      console.error("Erro ao obter contagem de tarefas:", error);
-      res.status(500).json({ message: "Falha ao obter contagem de tarefas por status" });
     }
   });
 
