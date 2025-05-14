@@ -1471,7 +1471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks - Adicionando autenticação e permissões
-  // Endpoint de contagem de tarefas por status com filtros opcionais
+  // Endpoint para obtenção de estatísticas simplificadas - extremamente rápido
   // IMPORTANTE: Este endpoint precisa vir ANTES do endpoint com parâmetros (/api/tasks/:id)
   app.get("/api/tasks/count-by-status", authenticateJWT, async (req, res) => {
     try {
@@ -1483,12 +1483,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
       const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
       
+      // Flag de modo rápido - utiliza valores em cache quando possível
+      const fast_mode = req.query.fast === 'true';
+      
       // Usar a função otimizada para contagem por status
       const counts = await storage.getTaskCountByStatus({
         status,
         project_id,
         client_id,
-        assigned_to
+        assigned_to,
+        fast_mode
       });
       
       console.timeEnd("[Performance] GET /api/tasks/count-by-status");
@@ -1501,6 +1505,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint otimizado para listagem básica de tarefas
+  // Usando carregamento em etapas para melhorar performance
+  app.get("/api/tasks/basic", authenticateJWT, async (req, res) => {
+    try {
+      console.time("[Performance] GET /api/tasks/basic");
+      
+      // Parâmetros de paginação e filtros
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const status = req.query.status as string | undefined;
+      const project_id = req.query.project_id ? parseInt(req.query.project_id as string) : undefined;
+      const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
+      const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
+      
+      // Flag para carregamento mínimo (apenas dados das tarefas sem relações)
+      const minimal = req.query.minimal === 'true';
+      
+      console.log(`[Performance] API: Solicitando tarefas básicas (limit=${limit}, offset=${offset}, status=${status || 'todos'}, minimal=${minimal})`);
+      
+      // Usar função simplificada sem JOINs pesados
+      const { tasks, total } = await storage.getBasicTaskList({
+        status,
+        project_id,
+        client_id, 
+        assigned_to,
+        limit,
+        offset,
+        minimal
+      });
+      
+      console.timeEnd("[Performance] GET /api/tasks/basic");
+      console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas básicas`);
+      
+      res.json({
+        data: tasks,
+        total: total,
+        limit: limit,
+        offset: offset
+      });
+    } catch (error) {
+      console.error("Erro ao buscar tarefas básicas:", error);
+      res.status(500).json({ message: "Failed to fetch basic tasks" });
+    }
+  });
+
+  // Endpoint padrão de tarefas - compatibilidade com código existente
   app.get("/api/tasks", authenticateJWT, async (req, res) => {
     try {
       console.time("[Performance] GET /api/tasks");
@@ -1513,35 +1563,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client_id = req.query.client_id ? parseInt(req.query.client_id as string) : undefined;
       const assigned_to = req.query.assigned_to ? parseInt(req.query.assigned_to as string) : undefined;
       
-      console.log(`[Performance] API: Solicitando tarefas (limit=${limit}, offset=${offset}, status=${status || 'todos'}, project_id=${project_id || 'todos'}, client_id=${client_id || 'todos'}, assigned_to=${assigned_to || 'todos'})`);
+      // Flag opcional para usar o modo ultra-rápido
+      const fast_mode = req.query.fast === 'true';
       
-      // Usar a nova função otimizada que aplica filtros diretamente no SQL e usa cache
-      const { tasks, total } = await storage.getFilteredTasksWithDetails({
-        status,
-        project_id,
-        client_id,
-        assigned_to,
-        limit,
-        offset
-      });
+      console.log(`[Performance] API: Solicitando tarefas (limit=${limit}, offset=${offset}, status=${status || 'todos'}, project_id=${project_id || 'todos'}, client_id=${client_id || 'todos'}, assigned_to=${assigned_to || 'todos'}, fast_mode=${fast_mode})`);
       
-      console.timeEnd("[Performance] GET /api/tasks");
-      console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas totais`);
-      
-      // Verificar se o parâmetro count=true foi fornecido na requisição
-      const includeCount = req.query.count === 'true';
-      
-      // Retornar com metadados de paginação quando solicitado
-      if (includeCount) {
-        res.json({
-          data: tasks,
-          total: total,
-          limit: limit,
-          offset: offset
+      // No modo rápido, usamos a versão básica de tarefas
+      if (fast_mode) {
+        const { tasks, total } = await storage.getBasicTaskList({
+          status,
+          project_id,
+          client_id,
+          assigned_to,
+          limit,
+          offset,
+          minimal: false
         });
+        
+        console.timeEnd("[Performance] GET /api/tasks");
+        console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas (modo rápido)`);
+        
+        // Verificar se o parâmetro count=true foi fornecido na requisição
+        const includeCount = req.query.count === 'true';
+        
+        // Retornar com metadados de paginação quando solicitado
+        if (includeCount) {
+          res.json({
+            data: tasks,
+            total: total,
+            limit: limit,
+            offset: offset
+          });
+        } else {
+          // Manter comportamento atual para compatibilidade
+          res.json(tasks);
+        }
       } else {
-        // Manter comportamento atual para compatibilidade
-        res.json(tasks);
+        // Modo detalhado (padrão) - mais lento mas com todos os dados relacionados
+        const { tasks, total } = await storage.getFilteredTasksWithDetails({
+          status,
+          project_id,
+          client_id,
+          assigned_to,
+          limit,
+          offset
+        });
+        
+        console.timeEnd("[Performance] GET /api/tasks");
+        console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas totais`);
+        
+        // Verificar se o parâmetro count=true foi fornecido na requisição
+        const includeCount = req.query.count === 'true';
+        
+        // Retornar com metadados de paginação quando solicitado
+        if (includeCount) {
+          res.json({
+            data: tasks,
+            total: total,
+            limit: limit,
+            offset: offset
+          });
+        } else {
+          // Manter comportamento atual para compatibilidade
+          res.json(tasks);
+        }
       }
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
