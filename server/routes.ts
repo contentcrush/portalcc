@@ -1550,8 +1550,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint super otimizado e rápido para listagem de tarefas
+  app.get("/api/tasks/ultrafast", authenticateJWT, async (req, res) => {
+    const { getFastTasks } = await import('./optimized-endpoints');
+    await getFastTasks(req, res);
+  });
+  
+  // Endpoint otimizado para detalhar uma tarefa específica 
+  app.get("/api/tasks/:id/detailed", authenticateJWT, async (req, res) => {
+    const { getTaskDetails } = await import('./optimized-endpoints');
+    await getTaskDetails(req, res);
+  });
+  
   // Endpoint padrão de tarefas - compatibilidade com código existente
+  // Agora com opção de redirecionamento ao endpoint ultra-otimizado
   app.get("/api/tasks", authenticateJWT, async (req, res) => {
+    // Redirecionar para o endpoint otimizado se a flag estiver presente
+    if (req.query.ultrafast === 'true') {
+      console.log("[Performance] Redirecionando para endpoint ultra-otimizado");
+      const { getFastTasks } = await import('./optimized-endpoints');
+      return await getFastTasks(req, res);
+    }
     try {
       console.time("[Performance] GET /api/tasks");
       
