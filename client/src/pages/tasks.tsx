@@ -1150,18 +1150,13 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
   const isDueSoon = isTaskDueSoon(task);
   const isCompleted = task.completed;
   
-  // Referência para controlar animação
-  const cardRef = useRef<HTMLDivElement>(null);
-  
-  // Handler para toggle com animação
+  // Handler simplificado sem animação para melhorar performance
   const handleToggleComplete = () => {
-    // Chamar handler original diretamente sem a animação que estava causando erro
     onToggleComplete();
   };
   
   return (
-    <Card 
-      ref={cardRef}
+    <Card
       className={cn(
         "border overflow-hidden transition-all duration-200",
         {
