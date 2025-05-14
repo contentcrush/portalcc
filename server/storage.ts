@@ -2868,40 +2868,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
-    try {
-      // Simplificar os dados de data para reduzir chances de erro
-      const processedTask = { ...insertTask };
-      
-      // Certificar que os campos de data estão em formato consistente
-      if (processedTask.due_date) {
-        processedTask.due_date = new Date(processedTask.due_date);
-      }
-      
-      if (processedTask.start_date) {
-        processedTask.start_date = new Date(processedTask.start_date);
-      }
-      
-      // Importar a função de retry
-      const { withRetry } = await import('./utils/db-retry');
-      
-      // Executar inserção com retry
-      const [task] = await withRetry(async () => {
-        console.log("Executando inserção da tarefa com retry...");
-        return db.insert(tasks).values(processedTask).returning();
-      }, {
-        maxRetries: 5,  // Aumentar número de tentativas
-        initialDelay: 300,
-        maxDelay: 2000
-      });
-      
-      // Invalidar cache de tarefas
-      this.#invalidateTaskCache();
-      
-      return task;
-    } catch (error) {
-      console.error("[DB] Erro ao criar tarefa mesmo após retries:", error);
-      throw error;
-    }
+    const [task] = await db.insert(tasks).values(insertTask).returning();
+    // Invalidar cache de tarefas
+    this.#invalidateTaskCache();
+    return task;
   }
 
   async updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined> {

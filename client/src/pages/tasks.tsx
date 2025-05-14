@@ -155,9 +155,6 @@ export default function Tasks() {
     params.append('offset', (currentPage * pageSize).toString());
     params.append('count', 'true'); // Solicitar contagem total
     
-    // Adicionar flag para usar o endpoint ultrafast
-    params.append('ultrafast', 'true');
-    
     // Add filters if they are active (not 'all')
     if (statusFilter !== 'all') params.append('status', statusFilter);
     if (projectFilter !== 'all') params.append('project_id', projectFilter);

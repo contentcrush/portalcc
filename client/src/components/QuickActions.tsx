@@ -64,9 +64,9 @@ export default function QuickActions() {
     assigneeName?: string;
   }
   
-  // Buscar as próximas tarefas a vencer usando a versão ultra otimizada da API
+  // Buscar as próximas tarefas a vencer
   const { data: tasks, isLoading, error } = useQuery<Task[]>({
-    queryKey: ['/api/tasks/ultrafast'],
+    queryKey: ['/api/tasks'],
     select: (data: Task[]) => {
       // Incluir apenas tarefas não concluídas
       const pendingTasks = [...data].filter(task => 

@@ -1550,27 +1550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint super otimizado e rápido para listagem de tarefas
-  app.get("/api/tasks/ultrafast", authenticateJWT, async (req, res) => {
-    const { getFastTasks } = await import('./optimized-endpoints');
-    await getFastTasks(req, res);
-  });
-  
-  // Endpoint otimizado para detalhar uma tarefa específica 
-  app.get("/api/tasks/:id/detailed", authenticateJWT, async (req, res) => {
-    const { getTaskDetails } = await import('./optimized-endpoints');
-    await getTaskDetails(req, res);
-  });
-  
   // Endpoint padrão de tarefas - compatibilidade com código existente
-  // Agora com opção de redirecionamento ao endpoint ultra-otimizado
   app.get("/api/tasks", authenticateJWT, async (req, res) => {
-    // Redirecionar para o endpoint otimizado se a flag estiver presente
-    if (req.query.ultrafast === 'true') {
-      console.log("[Performance] Redirecionando para endpoint ultra-otimizado");
-      const { getFastTasks } = await import('./optimized-endpoints');
-      return await getFastTasks(req, res);
-    }
     try {
       console.time("[Performance] GET /api/tasks");
       
@@ -1768,43 +1749,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // OTIMIZAÇÃO: Processamento de datas simplificado para evitar erros de conexão
+        // Processamento robusto de data/hora
         if (req.body.due_date) {
           try {
             console.log("Processando data de entrega:", req.body.due_date);
             
-            // Criar string ISO a partir da data fornecida
-            const isoString = new Date(req.body.due_date).toISOString();
+            // Primeiro, verificamos se a data está em formato ISO ou de objetos Date serializados
+            let dueDate: Date;
             
-            // Extrair apenas a parte da data (YYYY-MM-DD)
-            const dateOnly = isoString.split('T')[0];
+            if (typeof req.body.due_date === 'string') {
+              // Para string ISO
+              dueDate = new Date(req.body.due_date);
+            } else if (req.body.due_date instanceof Date) {
+              // Para data direta (raro, mas possível em alguns casos)
+              dueDate = req.body.due_date;
+            } else if (typeof req.body.due_date === 'object') {
+              // Para objeto Date serializado pelo JSON
+              dueDate = new Date(req.body.due_date);
+            } else {
+              throw new Error(`Formato de data inválido: ${typeof req.body.due_date}`);
+            }
+            
+            // Validar se a data é válida
+            if (isNaN(dueDate.getTime())) {
+              throw new Error(`Data inválida: ${req.body.due_date}`);
+            }
+            
+            console.log("Data parseada inicialmente:", dueDate.toISOString());
             
             // Se temos um horário específico no campo temporário (due_time_temp)
             if (req.body.due_time_temp) {
               try {
-                // Extrair horas e minutos de forma segura
-                const timeParts = req.body.due_time_temp.split(':');
-                const hours = parseInt(timeParts[0] || '0', 10);
-                const minutes = parseInt(timeParts[1] || '0', 10);
+                // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
+                const timeStr = req.body.due_time_temp;
+                const [hours, minutes] = timeStr.split(':').map(Number);
                 
-                // Criar data combinada usando formato ISO 8601 diretamente
-                const combinedDate = `${dateOnly}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00.000Z`;
+                if (isNaN(hours) || isNaN(minutes)) {
+                  throw new Error(`Formato de hora inválido: ${timeStr}`);
+                }
                 
-                console.log("Caso 2: Combinando due_date existente com hora específica");
-                console.log("Data combinada:", combinedDate);
+                console.log(`Aplicando hora específica: ${hours}:${minutes} à data:`, dueDate.toISOString());
                 
-                // Armazenar como string ISO
-                taskData.due_date = combinedDate;
+                // Criar uma nova data mantendo o ano, mês e dia, mas atualizando horas e minutos
+                const year = dueDate.getFullYear();
+                const month = dueDate.getMonth();
+                const day = dueDate.getDate();
+                
+                // Criar nova data com as horas específicas
+                dueDate = new Date(year, month, day, hours, minutes, 0, 0);
+                
+                console.log("Data após aplicar hora:", dueDate.toISOString());
               } catch (timeError) {
                 console.error("Erro ao processar hora:", timeError);
-                // Se falhar, usar data sem hora específica
-                taskData.due_date = `${dateOnly}T23:59:59.000Z`;
+                // Se falhar o processamento da hora, mantemos a data original
               }
-            } else {
-              // Se não temos hora específica, definir para o final do dia
-              taskData.due_date = `${dateOnly}T23:59:59.000Z`;
-              console.log("Data ajustada para final do dia:", taskData.due_date);
+            } 
+            // Se não temos horário específico e a data está em meia-noite local,
+            // definimos para o final do dia (23:59:59)
+            else if (dueDate.getHours() === 0 && 
+                     dueDate.getMinutes() === 0 && 
+                     dueDate.getSeconds() === 0) {
+              dueDate.setHours(23, 59, 59, 999);
+              console.log("Data ajustada para final do dia:", dueDate.toISOString());
             }
+            
+            taskData.due_date = dueDate;
           } catch (e) {
             console.error("Erro ao processar due_date:", e);
             taskData.due_date = null;
@@ -1813,48 +1822,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Se não temos data de entrega, mas temos data de início e hora, usamos a data de início
         else if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
           try {
-            console.log("Caso 3: Usando start_date como base para due_date com hora específica");
+            console.log("Usando start_date como base para due_date com due_time_temp");
             
-            // Extrair apenas a parte da data do start_date
-            const startDateStr = typeof req.body.start_date === 'string' 
-              ? req.body.start_date 
-              : new Date(req.body.start_date).toISOString();
+            // Criar data a partir da data de início
+            let baseDate = new Date(req.body.start_date);
             
-            const dateOnly = startDateStr.split('T')[0];
+            // Extrair horas e minutos
+            const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
             
-            // Extrair horas e minutos de forma segura
-            const timeParts = req.body.due_time_temp.split(':');
-            const hours = parseInt(timeParts[0] || '0', 10);
-            const minutes = parseInt(timeParts[1] || '0', 10);
+            // Definir horas e minutos
+            baseDate.setHours(hours, minutes, 0, 0);
             
-            // Criar data combinada usando formato ISO 8601 diretamente
-            const combinedDate = `${dateOnly}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00.000Z`;
+            console.log("Data resultante:", baseDate.toISOString());
             
-            console.log("Data combinada:", combinedDate);
-            
-            // Armazenar como string ISO
-            taskData.due_date = combinedDate;
+            taskData.due_date = baseDate;
           } catch (e) {
             console.error("Erro ao processar start_date + due_time_temp:", e);
             taskData.due_date = null;
-          }
-        }
-        
-        // Processar data de início (start_date) se fornecida
-        if (req.body.start_date) {
-          try {
-            // Extrair apenas a parte da data
-            const startDateStr = typeof req.body.start_date === 'string' 
-              ? req.body.start_date 
-              : new Date(req.body.start_date).toISOString();
-            
-            const dateOnly = startDateStr.split('T')[0];
-            
-            // Definir para final do dia em formato ISO
-            taskData.start_date = `${dateOnly}T23:59:59.000Z`;
-          } catch (e) {
-            console.error("Erro ao processar start_date:", e);
-            taskData.start_date = null;
           }
         }
         
