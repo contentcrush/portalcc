@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { motion } from "framer-motion";
 import { 
   formatDate, 
   formatDueDateWithDaysRemaining, 
@@ -17,8 +16,7 @@ import {
   truncateText,
   getInitials,
   generateAvatarColor,
-  showSuccessToast,
-  animations
+  showSuccessToast
 } from "@/lib/utils";
 import { AnimatedElement } from "@/components/ui/animated-element";
 import {
