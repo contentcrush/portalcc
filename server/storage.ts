@@ -123,6 +123,12 @@ export interface IStorage {
   }>;
   getTasksByProject(projectId: number): Promise<Task[]>;
   getTasksByUser(userId: number): Promise<Task[]>;
+  getTaskCountByStatus(filters: {
+    status?: string;
+    project_id?: number;
+    client_id?: number;
+    assigned_to?: number;
+  }): Promise<{ [key: string]: number }>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: number): Promise<boolean>;

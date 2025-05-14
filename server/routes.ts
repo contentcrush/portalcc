@@ -1559,6 +1559,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user tasks" });
     }
   });
+  
+  // Endpoint otimizado para contar tarefas por status
+  app.get("/api/task-count", authenticateJWT, async (req, res) => {
+    try {
+      console.time("[Performance] GET /api/task-count");
+      
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
+      
+      // Usar o método otimizado que conta diretamente no banco de dados com cache
+      const countsByStatus = await storage.getTaskCountByStatus({
+        assigned_to: userId,
+        project_id: projectId,
+        client_id: clientId
+      });
+      
+      // Calcular total
+      const total = Object.values(countsByStatus).reduce((acc, count) => acc + count, 0);
+      
+      // Formatar resposta como esperado pelo cliente
+      const counts = {
+        ...countsByStatus,
+        total
+      };
+      
+      console.timeEnd("[Performance] GET /api/task-count");
+      
+      res.json(counts);
+    } catch (error) {
+      console.error("Erro ao contar tarefas:", error);
+      res.status(500).json({ message: "Failed to count tasks" });
+    }
+  });
 
   app.post("/api/tasks", authenticateJWT, requirePermission('manage_tasks'), async (req, res) => {
     try {
