@@ -68,10 +68,19 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     // Outros campos do projeto conforme necessário
   };
 
+  // Definindo o tipo compatível com o componente UserAvatar
   type UserType = {
     id: number;
     name: string;
     username: string;
+    email: string;
+    avatar: string | null;
+    role: "admin" | "manager" | "editor" | "viewer";
+    department: string | null;
+    address: string | null;
+    area: string | null;
+    password: string;
+    updated_at: Date | null;
     // Outros campos do usuário conforme necessário
   };
 
@@ -87,20 +96,40 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     enabled: !!task?.project_id
   });
 
-  // Fetch assigned user
-  const { data: assignedUser } = useQuery<UserType>({
+  // Fetch assigned user - tipado para compatibilizar com UserAvatar
+  const { data: assignedUser = null } = useQuery<UserType | null>({
     queryKey: [`/api/users/${task?.assigned_to}`],
     enabled: !!task?.assigned_to
   });
 
+  // Definir tipos para comentários e anexos
+  type CommentType = {
+    id: number;
+    task_id: number;
+    user_id: number;
+    content: string;
+    created_at: string;
+    // Outros campos conforme necessário
+  };
+
+  type AttachmentType = {
+    id: number;
+    task_id: number;
+    file_name: string;
+    file_path: string;
+    file_type: string;
+    created_at: string;
+    // Outros campos conforme necessário
+  };
+
   // Fetch task comments
-  const { data: comments, isLoading: isLoadingComments } = useQuery({
+  const { data: comments = [], isLoading: isLoadingComments } = useQuery<CommentType[]>({
     queryKey: [`/api/tasks/${taskId}/comments`],
     enabled: !!taskId
   });
 
   // Fetch task attachments
-  const { data: attachments, isLoading: isLoadingAttachments } = useQuery({
+  const { data: attachments = [], isLoading: isLoadingAttachments } = useQuery<AttachmentType[]>({
     queryKey: [`/api/tasks/${taskId}/attachments`],
     enabled: !!taskId
   });
@@ -197,13 +226,15 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
     if (task) {
       // Aplicar animação ao container principal
       if (taskDetailsRef.current) {
-        const animationType = !task.completed ? 'taskComplete' : 'fadeIn';
+        const isCurrentlyCompleted = task.completed;
         
-        // Usando animação CSS em vez de motion.animate que está causando erros
+        // Usando animação CSS em vez de motion.animate que estava causando erros
         const element = taskDetailsRef.current;
-        if (!task.completed) {
+        if (!isCurrentlyCompleted) {
+          // Adicionando classe para animar quando estiver marcando como concluído
           element.classList.add('animate-pulse');
         } else {
+          // Adicionando classe para animar quando estiver desmarcando a conclusão
           element.classList.add('animate-fade-in');
         }
         
@@ -214,35 +245,42 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
         }, 700);
         
         // Se marcar como concluído, adicionar animação extra de sucesso
-        if (!task.completed) {
+        if (!isCurrentlyCompleted) {
           // Mostrar ícone de sucesso temporariamente
           const successIcon = document.createElement('div');
           successIcon.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-green-100 rounded-full p-4';
           successIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
           document.body.appendChild(successIcon);
           
-          // Animar o ícone com classes CSS em vez de motion.animate
+          // Animar o ícone com classes CSS
           successIcon.classList.add('success-animation');
           
           // Remover o ícone após a animação (após 1500ms, duração da animação)
           setTimeout(() => {
-            document.body.removeChild(successIcon);
+            // Verificar se o elemento ainda existe antes de removê-lo
+            if (document.body.contains(successIcon)) {
+              document.body.removeChild(successIcon);
+            }
           }, 1500);
         }
       }
       
+      // Preparar os dados para a atualização
+      const updateData: {
+        completed: boolean;
+        status?: string;
+      } = {
+        completed: !task.completed
+      };
+      
+      // Se está marcando como concluída, também alterar o status para "concluido"
+      if (!task.completed) {
+        updateData.status = "concluido";
+      }
+      
       // Executar a mutação após um pequeno delay para a animação ser percebida
       setTimeout(() => {
-        if (!task.completed) {
-          // Se está marcando como concluída, também alterar o status para "concluido"
-          updateTaskMutation.mutate({ 
-            completed: true,
-            status: "concluido"
-          });
-        } else {
-          // Se está desmarcando, apenas remove o completed
-          updateTaskMutation.mutate({ completed: false });
-        }
+        updateTaskMutation.mutate(updateData);
       }, 100);
     }
   };
@@ -428,7 +466,11 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       <div ref={taskDetailsRef} className="px-6 py-4">
         {/* Task Title */}
         <h1 className="text-base font-medium text-gray-900 mb-1">{task.title}</h1>
-        <p className="text-sm text-gray-500 mb-4">{task.description?.substring(0, 120) + (task.description?.length > 120 ? '...' : '')}</p>
+        <p className="text-sm text-gray-500 mb-4">
+          {task.description 
+            ? task.description.substring(0, 120) + (task.description.length > 120 ? '...' : '') 
+            : 'Sem descrição'}
+        </p>
         
         {/* Completion Checkbox */}
         <div className="mb-4 flex items-center">
