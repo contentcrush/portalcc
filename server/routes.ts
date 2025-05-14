@@ -1515,8 +1515,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.timeEnd("[Performance] GET /api/tasks");
       console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas totais`);
       
-      // Retornar com metadados de paginação
-      res.json(tasks);
+      // Verificar se o parâmetro count=true foi fornecido na requisição
+      const includeCount = req.query.count === 'true';
+      
+      // Retornar com metadados de paginação quando solicitado
+      if (includeCount) {
+        res.json({
+          data: tasks,
+          total: total,
+          limit: limit,
+          offset: offset
+        });
+      } else {
+        // Manter comportamento atual para compatibilidade
+        res.json(tasks);
+      }
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });
