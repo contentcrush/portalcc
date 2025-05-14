@@ -2389,51 +2389,149 @@ export class DatabaseStorage implements IStorage {
         ? and(...conditions) 
         : undefined;
         
-      // Precisamos de duas consultas: uma para os dados e outra para a contagem total
-      // Fazer primeiro a contagem que é mais rápida
-      const [{ value: total }] = await db
-        .select({ value: count() })
-        .from(tasks)
-        .where(whereCondition || undefined);
+      // OTIMIZAÇÃO: Separar as consultas para melhorar performance
       
-      // Fazer a consulta com JOIN apenas para os registros da página atual
-      let query = db.query.tasks.findMany({
-        where: whereCondition,
-        limit: filters.limit,
-        offset: filters.offset,
-        with: {
-          project: {
-            with: {
-              client: true
-            }
-          },
-          assignedUser: true
-        }
-      });
+      // ETAPA 1: Contagem total de registros - Query simples e rápida
+      // Otimização: Se tivermos filter de client_id, precisamos fazer join, senão fazemos query direta
+      let totalCount = 0;
       
-      // Executar a consulta
-      const result = await query;
+      if (filters.client_id) {
+        // Contagem com join para filtro de cliente
+        const [countResult] = await db
+          .select({ value: count() })
+          .from(tasks)
+          .leftJoin(projects, eq(tasks.project_id, projects.id))
+          .where(and(
+            whereCondition || undefined,
+            eq(projects.client_id, filters.client_id)
+          ));
+        totalCount = Number(countResult.value);
+      } else {
+        // Contagem simples sem join (mais rápida)
+        const [countResult] = await db
+          .select({ value: count() })
+          .from(tasks)
+          .where(whereCondition || undefined);
+        totalCount = Number(countResult.value);
+      }
       
-      // Filtrar por client_id (não é possível fazer diretamente no WHERE do SQL com JOIN)
-      let finalResult = filters.client_id 
-        ? result.filter(task => 
-            task.project?.client?.id === filters.client_id
-          )
-        : result;
+      // ETAPA 2: Obter apenas os dados básicos das tarefas
+      // Não fazemos nested joins, apenas obtemos os dados principais
+      let taskResults;
       
-      // Transformar para o formato esperado
-      const tasksWithDetails = finalResult.map(item => {
-        const taskWithDetails = {
-          ...item,
-          assignedUser: item.assignedUser || undefined
-        } as any;
+      if (filters.client_id) {
+        // Query com join para filtro de cliente
+        taskResults = await db
+          .select({
+            id: tasks.id,
+            title: tasks.title,
+            description: tasks.description,
+            status: tasks.status,
+            priority: tasks.priority,
+            due_date: tasks.due_date,
+            due_time: tasks.due_time,
+            project_id: tasks.project_id,
+            assigned_to: tasks.assigned_to,
+            creation_date: tasks.creation_date,
+            tags: tasks.tags,
+            completed: tasks.completed,
+            completed_at: tasks.completed_at,
+            completion_note: tasks.completion_note
+          })
+          .from(tasks)
+          .leftJoin(projects, eq(tasks.project_id, projects.id))
+          .where(and(
+            whereCondition || undefined,
+            eq(projects.client_id, filters.client_id)
+          ))
+          .limit(filters.limit)
+          .offset(filters.offset);
+      } else {
+        // Query simples sem join (mais rápida)
+        taskResults = await db
+          .select()
+          .from(tasks)
+          .where(whereCondition || undefined)
+          .limit(filters.limit)
+          .offset(filters.offset);
+      };
+      
+      // ETAPA 3: Se não temos tarefas, retornar resultados vazios rápido
+      if (taskResults.length === 0) {
+        console.log(`[Performance] Nenhuma tarefa encontrada com os filtros aplicados`);
+        // Armazenar resultados vazios no cache
+        this.#taskCache.filtered.set(cacheKey, {
+          tasks: [],
+          total: totalCount,
+          timestamp: Date.now()
+        });
         
-        if (item.project) {
-          taskWithDetails.project = item.project;
-          
-          if (item.project.client) {
-            taskWithDetails.client = item.project.client;
+        return { tasks: [], total: totalCount };
+      }
+      
+      // ETAPA 4: Buscar dados relacionados apenas para as tarefas desta página
+      // Coletamos os IDs necessários
+      const taskIds = taskResults.map(t => t.id);
+      const projectIds = taskResults.filter(t => t.project_id).map(t => t.project_id!);
+      const userIds = taskResults.filter(t => t.assigned_to).map(t => t.assigned_to!);
+      
+      // ETAPA 5: Obter informações de projetos (se necessário)
+      let projectsData: Record<number, any> = {};
+      let clientsData: Record<number, any> = {};
+      
+      if (projectIds.length > 0) {
+        // Buscar projetos relacionados em uma única consulta
+        const projectResults = await db.query.projects.findMany({
+          where: inArray(projects.id, projectIds),
+          with: { client: true }
+        });
+        
+        // Transformar em um mapa de acesso rápido
+        projectResults.forEach(p => {
+          projectsData[p.id] = p;
+          if (p.client) {
+            clientsData[p.client.id] = p.client;
           }
+        });
+      }
+      
+      // ETAPA 6: Obter informações de usuários (se necessário)
+      let usersData: Record<number, any> = {};
+      
+      if (userIds.length > 0) {
+        const userResults = await db.select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          department: users.department,
+          position: users.position,
+          avatar: users.avatar
+        }).from(users).where(inArray(users.id, userIds));
+        
+        // Transformar em um mapa de acesso rápido
+        userResults.forEach(u => {
+          usersData[u.id] = u;
+        });
+      }
+      
+      // ETAPA 7: Montar o resultado final com relações estabelecidas na memória
+      const tasksWithDetails = taskResults.map(task => {
+        const taskWithDetails = { ...task } as any;
+        
+        // Adicionar projeto se existir
+        if (task.project_id && projectsData[task.project_id]) {
+          taskWithDetails.project = projectsData[task.project_id];
+          
+          // Adicionar cliente se existir
+          if (taskWithDetails.project.client_id && clientsData[taskWithDetails.project.client_id]) {
+            taskWithDetails.client = clientsData[taskWithDetails.project.client_id];
+          }
+        }
+        
+        // Adicionar usuário atribuído se existir
+        if (task.assigned_to && usersData[task.assigned_to]) {
+          taskWithDetails.assignedUser = usersData[task.assigned_to];
         }
         
         return taskWithDetails;
@@ -2442,7 +2540,7 @@ export class DatabaseStorage implements IStorage {
       // Armazenar no cache de consultas filtradas
       this.#taskCache.filtered.set(cacheKey, {
         tasks: tasksWithDetails,
-        total,
+        total: totalCount,
         timestamp: Date.now()
       });
       
