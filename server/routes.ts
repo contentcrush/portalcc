@@ -1485,32 +1485,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[Performance] API: Solicitando tarefas (limit=${limit}, offset=${offset}, status=${status || 'todos'}, project_id=${project_id || 'todos'}, client_id=${client_id || 'todos'}, assigned_to=${assigned_to || 'todos'})`);
       
-      // TODO: Adicionar método mais eficiente no storage para filtrar e paginar
-      // Por enquanto vamos filtrar no lado do servidor
-      let tasks = await storage.getTasksWithDetails();
-      
-      // Aplicar filtros
-      if (status) {
-        tasks = tasks.filter(task => task.status === status);
-      }
-      
-      if (project_id) {
-        tasks = tasks.filter(task => task.project_id === project_id);
-      }
-      
-      if (client_id) {
-        tasks = tasks.filter(task => task.project && (task.client?.id === client_id));
-      }
-      
-      if (assigned_to) {
-        tasks = tasks.filter(task => task.assigned_to === assigned_to);
-      }
-      
-      // Calcular total antes da paginação
-      const total = tasks.length;
-      
-      // Aplicar paginação
-      tasks = tasks.slice(offset, offset + limit);
+      // Usar a nova função otimizada que aplica filtros diretamente no SQL e usa cache
+      const { tasks, total } = await storage.getFilteredTasksWithDetails({
+        status,
+        project_id,
+        client_id,
+        assigned_to,
+        limit,
+        offset
+      });
       
       console.timeEnd("[Performance] GET /api/tasks");
       console.log(`[Performance] API: Retornando ${tasks.length} de ${total} tarefas totais`);

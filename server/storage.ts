@@ -2042,8 +2042,37 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(tasks);
   }
   
+  // Cachê em memória para reduzir consultas repetidas
+  #taskCache = {
+    lastUpdated: 0,
+    data: null as Task[] | null,
+    TTL: 30000, // 30 segundos de validade para o cache
+    filtered: new Map<string, { tasks: Task[], total: number, timestamp: number }>()
+  };
+
+  // Função que decide se deve usar o cache ou fazer nova consulta
+  #shouldUseCache() {
+    const now = Date.now();
+    return this.#taskCache.data !== null && 
+           (now - this.#taskCache.lastUpdated) < this.#taskCache.TTL;
+  }
+
+  // Invalida o cache quando uma tarefa é modificada
+  #invalidateTaskCache() {
+    this.#taskCache.data = null;
+    this.#taskCache.filtered.clear();
+    this.#taskCache.lastUpdated = 0;
+  }
+
   async getTasksWithDetails(): Promise<Task[]> {
     const startTime = Date.now();
+
+    // Verificar se podemos usar o cache
+    if (this.#shouldUseCache()) {
+      console.log("[Performance] Usando cache de tarefas em memória");
+      return this.#taskCache.data!;
+    }
+
     try {
       console.log("[Performance] Iniciando busca otimizada de tarefas");
       
@@ -2079,6 +2108,10 @@ export class DatabaseStorage implements IStorage {
         
         return taskWithDetails;
       });
+      
+      // Armazenar no cache
+      this.#taskCache.data = tasksWithDetails;
+      this.#taskCache.lastUpdated = Date.now();
       
       console.log(`[Performance] Processamento concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} tarefas`);
       return tasksWithDetails;
@@ -2144,8 +2177,179 @@ export class DatabaseStorage implements IStorage {
         return taskWithDetails;
       });
       
+      // Armazenar no cache mesmo se usado o fallback
+      this.#taskCache.data = tasksWithDetails;
+      this.#taskCache.lastUpdated = Date.now();
+      
       console.log(`[Performance] Processamento alternativo concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} tarefas`);
       return tasksWithDetails;
+    }
+  }
+  
+  // Nova função otimizada com filtros aplicados diretamente no SQL
+  async getFilteredTasksWithDetails(filters: {
+    status?: string;
+    project_id?: number;
+    client_id?: number;
+    assigned_to?: number;
+    limit: number;
+    offset: number;
+  }): Promise<{ tasks: Task[]; total: number }> {
+    const startTime = Date.now();
+    
+    // Gerar uma chave de cache baseada nos filtros
+    const cacheKey = JSON.stringify(filters);
+    
+    // Verificar se temos resultado em cache para esta consulta específica
+    if (this.#taskCache.filtered.has(cacheKey)) {
+      const cachedData = this.#taskCache.filtered.get(cacheKey)!;
+      // Verificar se o cache ainda é válido (30 segundos)
+      if (Date.now() - cachedData.timestamp < 30000) {
+        console.log(`[Performance] Usando cache filtrado para: ${cacheKey}`);
+        return { 
+          tasks: cachedData.tasks,
+          total: cachedData.total
+        };
+      }
+    }
+    
+    try {
+      console.log(`[Performance] Iniciando busca filtrada e otimizada: ${cacheKey}`);
+      
+      // Construir condições de filtro
+      const conditions = [];
+      
+      if (filters.status) {
+        conditions.push(eq(tasks.status, filters.status));
+      }
+      
+      if (filters.project_id) {
+        conditions.push(eq(tasks.project_id, filters.project_id));
+      }
+      
+      if (filters.assigned_to) {
+        conditions.push(eq(tasks.assigned_to, filters.assigned_to));
+      }
+      
+      // Condição final combinada com AND lógico
+      const whereCondition = conditions.length > 0 
+        ? and(...conditions) 
+        : undefined;
+        
+      // Precisamos de duas consultas: uma para os dados e outra para a contagem total
+      // Fazer primeiro a contagem que é mais rápida
+      const [{ value: total }] = await db
+        .select({ value: count() })
+        .from(tasks)
+        .where(whereCondition || undefined);
+      
+      // Fazer a consulta com JOIN apenas para os registros da página atual
+      let query = db.query.tasks.findMany({
+        where: whereCondition,
+        limit: filters.limit,
+        offset: filters.offset,
+        with: {
+          project: {
+            with: {
+              client: true
+            }
+          },
+          assignedUser: true
+        }
+      });
+      
+      // Executar a consulta
+      const result = await query;
+      
+      // Filtrar por client_id (não é possível fazer diretamente no WHERE do SQL com JOIN)
+      let finalResult = filters.client_id 
+        ? result.filter(task => 
+            task.project?.client?.id === filters.client_id
+          )
+        : result;
+      
+      // Transformar para o formato esperado
+      const tasksWithDetails = finalResult.map(item => {
+        const taskWithDetails = {
+          ...item,
+          assignedUser: item.assignedUser || undefined
+        } as any;
+        
+        if (item.project) {
+          taskWithDetails.project = item.project;
+          
+          if (item.project.client) {
+            taskWithDetails.client = item.project.client;
+          }
+        }
+        
+        return taskWithDetails;
+      });
+      
+      // Armazenar no cache de consultas filtradas
+      this.#taskCache.filtered.set(cacheKey, {
+        tasks: tasksWithDetails,
+        total,
+        timestamp: Date.now()
+      });
+      
+      // Se o cache principal estiver vazio e não houver filtros, podemos atualizar o cache completo também
+      if (!this.#taskCache.data && !filters.status && !filters.project_id && 
+          !filters.client_id && !filters.assigned_to && 
+          filters.offset === 0 && filters.limit >= 100) {
+        this.#taskCache.data = tasksWithDetails;
+        this.#taskCache.lastUpdated = Date.now();
+      }
+      
+      console.log(`[Performance] Processamento filtrado concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} de ${total} tarefas`);
+      
+      return {
+        tasks: tasksWithDetails,
+        total
+      };
+    } catch (error) {
+      console.error(`[Performance] Erro em consulta filtrada após ${Date.now() - startTime}ms:`, error);
+      
+      // Fallback: usar o método não filtrado e aplicar filtros no servidor
+      // Este é o método antigo que estávamos usando, mas agora com cache
+      let tasks = await this.getTasksWithDetails();
+      
+      // Aplicar filtros
+      if (filters.status) {
+        tasks = tasks.filter(task => task.status === filters.status);
+      }
+      
+      if (filters.project_id) {
+        tasks = tasks.filter(task => task.project_id === filters.project_id);
+      }
+      
+      if (filters.client_id) {
+        tasks = tasks.filter(task => task.project && (task.client?.id === filters.client_id));
+      }
+      
+      if (filters.assigned_to) {
+        tasks = tasks.filter(task => task.assigned_to === filters.assigned_to);
+      }
+      
+      // Calcular total antes da paginação
+      const total = tasks.length;
+      
+      // Aplicar paginação
+      tasks = tasks.slice(filters.offset, filters.offset + filters.limit);
+      
+      // Armazenar no cache de consultas filtradas
+      this.#taskCache.filtered.set(cacheKey, {
+        tasks,
+        total,
+        timestamp: Date.now()
+      });
+      
+      console.log(`[Performance] Processamento filtrado fallback concluído em ${Date.now() - startTime}ms, ${tasks.length} de ${total} tarefas`);
+      
+      return {
+        tasks,
+        total
+      };
     }
   }
 
@@ -2159,6 +2363,8 @@ export class DatabaseStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const [task] = await db.insert(tasks).values(insertTask).returning();
+    // Invalidar cache de tarefas
+    this.#invalidateTaskCache();
     return task;
   }
 
@@ -2167,11 +2373,19 @@ export class DatabaseStorage implements IStorage {
       .set(task)
       .where(eq(tasks.id, id))
       .returning();
+    
+    // Invalidar cache de tarefas
+    this.#invalidateTaskCache();
+    
     return updated;
   }
 
   async deleteTask(id: number): Promise<boolean> {
     const result = await db.delete(tasks).where(eq(tasks.id, id));
+    
+    // Invalidar cache de tarefas
+    this.#invalidateTaskCache();
+    
     return true;
   }
   
