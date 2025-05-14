@@ -107,23 +107,16 @@ export function UserAvatar({
         .then(() => {
           setIsLoaded(true);
           setIsError(false);
-          console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Imagem carregada com sucesso`);
         })
         .catch(() => {
           setIsLoaded(false);
           setIsError(true);
-          console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Erro ao carregar imagem`);
         });
     }
   }, [user.name, user.id, size, avatarUrl, preload]);
   
-  // Adicionar debug para verificar avatares válidos
-  useEffect(() => {
-    if (avatarUrl) {
-      console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Validando logo...`);
-      console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): URL válida, definindo como fonte`);
-    }
-  }, [avatarUrl, user.name, user.id]);
+  // Removidos logs de debug que estavam impactando a performance
+  
 
   // Calcular iniciais para fallback
   const initials = user.name.split(' ').map(part => part.charAt(0)).join('').substring(0, 2).toUpperCase();
@@ -151,12 +144,10 @@ export function UserAvatar({
             onLoad={() => {
               setIsLoaded(true);
               setIsError(false);
-              console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Imagem carregada com sucesso`);
             }}
             onError={() => {
               setIsLoaded(false);
               setIsError(true);
-              console.log(`Avatar avatar-${user.id.toString(36)} (${user.name}): Erro ao carregar imagem`);
             }}
           />
         ) : (
