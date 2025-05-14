@@ -1,4 +1,4 @@
-import { eq, and, inArray, or, count, asc, desc } from "drizzle-orm";
+import { eq, and, inArray, or, count, asc, desc, isNull, isNotNull, like, not, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
@@ -108,6 +108,19 @@ export interface IStorage {
   getTask(id: number): Promise<Task | undefined>;
   getTasks(): Promise<Task[]>;
   getTasksWithDetails(): Promise<Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
+  
+  // Método otimizado para obter tarefas com filtros aplicados diretamente no SQL
+  getFilteredTasksWithDetails(filters: {
+    status?: string;
+    project_id?: number;
+    client_id?: number;
+    assigned_to?: number;
+    limit: number;
+    offset: number;
+  }): Promise<{
+    tasks: Task[];
+    total: number;
+  }>;
   getTasksByProject(projectId: number): Promise<Task[]>;
   getTasksByUser(userId: number): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
