@@ -45,20 +45,50 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const taskDetailsRef = useRef<HTMLDivElement>(null);
 
+  // Definir tipos para as consultas
+  type TaskType = {
+    id: number;
+    title: string;
+    description: string | null;
+    project_id: number | null;
+    assigned_to: number | null;
+    status: string;
+    priority: string;
+    due_date: string | null;
+    start_date: string | null;
+    estimated_hours: number | null;
+    completed: boolean;
+    completion_date: string | null;
+    creation_date: string;
+  };
+
+  type ProjectType = {
+    id: number;
+    name: string;
+    // Outros campos do projeto conforme necessário
+  };
+
+  type UserType = {
+    id: number;
+    name: string;
+    username: string;
+    // Outros campos do usuário conforme necessário
+  };
+
   // Fetch task details
-  const { data: task, isLoading: isLoadingTask } = useQuery({
+  const { data: task, isLoading: isLoadingTask } = useQuery<TaskType>({
     queryKey: [`/api/tasks/${taskId}`],
     enabled: !!taskId
   });
 
   // Fetch project details if task has a project
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<ProjectType>({
     queryKey: [`/api/projects/${task?.project_id}`],
     enabled: !!task?.project_id
   });
 
   // Fetch assigned user
-  const { data: assignedUser } = useQuery({
+  const { data: assignedUser } = useQuery<UserType>({
     queryKey: [`/api/users/${task?.assigned_to}`],
     enabled: !!task?.assigned_to
   });
