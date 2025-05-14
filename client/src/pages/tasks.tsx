@@ -155,6 +155,7 @@ export default function Tasks() {
     // Add pagination params
     params.append('limit', pageSize.toString());
     params.append('offset', (currentPage * pageSize).toString());
+    params.append('count', 'true'); // Solicitar contagem total
     
     // Add filters if they are active (not 'all')
     if (statusFilter !== 'all') params.append('status', statusFilter);
@@ -177,12 +178,21 @@ export default function Tasks() {
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error('Failed to fetch tasks');
         
-        const data = await response.json();
-        // The API currently doesn't return total count, so we estimate based on results
-        if (data.length < pageSize) {
-          setTotalTasks(currentPage * pageSize + data.length);
+        const response_data = await response.json();
+        let data = response_data;
+        
+        // Verificar se o servidor retornou um objeto com contagem e dados
+        if (response_data && typeof response_data === 'object' && 'data' in response_data && 'total' in response_data) {
+          // Formato { data: [...], total: number }
+          setTotalTasks(response_data.total);
+          data = response_data.data;
         } else {
-          setTotalTasks((currentPage + 1) * pageSize + 1); // Assume there's at least 1 more page
+          // Caso o servidor não retorne contagem, estimar baseado nos resultados
+          if (data.length < pageSize) {
+            setTotalTasks(currentPage * pageSize + data.length);
+          } else {
+            setTotalTasks((currentPage + 1) * pageSize); // Assume que há exatamente uma página cheia
+          }
         }
         
         // Log for debugging
@@ -499,17 +509,31 @@ export default function Tasks() {
   const handlePageChange = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && currentPage > 0) {
       setCurrentPage(currentPage - 1);
-    } else if (direction === 'next' && tasks?.length === pageSize) {
-      // Se temos um número de tarefas igual ao pageSize, assumimos que há mais páginas
-      setCurrentPage(currentPage + 1);
+    } else if (direction === 'next') {
+      // Calcular se há mais páginas
+      const totalPages = Math.ceil(totalTasks / pageSize);
+      const hasMorePages = (currentPage + 1) < totalPages;
+      
+      // Se temos mais páginas ou o número de tarefas é igual ao tamanho da página
+      if (hasMorePages || (tasks && tasks.length === pageSize)) {
+        setCurrentPage(currentPage + 1);
+      }
     }
   };
   
   // Função para formatar o intervalo de tarefas exibido
   const formatTaskRange = () => {
+    if (!tasks || tasks.length === 0) {
+      return `0 tarefas encontradas`;
+    }
+    
     const start = currentPage * pageSize + 1;
-    const end = start + (tasks?.length || 0) - 1;
-    return `${start}-${end} de ${totalTasks || '?'}`;
+    const end = start + (tasks.length - 1);
+    
+    // Se o totalTasks é zero mas temos tarefas, algo está errado com a contagem
+    const total = totalTasks > 0 ? totalTasks : tasks.length;
+    
+    return `${start}-${end} de ${total}`;
   };
 
   return (
@@ -668,7 +692,7 @@ export default function Tasks() {
                         variant="outline" 
                         size="sm" 
                         onClick={() => handlePageChange('next')}
-                        disabled={tasks.length < pageSize}
+                        disabled={(currentPage + 1) >= Math.ceil(totalTasks / pageSize)}
                       >
                         Próxima
                       </Button>
@@ -1131,25 +1155,8 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
   
   // Handler para toggle com animação
   const handleToggleComplete = () => {
-    // Aplicar animação baseada no novo status (inverso do atual)
-    if (cardRef.current) {
-      const animationType = !isCompleted ? 'taskComplete' : 'fadeIn';
-      
-      // Aplicar animação usando a API do Framer Motion
-      motion.animate(
-        cardRef.current,
-        animations[animationType].animate,
-        { 
-          duration: 0.7,
-          ease: "easeInOut"
-        }
-      );
-    }
-    
-    // Chamar handler original
-    setTimeout(() => {
-      onToggleComplete();
-    }, 100);
+    // Chamar handler original diretamente sem a animação que estava causando erro
+    onToggleComplete();
   };
   
   return (
