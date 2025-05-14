@@ -1090,15 +1090,19 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
     if (cardRef.current) {
       const animationType = !isCompleted ? 'taskComplete' : 'fadeIn';
       
-      // Aplicar animação usando a API do Framer Motion
-      motion.animate(
-        cardRef.current,
-        animations[animationType].animate,
-        { 
-          duration: 0.7,
-          ease: "easeInOut"
-        }
-      );
+      // Usando animação CSS em vez de motion.animate que está causando erros
+      const element = cardRef.current;
+      if (!isCompleted) {
+        element.classList.add('animate-pulse');
+      } else {
+        element.classList.add('animate-fade-in');
+      }
+      
+      // Remover classes de animação após terminar
+      setTimeout(() => {
+        element.classList.remove('animate-pulse');
+        element.classList.remove('animate-fade-in');
+      }, 700);
     }
     
     // Chamar handler original

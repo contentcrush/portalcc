@@ -27,6 +27,44 @@
   }
 }
 
+/* Animação para o ícone de sucesso após completar tarefa */
+.success-animation {
+  animation: success-anim 1.5s ease-in-out forwards;
+}
+
+@keyframes success-anim {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+}
+
+/* Animação para efeito de fade-in */
+.animate-fade-in {
+  animation: fade-in 0.7s ease-in-out forwards;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   /* Fundo listrado para barras de progresso de projetos pausados */
   .bg-stripes {

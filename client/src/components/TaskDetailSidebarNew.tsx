@@ -169,15 +169,19 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       if (taskDetailsRef.current) {
         const animationType = !task.completed ? 'taskComplete' : 'fadeIn';
         
-        // Aplicar animação usando a API do Framer Motion
-        motion.animate(
-          taskDetailsRef.current,
-          animations[animationType].animate,
-          { 
-            duration: 0.7,
-            ease: "easeInOut"
-          }
-        );
+        // Usando animação CSS em vez de motion.animate que está causando erros
+        const element = taskDetailsRef.current;
+        if (!task.completed) {
+          element.classList.add('animate-pulse');
+        } else {
+          element.classList.add('animate-fade-in');
+        }
+        
+        // Remover classes de animação após terminar
+        setTimeout(() => {
+          element.classList.remove('animate-pulse');
+          element.classList.remove('animate-fade-in');
+        }, 700);
         
         // Se marcar como concluído, adicionar animação extra de sucesso
         if (!task.completed) {
@@ -187,14 +191,13 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
           successIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
           document.body.appendChild(successIcon);
           
-          // Animar o ícone
-          motion.animate(
-            successIcon,
-            { opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] },
-            { duration: 1.5, ease: "easeInOut" }
-          ).then(() => {
+          // Animar o ícone com classes CSS em vez de motion.animate
+          successIcon.classList.add('success-animation');
+          
+          // Remover o ícone após a animação (após 1500ms, duração da animação)
+          setTimeout(() => {
             document.body.removeChild(successIcon);
-          });
+          }, 1500);
         }
       }
       
