@@ -87,12 +87,17 @@ export function ClientAvatar({
     // Se preload estiver ativado, pré-carregar o logo
     if (preload && logoUrl && !isImageCached(logoUrl)) {
       preloadImage(logoUrl).catch(() => {
-        // Falha silenciosa - sem logs para melhorar performance
+        console.debug(`ClientAvatar: Falha ao pré-carregar logo para "${client.name}"`);
       });
     }
   }, [client.name, size, logoUrl, preload]);
   
-  // Removido log de debug que estava impactando a performance
+  // Adicionar debug para verificar logos válidos
+  useEffect(() => {
+    if (logoUrl) {
+      console.debug(`ClientAvatar: Logo válido encontrado para "${client.name}"`);
+    }
+  }, [logoUrl, client.name]);
 
   return (
     <LazyImage

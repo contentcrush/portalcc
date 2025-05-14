@@ -3,6 +3,7 @@ import { twMerge } from "tailwind-merge";
 import { ReactNode } from "react";
 import { toast } from "@/hooks/use-toast";
 import { ToastActionElement } from "@/components/ui/toast";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { 
   format, 
   parseISO, 
@@ -944,4 +945,82 @@ export function createSuccessToast({ title, description, action }: ToastParams) 
   };
 }
 
-// Removido o objeto de animações para melhorar a performance
+/**
+ * Variantes de animação para diferentes propósitos de UI
+ * Pode ser usado com framer-motion para adicionar animações consistentes
+ */
+export const animations = {
+  // Animação para itens sendo adicionados a uma lista
+  itemAdded: {
+    initial: { opacity: 0, scale: 0.8, height: 0 },
+    animate: { opacity: 1, scale: 1, height: "auto" },
+    exit: { opacity: 0, scale: 0.8, height: 0 },
+    transition: { type: "spring", damping: 15, stiffness: 300 }
+  },
+  
+  // Animação para itens sendo removidos de uma lista
+  itemRemoved: {
+    initial: { opacity: 1, scale: 1, height: "auto" },
+    animate: { opacity: 1, scale: 1, height: "auto" },
+    exit: { opacity: 0, y: -10, height: 0 },
+    transition: { duration: 0.2 }
+  },
+  
+  // Animação para ações de sucesso (como salvar ou completar)
+  success: {
+    initial: { backgroundColor: "transparent" },
+    animate: { 
+      backgroundColor: ["transparent", "rgba(34, 197, 94, 0.2)", "transparent"],
+      transition: { duration: 1, times: [0, 0.1, 1] }
+    }
+  },
+  
+  // Animação para ações de falha ou erro
+  error: {
+    initial: { backgroundColor: "transparent" },
+    animate: { 
+      backgroundColor: ["transparent", "rgba(239, 68, 68, 0.2)", "transparent"],
+      transition: { duration: 1, times: [0, 0.1, 1] }
+    }
+  },
+  
+  // Animação para marcar tarefa como completa
+  taskComplete: {
+    initial: { backgroundColor: "transparent" },
+    animate: { 
+      backgroundColor: ["transparent", "rgba(34, 197, 94, 0.2)", "transparent"],
+      scale: [1, 1.02, 1],
+      transition: { duration: 0.7, times: [0, 0.2, 1] }
+    }
+  },
+  
+  // Pulso sutil para chamar atenção
+  pulse: {
+    initial: { scale: 1 },
+    animate: { 
+      scale: [1, 1.03, 1],
+      transition: { duration: 0.5, repeat: 1, repeatType: "reverse" }
+    }
+  },
+  
+  // Fade in
+  fadeIn: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: { duration: 0.3 }
+  },
+  
+  // Slide in de baixo
+  slideInBottom: {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { type: "spring", damping: 18, stiffness: 500 }
+  },
+  
+  // Slide in do lado
+  slideInRight: {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { type: "spring", damping: 18, stiffness: 500 }
+  }
+};

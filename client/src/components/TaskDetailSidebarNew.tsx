@@ -8,7 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Download, Plus, Send, ChevronDown, Trash2, CheckCircle2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDate, formatDateWithTime, showSuccessToast } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { formatDate, formatDateWithTime, showSuccessToast, animations } from "@/lib/utils";
+import { AnimatedElement } from "@/components/ui/animated-element";
 import PriorityBadge from "@/components/PriorityBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Separator } from "@/components/ui/separator";
@@ -79,20 +81,8 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
       return apiRequest('PATCH', `/api/tasks/${taskId}`, data);
     },
     onSuccess: () => {
-      // Invalidar apenas a consulta específica da tarefa atual
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
-      
-      // Invalidar as listas de tarefas que contêm apenas os parâmetros necessários
-      // para refletir mudanças na UI sem fazer múltiplas requisições
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/tasks'],
-        predicate: (query) => {
-          // Só invalidar se a chave contém exatamente 1 elemento ('/api/tasks') 
-          // ou no máximo 2 elementos ('/api/tasks' + algum filtro)
-          return query.queryKey.length <= 2;
-        }
-      });
-      
       showSuccessToast({
         title: "Tarefa atualizada",
         description: "Tarefa atualizada com sucesso"
@@ -175,17 +165,52 @@ export default function TaskDetailSidebarNew({ taskId, onClose, onEdit }: TaskDe
 
   const handleToggleCompletion = () => {
     if (task) {
-      // Executar a mutação imediatamente, sem animações
-      if (!task.completed) {
-        // Se está marcando como concluída, também alterar o status para "concluido"
-        updateTaskMutation.mutate({ 
-          completed: true,
-          status: "concluido"
-        });
-      } else {
-        // Se está desmarcando, apenas remove o completed
-        updateTaskMutation.mutate({ completed: false });
+      // Aplicar animação ao container principal
+      if (taskDetailsRef.current) {
+        const animationType = !task.completed ? 'taskComplete' : 'fadeIn';
+        
+        // Aplicar animação usando a API do Framer Motion
+        motion.animate(
+          taskDetailsRef.current,
+          animations[animationType].animate,
+          { 
+            duration: 0.7,
+            ease: "easeInOut"
+          }
+        );
+        
+        // Se marcar como concluído, adicionar animação extra de sucesso
+        if (!task.completed) {
+          // Mostrar ícone de sucesso temporariamente
+          const successIcon = document.createElement('div');
+          successIcon.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-green-100 rounded-full p-4';
+          successIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+          document.body.appendChild(successIcon);
+          
+          // Animar o ícone
+          motion.animate(
+            successIcon,
+            { opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] },
+            { duration: 1.5, ease: "easeInOut" }
+          ).then(() => {
+            document.body.removeChild(successIcon);
+          });
+        }
       }
+      
+      // Executar a mutação após um pequeno delay para a animação ser percebida
+      setTimeout(() => {
+        if (!task.completed) {
+          // Se está marcando como concluída, também alterar o status para "concluido"
+          updateTaskMutation.mutate({ 
+            completed: true,
+            status: "concluido"
+          });
+        } else {
+          // Se está desmarcando, apenas remove o completed
+          updateTaskMutation.mutate({ completed: false });
+        }
+      }, 100);
     }
   };
 

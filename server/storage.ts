@@ -1,4 +1,4 @@
-import { eq, and, inArray, or, count, asc, desc, isNull, isNotNull, like, not, sql } from "drizzle-orm";
+import { eq, and, inArray, or, count, asc, desc } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
@@ -16,30 +16,6 @@ import {
   type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact,
   type InsertProjectAttachment
 } from "../shared/schema";
-
-// Interface para filtros de tarefas (reutilizável)
-interface TaskFilters {
-  status?: string;
-  project_id?: number;
-  client_id?: number;
-  assigned_to?: number;
-  limit: number;
-  offset: number;
-}
-
-// Interface para filtros básicos de tarefas
-interface BasicTaskFilters extends TaskFilters {
-  minimal?: boolean; // Se true, retorna apenas os dados da tarefa sem relações
-}
-
-// Interface para contagem de tarefas por status
-interface TaskCountFilters {
-  status?: string;
-  project_id?: number;
-  client_id?: number;
-  assigned_to?: number;
-  fast_mode?: boolean; // Se true, usa valores em cache com TTL maior
-}
 
 export interface IStorage {
   // Users
@@ -132,21 +108,6 @@ export interface IStorage {
   getTask(id: number): Promise<Task | undefined>;
   getTasks(): Promise<Task[]>;
   getTasksWithDetails(): Promise<Task[]>; // Método adicional para obter tarefas com detalhes de projeto e cliente
-  
-  // Método otimizado para obter tarefas com filtros aplicados diretamente no SQL
-  getFilteredTasksWithDetails(filters: TaskFilters): Promise<{
-    tasks: Task[];
-    total: number;
-  }>;
-  
-  // Método ultra-otimizado para obter lista básica de tarefas sem JOINs pesados
-  getBasicTaskList(filters: BasicTaskFilters): Promise<{
-    tasks: Task[];
-    total: number;
-  }>;
-  
-  // Função para contar tarefas por status com opção de modo rápido
-  getTaskCountByStatus(filters: TaskCountFilters): Promise<Record<string, number>>;
   getTasksByProject(projectId: number): Promise<Task[]>;
   getTasksByUser(userId: number): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
@@ -1319,59 +1280,6 @@ export class MemStorage implements IStorage {
       (task) => task.assigned_to === userId,
     );
   }
-  
-  async getTaskCountByStatus(filters: {
-    status?: string;
-    project_id?: number;
-    client_id?: number;
-    assigned_to?: number;
-  }): Promise<{ [key: string]: number }> {
-    const { status, project_id, client_id, assigned_to } = filters;
-    
-    // Filtrar as tarefas com base nos critérios
-    let filteredTasks = Array.from(this.tasksData.values());
-    
-    if (status) {
-      filteredTasks = filteredTasks.filter(task => task.status === status);
-    }
-    
-    if (project_id) {
-      filteredTasks = filteredTasks.filter(task => task.project_id === project_id);
-    }
-    
-    if (assigned_to) {
-      filteredTasks = filteredTasks.filter(task => task.assigned_to === assigned_to);
-    }
-    
-    if (client_id) {
-      // Para filtrar por cliente, precisamos relacionar com projetos
-      const projectsForClient = Array.from(this.projectsData.values())
-        .filter(project => project.client_id === client_id)
-        .map(project => project.id);
-      
-      filteredTasks = filteredTasks.filter(task => 
-        task.project_id && projectsForClient.includes(task.project_id)
-      );
-    }
-    
-    // Contar por status
-    const countsByStatus = {
-      pending: 0,
-      in_progress: 0,
-      review: 0,
-      completed: 0
-    };
-    
-    // Contabilizar
-    filteredTasks.forEach(task => {
-      const taskStatus = task.status as keyof typeof countsByStatus;
-      if (taskStatus in countsByStatus) {
-        countsByStatus[taskStatus]++;
-      }
-    });
-    
-    return countsByStatus;
-  }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = this.taskId++;
@@ -2121,741 +2029,97 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(tasks);
   }
   
-  // Cachê em memória para reduzir consultas repetidas
-  #taskCache = {
-    lastUpdated: 0,
-    data: null as Task[] | null,
-    TTL: 30000, // 30 segundos de validade para o cache
-    filtered: new Map<string, { tasks: Task[], total: number, timestamp: number }>(),
-    counts: new Map<string, { data: Record<string, number>, timestamp: number }>()
-  };
-
-  // Função que decide se deve usar o cache ou fazer nova consulta
-  #shouldUseCache() {
-    const now = Date.now();
-    return this.#taskCache.data !== null && 
-           (now - this.#taskCache.lastUpdated) < this.#taskCache.TTL;
-  }
-
-  // Implementação otimizada para listagem de tarefas básicas (sem JOINs pesados)
-  async getBasicTaskList(filters: BasicTaskFilters): Promise<{ tasks: Task[]; total: number }> {
-    const startTime = Date.now();
-    
-    // Gerar uma chave de cache baseada nos filtros
-    const cacheKey = `basic_${JSON.stringify(filters)}`;
-    
-    // Verificar se temos resultado em cache para esta consulta específica
-    if (this.#taskCache.filtered.has(cacheKey)) {
-      const cachedData = this.#taskCache.filtered.get(cacheKey)!;
-      // Verificar se o cache ainda é válido (30 segundos)
-      if (Date.now() - cachedData.timestamp < 30000) {
-        console.log(`[Performance] Usando cache básico para: ${cacheKey}`);
-        return { 
-          tasks: cachedData.tasks,
-          total: cachedData.total
-        };
-      }
-    }
-    
-    console.log(`[Performance] Iniciando busca básica otimizada: ${cacheKey}`);
-    
-    try {
-      // Construir condições de filtro básicas
-      const conditions = [];
-      
-      if (filters.status) {
-        conditions.push(eq(tasks.status, filters.status));
-      }
-      
-      if (filters.project_id) {
-        conditions.push(eq(tasks.project_id, filters.project_id));
-      }
-      
-      if (filters.assigned_to) {
-        conditions.push(eq(tasks.assigned_to, filters.assigned_to));
-      }
-      
-      // Condição final combinada
-      const whereCondition = conditions.length > 0 
-        ? and(...conditions) 
-        : undefined;
-      
-      let totalCount = 0;
-      let taskResults;
-      
-      // Se temos filtro de cliente, precisamos fazer pelo menos um JOIN
-      if (filters.client_id) {
-        // Contar total com JOIN
-        const [countResult] = await db
-          .select({ value: count() })
-          .from(tasks)
-          .leftJoin(projects, eq(tasks.project_id, projects.id))
-          .where(and(
-            whereCondition || undefined,
-            eq(projects.client_id, filters.client_id)
-          ));
-        totalCount = Number(countResult.value);
-        
-        // Buscar dados com JOIN
-        taskResults = await db
-          .select({
-            id: tasks.id,
-            title: tasks.title,
-            description: tasks.description,
-            status: tasks.status,
-            priority: tasks.priority,
-            due_date: tasks.due_date,
-            due_time: tasks.due_time,
-            project_id: tasks.project_id,
-            assigned_to: tasks.assigned_to,
-            creation_date: tasks.creation_date,
-            tags: tasks.tags,
-            completed: tasks.completed,
-            completed_at: tasks.completed_at,
-            completion_note: tasks.completion_note
-          })
-          .from(tasks)
-          .leftJoin(projects, eq(tasks.project_id, projects.id))
-          .where(and(
-            whereCondition || undefined,
-            eq(projects.client_id, filters.client_id)
-          ))
-          .limit(filters.limit)
-          .offset(filters.offset);
-      } else {
-        // Contar total sem JOIN (mais rápido)
-        const [countResult] = await db
-          .select({ value: count() })
-          .from(tasks)
-          .where(whereCondition || undefined);
-        totalCount = Number(countResult.value);
-        
-        // Buscar dados sem JOIN (mais rápido)
-        taskResults = await db
-          .select()
-          .from(tasks)
-          .where(whereCondition || undefined)
-          .limit(filters.limit)
-          .offset(filters.offset);
-      }
-      
-      // No modo minimal, retornamos apenas os dados básicos sem relações
-      if (filters.minimal) {
-        const result = {
-          tasks: taskResults,
-          total: totalCount
-        };
-        
-        // Armazenar no cache
-        this.#taskCache.filtered.set(cacheKey, {
-          tasks: taskResults,
-          total: totalCount,
-          timestamp: Date.now()
-        });
-        
-        console.log(`[Performance] Busca básica concluída em ${Date.now() - startTime}ms (modo minimal)`);
-        return result;
-      }
-      
-      // No modo completo, adicionamos dados relacionados básicos
-      // Mas só fazemos isso se temos tarefas para processar
-      if (taskResults.length === 0) {
-        const result = {
-          tasks: [],
-          total: totalCount
-        };
-        
-        // Armazenar no cache
-        this.#taskCache.filtered.set(cacheKey, {
-          tasks: [],
-          total: totalCount,
-          timestamp: Date.now()
-        });
-        
-        console.log(`[Performance] Busca básica concluída em ${Date.now() - startTime}ms (sem resultados)`);
-        return result; 
-      }
-      
-      // Extrair IDs para buscar relações
-      const projectIds = taskResults.filter(t => t.project_id).map(t => t.project_id!);
-      const userIds = taskResults.filter(t => t.assigned_to).map(t => t.assigned_to!);
-      
-      // Buscar projetos e clientes
-      let projectsData: Record<number, any> = {};
-      let clientsData: Record<number, any> = {};
-      
-      if (projectIds.length > 0) {
-        const projectResults = await db
-          .select({
-            id: projects.id,
-            name: projects.name,
-            client_id: projects.client_id,
-            clientName: clients.name,
-            clientLogo: clients.logo
-          })
-          .from(projects)
-          .leftJoin(clients, eq(projects.client_id, clients.id))
-          .where(inArray(projects.id, projectIds));
-        
-        // Mapear resultados
-        projectResults.forEach(p => {
-          // Projeto básico
-          projectsData[p.id] = {
-            id: p.id,
-            name: p.name,
-            client_id: p.client_id
-          };
-          
-          // Cliente básico
-          if (p.client_id) {
-            clientsData[p.client_id] = {
-              id: p.client_id,
-              name: p.clientName,
-              logo: p.clientLogo
-            };
-          }
-        });
-      }
-      
-      // Buscar usuários básicos
-      let usersData: Record<number, any> = {};
-      
-      if (userIds.length > 0) {
-        const userResults = await db.select({
-          id: users.id,
-          name: users.name,
-          avatar: users.avatar
-        }).from(users).where(inArray(users.id, userIds));
-        
-        // Mapear resultados
-        userResults.forEach(u => {
-          usersData[u.id] = u;
-        });
-      }
-      
-      // Construir tarefas com relações básicas
-      const tasksWithBasicRelations = taskResults.map(task => {
-        const taskWithDetails = { ...task } as any;
-        
-        // Adicionar projeto se existir
-        if (task.project_id && projectsData[task.project_id]) {
-          taskWithDetails.project = projectsData[task.project_id];
-          
-          // Adicionar cliente se existir
-          if (taskWithDetails.project.client_id && clientsData[taskWithDetails.project.client_id]) {
-            taskWithDetails.client = clientsData[taskWithDetails.project.client_id];
-          }
-        }
-        
-        // Adicionar usuário atribuído se existir
-        if (task.assigned_to && usersData[task.assigned_to]) {
-          taskWithDetails.assignedUser = usersData[task.assigned_to];
-        }
-        
-        return taskWithDetails;
-      });
-      
-      // Armazenar no cache
-      this.#taskCache.filtered.set(cacheKey, {
-        tasks: tasksWithBasicRelations,
-        total: totalCount,
-        timestamp: Date.now()
-      });
-      
-      console.log(`[Performance] Busca básica concluída em ${Date.now() - startTime}ms (modo completo)`);
-      
-      return {
-        tasks: tasksWithBasicRelations,
-        total: totalCount
-      };
-    } catch (error) {
-      console.error(`[Performance] Erro ao processar busca básica: ${error}`);
-      
-      // Em caso de erro, retornar vazio
-      return {
-        tasks: [],
-        total: 0
-      };
-    }
-  }
-  
-  // Invalida o cache quando uma tarefa é modificada
-  #invalidateTaskCache() {
-    this.#taskCache.data = null;
-    this.#taskCache.filtered.clear();
-    this.#taskCache.counts.clear();
-    this.#taskCache.lastUpdated = 0;
-  }
-
   async getTasksWithDetails(): Promise<Task[]> {
-    const startTime = Date.now();
-
-    // Verificar se podemos usar o cache
-    if (this.#shouldUseCache()) {
-      console.log("[Performance] Usando cache de tarefas em memória");
-      return this.#taskCache.data!;
-    }
-
     try {
-      console.log("[Performance] Iniciando busca otimizada de tarefas");
-      
-      // Usar JOIN para buscar todas as informações em uma única consulta SQL
-      const result = await db.query.tasks.findMany({
-        with: {
-          project: {
-            with: {
-              client: true,
-            },
-          },
-          assignedUser: true,
-        }
-      });
-      
-      // Transformar o resultado para o formato esperado pela aplicação
-      const tasksWithDetails = result.map(item => {
-        // Estruturar os dados no formato que a aplicação espera
-        const taskWithDetails = { 
-          ...item,
-          // Redefinir o assignedUser para preservar compatibilidade
-          assignedUser: item.assignedUser || undefined
-        } as any;
-        
-        // Mover os relacionamentos para o formato esperado
-        if (item.project) {
-          taskWithDetails.project = item.project;
-          
-          if (item.project.client) {
-            taskWithDetails.client = item.project.client;
-          }
-        }
-        
-        return taskWithDetails;
-      });
-      
-      // Armazenar no cache
-      this.#taskCache.data = tasksWithDetails;
-      this.#taskCache.lastUpdated = Date.now();
-      
-      console.log(`[Performance] Processamento concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} tarefas`);
-      return tasksWithDetails;
-    } catch (error) {
-      console.error(`[Performance] Erro após ${Date.now() - startTime}ms:`, error);
-      
-      // Implementação de fallback caso ocorra algum erro
-      console.log("[Performance] Usando implementação alternativa após erro");
-      
-      // Buscar tarefas, projetos, clientes e usuários em consultas SQL separadas
+      // Primeiro, obtemos todas as tarefas
       const allTasks = await db.select().from(tasks);
       
-      // Montar arrays de relacionamentos
+      // Se não houver tarefas, retorna array vazio
+      if (allTasks.length === 0) {
+        return [];
+      }
+      
+      // Filtramos os IDs de projeto não nulos
       const projectIds = [...new Set(allTasks
-        .filter(task => task.project_id !== null)
         .map(task => task.project_id)
-      )] as number[];
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
+
+      // Obtemos os projetos relacionados
+      let projectsData: any[] = [];
+      if (projectIds.length > 0) {
+        projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
+      }
       
-      const allProjects = projectIds.length > 0 
-        ? await db.select().from(projects).where(inArray(projects.id, projectIds))
-        : [];
-        
-      const clientIds = [...new Set(allProjects
-        .filter(p => p.client_id !== null)
-        .map(p => p.client_id)
-      )] as number[];
+      // Transformar projetos em um map para consulta rápida
+      const projectsMap = new Map<number, typeof projects.$inferSelect>();
+      projectsData.forEach(project => {
+        projectsMap.set(project.id, project);
+      });
       
-      const allClients = clientIds.length > 0
-        ? await db.select().from(clients).where(inArray(clients.id, clientIds))
-        : [];
-        
+      // Obter todos os clientes relacionados aos projetos (se houver projetos)
+      const clientIds = [...new Set(projectsData
+        .map(project => project.client_id)
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
+      
+      let clientsData: any[] = [];
+      if (clientIds.length > 0) {
+        clientsData = await db.select().from(clients).where(inArray(clients.id, clientIds));
+      }
+      
+      // Transformar clientes em um map para consulta rápida
+      const clientsMap = new Map<number, typeof clients.$inferSelect>();
+      clientsData.forEach(client => {
+        clientsMap.set(client.id, client);
+      });
+      
+      // Obter todos os usuários assignados às tarefas (filtrando nulos)
       const userIds = [...new Set(allTasks
-        .filter(task => task.assigned_to !== null)
         .map(task => task.assigned_to)
-      )] as number[];
+        .filter(id => id !== null && id !== undefined) as number[]
+      )];
       
-      const allUsers = userIds.length > 0
-        ? await db.select().from(users).where(inArray(users.id, userIds))
-        : [];
+      let usersData: any[] = [];
+      if (userIds.length > 0) {
+        usersData = await db.select().from(users).where(inArray(users.id, userIds));
+      }
       
-      // Criar mapas para busca rápida
-      const projectsMap = new Map(allProjects.map(p => [p.id, p]));
-      const clientsMap = new Map(allClients.map(c => [c.id, c]));
-      const usersMap = new Map(allUsers.map(u => [u.id, u]));
+      // Transformar usuários em um map para consulta rápida
+      const usersMap = new Map<number, typeof users.$inferSelect>();
+      usersData.forEach(user => {
+        usersMap.set(user.id, user);
+      });
       
-      // Montar o resultado final
+      // Para cada tarefa, adicionar detalhes do projeto, cliente e usuário assignado
       const tasksWithDetails = allTasks.map(task => {
         const taskWithDetails = { ...task } as any;
         
+        // Adicionar projeto (se task.project_id não for nulo)
         if (task.project_id && projectsMap.has(task.project_id)) {
           const project = projectsMap.get(task.project_id);
           taskWithDetails.project = project;
           
-          if (project.client_id && clientsMap.has(project.client_id)) {
-            taskWithDetails.client = clientsMap.get(project.client_id);
+          // Adicionar cliente (se project.client_id não for nulo)
+          if (project && project.client_id && clientsMap.has(project.client_id)) {
+            const client = clientsMap.get(project.client_id);
+            taskWithDetails.client = client;
           }
         }
         
+        // Adicionar usuário assignado (se task.assigned_to não for nulo)
         if (task.assigned_to && usersMap.has(task.assigned_to)) {
-          taskWithDetails.assignedUser = usersMap.get(task.assigned_to);
+          const user = usersMap.get(task.assigned_to);
+          taskWithDetails.assignedUser = user;
         }
         
         return taskWithDetails;
       });
       
-      // Armazenar no cache mesmo se usado o fallback
-      this.#taskCache.data = tasksWithDetails;
-      this.#taskCache.lastUpdated = Date.now();
-      
-      console.log(`[Performance] Processamento alternativo concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} tarefas`);
       return tasksWithDetails;
-    }
-  }
-  
-  // Função para contar tarefas por status com filtros
-  async getTaskCountByStatus(filters: TaskCountFilters): Promise<Record<string, number>> {
-    const { status, project_id, client_id, assigned_to, fastMode } = filters;
-    const startTime = Date.now();
-    
-    // Gerar uma chave única para este conjunto de filtros
-    const filterKey = `count:${JSON.stringify({ status, project_id, client_id, assigned_to })}`;
-    
-    // Verificar se temos este resultado em cache
-    if (this.#taskCache.counts.has(filterKey)) {
-      const cachedData = this.#taskCache.counts.get(filterKey)!;
-      // TTL maior para modo rápido
-      const ttl = fastMode ? 300000 : 30000; // 5 minutos ou 30 segundos
-      
-      if (Date.now() - cachedData.timestamp < ttl) {
-        console.log(`[Performance] Usando contagem em cache para filtros: ${filterKey}`);
-        return cachedData.data;
-      }
-    }
-    
-    console.log("[Performance] Calculando contagem de tarefas por status no banco:", filterKey);
-    
-    // Construir a consulta base
-    let query = db.select({
-      status: tasks.status,
-      count: sql`count(*)`.as('count')
-    })
-    .from(tasks);
-    
-    // Condições para os filtros
-    const conditions: SQL<unknown>[] = [];
-    
-    if (project_id !== undefined) {
-      conditions.push(eq(tasks.project_id, project_id));
-    }
-    
-    if (assigned_to !== undefined) {
-      conditions.push(eq(tasks.assigned_to, assigned_to));
-    }
-    
-    // Se tiver filtro de cliente, precisamos fazer join com projects
-    if (client_id !== undefined) {
-      query = query
-        .leftJoin(projects, eq(tasks.project_id, projects.id))
-        .where(eq(projects.client_id, client_id));
-    }
-    
-    // Adicionar as condições à consulta
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    // Agrupar por status para contar
-    query = query.groupBy(tasks.status);
-    
-    // Executar a consulta
-    const results = await query;
-    
-    // Transformar resultados em um objeto { status: count }
-    const countsByStatus = {
-      pending: 0,
-      in_progress: 0,
-      review: 0,
-      completed: 0
-    };
-    
-    // Preencher com os resultados da consulta
-    results.forEach(result => {
-      const status = result.status as keyof typeof countsByStatus;
-      if (status in countsByStatus) {
-        countsByStatus[status] = Number(result.count);
-      }
-    });
-    
-    // Salvar no cache
-    this.#taskCache.counts.set(filterKey, {
-      data: countsByStatus,
-      timestamp: Date.now()
-    });
-    
-    console.log(`[Performance] Contagem de tarefas por status concluída em ${Date.now() - startTime}ms`);
-    
-    return countsByStatus;
-  }
-
-  // Nova função otimizada com filtros aplicados diretamente no SQL
-  async getFilteredTasksWithDetails(filters: {
-    status?: string;
-    project_id?: number;
-    client_id?: number;
-    assigned_to?: number;
-    limit: number;
-    offset: number;
-  }): Promise<{ tasks: Task[]; total: number }> {
-    const startTime = Date.now();
-    
-    // Gerar uma chave de cache baseada nos filtros
-    const cacheKey = JSON.stringify(filters);
-    
-    // Verificar se temos resultado em cache para esta consulta específica
-    if (this.#taskCache.filtered.has(cacheKey)) {
-      const cachedData = this.#taskCache.filtered.get(cacheKey)!;
-      // Verificar se o cache ainda é válido (30 segundos)
-      if (Date.now() - cachedData.timestamp < 30000) {
-        console.log(`[Performance] Usando cache filtrado para: ${cacheKey}`);
-        return { 
-          tasks: cachedData.tasks,
-          total: cachedData.total
-        };
-      }
-    }
-    
-    try {
-      console.log(`[Performance] Iniciando busca filtrada e otimizada: ${cacheKey}`);
-      
-      // Construir condições de filtro
-      const conditions = [];
-      
-      if (filters.status) {
-        conditions.push(eq(tasks.status, filters.status));
-      }
-      
-      if (filters.project_id) {
-        conditions.push(eq(tasks.project_id, filters.project_id));
-      }
-      
-      if (filters.assigned_to) {
-        conditions.push(eq(tasks.assigned_to, filters.assigned_to));
-      }
-      
-      // Condição final combinada com AND lógico
-      const whereCondition = conditions.length > 0 
-        ? and(...conditions) 
-        : undefined;
-        
-      // OTIMIZAÇÃO: Separar as consultas para melhorar performance
-      
-      // ETAPA 1: Contagem total de registros - Query simples e rápida
-      // Otimização: Se tivermos filter de client_id, precisamos fazer join, senão fazemos query direta
-      let totalCount = 0;
-      
-      if (filters.client_id) {
-        // Contagem com join para filtro de cliente
-        const [countResult] = await db
-          .select({ value: count() })
-          .from(tasks)
-          .leftJoin(projects, eq(tasks.project_id, projects.id))
-          .where(and(
-            whereCondition || undefined,
-            eq(projects.client_id, filters.client_id)
-          ));
-        totalCount = Number(countResult.value);
-      } else {
-        // Contagem simples sem join (mais rápida)
-        const [countResult] = await db
-          .select({ value: count() })
-          .from(tasks)
-          .where(whereCondition || undefined);
-        totalCount = Number(countResult.value);
-      }
-      
-      // ETAPA 2: Obter apenas os dados básicos das tarefas
-      // Não fazemos nested joins, apenas obtemos os dados principais
-      let taskResults;
-      
-      if (filters.client_id) {
-        // Query com join para filtro de cliente
-        taskResults = await db
-          .select({
-            id: tasks.id,
-            title: tasks.title,
-            description: tasks.description,
-            status: tasks.status,
-            priority: tasks.priority,
-            due_date: tasks.due_date,
-            due_time: tasks.due_time,
-            project_id: tasks.project_id,
-            assigned_to: tasks.assigned_to,
-            creation_date: tasks.creation_date,
-            tags: tasks.tags,
-            completed: tasks.completed,
-            completed_at: tasks.completed_at,
-            completion_note: tasks.completion_note
-          })
-          .from(tasks)
-          .leftJoin(projects, eq(tasks.project_id, projects.id))
-          .where(and(
-            whereCondition || undefined,
-            eq(projects.client_id, filters.client_id)
-          ))
-          .limit(filters.limit)
-          .offset(filters.offset);
-      } else {
-        // Query simples sem join (mais rápida)
-        taskResults = await db
-          .select()
-          .from(tasks)
-          .where(whereCondition || undefined)
-          .limit(filters.limit)
-          .offset(filters.offset);
-      };
-      
-      // ETAPA 3: Se não temos tarefas, retornar resultados vazios rápido
-      if (taskResults.length === 0) {
-        console.log(`[Performance] Nenhuma tarefa encontrada com os filtros aplicados`);
-        // Armazenar resultados vazios no cache
-        this.#taskCache.filtered.set(cacheKey, {
-          tasks: [],
-          total: totalCount,
-          timestamp: Date.now()
-        });
-        
-        return { tasks: [], total: totalCount };
-      }
-      
-      // ETAPA 4: Buscar dados relacionados apenas para as tarefas desta página
-      // Coletamos os IDs necessários
-      const taskIds = taskResults.map(t => t.id);
-      const projectIds = taskResults.filter(t => t.project_id).map(t => t.project_id!);
-      const userIds = taskResults.filter(t => t.assigned_to).map(t => t.assigned_to!);
-      
-      // ETAPA 5: Obter informações de projetos (se necessário)
-      let projectsData: Record<number, any> = {};
-      let clientsData: Record<number, any> = {};
-      
-      if (projectIds.length > 0) {
-        // Buscar projetos relacionados em uma única consulta
-        const projectResults = await db.query.projects.findMany({
-          where: inArray(projects.id, projectIds),
-          with: { client: true }
-        });
-        
-        // Transformar em um mapa de acesso rápido
-        projectResults.forEach(p => {
-          projectsData[p.id] = p;
-          if (p.client) {
-            clientsData[p.client.id] = p.client;
-          }
-        });
-      }
-      
-      // ETAPA 6: Obter informações de usuários (se necessário)
-      let usersData: Record<number, any> = {};
-      
-      if (userIds.length > 0) {
-        const userResults = await db.select({
-          id: users.id,
-          name: users.name,
-          email: users.email,
-          role: users.role,
-          department: users.department,
-          position: users.position,
-          avatar: users.avatar
-        }).from(users).where(inArray(users.id, userIds));
-        
-        // Transformar em um mapa de acesso rápido
-        userResults.forEach(u => {
-          usersData[u.id] = u;
-        });
-      }
-      
-      // ETAPA 7: Montar o resultado final com relações estabelecidas na memória
-      const tasksWithDetails = taskResults.map(task => {
-        const taskWithDetails = { ...task } as any;
-        
-        // Adicionar projeto se existir
-        if (task.project_id && projectsData[task.project_id]) {
-          taskWithDetails.project = projectsData[task.project_id];
-          
-          // Adicionar cliente se existir
-          if (taskWithDetails.project.client_id && clientsData[taskWithDetails.project.client_id]) {
-            taskWithDetails.client = clientsData[taskWithDetails.project.client_id];
-          }
-        }
-        
-        // Adicionar usuário atribuído se existir
-        if (task.assigned_to && usersData[task.assigned_to]) {
-          taskWithDetails.assignedUser = usersData[task.assigned_to];
-        }
-        
-        return taskWithDetails;
-      });
-      
-      // Armazenar no cache de consultas filtradas
-      this.#taskCache.filtered.set(cacheKey, {
-        tasks: tasksWithDetails,
-        total: totalCount,
-        timestamp: Date.now()
-      });
-      
-      // Se o cache principal estiver vazio e não houver filtros, podemos atualizar o cache completo também
-      if (!this.#taskCache.data && !filters.status && !filters.project_id && 
-          !filters.client_id && !filters.assigned_to && 
-          filters.offset === 0 && filters.limit >= 100) {
-        this.#taskCache.data = tasksWithDetails;
-        this.#taskCache.lastUpdated = Date.now();
-      }
-      
-      console.log(`[Performance] Processamento filtrado concluído em ${Date.now() - startTime}ms, ${tasksWithDetails.length} de ${totalCount} tarefas`);
-      
-      return {
-        tasks: tasksWithDetails,
-        total: totalCount
-      };
     } catch (error) {
-      console.error(`[Performance] Erro em consulta filtrada após ${Date.now() - startTime}ms:`, error);
-      
-      // Fallback: usar o método não filtrado e aplicar filtros no servidor
-      // Este é o método antigo que estávamos usando, mas agora com cache
-      let tasks = await this.getTasksWithDetails();
-      
-      // Aplicar filtros
-      if (filters.status) {
-        tasks = tasks.filter(task => task.status === filters.status);
-      }
-      
-      if (filters.project_id) {
-        tasks = tasks.filter(task => task.project_id === filters.project_id);
-      }
-      
-      if (filters.client_id) {
-        tasks = tasks.filter(task => task.project && (task.client?.id === filters.client_id));
-      }
-      
-      if (filters.assigned_to) {
-        tasks = tasks.filter(task => task.assigned_to === filters.assigned_to);
-      }
-      
-      // Calcular total antes da paginação
-      const total = tasks.length;
-      
-      // Aplicar paginação
-      tasks = tasks.slice(filters.offset, filters.offset + filters.limit);
-      
-      // Armazenar no cache de consultas filtradas
-      this.#taskCache.filtered.set(cacheKey, {
-        tasks,
-        total,
-        timestamp: Date.now()
-      });
-      
-      console.log(`[Performance] Processamento filtrado fallback concluído em ${Date.now() - startTime}ms, ${tasks.length} de ${total} tarefas`);
-      
-      return {
-        tasks,
-        total
-      };
+      console.error("Erro detalhado ao buscar tarefas:", error);
+      throw error;
     }
   }
 
@@ -2869,8 +2133,6 @@ export class DatabaseStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const [task] = await db.insert(tasks).values(insertTask).returning();
-    // Invalidar cache de tarefas
-    this.#invalidateTaskCache();
     return task;
   }
 
@@ -2879,19 +2141,11 @@ export class DatabaseStorage implements IStorage {
       .set(task)
       .where(eq(tasks.id, id))
       .returning();
-    
-    // Invalidar cache de tarefas
-    this.#invalidateTaskCache();
-    
     return updated;
   }
 
   async deleteTask(id: number): Promise<boolean> {
     const result = await db.delete(tasks).where(eq(tasks.id, id));
-    
-    // Invalidar cache de tarefas
-    this.#invalidateTaskCache();
-    
     return true;
   }
   

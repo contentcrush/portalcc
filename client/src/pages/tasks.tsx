@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseISO, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { motion } from "framer-motion";
 import { 
   formatDate, 
   formatDueDateWithDaysRemaining, 
@@ -16,7 +17,8 @@ import {
   truncateText,
   getInitials,
   generateAvatarColor,
-  showSuccessToast
+  showSuccessToast,
+  animations
 } from "@/lib/utils";
 import { AnimatedElement } from "@/components/ui/animated-element";
 import {
@@ -141,68 +143,14 @@ export default function Tasks() {
     },
   });
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(50);
-  const [totalTasks, setTotalTasks] = useState(0);
-
-  // Prepare query params for tasks endpoint
-  const buildTaskQueryParams = () => {
-    const params = new URLSearchParams();
-    
-    // Add pagination params
-    params.append('limit', pageSize.toString());
-    params.append('offset', (currentPage * pageSize).toString());
-    params.append('count', 'true'); // Solicitar contagem total
-    
-    // Add filters if they are active (not 'all')
-    if (statusFilter !== 'all') params.append('status', statusFilter);
-    if (projectFilter !== 'all') params.append('project_id', projectFilter);
-    if (clientFilter !== 'all') params.append('client_id', clientFilter);
-    if (userFilter !== 'all') params.append('assigned_to', userFilter);
-    
-    return params.toString();
-  };
-
-  // Fetch tasks with filters and pagination
+  // Fetch tasks
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<TaskWithDetails[]>({
-    queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize],
-    queryFn: async () => {
-      const queryParams = buildTaskQueryParams();
-      const endpoint = `/api/tasks${queryParams ? `?${queryParams}` : ''}`;
-      console.log('Fetching tasks with endpoint:', endpoint);
-      
-      try {
-        const response = await fetch(endpoint);
-        if (!response.ok) throw new Error('Failed to fetch tasks');
-        
-        const response_data = await response.json();
-        let data = response_data;
-        
-        // Verificar se o servidor retornou um objeto com contagem e dados
-        if (response_data && typeof response_data === 'object' && 'data' in response_data && 'total' in response_data) {
-          // Formato { data: [...], total: number }
-          setTotalTasks(response_data.total);
-          data = response_data.data;
-        } else {
-          // Caso o servidor não retorne contagem, estimar baseado nos resultados
-          if (data.length < pageSize) {
-            setTotalTasks(currentPage * pageSize + data.length);
-          } else {
-            setTotalTasks((currentPage + 1) * pageSize); // Assume que há exatamente uma página cheia
-          }
-        }
-        
-        // Log for debugging
-        if (data && data.length > 0) {
-          console.log(`Loaded ${data.length} tasks for page ${currentPage}`);
-          console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
-        }
-        
-        return data;
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-        throw error;
+    queryKey: ['/api/tasks'],
+    onSuccess: (data) => {
+      // Log temporário para depuração
+      if (data && data.length > 0) {
+        console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
+        console.log("DEBUG - Formato de due_date:", data[0].due_date ? new Date(data[0].due_date).toISOString() : "null");
       }
     }
   });
@@ -228,10 +176,7 @@ export default function Tasks() {
       return apiRequest('POST', '/api/tasks', data);
     },
     onSuccess: () => {
-      // Invalidar apenas a consulta específica com os filtros atuais
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       showSuccessToast({
         title: "Tarefa criada",
         description: "Tarefa criada com sucesso",
@@ -254,10 +199,7 @@ export default function Tasks() {
       return apiRequest('PATCH', `/api/tasks/${id}`, data);
     },
     onSuccess: () => {
-      // Invalidar apenas a consulta específica com os filtros atuais
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Tarefa atualizada com sucesso" 
@@ -281,10 +223,7 @@ export default function Tasks() {
       return apiRequest('DELETE', `/api/tasks/${id}`);
     },
     onSuccess: () => {
-      // Invalidar apenas a consulta específica com os filtros atuais
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       showSuccessToast({
         title: "Tarefa excluída",
         description: "Tarefa excluída com sucesso",
@@ -322,10 +261,7 @@ export default function Tasks() {
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
     },
     onSuccess: () => {
-      // Invalidar apenas a consulta específica com os filtros atuais
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/tasks', statusFilter, projectFilter, clientFilter, userFilter, currentPage, pageSize]
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Status de conclusão atualizado com sucesso" 
@@ -509,42 +445,52 @@ export default function Tasks() {
     });
   };
 
-  // Agora estamos filtrando no backend, portanto não precisamos filtrar novamente no frontend
-  // Apenas separamos as tarefas concluídas das pendentes para exibição
-  const pendingTasks = tasks?.filter(task => !task.completed) || [];
-  const completedTasks = tasks?.filter(task => task.completed) || [];
-  
-  // O estado total de tarefas já está sendo gerenciado pelo hook useQuery
-  
-  const handlePageChange = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    } else if (direction === 'next') {
-      // Calcular se há mais páginas
-      const totalPages = Math.ceil(totalTasks / pageSize);
-      const hasMorePages = (currentPage + 1) < totalPages;
-      
-      // Se temos mais páginas ou o número de tarefas é igual ao tamanho da página
-      if (hasMorePages || (tasks && tasks.length === pageSize)) {
-        setCurrentPage(currentPage + 1);
+  // Filter tasks based on criteria
+  let filteredTasks = tasks?.filter((task: TaskWithDetails) => {
+    // Search term filter
+    if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Status filter
+    if (statusFilter !== "all" && task.status !== statusFilter) {
+      return false;
+    }
+    
+    // Priority filter
+    if (priorityFilter !== "all" && task.priority !== priorityFilter) {
+      return false;
+    }
+    
+    // Project filter
+    if (projectFilter !== "all" && task.project_id !== parseInt(projectFilter)) {
+      return false;
+    }
+    
+    // User filter
+    if (userFilter !== "all" && task.assigned_to !== parseInt(userFilter)) {
+      return false;
+    }
+    
+    // Client filter
+    if (clientFilter !== "all") {
+      // Precisamos verificar o cliente associado ao projeto
+      const project = projects.find(p => p.id === task.project_id);
+      if (!project || project.client_id !== parseInt(clientFilter)) {
+        return false;
       }
     }
-  };
+    
+    // Removemos os filtros baseados no activeTab para permitir
+    // que ambas as seções (pendentes e concluídas) sejam exibidas simultaneamente
+    
+    return true;
+  });
   
-  // Função para formatar o intervalo de tarefas exibido
-  const formatTaskRange = () => {
-    if (!tasks || tasks.length === 0) {
-      return `0 tarefas encontradas`;
-    }
-    
-    const start = currentPage * pageSize + 1;
-    const end = start + (tasks.length - 1);
-    
-    // Se o totalTasks é zero mas temos tarefas, algo está errado com a contagem
-    const total = totalTasks > 0 ? totalTasks : tasks.length;
-    
-    return `${start}-${end} de ${total}`;
-  };
+  // Sort tasks by the intelligent priority algorithm
+  if (filteredTasks) {
+    filteredTasks = [...filteredTasks].sort(getTaskSortFunction());
+  }
 
   return (
     <div className="space-y-4 relative">
@@ -611,9 +557,11 @@ export default function Tasks() {
               <div className="flex items-center gap-3">
                 <AlarmClock className="h-5 w-5 text-amber-500" />
                 <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  {pendingTasks.length}
-                </Badge>
+                {tasks && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    {tasks.filter(t => !t.completed).length}
+                  </Badge>
+                )}
               </div>
               
               <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
@@ -669,46 +617,17 @@ export default function Tasks() {
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                 </div>
-              ) : pendingTasks.length > 0 ? (
-                <>
-                  <div className="space-y-3">
-                    {pendingTasks.map(task => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
-                        onView={() => handleViewTaskDetails(task.id)}
-                        onDelete={() => handleDeleteTask(task.id)}
-                        onEdit={() => handleEditTask(task.id)}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Controles de paginação */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 text-sm text-gray-500">
-                    <div>
-                      <span>{formatTaskRange()}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handlePageChange('prev')}
-                        disabled={currentPage === 0}
-                      >
-                        Anterior
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handlePageChange('next')}
-                        disabled={(currentPage + 1) >= Math.ceil(totalTasks / pageSize)}
-                      >
-                        Próxima
-                      </Button>
-                    </div>
-                  </div>
-                </>
+              ) : filteredTasks && filteredTasks.filter(task => !task.completed).length > 0 ? (
+                filteredTasks.filter(task => !task.completed).map(task => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={() => handleToggleTaskCompletion(task.id, task.completed)}
+                    onView={() => handleViewTaskDetails(task.id)}
+                    onDelete={() => handleDeleteTask(task.id)}
+                    onEdit={() => handleEditTask(task.id)}
+                  />
+                ))
               ) : (
                 <div className="bg-gray-50 rounded-lg p-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
@@ -730,9 +649,11 @@ export default function Tasks() {
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <h2 className="text-lg font-semibold">Tarefas Concluídas</h2>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  {completedTasks.length}
-                </Badge>
+                {tasks && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    {tasks.filter(t => t.completed).length}
+                  </Badge>
+                )}
               </div>
               <div className="flex justify-end">
                 <Button 
@@ -763,8 +684,8 @@ export default function Tasks() {
                   <div className="flex justify-center items-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                   </div>
-                ) : completedTasks.length > 0 ? (
-                  completedTasks.map(task => (
+                ) : filteredTasks && filteredTasks.filter(task => task.completed).length > 0 ? (
+                  filteredTasks.filter(task => task.completed).map(task => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -789,7 +710,7 @@ export default function Tasks() {
             ) : (
               // Preview of Completed Tasks (mostrando até 6 tarefas)
               <div className="space-y-3">
-                {completedTasks.slice(0, 6).map(task => (
+                {filteredTasks && filteredTasks.filter(task => task.completed).slice(0, 6).map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -800,14 +721,14 @@ export default function Tasks() {
                   />
                 ))}
                 
-                {completedTasks.length > 6 && (
+                {filteredTasks && filteredTasks.filter(task => task.completed).length > 6 && (
                   <Button 
                     variant="outline" 
                     className="w-full text-sm text-muted-foreground hover:text-primary bg-white"
                     onClick={() => setShowAllCompleted(true)}
                   >
                     <ChevronDown className="h-4 w-4 mr-1" />
-                    Ver todas as {completedTasks.length} tarefas concluídas
+                    Ver todas as {filteredTasks.filter(task => task.completed).length} tarefas concluídas
                   </Button>
                 )}
               </div>
@@ -1160,13 +1081,35 @@ function TaskCard({ task, onToggleComplete, onView, onEdit, onDelete }: TaskCard
   const isDueSoon = isTaskDueSoon(task);
   const isCompleted = task.completed;
   
-  // Handler simplificado sem animação para melhorar performance
+  // Referência para controlar animação
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Handler para toggle com animação
   const handleToggleComplete = () => {
-    onToggleComplete();
+    // Aplicar animação baseada no novo status (inverso do atual)
+    if (cardRef.current) {
+      const animationType = !isCompleted ? 'taskComplete' : 'fadeIn';
+      
+      // Aplicar animação usando a API do Framer Motion
+      motion.animate(
+        cardRef.current,
+        animations[animationType].animate,
+        { 
+          duration: 0.7,
+          ease: "easeInOut"
+        }
+      );
+    }
+    
+    // Chamar handler original
+    setTimeout(() => {
+      onToggleComplete();
+    }, 100);
   };
   
   return (
-    <Card
+    <Card 
+      ref={cardRef}
       className={cn(
         "border overflow-hidden transition-all duration-200",
         {
