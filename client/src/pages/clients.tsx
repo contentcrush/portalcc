@@ -454,11 +454,13 @@ export default function Clients() {
         // Ordem alfabética (A-Z)
         // Verificando se name existe e é string
         if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
-        return a.name.localeCompare(b.name);
+        // Removendo espaços no início para ordenação correta
+        return a.name.trim().localeCompare(b.name.trim());
       } else if (sortBy === "nameDesc") {
         // Ordem alfabética inversa (Z-A)
         if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
-        return b.name.localeCompare(a.name);
+        // Removendo espaços no início para ordenação correta
+        return b.name.trim().localeCompare(a.name.trim());
       } else if (sortBy === "revenue") {
         // Prevenimos contra erros com validação adicional
         const revenueA = typeof a.id === 'number' ? getClientRevenue(a.id) : 0;
