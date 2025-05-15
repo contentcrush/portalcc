@@ -38,10 +38,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add health check endpoint
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
+});
+
 (async () => {
   try {
-    // Seed the database with initial data
-    await seedDatabase();
+    // Only seed in development
+    if (process.env.NODE_ENV === 'development') {
+      await seedDatabase();
+    }
   } catch (error) {
     console.error("Error seeding database:", error);
   }
