@@ -796,9 +796,7 @@ export default function Clients() {
                         {client.name}
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs">
-                          {client.type}
-                        </Badge>
+                        {/* Removido badge de tipo para deixar os cards mais limpos */}
                         <Badge 
                           variant="outline" 
                           className={`text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 
@@ -918,9 +916,7 @@ export default function Clients() {
                             {client.name}
                           </span>
                           <div className="flex gap-1 mt-1">
-                            <Badge variant="outline" className="w-fit text-xs">
-                              {client.type}
-                            </Badge>
+                            {/* Removido badge de tipo para deixar os cards mais limpos */}
                             <Badge 
                               variant="outline" 
                               className={`w-fit text-xs cursor-pointer hover:opacity-80 transition-opacity ${isClientActive(client) 

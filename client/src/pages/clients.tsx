@@ -415,34 +415,43 @@ export default function Clients() {
     refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
 
-  // Filter clients based on criteria
-  const filteredClients = clients?.filter(client => {
-    // Search term filter
-    if (searchTerm && !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+  // Filter clients based on criteria - versão corrigida e mais segura
+  const filteredClients = Array.isArray(clients) ? clients.filter(client => {
+    // Validação de client para evitar erros de null/undefined
+    if (!client || typeof client !== 'object') return false;
+    
+    // Search term filter - com validação para evitar erros
+    if (searchTerm && client.name && typeof client.name === 'string' && 
+        !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
     
-    // Type filter
-    if (typeFilter !== "all" && client.type !== typeFilter) {
+    // Type filter - com validação para evitar erros
+    if (typeFilter !== "all" && client.type && client.type !== typeFilter) {
       return false;
     }
     
     return true;
-  });
+  }) : [];
 
-  // Sort clients - implementação corrigida
+  // Sort clients - implementação corrigida e prevenção contra null/undefined
   const sortedClients = filteredClients ? [...filteredClients].sort((a, b) => {
-    if (sortBy === "recent") {
-      // Usando created_at ao invés de since para garantir que sempre tenha um valor
-      const dateA = a.created_at || a.since || new Date(0);
-      const dateB = b.created_at || b.since || new Date(0);
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
-    } else if (sortBy === "name") {
-      return a.name.localeCompare(b.name);
-    } else if (sortBy === "revenue") {
-      const revenueA = getClientRevenue(a.id);
-      const revenueB = getClientRevenue(b.id);
-      return revenueB - revenueA; // Ordem decrescente
+    try {
+      if (sortBy === "recent") {
+        // Usando created_at ao invés de since para garantir que sempre tenha um valor
+        const dateA = a.created_at || a.since || new Date(0);
+        const dateB = b.created_at || b.since || new Date(0);
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      } else if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "revenue") {
+        // Prevenimos contra erros com validação adicional
+        const revenueA = typeof a.id === 'number' ? getClientRevenue(a.id) : 0;
+        const revenueB = typeof b.id === 'number' ? getClientRevenue(b.id) : 0;
+        return revenueB - revenueA; // Ordem decrescente
+      }
+    } catch (error) {
+      console.error("Erro ao ordenar clientes:", error);
     }
     return 0;
   }) : [];
@@ -966,10 +975,9 @@ export default function Clients() {
                       </div>
                     </TableCell>
                     
-                    <TableCell>
-                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="whitespace-nowrap">
-                        {client.type}
-                      </Badge>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {/* Removido o badge de tipo para deixar os cards mais limpos */}
+                      {client.type}
                     </TableCell>
                     
                     <TableCell className="hidden sm:table-cell">
