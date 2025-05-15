@@ -577,40 +577,27 @@ export default function FilesPage() {
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
   
-  // Busca anexos do cliente (todos os clientes quando clientId é 'all')
+  // Busca anexos do cliente
   const {
     data: clientAttachments = [],
     isLoading: clientLoading,
     isError: clientError,
   } = useQuery({
-    queryKey: ["/api/attachments/clients", clientId === 'all' ? undefined : clientId],
+    queryKey: ["/api/attachments/clients"],
     queryFn: async () => {
-      // Se não tiver ID específico, obter para todos os clientes
-      if (clientId === 'all') {
-        // Obter todos os IDs de clientes
-        const clientIds = clients.map((client: any) => client.id);
-        
-        // Para cada cliente, fazer uma requisição de anexos e combinar os resultados
-        const allClientAttachments = await Promise.all(
-          clientIds.map(async (id: number) => {
-            try {
-              const response = await fetch(`/api/attachments/clients/${id}`);
-              if (!response.ok) return [];
-              return await response.json();
-            } catch {
-              return [];
-            }
-          })
-        );
-        
-        // Combinar todos os resultados em um único array
-        return allClientAttachments.flat();
-      } else {
-        // Se tiver um cliente específico, obter apenas os anexos desse cliente
-        const response = await fetch(`/api/attachments/clients/${clientId}`);
-        if (!response.ok) throw new Error('Falha ao obter anexos do cliente');
-        return await response.json();
+      // Se o clientId for específico, filtra os resultados no cliente
+      let url = '/api/attachments/clients';
+      
+      if (clientId !== 'all') {
+        url = `/api/attachments/clients/${clientId}`;
       }
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Falha ao carregar anexos de clientes');
+      }
+      
+      return await response.json();
     },
     onError: (error: Error) => {
       toast({
@@ -619,7 +606,6 @@ export default function FilesPage() {
         variant: "destructive",
       });
     },
-    enabled: clients.length > 0, // Só executa quando a lista de clientes estiver carregada
   });
   
   // Busca anexos de projeto
@@ -628,34 +614,21 @@ export default function FilesPage() {
     isLoading: projectLoading,
     isError: projectError,
   } = useQuery({
-    queryKey: ["/api/attachments/projects", projectId === 'all' ? undefined : projectId],
+    queryKey: ["/api/attachments/projects"],
     queryFn: async () => {
-      // Se não tiver ID específico, obter para todos os projetos
-      if (projectId === 'all') {
-        // Obter todos os IDs de projetos
-        const projectIds = projects.map((project: any) => project.id);
-        
-        // Para cada projeto, fazer uma requisição de anexos e combinar os resultados
-        const allProjectAttachments = await Promise.all(
-          projectIds.map(async (id: number) => {
-            try {
-              const response = await fetch(`/api/attachments/projects/${id}`);
-              if (!response.ok) return [];
-              return await response.json();
-            } catch {
-              return [];
-            }
-          })
-        );
-        
-        // Combinar todos os resultados em um único array
-        return allProjectAttachments.flat();
-      } else {
-        // Se tiver um projeto específico, obter apenas os anexos desse projeto
-        const response = await fetch(`/api/attachments/projects/${projectId}`);
-        if (!response.ok) throw new Error('Falha ao obter anexos do projeto');
-        return await response.json();
+      // Se o projectId for específico, filtra os resultados no cliente
+      let url = '/api/attachments/projects';
+      
+      if (projectId !== 'all') {
+        url = `/api/attachments/projects/${projectId}`;
       }
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Falha ao carregar anexos de projetos');
+      }
+      
+      return await response.json();
     },
     onError: (error: Error) => {
       toast({
@@ -664,7 +637,6 @@ export default function FilesPage() {
         variant: "destructive",
       });
     },
-    enabled: projects.length > 0, // Só executa quando a lista de projetos estiver carregada
   });
   
   // Busca anexos de tarefas
@@ -675,32 +647,32 @@ export default function FilesPage() {
   } = useQuery({
     queryKey: ["/api/attachments/tasks"],
     queryFn: async () => {
-      // Obter todos os IDs de tarefas (sem filtro específico por enquanto)
-      // Poderíamos melhorar isso com um endpoint para listar todas as tarefas ou filtradas
-      const tasksResponse = await fetch(`/api/tasks`);
-      if (!tasksResponse.ok) return [];
-      const tasks = await tasksResponse.json();
+      // Obtém todos os anexos de tarefas
+      const response = await fetch('/api/attachments/tasks');
+      if (!response.ok) {
+        throw new Error('Falha ao carregar anexos de tarefas');
+      }
       
-      // Para cada tarefa, fazer uma requisição de anexos e combinar os resultados
-      const allTaskAttachments = await Promise.all(
-        tasks.map(async (task: any) => {
-          try {
-            const response = await fetch(`/api/attachments/tasks/${task.id}`);
-            if (!response.ok) return [];
-            const attachments = await response.json();
-            // Adicionar título da tarefa aos anexos para referência
-            return attachments.map((att: any) => ({
-              ...att,
-              task_title: task.title
-            }));
-          } catch {
-            return [];
-          }
-        })
-      );
+      const attachments = await response.json();
+
+      // Busca títulos das tarefas para melhorar a exibição
+      const tasksResponse = await fetch('/api/tasks');
+      if (tasksResponse.ok) {
+        const tasks = await tasksResponse.json();
+        // Cria um mapa de id -> título para eficiência
+        const taskMap = tasks.reduce((map: any, task: any) => {
+          map[task.id] = task.title;
+          return map;
+        }, {});
+        
+        // Adiciona o título da tarefa a cada anexo
+        return attachments.map((att: any) => ({
+          ...att,
+          task_title: taskMap[att.task_id] || 'Tarefa não encontrada'
+        }));
+      }
       
-      // Combinar todos os resultados em um único array
-      return allTaskAttachments.flat();
+      return attachments;
     },
     onError: (error: Error) => {
       toast({
