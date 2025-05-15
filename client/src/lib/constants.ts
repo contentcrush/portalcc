@@ -33,6 +33,11 @@ export const SIDEBAR_ITEMS = [
     icon: "calendar"
   },
   {
+    path: "/files",
+    name: "Arquivos",
+    icon: "file-text"
+  },
+  {
     path: "/team",
     name: "Equipe",
     icon: "users"
