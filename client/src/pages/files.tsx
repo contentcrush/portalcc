@@ -4,7 +4,8 @@ import { format, parseISO, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { ClientAttachment, ProjectAttachment, TaskAttachment } from "@shared/schema";
+import FileUploadForm from "@/components/FileUploadForm";
+import { clientAttachments, projectAttachments, taskAttachments } from "@shared/schema";
 import { 
   Download as DownloadIcon, 
   Filter, 
@@ -691,21 +692,27 @@ export default function FilesPage() {
   
   // Unifica os anexos em um único array com tipagem consistente
   const unifiedAttachments: UnifiedAttachment[] = [
-    ...clientAttachments.map((att: ClientAttachment) => ({
+    ...(Array.isArray(clientAttachments) ? clientAttachments.map((att: any) => ({
       ...att,
       type: 'client' as const,
-      entity_name: clients.find((c: any) => c.id === att.client_id)?.name || 'Cliente não encontrado'
-    })),
-    ...projectAttachments.map((att: ProjectAttachment) => ({
+      entity_id: att.client_id,
+      entity_name: Array.isArray(clients) ? clients.find((c: any) => c.id === att.client_id)?.name || 'Cliente não encontrado' : `Cliente ${att.client_id}`,
+      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
+    })) : []),
+    ...(Array.isArray(projectAttachments) ? projectAttachments.map((att: any) => ({
       ...att,
       type: 'project' as const,
-      entity_name: projects.find((p: any) => p.id === att.project_id)?.name || 'Projeto não encontrado'
-    })),
-    ...taskAttachments.map((att: TaskAttachment) => ({
+      entity_id: att.project_id,
+      entity_name: Array.isArray(projects) ? projects.find((p: any) => p.id === att.project_id)?.name || 'Projeto não encontrado' : `Projeto ${att.project_id}`,
+      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
+    })) : []),
+    ...(Array.isArray(taskAttachments) ? taskAttachments.map((att: any) => ({
       ...att,
       type: 'task' as const,
-      entity_name: att.task_title || 'Tarefa não encontrada'
-    }))
+      entity_id: att.task_id,
+      entity_name: att.title || `Tarefa ${att.task_id}`,
+      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
+    })) : [])
   ];
   
   // Filtra os anexos com base nos critérios selecionados
