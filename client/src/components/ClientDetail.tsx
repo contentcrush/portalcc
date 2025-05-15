@@ -95,28 +95,46 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
+  // Otimização de cache para detalhes do cliente
   const { data: client, isLoading: isLoadingClient } = useQuery({
     queryKey: [`/api/clients/${clientId}`],
-    enabled: !!clientId
+    enabled: !!clientId,
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false
   });
 
+  // Usando o cache efetivamente para dados relacionados
   const { data: projects } = useQuery({
     queryKey: [`/api/clients/${clientId}/projects`],
-    enabled: !!clientId
+    enabled: !!clientId,
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false
   });
 
+  // Dados de interações - carregados sob demanda conforme necessário
   const { data: interactions } = useQuery({
     queryKey: [`/api/clients/${clientId}/interactions`],
-    enabled: !!clientId
+    enabled: !!clientId && activeTab === "interactions", // Só carrega quando a tab estiver ativa
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000 // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
   });
 
+  // Dados financeiros - carregados sob demanda conforme necessário
   const { data: financialDocuments } = useQuery({
     queryKey: [`/api/clients/${clientId}/financial-documents`],
-    enabled: !!clientId
+    enabled: !!clientId && activeTab === "financial", // Só carrega quando a tab estiver ativa
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000 // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
   });
 
+  // Usuários são dados globais menos alterados - cache mais longo
   const { data: users } = useQuery({
-    queryKey: ['/api/users']
+    queryKey: ['/api/users'],
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 15 * 60 * 1000, // 15 minutos (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false
   });
   
   // Schema para validação do formulário de cliente

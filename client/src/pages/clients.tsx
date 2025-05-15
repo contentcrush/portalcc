@@ -399,14 +399,20 @@ export default function Clients() {
     createClientMutation.mutate(clientData);
   };
 
-  // Fetch clients
+  // Fetch clients com cache otimizado
   const { data: clients, isLoading } = useQuery({
-    queryKey: ['/api/clients']
+    queryKey: ['/api/clients'],
+    staleTime: 5 * 60 * 1000, // 5 minutos de stale time
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache time (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
   
-  // Fetch projects para cada cliente (para contagem e badges)
+  // Fetch projects com cache otimizado
   const { data: projects } = useQuery({
-    queryKey: ['/api/projects']
+    queryKey: ['/api/projects'],
+    staleTime: 5 * 60 * 1000, // 5 minutos de stale time
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache time (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
 
   // Filter clients based on criteria
@@ -424,10 +430,13 @@ export default function Clients() {
     return true;
   });
 
-  // Sort clients
-  const sortedClients = filteredClients?.sort((a, b) => {
+  // Sort clients - implementação corrigida
+  const sortedClients = filteredClients ? [...filteredClients].sort((a, b) => {
     if (sortBy === "recent") {
-      return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
+      // Usando created_at ao invés de since para garantir que sempre tenha um valor
+      const dateA = a.created_at || a.since || new Date(0);
+      const dateB = b.created_at || b.since || new Date(0);
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
     } else if (sortBy === "name") {
       return a.name.localeCompare(b.name);
     } else if (sortBy === "revenue") {
@@ -436,7 +445,7 @@ export default function Clients() {
       return revenueB - revenueA; // Ordem decrescente
     }
     return 0;
-  });
+  }) : [];
 
   const handleNewClientClick = () => {
     setIsNewClientDialogOpen(true);
@@ -765,9 +774,7 @@ export default function Clients() {
                       </CardTitle>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={client.type === "Corporate" ? "default" : "secondary"} className="text-xs relative z-20">
-                        {client.type}
-                      </Badge>
+                      {/* Removido badge de tipo para deixar os cards mais limpos */}
                       {isClientActive(client.id) ? (
                         <Badge variant="outline" className="bg-green-50 text-green-700 text-xs border-green-200 relative z-20">
                           Ativo
