@@ -37,11 +37,11 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserAvatar } from "./UserAvatar";
 import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertClientSchema, insertProjectSchema, type InsertClient, type InsertProject } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useLocation } from "wouter";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import RecentDocuments from "@/components/RecentDocuments";
@@ -929,7 +929,12 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                           )}
                         </div>
                         <div>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleCompleteTask(task.id)}
+                          >
                             <CheckSquare className="h-4 w-4 text-green-500" />
                           </Button>
                         </div>
@@ -943,7 +948,12 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
               )}
               
               {Array.isArray(clientTasks) && clientTasks.filter(task => !task.completed).length > 3 && (
-                <Button variant="outline" size="sm" className="w-full">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => navigate(`/tasks?clientId=${clientId}`)}
+                >
                   Ver todas as tarefas ({clientTasks.filter(task => !task.completed).length})
                 </Button>
               )}
