@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { formatDate, formatCurrency, getInitials, calculatePercentChange, cn, showSuccessToast } from "@/lib/utils";
+import { formatDate, formatCurrency, getInitials, calculatePercentChange, cn, showSuccessToast, formatDateWithTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,10 @@ import {
   ChevronLeft,
   ArrowLeft,
   Trash2,
-  Users
+  Users,
+  ListTodo,
+  CalendarCheck,
+  CheckSquare
 } from "lucide-react";
 import type { ClientWithDetails } from "@/lib/types";
 import { format } from "date-fns";
@@ -119,6 +122,15 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     enabled: !!clientId && activeTab === "interactions", // Só carrega quando a tab estiver ativa
     staleTime: 3 * 60 * 1000, // 3 minutos
     gcTime: 10 * 60 * 1000 // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
+  });
+  
+  // Tarefas relacionadas aos projetos do cliente
+  const { data: clientTasks } = useQuery({
+    queryKey: [`/api/clients/${clientId}/tasks`],
+    enabled: !!clientId,
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false
   });
 
   // Dados financeiros - carregados sob demanda conforme necessário
@@ -868,6 +880,73 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                   <span className="ml-3 px-2 py-0.5 rounded text-xs bg-green-100 text-green-600">Presencial</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Tarefas Pendentes */}
+          <Card className="overflow-hidden">
+            <CardHeader className="py-5 px-6">
+              <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
+                <ListTodo className="h-5 w-5 mr-2 text-blue-500" />
+                TAREFAS PENDENTES
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-6 pb-6">
+              {Array.isArray(clientTasks) && clientTasks.filter(task => !task.completed).length > 0 ? (
+                clientTasks
+                  .filter(task => !task.completed)
+                  .slice(0, 3)
+                  .map(task => (
+                    <div key={task.id} className="border border-gray-200 rounded-lg p-3 hover:border-primary transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium mb-1">{task.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {task.project && <span className="font-medium">{task.project.name}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "rounded-full font-normal",
+                              new Date(task.due_date) < new Date() 
+                                ? "bg-red-50 text-red-600 border-red-200" 
+                                : "bg-blue-50 text-blue-600 border-blue-200"
+                            )}
+                          >
+                            {formatDateWithTime(task.due_date, task.due_time)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-3">
+                        <div className="flex items-center">
+                          {task.assignedUser && (
+                            <div className="flex items-center">
+                              <UserAvatar user={task.assignedUser} size="xs" />
+                              <span className="text-xs text-gray-500 ml-2">{task.assignedUser.name}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <CheckSquare className="h-4 w-4 text-green-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma tarefa pendente para este cliente.
+                </div>
+              )}
+              
+              {Array.isArray(clientTasks) && clientTasks.filter(task => !task.completed).length > 3 && (
+                <Button variant="outline" size="sm" className="w-full">
+                  Ver todas as tarefas ({clientTasks.filter(task => !task.completed).length})
+                </Button>
+              )}
             </CardContent>
           </Card>
 
