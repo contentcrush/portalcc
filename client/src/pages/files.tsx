@@ -577,13 +577,41 @@ export default function FilesPage() {
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
   
-  // Busca anexos do cliente
+  // Busca anexos do cliente (todos os clientes quando clientId é 'all')
   const {
     data: clientAttachments = [],
     isLoading: clientLoading,
     isError: clientError,
   } = useQuery({
-    queryKey: ["/api/client-attachments"],
+    queryKey: ["/api/attachments/clients", clientId === 'all' ? undefined : clientId],
+    queryFn: async () => {
+      // Se não tiver ID específico, obter para todos os clientes
+      if (clientId === 'all') {
+        // Obter todos os IDs de clientes
+        const clientIds = clients.map((client: any) => client.id);
+        
+        // Para cada cliente, fazer uma requisição de anexos e combinar os resultados
+        const allClientAttachments = await Promise.all(
+          clientIds.map(async (id: number) => {
+            try {
+              const response = await fetch(`/api/attachments/clients/${id}`);
+              if (!response.ok) return [];
+              return await response.json();
+            } catch {
+              return [];
+            }
+          })
+        );
+        
+        // Combinar todos os resultados em um único array
+        return allClientAttachments.flat();
+      } else {
+        // Se tiver um cliente específico, obter apenas os anexos desse cliente
+        const response = await fetch(`/api/attachments/clients/${clientId}`);
+        if (!response.ok) throw new Error('Falha ao obter anexos do cliente');
+        return await response.json();
+      }
+    },
     onError: (error: Error) => {
       toast({
         title: "Erro ao carregar anexos de clientes",
@@ -591,6 +619,7 @@ export default function FilesPage() {
         variant: "destructive",
       });
     },
+    enabled: clients.length > 0, // Só executa quando a lista de clientes estiver carregada
   });
   
   // Busca anexos de projeto
@@ -599,7 +628,35 @@ export default function FilesPage() {
     isLoading: projectLoading,
     isError: projectError,
   } = useQuery({
-    queryKey: ["/api/project-attachments"],
+    queryKey: ["/api/attachments/projects", projectId === 'all' ? undefined : projectId],
+    queryFn: async () => {
+      // Se não tiver ID específico, obter para todos os projetos
+      if (projectId === 'all') {
+        // Obter todos os IDs de projetos
+        const projectIds = projects.map((project: any) => project.id);
+        
+        // Para cada projeto, fazer uma requisição de anexos e combinar os resultados
+        const allProjectAttachments = await Promise.all(
+          projectIds.map(async (id: number) => {
+            try {
+              const response = await fetch(`/api/attachments/projects/${id}`);
+              if (!response.ok) return [];
+              return await response.json();
+            } catch {
+              return [];
+            }
+          })
+        );
+        
+        // Combinar todos os resultados em um único array
+        return allProjectAttachments.flat();
+      } else {
+        // Se tiver um projeto específico, obter apenas os anexos desse projeto
+        const response = await fetch(`/api/attachments/projects/${projectId}`);
+        if (!response.ok) throw new Error('Falha ao obter anexos do projeto');
+        return await response.json();
+      }
+    },
     onError: (error: Error) => {
       toast({
         title: "Erro ao carregar anexos de projetos",
@@ -607,6 +664,7 @@ export default function FilesPage() {
         variant: "destructive",
       });
     },
+    enabled: projects.length > 0, // Só executa quando a lista de projetos estiver carregada
   });
   
   // Busca anexos de tarefas
@@ -615,7 +673,35 @@ export default function FilesPage() {
     isLoading: taskLoading,
     isError: taskError,
   } = useQuery({
-    queryKey: ["/api/task-attachments"],
+    queryKey: ["/api/attachments/tasks"],
+    queryFn: async () => {
+      // Obter todos os IDs de tarefas (sem filtro específico por enquanto)
+      // Poderíamos melhorar isso com um endpoint para listar todas as tarefas ou filtradas
+      const tasksResponse = await fetch(`/api/tasks`);
+      if (!tasksResponse.ok) return [];
+      const tasks = await tasksResponse.json();
+      
+      // Para cada tarefa, fazer uma requisição de anexos e combinar os resultados
+      const allTaskAttachments = await Promise.all(
+        tasks.map(async (task: any) => {
+          try {
+            const response = await fetch(`/api/attachments/tasks/${task.id}`);
+            if (!response.ok) return [];
+            const attachments = await response.json();
+            // Adicionar título da tarefa aos anexos para referência
+            return attachments.map((att: any) => ({
+              ...att,
+              task_title: task.title
+            }));
+          } catch {
+            return [];
+          }
+        })
+      );
+      
+      // Combinar todos os resultados em um único array
+      return allTaskAttachments.flat();
+    },
     onError: (error: Error) => {
       toast({
         title: "Erro ao carregar anexos de tarefas",
@@ -801,8 +887,19 @@ export default function FilesPage() {
   
   // Mutation para upload de arquivos
   const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const response = await apiRequest('POST', '/api/upload', formData, {
+    mutationFn: async ({
+      entityType,
+      entityId,
+      formData
+    }: {
+      entityType: 'client' | 'project' | 'task';
+      entityId: string;
+      formData: FormData;
+    }) => {
+      // Constrói o endpoint correto baseado no tipo de entidade
+      const endpoint = `/api/attachments/${entityType}s/${entityId}`;
+      
+      const response = await apiRequest('POST', endpoint, formData, {
         // Remove os headers padrão para que o navegador configure corretamente o Content-Type
         // para FormData com boundary apropriado para upload de arquivos
         headers: {},
@@ -824,9 +921,9 @@ export default function FilesPage() {
       });
       
       // Invalidar as consultas para recarregar os dados
-      queryClient.invalidateQueries({ queryKey: ["/api/client-attachments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/project-attachments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/task-attachments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attachments/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attachments/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attachments/tasks"] });
       
       setUploading(false);
       setUploadProgress(0);
@@ -852,32 +949,45 @@ export default function FilesPage() {
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     
+    // Verifica se temos pelo menos um tipo de entidade e ID para associar o arquivo
+    let entityType: 'client' | 'project' | 'task';
+    let entityId: string;
+    
+    if (attachmentType === 'client' && clientId !== 'all') {
+      entityType = 'client';
+      entityId = clientId;
+    } else if (attachmentType === 'project' && projectId !== 'all') {
+      entityType = 'project';
+      entityId = projectId;
+    } else if (clientId !== 'all') { 
+      // Se um cliente específico estiver selecionado, usá-lo como padrão
+      entityType = 'client';
+      entityId = clientId;
+    } else if (projectId !== 'all') {
+      // Se um projeto específico estiver selecionado, usá-lo como padrão
+      entityType = 'project';
+      entityId = projectId;
+    } else {
+      // Se nenhuma entidade for selecionada, mostrar mensagem de erro
+      toast({
+        title: "Seleção necessária",
+        description: "Por favor, selecione um cliente ou projeto para associar o arquivo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setUploading(true);
     setUploadProgress(10);
     
     const formData = new FormData();
     
-    // Adiciona todos os arquivos ao FormData
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
-    });
+    // Adiciona o arquivo ao FormData - importante: nosso backend espera um único arquivo com o campo 'file'
+    formData.append('file', files[0]);
     
-    // Adiciona informações sobre a entidade (cliente, projeto ou tarefa)
-    if (clientId !== 'all') {
-      formData.append('entityType', 'client');
-      formData.append('entityId', clientId);
-    } else if (projectId !== 'all') {
-      formData.append('entityType', 'project');
-      formData.append('entityId', projectId);
-    } else {
-      // Se nenhuma entidade específica for selecionada,
-      // adiciona ao repositório geral (pode precisar de ajustes conforme a lógica do backend)
-      formData.append('entityType', 'general');
-    }
-    
-    // Adiciona o ID do usuário que está fazendo o upload
+    // Adiciona descrição ou informações adicionais se necessário
     if (user) {
-      formData.append('userId', user.id.toString());
+      formData.append('description', `Arquivo enviado por ${user.name}`);
     }
     
     setUploadProgress(30);
@@ -894,7 +1004,12 @@ export default function FilesPage() {
     }, 500);
     
     try {
-      await uploadMutation.mutateAsync(formData);
+      await uploadMutation.mutateAsync({
+        entityType,
+        entityId,
+        formData
+      });
+      
       clearInterval(progressInterval);
       setUploadProgress(100);
     } catch (error) {
@@ -922,7 +1037,7 @@ export default function FilesPage() {
       e.stopPropagation();
       setIsDragging(false);
       
-      if (e.dataTransfer?.files) {
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         handleFileUpload(e.dataTransfer.files);
       }
     };
