@@ -633,12 +633,11 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="contacts">
                 <Users className="h-4 w-4 mr-2" />
                 Contatos
               </TabsTrigger>
-              <TabsTrigger value="interactions">Histórico de Interações</TabsTrigger>
               <TabsTrigger value="financial">Documentos Financeiros</TabsTrigger>
             </TabsList>
             
