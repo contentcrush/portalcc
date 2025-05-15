@@ -140,7 +140,8 @@ export const tasks = pgTable("tasks", {
   assigned_to: integer("assigned_to"),
   status: text("status").notNull().default("pending"),
   priority: text("priority").default("medium"),
-  due_date: timestamp("due_date"), // Armazena data e hora de vencimento
+  due_date: timestamp("due_date"), // Armazena data de vencimento
+  due_time: text("due_time"), // Armazena hora de vencimento separadamente
   start_date: timestamp("start_date"),
   estimated_hours: doublePrecision("estimated_hours"),
   completed: boolean("completed").default(false),
