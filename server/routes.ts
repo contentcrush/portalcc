@@ -18,6 +18,9 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
+import { upload, processImage, moveFile } from "./upload";
+import path from "path";
+import fs from "fs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -25,6 +28,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register attachments routes
   app.use('/api/attachments', attachmentsRoutes);
+  
+  // Rota genérica para upload de arquivos
+  app.post('/api/upload', authenticateJWT, upload.array('files'), async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+      }
+      
+      const files = Array.isArray(req.files) ? req.files : [req.files];
+      const uploadedFiles = [];
+      
+      // Determinar a entidade para qual o arquivo será associado
+      const entityType = req.body.entityType || 'general';
+      const entityId = req.body.entityId ? parseInt(req.body.entityId) : null;
+      const userId = req.user?.id || null;
+      
+      for (const file of files) {
+        const filePath = file.path;
+        const mimeType = file.mimetype;
+        const fileName = file.originalname;
+        const fileSize = file.size;
+        
+        // Processar imagem ou mover arquivo para diretório apropriado
+        const isImage = mimeType.startsWith('image/');
+        let fileUrl;
+        
+        // Se não tiver entityId, usar 'general' como pasta
+        const folder = entityId ? entityType : 'general';
+        const id = entityId || 0;
+        
+        if (isImage) {
+          // Processar e mover imagem
+          fileUrl = await processImage(filePath, folder, id);
+        } else {
+          // Mover outros tipos de arquivo
+          fileUrl = moveFile(filePath, folder, id);
+        }
+        
+        let attachment;
+        
+        // Salvar no banco de dados de acordo com o tipo de entidade
+        if (entityType === 'client' && entityId) {
+          attachment = await storage.createClientAttachment({
+            client_id: entityId,
+            file_name: fileName,
+            file_size: fileSize,
+            file_type: mimeType,
+            file_url: fileUrl,
+            uploaded_by: userId,
+            description: req.body.description || null,
+            tags: req.body.tags ? JSON.parse(req.body.tags) : null
+          });
+        } else if (entityType === 'project' && entityId) {
+          attachment = await storage.createProjectAttachment({
+            project_id: entityId,
+            file_name: fileName,
+            file_size: fileSize,
+            file_type: mimeType,
+            file_url: fileUrl,
+            uploaded_by: userId
+          });
+        } else if (entityType === 'task' && entityId) {
+          attachment = await storage.createTaskAttachment({
+            task_id: entityId,
+            file_name: fileName,
+            file_size: fileSize,
+            file_type: mimeType,
+            file_url: fileUrl,
+            uploaded_by: userId
+          });
+        } else {
+          // Arquivo genérico, não associado a nenhuma entidade específica
+          // Aqui poderia criar uma tabela de anexos gerais se necessário
+          attachment = {
+            file_name: fileName,
+            file_size: fileSize,
+            file_type: mimeType,
+            file_url: fileUrl,
+            uploaded_by: userId,
+            uploaded_at: new Date().toISOString()
+          };
+        }
+        
+        uploadedFiles.push(attachment);
+      }
+      
+      res.status(201).json({ 
+        success: true, 
+        message: `${uploadedFiles.length} arquivo(s) enviado(s) com sucesso`,
+        files: uploadedFiles
+      });
+    } catch (error) {
+      console.error('Erro no upload de arquivos:', error);
+      res.status(500).json({ 
+        message: 'Erro ao processar upload', 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
