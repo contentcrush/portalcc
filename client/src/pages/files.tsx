@@ -333,18 +333,19 @@ export default function FilesPage() {
     const taskMap = new Map(tasks?.map((task: any) => [task.id, task]) || []);
 
     // Filtrar por cliente selecionado
-    if (selectedClient) {
+    if (selectedClient && selectedClient !== "all") {
+      const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
       filtered = filtered.filter(att => {
         if (att.type === 'client') {
-          return att.entity_id === selectedClient;
+          return att.entity_id === clientId;
         } else if (att.type === 'project') {
           const project = projectMap.get(att.entity_id);
-          return project && project.client_id === selectedClient;
+          return project && project.client_id === clientId;
         } else if (att.type === 'task') {
           const task = taskMap.get(att.entity_id);
           if (task && task.project_id) {
             const project = projectMap.get(task.project_id);
-            return project && project.client_id === selectedClient;
+            return project && project.client_id === clientId;
           }
         }
         return false;
@@ -352,13 +353,14 @@ export default function FilesPage() {
     }
 
     // Filtrar por projeto selecionado
-    if (selectedProject) {
+    if (selectedProject && selectedProject !== "all") {
+      const projectId = typeof selectedProject === 'number' ? selectedProject : parseInt(selectedProject);
       filtered = filtered.filter(att => {
         if (att.type === 'project') {
-          return att.entity_id === selectedProject;
+          return att.entity_id === projectId;
         } else if (att.type === 'task') {
           const task = taskMap.get(att.entity_id);
-          return task && task.project_id === selectedProject;
+          return task && task.project_id === projectId;
         }
         return false;
       });
@@ -485,13 +487,16 @@ export default function FilesPage() {
             disabled={selectedClient === "all"}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={selectedClient ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
+              <SelectValue placeholder={selectedClient !== "all" ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os projetos</SelectItem>
-              {projects && selectedClient && 
+              {projects && selectedClient !== "all" && 
                 projects
-                  .filter((project: any) => project.client_id === selectedClient)
+                  .filter((project: any) => {
+                    const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
+                    return project.client_id === clientId;
+                  })
                   .map((project: any) => (
                     <SelectItem key={project.id} value={project.id.toString()}>
                       {project.name}
