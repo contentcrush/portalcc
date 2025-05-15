@@ -257,7 +257,8 @@ export default function Tasks() {
         // Atualiza o status baseado no estado de conclusão
         status: completed ? "concluido" : "pendente",
         // Adiciona data de conclusão quando completa, ou remove quando desmarca
-        completion_date: completed ? new Date().toISOString() : null
+        // Enviamos o objeto Date diretamente, o servidor fará a conversão adequada
+        completion_date: completed ? new Date() : null
       };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
@@ -279,7 +280,7 @@ export default function Tasks() {
               ...task, 
               completed: completed,
               status: completed ? "concluido" : "pendente",
-              completion_date: completed ? new Date().toISOString() : null
+              completion_date: completed ? new Date() : null
             };
           }
           return task;
