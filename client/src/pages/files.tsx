@@ -1004,9 +1004,18 @@ export default function FilesPage() {
       
       clearInterval(progressInterval);
       setUploadProgress(100);
+      
+      // Atualizar a lista de anexos após o upload com sucesso
+      refetchAttachments();
     } catch (error) {
       clearInterval(progressInterval);
       console.error('Erro no upload:', error);
+      
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível enviar o arquivo.",
+        variant: "destructive",
+      });
     }
   };
   
