@@ -273,10 +273,7 @@ export default function FilesPage() {
     return processed;
   };
 
-  // Mapas de dados para acesso rápido
-  const clientMap = new Map(clients?.map((c: any) => [c.id, c]) || []);
-  const projectMap = new Map(projects?.map((p: any) => [p.id, p]) || []);
-  const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || []);
+  // Os mapas já estão sendo criados dentro da função processAttachments
 
   // Função para obter o ícone correto com base no tipo de arquivo
   const getFileIcon = (fileType: string) => {

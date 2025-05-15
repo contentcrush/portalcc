@@ -35,7 +35,7 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/files",
     name: "Arquivos",
-    icon: "file-text"
+    icon: "file"
   },
   {
     path: "/team",
