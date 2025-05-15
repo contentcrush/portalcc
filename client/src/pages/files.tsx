@@ -434,7 +434,22 @@ const getDisplayType = (type: string, fileType: string): string => {
 };
 
 // Componente para exibir a lista de arquivos
-const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFileIcon }: FilesListProps) => {
+const AttachmentsList = ({ 
+  attachments, 
+  isLoading, 
+  onDownload, 
+  onDelete, 
+  getFileIcon,
+  view = 'grid',
+  selectedFiles = [],
+  onSelect = () => {}
+}: FilesListProps) => {
+  // Função auxiliar para lidar com visualização
+  const handleView = (attachment: UnifiedAttachment) => {
+    // Como não foi fornecida a função onView diretamente, vamos simular
+    // abrindo o arquivo em uma nova aba
+    window.open(attachment.file_url, '_blank');
+  };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40">
@@ -455,67 +470,92 @@ const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFile
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {attachments.map((attachment) => (
-        <Card key={`${attachment.type}-${attachment.id}`} className="overflow-hidden hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center gap-4 pb-2">
-            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted">
-              {getFileIcon(attachment.file_type)}
+  // Agrupar anexos por mês para visualização em blocos
+  const groupedAttachments = (() => {
+    const groups: { [key: string]: UnifiedAttachment[] } = {};
+    
+    attachments.forEach(attachment => {
+      const date = new Date(attachment.uploaded_at);
+      const monthYear = format(date, 'MMMM yyyy', { locale: ptBR });
+      
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      
+      groups[monthYear].push(attachment);
+    });
+    
+    // Ordenar os grupos por data (mais recente primeiro)
+    return Object.entries(groups)
+      .sort(([a], [b]) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .map(([month, files]) => ({
+        month,
+        files: files.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
+      }));
+  })();
+
+  if (view === 'grid') {
+    return (
+      <div className="space-y-6">
+        {groupedAttachments.map(group => (
+          <div key={group.month} className="space-y-2">
+            <h3 className="text-lg font-medium capitalize">{group.month}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {group.files.map((attachment) => (
+                <FileCard
+                  key={`${attachment.type}-${attachment.id}`}
+                  attachment={attachment}
+                  isSelected={selectedFiles.includes(attachment.id)}
+                  onSelect={onSelect}
+                  onDownload={onDownload}
+                  onDelete={onDelete}
+                  onView={handleView}
+                  getFileIcon={getFileIcon}
+                />
+              ))}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <CardTitle className="text-base truncate" title={attachment.file_name}>
-                {attachment.file_name}
-              </CardTitle>
-              <CardDescription className="truncate">
-                {attachment.entity_name}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="pb-1">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Badge variant="outline" className="mr-2">
-                {attachment.type === 'client' ? 'Cliente' : attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
-              </Badge>
-              <span>{formatFileSize(attachment.file_size)}</span>
-            </div>
-            <div className="mt-2 flex items-center text-xs text-muted-foreground">
-              <span>Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
-            </div>
-            {attachment.tags && attachment.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {attachment.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+          </div>
+        ))}
+      </div>
+    );
+  } else {
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-muted/20 py-2 px-3 border-b grid grid-cols-[auto_1fr_auto_auto] gap-4">
+          <span className="w-10"></span>
+          <span className="text-sm font-medium">Nome</span>
+          <span className="text-sm font-medium w-36">Tamanho</span>
+          <span className="text-sm font-medium w-48">Data de upload</span>
+        </div>
+        
+        <ScrollArea className="h-[600px]">
+          {groupedAttachments.map(group => (
+            <div key={group.month}>
+              <div className="bg-muted/10 py-1 px-3 border-b sticky top-0 z-10">
+                <h3 className="text-sm font-medium capitalize">{group.month}</h3>
               </div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <div className="flex w-full divide-x">
-              <Button 
-                variant="ghost" 
-                className="rounded-none h-10 flex-1"
-                onClick={() => onDownload(attachment)}
-              >
-                <DownloadIcon className="mr-1 h-4 w-4" />
-                <span>Download</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="rounded-none h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onDelete(attachment)}
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                <span>Excluir</span>
-              </Button>
+              {group.files.map((attachment) => (
+                <FileListItem
+                  key={`${attachment.type}-${attachment.id}`}
+                  attachment={attachment}
+                  isSelected={selectedFiles.includes(attachment.id)}
+                  onSelect={onSelect}
+                  onDownload={onDownload}
+                  onDelete={onDelete}
+                  onView={handleView}
+                  getFileIcon={getFileIcon}
+                />
+              ))}
             </div>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
-  );
+          ))}
+        </ScrollArea>
+      </div>
+    );
+  }
 };
 
 // Página principal de gerenciamento de arquivos
