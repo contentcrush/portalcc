@@ -143,31 +143,40 @@ export default function Tasks() {
     },
   });
 
-  // Fetch tasks
+  // Fetch tasks com otimizações de caching e performance
   const { data: tasks = [], isLoading: isLoadingTasks } = useQuery<TaskWithDetails[]>({
     queryKey: ['/api/tasks'],
+    staleTime: 30 * 1000, // 30 segundos antes de considerar os dados obsoletos
+    gcTime: 5 * 60 * 1000, // 5 minutos de cache
+    refetchOnWindowFocus: true, // Recarrega quando a janela recebe foco
     onSuccess: (data) => {
-      // Log temporário para depuração
-      if (data && data.length > 0) {
-        console.log("DEBUG - Primeira tarefa carregada:", JSON.stringify(data[0], null, 2));
-        console.log("DEBUG - Formato de due_date:", data[0].due_date ? new Date(data[0].due_date).toISOString() : "null");
-      }
+      // Removendo logs de depuração que não são mais necessários
+      // e podem prejudicar a performance
     }
   });
 
-  // Fetch projects for dropdown
+  // Fetch projects for dropdown com otimizações
   const { data: projects = [] } = useQuery<any[]>({
     queryKey: ['/api/projects'],
+    staleTime: 5 * 60 * 1000, // 5 minutos antes de considerar os dados obsoletos
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache (dados que mudam pouco)
+    refetchOnWindowFocus: false // Projetos não precisam ser recarregados ao focar a janela
   });
 
-  // Fetch users for dropdown
+  // Fetch users for dropdown com otimizações
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ['/api/users'],
+    staleTime: 10 * 60 * 1000, // 10 minutos antes de considerar os dados obsoletos
+    gcTime: 15 * 60 * 1000, // 15 minutos de cache (dados que mudam raramente)
+    refetchOnWindowFocus: false // Usuários não precisam ser recarregados ao focar a janela
   });
   
-  // Fetch clients for dropdown
+  // Fetch clients for dropdown com otimizações
   const { data: clients = [] } = useQuery<any[]>({
     queryKey: ['/api/clients'],
+    staleTime: 5 * 60 * 1000, // 5 minutos antes de considerar os dados obsoletos
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache (dados que mudam pouco)
+    refetchOnWindowFocus: false // Clientes não precisam ser recarregados ao focar a janela
   });
 
   // Create task mutation
