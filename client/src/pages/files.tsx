@@ -595,18 +595,17 @@ export default function FilesPage() {
       
       const response = await fetch(url);
       if (!response.ok) {
+        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
+        if (response.status === 401) {
+          console.warn('Não autenticado ao carregar anexos de clientes, retornando lista vazia');
+          return [];
+        }
         throw new Error('Falha ao carregar anexos de clientes');
       }
       
       return await response.json();
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao carregar anexos de clientes",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
   });
   
   // Busca anexos de projeto
@@ -627,18 +626,17 @@ export default function FilesPage() {
       
       const response = await fetch(url);
       if (!response.ok) {
+        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
+        if (response.status === 401) {
+          console.warn('Não autenticado ao carregar anexos de projetos, retornando lista vazia');
+          return [];
+        }
         throw new Error('Falha ao carregar anexos de projetos');
       }
       
       return await response.json();
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao carregar anexos de projetos",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
   });
   
   // Busca anexos de tarefas
@@ -653,6 +651,11 @@ export default function FilesPage() {
       // Obtém todos os anexos de tarefas
       const response = await fetch('/api/attachments/tasks');
       if (!response.ok) {
+        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
+        if (response.status === 401) {
+          console.warn('Não autenticado ao carregar anexos de tarefas, retornando lista vazia');
+          return [];
+        }
         throw new Error('Falha ao carregar anexos de tarefas');
       }
       
@@ -677,13 +680,7 @@ export default function FilesPage() {
       
       return attachments;
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao carregar anexos de tarefas",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
   });
   
   // Carrega metadados completos para cada anexo
