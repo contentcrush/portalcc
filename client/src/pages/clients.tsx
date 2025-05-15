@@ -434,8 +434,10 @@ export default function Clients() {
     return true;
   }) : [];
 
-  // Sort clients - implementação corrigida e prevenção contra null/undefined
-  const sortedClients = filteredClients ? [...filteredClients].sort((a, b) => {
+  // Sort clients - implementação totalmente corrigida com melhor tratamento de erros
+  const sortedClients = Array.isArray(filteredClients) ? [...filteredClients].sort((a, b) => {
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return 0;
+    
     try {
       if (sortBy === "recent") {
         // Usando created_at ao invés de since para garantir que sempre tenha um valor
@@ -443,6 +445,8 @@ export default function Clients() {
         const dateB = b.created_at || b.since || new Date(0);
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       } else if (sortBy === "name") {
+        // Verificando se name existe e é string
+        if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
         return a.name.localeCompare(b.name);
       } else if (sortBy === "revenue") {
         // Prevenimos contra erros com validação adicional
@@ -485,31 +489,59 @@ export default function Clients() {
     createProjectMutation.mutate(projectData);
   };
   
-  // Função para verificar se um cliente tem projetos ativos
+  // Função para verificar se um cliente tem projetos ativos - versão mais segura
   const isClientActive = (clientId: number) => {
     // Verifica se há projetos ativos nos últimos 6 meses
-    if (!projects) return false;
+    if (!projects || !Array.isArray(projects)) return false;
     
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
-    return projects.some((project: any) => 
-      project.client_id === clientId && new Date(project.updated_at || project.created_at) > sixMonthsAgo
-    );
+    try {
+      return projects.some((project) => {
+        if (!project || typeof project !== 'object') return false;
+        return project.client_id === clientId && 
+               new Date(project.updated_at || project.created_at) > sixMonthsAgo;
+      });
+    } catch (err) {
+      console.error("Erro ao verificar cliente ativo:", err);
+      return false;
+    }
   };
   
-  // Função para contar o número de projetos por cliente
+  // Função para contar o número de projetos por cliente - versão mais segura
   const getClientProjectsCount = (clientId: number) => {
-    if (!projects) return 0;
-    return projects.filter((project: any) => project.client_id === clientId).length;
+    if (!projects || !Array.isArray(projects)) return 0;
+    
+    try {
+      return projects.filter((project) => {
+        if (!project || typeof project !== 'object') return false;
+        return project.client_id === clientId;
+      }).length;
+    } catch (err) {
+      console.error("Erro ao contar projetos do cliente:", err);
+      return 0;
+    }
   };
   
-  // Função para calcular a receita total de projetos por cliente
+  // Função para calcular a receita total de projetos por cliente - versão mais segura
   const getClientRevenue = (clientId: number) => {
-    if (!projects) return 0;
-    return projects
-      .filter((project: any) => project.client_id === clientId)
-      .reduce((total: number, project: any) => total + (project.budget || 0), 0);
+    if (!projects || !Array.isArray(projects)) return 0;
+    
+    try {
+      return projects
+        .filter((project) => {
+          if (!project || typeof project !== 'object') return false;
+          return project.client_id === clientId;
+        })
+        .reduce((total, project) => {
+          const budget = typeof project.budget === 'number' ? project.budget : 0;
+          return total + budget;
+        }, 0);
+    } catch (err) {
+      console.error("Erro ao calcular receita do cliente:", err);
+      return 0;
+    }
   };
   
   // Mutation para excluir cliente
