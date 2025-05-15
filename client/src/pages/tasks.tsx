@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { onWebSocketMessage } from "@/lib/socket";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -179,25 +180,108 @@ export default function Tasks() {
     refetchOnWindowFocus: false // Clientes não precisam ser recarregados ao focar a janela
   });
 
-  // Create task mutation
+  // Listener para notificações de tarefas via WebSocket
+  const setupTaskWebSocketListener = () => {
+    // Remover handlers existentes para evitar duplicações
+    const cleanupFn = onWebSocketMessage('task_created', (data) => {
+      // Atualizar cache sem fazer nova requisição
+      queryClient.setQueryData(['/api/tasks'], (oldData: TaskWithDetails[] | undefined) => {
+        if (!oldData) return [data.task];
+        return [...oldData, data.task];
+      });
+    });
+    
+    return cleanupFn;
+  };
+  
+  // Configurar o listener WebSocket quando o componente for montado
+  // e limpá-lo quando for desmontado
+  useEffect(() => {
+    const cleanupListener = setupTaskWebSocketListener();
+    return () => cleanupListener();
+  }, []);
+
+  // Create task mutation com suporte a atualização otimista
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest('POST', '/api/tasks', data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      showSuccessToast({
-        title: "Tarefa criada",
-        description: "Tarefa criada com sucesso",
+    onMutate: async (newTaskData) => {
+      // Cancelar qualquer requisição em andamento
+      await queryClient.cancelQueries({ queryKey: ['/api/tasks'] });
+      
+      // Salvar o estado anterior
+      const previousTasks = queryClient.getQueryData(['/api/tasks']);
+      
+      // Criar ID temporário para a nova tarefa
+      const tempId = Date.now();
+      
+      // Criar objeto de tarefa temporário
+      const tempTask: TaskWithDetails = {
+        id: tempId,
+        title: newTaskData.title,
+        description: newTaskData.description || "",
+        status: newTaskData.status || "pendente",
+        priority: newTaskData.priority || "media",
+        due_date: newTaskData.due_date || null,
+        start_date: newTaskData.start_date || null,
+        estimated_hours: newTaskData.estimated_hours || null,
+        completed: newTaskData.completed || false,
+        project_id: newTaskData.project_id || null,
+        assigned_to: newTaskData.assigned_to || null,
+        creation_date: new Date().toISOString(),
+        // Adicionar dados de projeto e usuário, se disponíveis
+        project: newTaskData.project_id ? 
+          projects.find(p => p.id === parseInt(newTaskData.project_id)) : undefined,
+        assignedUser: newTaskData.assigned_to ? 
+          users.find(u => u.id === parseInt(newTaskData.assigned_to)) : undefined,
+        // Flag para indicar que é uma tarefa temporária
+        _isOptimistic: true
+      };
+      
+      // Atualizar o cache com a nova tarefa
+      queryClient.setQueryData(['/api/tasks'], (old: any[] = []) => {
+        return [...old, tempTask];
       });
+      
+      // Mostrar toast imediatamente
+      showSuccessToast({
+        title: "Tarefa adicionada",
+        description: "A tarefa foi adicionada e está sendo salva...",
+      });
+      
+      // Fechar o diálogo imediatamente
       setIsDialogOpen(false);
       form.reset();
+      
+      // Retornar o estado anterior para caso de rollback
+      return { previousTasks };
     },
-    onError: (error) => {
+    onError: (error, newTask, context) => {
+      // Reverter para o estado anterior em caso de erro
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['/api/tasks'], context.previousTasks);
+      }
+      
+      // Mostrar mensagem de erro
       toast({
         title: "Erro ao criar tarefa",
         description: error.message,
         variant: "destructive",
+      });
+      
+      // Reabrir o diálogo com os dados preenchidos
+      setIsDialogOpen(true);
+      form.reset(newTask);
+    },
+    onSuccess: (response) => {
+      // Invalidar o cache para atualizar a lista com a versão real do servidor
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      
+      // Mostrar toast de confirmação final
+      showSuccessToast({
+        title: "Tarefa salva",
+        description: "Tarefa criada com sucesso no servidor",
       });
     },
   });

@@ -20,6 +20,7 @@ export interface TaskWithDetails extends Task {
   assignedUser?: User;
   comments?: (TaskComment & { user?: User })[];
   attachments?: TaskAttachment[];
+  _isOptimistic?: boolean; // Flag para indicar que é uma tarefa em estado otimista (ainda não confirmada pelo servidor)
 }
 
 export interface ClientWithDetails extends Client {
