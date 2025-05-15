@@ -140,6 +140,33 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     staleTime: 3 * 60 * 1000, // 3 minutos
     gcTime: 10 * 60 * 1000 // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
   });
+  
+  // Mutation para completar tarefa
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const res = await apiRequest("PATCH", `/api/tasks/${taskId}/complete`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Atualize o cache das tarefas do cliente
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/tasks`] });
+      // Atualize também a lista global de tarefas
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      showSuccessToast(toast, "Tarefa concluída com sucesso");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao concluir tarefa",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Função para completar tarefa
+  const handleCompleteTask = (taskId: number) => {
+    completeTaskMutation.mutate(taskId);
+  };
 
   // Usuários são dados globais menos alterados - cache mais longo
   const { data: users } = useQuery({
