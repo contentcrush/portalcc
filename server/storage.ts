@@ -74,6 +74,7 @@ export interface IStorage {
       contacts: number;
     } 
   }>;
+  getTasksByClient(clientId: number): Promise<Task[]>;
   
   // Client Contacts
   getClientContact(id: number): Promise<ClientContact | undefined>;
@@ -1836,6 +1837,54 @@ export class DatabaseStorage implements IStorage {
           contacts: 0
         }
       };
+    }
+  }
+  
+  async getTasksByClient(clientId: number): Promise<Task[]> {
+    try {
+      // Primeiro, obtém todos os projetos do cliente
+      const clientProjects = await this.getProjectsByClient(clientId);
+      
+      // Se não houver projetos, retorna array vazio
+      if (clientProjects.length === 0) {
+        return [];
+      }
+      
+      // Obtém os IDs dos projetos
+      const projectIds = clientProjects.map(project => project.id);
+      
+      // Busca todas as tarefas relacionadas a esses projetos
+      const clientTasks = await db.select()
+        .from(tasks)
+        .where(inArray(tasks.project_id, projectIds));
+      
+      // Para cada tarefa, adiciona informações do projeto e do usuário assignado
+      const tasksWithDetails = await Promise.all(clientTasks.map(async task => {
+        const taskWithDetails = { ...task } as any;
+        
+        // Adicionar projeto
+        if (task.project_id) {
+          const project = await this.getProject(task.project_id);
+          if (project) {
+            taskWithDetails.project = project;
+          }
+        }
+        
+        // Adicionar usuário assignado
+        if (task.assigned_to) {
+          const user = await this.getUser(task.assigned_to);
+          if (user) {
+            taskWithDetails.assignedUser = user;
+          }
+        }
+        
+        return taskWithDetails;
+      }));
+      
+      return tasksWithDetails;
+    } catch (error) {
+      console.error("Erro ao buscar tarefas do cliente:", error);
+      return [];
     }
   }
   

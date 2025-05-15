@@ -564,6 +564,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Obter tarefas relacionadas a um cliente específico
+  app.get("/api/clients/:id/tasks", authenticateJWT, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Verificar se o cliente existe
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+      
+      const tasks = await storage.getTasksByClient(clientId);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Erro ao buscar tarefas do cliente:", error);
+      res.status(500).json({ message: "Failed to fetch client tasks" });
+    }
+  });
+  
   // Contatos do cliente
   app.get("/api/clients/:id/contacts", authenticateJWT, async (req, res) => {
     try {
