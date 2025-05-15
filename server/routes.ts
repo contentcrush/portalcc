@@ -1548,172 +1548,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", authenticateJWT, requirePermission('manage_tasks'), async (req, res) => {
     try {
-      console.log("Recebendo dados do cliente:", JSON.stringify(req.body, null, 2));
+      // Preparação dos dados para inserção - versão otimizada
+      const taskData: any = {
+        title: req.body.title || "Nova Tarefa",
+        description: req.body.description || null,
+        project_id: req.body.project_id ? parseInt(req.body.project_id) : null,
+        assigned_to: req.body.assigned_to ? parseInt(req.body.assigned_to) : null,
+        status: req.body.status || "pending",
+        priority: req.body.priority || "medium",
+        estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
+        completed: req.body.completed === true || req.body.completed === "true" ? true : false,
+        start_date: null,
+        due_date: null
+      };
       
-      try {
-        // Preparação dos dados para inserção
-        const taskData: any = {
-          title: req.body.title || "Nova Tarefa",
-          description: req.body.description || null,
-          project_id: req.body.project_id ? parseInt(req.body.project_id) : null,
-          assigned_to: req.body.assigned_to ? parseInt(req.body.assigned_to) : null,
-          status: req.body.status || "pending",
-          priority: req.body.priority || "medium",
-          estimated_hours: req.body.estimated_hours ? parseFloat(req.body.estimated_hours) : null,
-          completed: req.body.completed === true || req.body.completed === "true" ? true : false,
-          start_date: null,
-          due_date: null
-        };
-        
-        // Processamento das datas com tratamento específico
-        if (req.body.start_date) {
-          try {
-            // Converter para Date objeto se for string
-            let startDate = new Date(req.body.start_date);
-            
-            // Verificar se a data não tem informação de hora (é meia-noite no fuso local)
-            // Se for apenas data (sem hora), definir para final do dia em UTC
-            if (startDate.getUTCHours() === 0 && 
-                startDate.getUTCMinutes() === 0 && 
-                startDate.getUTCSeconds() === 0) {
-              // Definir para 23:59:59 UTC
-              startDate.setUTCHours(23, 59, 59, 999);
-            }
-            
-            taskData.start_date = startDate;
-          } catch (e) {
-            taskData.start_date = null;
+      // Processamento das datas - versão simplificada e otimizada
+      if (req.body.start_date) {
+        try {
+          let startDate = new Date(req.body.start_date);
+          if (startDate.getUTCHours() === 0 && startDate.getUTCMinutes() === 0) {
+            startDate.setUTCHours(23, 59, 59, 999);
           }
-        }
-        
-        // Processamento robusto de data/hora
-        if (req.body.due_date) {
-          try {
-            console.log("Processando data de entrega:", req.body.due_date);
-            
-            // Primeiro, verificamos se a data está em formato ISO ou de objetos Date serializados
-            let dueDate: Date;
-            
-            if (typeof req.body.due_date === 'string') {
-              // Para string ISO
-              dueDate = new Date(req.body.due_date);
-            } else if (req.body.due_date instanceof Date) {
-              // Para data direta (raro, mas possível em alguns casos)
-              dueDate = req.body.due_date;
-            } else if (typeof req.body.due_date === 'object') {
-              // Para objeto Date serializado pelo JSON
-              dueDate = new Date(req.body.due_date);
-            } else {
-              throw new Error(`Formato de data inválido: ${typeof req.body.due_date}`);
-            }
-            
-            // Validar se a data é válida
-            if (isNaN(dueDate.getTime())) {
-              throw new Error(`Data inválida: ${req.body.due_date}`);
-            }
-            
-            console.log("Data parseada inicialmente:", dueDate.toISOString());
-            
-            // Se temos um horário específico no campo temporário (due_time_temp)
-            if (req.body.due_time_temp) {
-              try {
-                // Extrair horas e minutos do campo due_time_temp (formato: "HH:MM")
-                const timeStr = req.body.due_time_temp;
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                
-                if (isNaN(hours) || isNaN(minutes)) {
-                  throw new Error(`Formato de hora inválido: ${timeStr}`);
-                }
-                
-                console.log(`Aplicando hora específica: ${hours}:${minutes} à data:`, dueDate.toISOString());
-                
-                // Criar uma nova data mantendo o ano, mês e dia, mas atualizando horas e minutos
-                const year = dueDate.getFullYear();
-                const month = dueDate.getMonth();
-                const day = dueDate.getDate();
-                
-                // Criar nova data com as horas específicas
-                dueDate = new Date(year, month, day, hours, minutes, 0, 0);
-                
-                console.log("Data após aplicar hora:", dueDate.toISOString());
-              } catch (timeError) {
-                console.error("Erro ao processar hora:", timeError);
-                // Se falhar o processamento da hora, mantemos a data original
-              }
-            } 
-            // Se não temos horário específico e a data está em meia-noite local,
-            // definimos para o final do dia (23:59:59)
-            else if (dueDate.getHours() === 0 && 
-                     dueDate.getMinutes() === 0 && 
-                     dueDate.getSeconds() === 0) {
-              dueDate.setHours(23, 59, 59, 999);
-              console.log("Data ajustada para final do dia:", dueDate.toISOString());
-            }
-            
-            taskData.due_date = dueDate;
-          } catch (e) {
-            console.error("Erro ao processar due_date:", e);
-            taskData.due_date = null;
-          }
-        } 
-        // Se não temos data de entrega, mas temos data de início e hora, usamos a data de início
-        else if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
-          try {
-            console.log("Usando start_date como base para due_date com due_time_temp");
-            
-            // Criar data a partir da data de início
-            let baseDate = new Date(req.body.start_date);
-            
-            // Extrair horas e minutos
-            const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
-            
-            // Definir horas e minutos
-            baseDate.setHours(hours, minutes, 0, 0);
-            
-            console.log("Data resultante:", baseDate.toISOString());
-            
-            taskData.due_date = baseDate;
-          } catch (e) {
-            console.error("Erro ao processar start_date + due_time_temp:", e);
-            taskData.due_date = null;
-          }
-        }
-        
-        // Remover campos temporários que não existem no banco de dados
-        delete req.body.due_time_temp;
-        
-        console.log("Dados processados para inserção:", JSON.stringify(taskData, null, 2));
-        
-        // Criar a tarefa no banco de dados
-        const task = await storage.createTask(taskData);
-        console.log("Tarefa criada com sucesso:", JSON.stringify(task, null, 2));
-        
-        res.status(201).json(task);
-      } catch (error: any) { // Usando typecasting para evitar erros de tipo
-        console.error("Erro detalhado na criação da tarefa:", error);
-        
-        // Se for um erro de validação do Zod ou Drizzle
-        if (error.errors) {
-          console.error("Erros de validação:", JSON.stringify(error.errors, null, 2));
-          res.status(400).json({ 
-            message: "Erro de validação na criação da tarefa", 
-            errors: error.errors
-          });
-        } else if (error.code) {
-          // Erro de banco de dados
-          console.error("Erro de banco de dados:", error.code, error.message);
-          res.status(400).json({ 
-            message: `Erro de banco de dados: ${error.code}`, 
-            detail: error.message
-          });
-        } else {
-          // Outros erros inesperados
-          throw error;
+          taskData.start_date = startDate;
+        } catch (e) {
+          taskData.start_date = null;
         }
       }
-    } catch (error) {
+      
+      if (req.body.due_date) {
+        try {
+          let dueDate = new Date(req.body.due_date);
+          
+          // Aplicar horário específico se fornecido
+          if (req.body.due_time_temp) {
+            const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
+            if (!isNaN(hours) && !isNaN(minutes)) {
+              const year = dueDate.getFullYear();
+              const month = dueDate.getMonth();
+              const day = dueDate.getDate();
+              dueDate = new Date(year, month, day, hours, minutes, 0, 0);
+            }
+          } else if (dueDate.getHours() === 0 && dueDate.getMinutes() === 0) {
+            dueDate.setHours(23, 59, 59, 999);
+          }
+          
+          taskData.due_date = dueDate;
+        } catch (e) {
+          taskData.due_date = null;
+        }
+      } else if (!req.body.due_date && req.body.start_date && req.body.due_time_temp) {
+        try {
+          let baseDate = new Date(req.body.start_date);
+          const [hours, minutes] = req.body.due_time_temp.split(':').map(Number);
+          baseDate.setHours(hours, minutes, 0, 0);
+          taskData.due_date = baseDate;
+        } catch (e) {
+          // Ignora se falhar
+        }
+      }
+      
+      // Remover campos temporários
+      delete req.body.due_time_temp;
+      
+      // Criar a tarefa no banco de dados
+      const task = await storage.createTask(taskData);
+      
+      // Emitir evento WebSocket para notificar clientes da nova tarefa
+      if (wss && wss.clients) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'task_created',
+              task: task
+            }));
+          }
+        });
+      }
+      
+      // Também notificar via Socket.IO (se disponível)
+      if (io) {
+        // Enviar para todos os clientes
+        io.emit('task_updated', { 
+          action: 'created', 
+          task,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Enviar para a sala do projeto específico
+        if (task.project_id) {
+          io.to(`project:${task.project_id}`).emit('project_task_update', {
+            action: 'task_created',
+            task,
+            project_id: task.project_id,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+      
+      res.status(201).json(task);
+    } catch (error: any) {
       console.error("Erro ao criar tarefa:", error);
-      res.status(500).json({ message: "Failed to create task" });
+      
+      // Tratamento de erro simplificado
+      if (error.errors) {
+        res.status(400).json({ 
+          message: "Erro de validação na criação da tarefa", 
+          errors: error.errors
+        });
+      } else if (error.code) {
+        res.status(400).json({ 
+          message: `Erro de banco de dados: ${error.code}`, 
+          detail: error.message
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create task" });
+      }
     }
   });
 
