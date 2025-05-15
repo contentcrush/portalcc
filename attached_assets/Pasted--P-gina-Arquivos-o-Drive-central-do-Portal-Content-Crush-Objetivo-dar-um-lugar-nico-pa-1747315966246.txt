@@ -1,0 +1,103 @@
+### Página **Arquivos** — o “Drive” central do Portal Content Crush
+
+Objetivo: dar um lugar único para localizar, pré-visualizar e gerenciar todos os arquivos vindos de clientes, projetos, tarefas e finanças, sem perder o contexto de origem e com controle de espaço em disco.
+
+---
+
+## 1. Estrutura visual
+
+```
+┌── Topbar ──────────────────────────────────────────────────────┐
+🔍  Pesquisa (nome, tipo, origem)          |  Espaço:  68 GB / 100 GB ▉▉▉▉▉▉▉▉▉▁  (Ver detalhes)
+└────────────────────────────────────────────────────────────────┘
+
+┌── Breadcrumb / Filtros ───────────────────────────────────────┐
+ Todos  ▸  Projeto  ▸  Tarefa
+  • Tipo ▾  • Projeto ▾  • Cliente ▾  • Período ▾
+└────────────────────────────────────────────────────────────────┘
+
+┌── Painel lateral (toggle) ─────────────────┐   ┌── Grade / Lista ──────────────┐
+│ Favoritos                                  │   │ ▲ Nome         Origem  Peso  │
+│  • Scripts padrão.mp4                      │   │  Vídeo_final_1.mp4  Projeto 320 MB │
+│ Pastas recentes                            │   │  Briefing.pdf        Cliente  2 MB │
+│  • Banco Azul                              │   │  ...                          │
+└────────────────────────────────────────────┘   └───────────────────────────────┘
+```
+
+* **Grade** (miniaturas) ↔ **Lista** (detalhes) switch.
+* Arquivos agrupados por “pasta virtual” = cliente / projeto / tarefa — não há pastas físicas.
+* Upload drag-and-drop sempre disponível.
+
+---
+
+## 2. Navegação e filtros
+
+| Ferramenta       | O que faz                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Busca global** | Indexa nome, extensão, tags e campo “descrição” adicionado na tarefa.                                                                                               |
+| **Filtros**      | • Tipo (vídeo, documento, imagem, áudio, planilha) <br>• Origem (Cliente, Projeto, Tarefa, Financeiro) <br>• Responsável (uploader) <br>• Data (últimos 30 d, 90 d) |
+| **Breadcrumb**   | Clica na migalha para subir nível logicamente (Projeto → Cliente → Todos).                                                                                          |
+| **Favoritar** ⭐  | Marca item ou “pasta virtual” para acesso rápido no painel lateral.                                                                                                 |
+
+---
+
+## 3. Cartão / linha de arquivo
+
+| Elemento      | Detalhe                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Ícone/Thumb   | Mostra preview (imagem) ou extensão genérica (PDF, DOC).                                   |
+| Nome editável | Duplo-clique renomeia (sem mudar URL).                                                     |
+| Origem        | Link “Projeto Banco Azul” → abre projeto num novo tab.                                     |
+| Peso          | Exibe MB/GB; badge vermelho se >1 GB (alerta de espaço).                                   |
+| Ações rápidas | Download · Copiar link · Mover (seleciona nova origem) · Deletar · Versões (se aplicável). |
+
+---
+
+## 4. Barra de espaço em disco
+
+* Top-right widget: “68 GB / 100 GB ▉▉▉▉▉▉▉▉▉▁”.
+* Cor muda para laranja a 80 % e vermelho a 95 %.
+* Clique → modal “Uso de espaço” com pizza por tipo (vídeo 78 %, docs 12 %, etc.) e por cliente (TOP 5).
+
+Back-end: consulta `SUM(size)` de `attachments`; cron a cada hora grava em `storage_stats` para não pesar.
+
+---
+
+## 5. Gestão em lote
+
+* Checkbox multi-seleção.
+* Barra flutuante: **Mover para… · Download ZIP · Deletar · Compartilhar link**.
+* Progresso em tempo real (WebSocket) para uploads/downloads grandes.
+
+---
+
+## 6. Segurança & permissões
+
+| Papel                                                                                       | Ver                                            | Upload | Deletar              |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------ | -------------------- |
+| Admin                                                                                       | Todos                                          | ✔      | ✔                    |
+| Gestor                                                                                      | Arquivos de projetos sob sua gestão + clientes | ✔      | ✔                    |
+| Creator                                                                                     | Arquivos de projetos onde é membro             | ✔      | Apenas os que enviou |
+| *Back-end valida `canViewFile(userId, fileId)` usando FK `project_id` + `project_members`.* |                                                |        |                      |
+
+---
+
+## 7. Futuro-proof (notificações externas)
+
+* Cada upload dispara `publishEvent('file_uploaded', meta)` → já entra no sistema de notificações.
+* Campo `public_url` pronto: um toggle “Gerar link público (expira 7 d)” utiliza Cloudflare/S3 presigned.
+* Webhook outbound (Zapier) pode ouvir `file_uploaded` para auto-postar no Slack.
+
+---
+
+## 8. Performance
+
+* **Virtualização** (`react-window`) em lista > 500.
+* Thumbnails gerados server-side (Lambda\@Edge) e cacheados.
+* Lazy fetch de metadata; download link só assinado on-click (reduz custo STORAGE e tratamento 403).
+
+---
+
+### Resultado
+
+Uma tela única, com busca unificada, filtros contextuais e visão clara de espaço em disco — tornando arquivos de cliente, projeto e tarefa tão fáceis de achar quanto em um drive dedicado, sem quebrar a lógica de permissões já existente.
