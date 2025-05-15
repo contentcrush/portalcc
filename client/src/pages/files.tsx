@@ -565,6 +565,7 @@ export default function FilesPage() {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [isUploadFormOpen, setIsUploadFormOpen] = useState<boolean>(false);
   
   // Busca clientes para o filtro
   const { data: clients = [] } = useQuery({
@@ -723,9 +724,9 @@ export default function FilesPage() {
         return false;
       }
       
-      if (att.type === 'project') {
+      if (att.type === 'project' && Array.isArray(projects)) {
         const project = projects.find((p: any) => p.id === att.entity_id);
-        if (!project || project.client_id.toString() !== clientId) {
+        if (!project || project.client_id?.toString() !== clientId) {
           return false;
         }
       }
@@ -1177,11 +1178,11 @@ export default function FilesPage() {
             
             <Button 
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setIsUploadFormOpen(true)}
               className="flex items-center gap-1"
             >
               <Upload className="h-4 w-4" />
-              Enviar
+              Enviar arquivo
             </Button>
             
             {selectedFiles.length > 0 && (
@@ -1220,7 +1221,7 @@ export default function FilesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os clientes</SelectItem>
-                  {clients.map((client: any) => (
+                  {Array.isArray(clients) && clients.map((client: any) => (
                     <SelectItem key={client.id} value={client.id.toString()}>
                       {client.name}
                     </SelectItem>
@@ -1237,7 +1238,7 @@ export default function FilesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os projetos</SelectItem>
-                  {projects.map((project: any) => (
+                  {Array.isArray(projects) && projects.map((project: any) => (
                     <SelectItem key={project.id} value={project.id.toString()}>
                       {project.name}
                     </SelectItem>
@@ -1285,6 +1286,23 @@ export default function FilesPage() {
         className="hidden"
         multiple
         onChange={(e) => handleFileUpload(e.target.files)}
+      />
+      
+      {/* Formulário de upload de arquivos */}
+      <FileUploadForm
+        open={isUploadFormOpen}
+        onClose={() => setIsUploadFormOpen(false)}
+        onSuccess={() => {
+          refetchAttachments();
+          toast({
+            title: "Upload concluído",
+            description: "O arquivo foi enviado com sucesso",
+            variant: "default",
+            className: "bg-green-50 text-green-900 border-green-200",
+          });
+        }}
+        initialEntityType={clientId !== 'all' ? 'client' : projectId !== 'all' ? 'project' : 'client'}
+        initialEntityId={clientId !== 'all' ? clientId : projectId !== 'all' ? projectId : 'all'}
       />
     </div>
   );

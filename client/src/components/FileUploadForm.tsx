@@ -248,19 +248,19 @@ export default function FileUploadForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {entityType === 'client' && clients.map((client: any) => (
+                      {entityType === 'client' && Array.isArray(clients) && clients.map((client: any) => (
                         <SelectItem key={client.id} value={client.id.toString()}>
                           {client.name}
                         </SelectItem>
                       ))}
                       
-                      {entityType === 'project' && projects.map((project: any) => (
+                      {entityType === 'project' && Array.isArray(projects) && projects.map((project: any) => (
                         <SelectItem key={project.id} value={project.id.toString()}>
                           {project.name}
                         </SelectItem>
                       ))}
                       
-                      {entityType === 'task' && tasks.map((task: any) => (
+                      {entityType === 'task' && Array.isArray(tasks) && tasks.map((task: any) => (
                         <SelectItem key={task.id} value={task.id.toString()}>
                           {task.title}
                         </SelectItem>
