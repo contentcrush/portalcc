@@ -17,10 +17,14 @@ import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
+import attachmentsRoutes from "./routes/attachments";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
   setupAuth(app);
+  
+  // Register attachments routes
+  app.use('/api/attachments', attachmentsRoutes);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
