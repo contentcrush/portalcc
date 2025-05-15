@@ -522,11 +522,22 @@ const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFile
 export default function FilesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("all");
   const [selectedClient, setSelectedClient] = useState<string | number | null>("all");
   const [selectedProject, setSelectedProject] = useState<string | number | null>("all");
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
+  const [currentAttachment, setCurrentAttachment] = useState<UnifiedAttachment | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [totalUsage, setTotalUsage] = useState({ used: 0, total: 1024 * 1024 * 1024 * 5 }); // 5GB total por padrão
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
 
   // Consulta para buscar todos os anexos
   const { data: attachments, isLoading: isLoadingAttachments } = useQuery<{
@@ -535,13 +546,22 @@ export default function FilesPage() {
     tasks: TaskAttachment[]
   }>({
     queryKey: ['/api/attachments/all'],
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Erro ao carregar anexos",
         description: "Não foi possível carregar os anexos. Tente novamente mais tarde.",
         variant: "destructive",
       });
       console.error("Erro ao buscar anexos:", error);
+    },
+    onSuccess: (data) => {
+      // Calcula o espaço total usado
+      let totalSize = 0;
+      data.clients.forEach(a => totalSize += a.file_size);
+      data.projects.forEach(a => totalSize += a.file_size);
+      data.tasks.forEach(a => totalSize += a.file_size);
+      
+      setTotalUsage(prev => ({ ...prev, used: totalSize }));
     }
   });
 
@@ -577,23 +597,132 @@ export default function FilesPage() {
     },
     onSuccess: () => {
       toast({
-        title: "Anexo excluído",
-        description: "O anexo foi excluído com sucesso.",
+        title: "Arquivo excluído",
+        description: "O arquivo foi excluído com sucesso.",
         variant: "default",
         className: "bg-green-100 border-green-400 text-green-900",
       });
       
       // Atualizar a lista de anexos
       queryClient.invalidateQueries({ queryKey: ['/api/attachments/all'] });
+      // Limpar a seleção atual
+      setSelectedFiles([]);
+      // Fechar o drawer se estiver aberto
+      setShowDetailsDrawer(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao excluir anexo",
-        description: error.message || "Ocorreu um erro ao excluir o anexo.",
+        title: "Erro ao excluir arquivo",
+        description: error.message || "Ocorreu um erro ao excluir o arquivo.",
         variant: "destructive",
       });
     }
   });
+
+  // Mutation para excluir vários anexos de uma vez
+  const batchDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      // Obtém os dados dos arquivos selecionados
+      const filesToDelete = processAttachments().filter(att => ids.includes(att.id));
+      
+      // Exclui os arquivos um por um (idealmente seria implementado um endpoint batch no backend)
+      for (const file of filesToDelete) {
+        await deleteMutation.mutateAsync({
+          type: file.type,
+          entityId: file.entity_id,
+          attachmentId: file.id
+        });
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: `${selectedFiles.length} arquivos excluídos`,
+        description: "Os arquivos selecionados foram excluídos com sucesso.",
+        variant: "default",
+        className: "bg-green-100 border-green-400 text-green-900",
+      });
+      
+      // Limpar a seleção
+      setSelectedFiles([]);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir arquivos",
+        description: error.message || "Ocorreu um erro ao excluir os arquivos selecionados.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Função para upload simulado de arquivos
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    setIsUploadDialogOpen(true);
+    
+    // Simulação de upload com progresso
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 5;
+      setUploadProgress(progress);
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        // Simulando um atraso para processamento no servidor
+        setTimeout(() => {
+          setIsUploadDialogOpen(false);
+          setUploadProgress(0);
+          toast({
+            title: "Upload concluído",
+            description: `${files.length} arquivo(s) enviado(s) com sucesso.`,
+            variant: "default",
+            className: "bg-green-100 border-green-400 text-green-900",
+          });
+          
+          // Atualizar a lista de anexos
+          queryClient.invalidateQueries({ queryKey: ['/api/attachments/all'] });
+        }, 500);
+      }
+    }, 100);
+  };
+
+  // Configuração para o recurso de arrastar e soltar
+  useEffect(() => {
+    const dropzone = dropzoneRef.current;
+    if (!dropzone) return;
+    
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('bg-primary/5', 'border-primary');
+    };
+    
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('bg-primary/5', 'border-primary');
+    };
+    
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('bg-primary/5', 'border-primary');
+      
+      if (e.dataTransfer?.files) {
+        handleFileUpload(e.dataTransfer.files);
+      }
+    };
+    
+    dropzone.addEventListener('dragover', handleDragOver);
+    dropzone.addEventListener('dragleave', handleDragLeave);
+    dropzone.addEventListener('drop', handleDrop);
+    
+    return () => {
+      dropzone.removeEventListener('dragover', handleDragOver);
+      dropzone.removeEventListener('dragleave', handleDragLeave);
+      dropzone.removeEventListener('drop', handleDrop);
+    };
+  }, []);
 
   // Função para processar anexos e normalizar dados
   const processAttachments = (): UnifiedAttachment[] => {
@@ -616,7 +745,11 @@ export default function FilesPage() {
           entity_id: att.client_id,
           entity_name: clientMap.get(att.client_id)?.name || `Cliente ${att.client_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString(),
+          // Adicionar nova propriedade para thumbnails
+          thumbnailUrl: att.file_type.startsWith('image/') ? att.file_url : undefined,
+          color: 'blue',
+          tags: att.tags || []
         }))
       ];
     }
@@ -631,7 +764,10 @@ export default function FilesPage() {
           entity_id: att.project_id,
           entity_name: projectMap.get(att.project_id)?.name || `Projeto ${att.project_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString(),
+          thumbnailUrl: att.file_type.startsWith('image/') ? att.file_url : undefined,
+          color: 'green',
+          tags: att.tags || []
         }))
       ];
     }
@@ -646,7 +782,10 @@ export default function FilesPage() {
           entity_id: att.task_id,
           entity_name: taskMap.get(att.task_id)?.title || `Tarefa ${att.task_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString(),
+          thumbnailUrl: att.file_type.startsWith('image/') ? att.file_url : undefined,
+          color: 'amber',
+          tags: att.tags || []
         }))
       ];
     }
@@ -657,16 +796,76 @@ export default function FilesPage() {
     );
   };
 
+  // Analisar o termo de busca para extrair filtros avançados
+  const parseSearchQuery = useCallback((query: string) => {
+    const result = {
+      text: '',
+      type: '',
+      project: '',
+      client: '',
+      date: '',
+      extension: ''
+    };
+    
+    // Expressão regular para encontrar filtros como tipo:pdf projeto:"Banco Azul"
+    const typeRegex = /tipo:([^\s"]+|"[^"]*")/g;
+    const projectRegex = /projeto:([^\s"]+|"[^"]*")/g;
+    const clientRegex = /cliente:([^\s"]+|"[^"]*")/g;
+    const dateRegex = /data:([^\s"]+|"[^"]*")/g;
+    const extensionRegex = /extensao:([^\s"]+|"[^"]*")/g;
+    
+    // Extrai todos os filtros e os remove da consulta original
+    let cleanQuery = query;
+    
+    const typeMatch = query.match(typeRegex);
+    if (typeMatch) {
+      result.type = typeMatch[0].substring(5).replace(/"/g, '');
+      cleanQuery = cleanQuery.replace(typeRegex, '');
+    }
+    
+    const projectMatch = query.match(projectRegex);
+    if (projectMatch) {
+      result.project = projectMatch[0].substring(8).replace(/"/g, '');
+      cleanQuery = cleanQuery.replace(projectRegex, '');
+    }
+    
+    const clientMatch = query.match(clientRegex);
+    if (clientMatch) {
+      result.client = clientMatch[0].substring(8).replace(/"/g, '');
+      cleanQuery = cleanQuery.replace(clientRegex, '');
+    }
+    
+    const dateMatch = query.match(dateRegex);
+    if (dateMatch) {
+      result.date = dateMatch[0].substring(5).replace(/"/g, '');
+      cleanQuery = cleanQuery.replace(dateRegex, '');
+    }
+    
+    const extensionMatch = query.match(extensionRegex);
+    if (extensionMatch) {
+      result.extension = extensionMatch[0].substring(9).replace(/"/g, '');
+      cleanQuery = cleanQuery.replace(extensionRegex, '');
+    }
+    
+    // O que sobrar é o texto de busca
+    result.text = cleanQuery.trim();
+    
+    return result;
+  }, []);
+
   // Filtrar anexos com base no termo de busca e filtros
   const filteredAttachments = (): UnifiedAttachment[] => {
     const processed = processAttachments();
     if (!processed.length) return [];
 
+    // Analisa a consulta de busca para extrair filtros avançados
+    const searchFilters = parseSearchQuery(searchTerm);
+    
     let filtered = processed;
 
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    // Filtrar por texto de busca
+    if (searchFilters.text) {
+      const term = searchFilters.text.toLowerCase();
       filtered = filtered.filter(
         att => 
           att.file_name.toLowerCase().includes(term) || 
@@ -675,13 +874,50 @@ export default function FilesPage() {
           (att.tags && att.tags.some(tag => tag.toLowerCase().includes(term)))
       );
     }
+    
+    // Filtrar por tipo de arquivo (dos filtros avançados)
+    if (searchFilters.type) {
+      filtered = filtered.filter(att => 
+        getDisplayType(att.type, att.file_type).toLowerCase().includes(searchFilters.type.toLowerCase())
+      );
+    }
+    
+    // Filtrar por extensão
+    if (searchFilters.extension) {
+      filtered = filtered.filter(att => 
+        att.file_name.toLowerCase().endsWith(`.${searchFilters.extension.toLowerCase()}`)
+      );
+    }
+    
+    // Filtrar por projeto (dos filtros avançados)
+    if (searchFilters.project) {
+      filtered = filtered.filter(att => 
+        att.entity_name && att.entity_name.toLowerCase().includes(searchFilters.project.toLowerCase())
+      );
+    }
+    
+    // Filtrar por cliente (dos filtros avançados)
+    if (searchFilters.client) {
+      filtered = filtered.filter(att => {
+        if (att.type === 'client') {
+          return att.entity_name && att.entity_name.toLowerCase().includes(searchFilters.client.toLowerCase());
+        } else if (att.type === 'project' && clients && projects) {
+          const project = projects.find((p: any) => p.id === att.entity_id);
+          if (project && project.client_id) {
+            const client = clients.find((c: any) => c.id === project.client_id);
+            return client && client.name.toLowerCase().includes(searchFilters.client.toLowerCase());
+          }
+        }
+        return false;
+      });
+    }
 
-    // Filtrar por tipo de anexo
+    // Filtrar por tipo de anexo (das tabs)
     if (activeTab !== "all") {
       filtered = filtered.filter(att => att.type === activeTab);
     }
 
-    // Aplicar filtros adicionais
+    // Aplicar filtros adicionais do dropdown
     if (filter === "images") {
       filtered = filtered.filter(att => att.file_type.startsWith('image/'));
     } else if (filter === "documents") {
@@ -743,14 +979,24 @@ export default function FilesPage() {
   };
 
   // Função para obter o ícone correto com base no tipo de arquivo
-  const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return <FileImage className="w-8 h-8 text-blue-500" />;
-    if (fileType.includes('pdf') || fileType.includes('text')) return <FileText className="w-8 h-8 text-red-500" />;
-    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
-    if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className="w-8 h-8 text-purple-500" />;
-    if (fileType.startsWith('audio/')) return <FileAudio className="w-8 h-8 text-yellow-500" />;
-    if (fileType.startsWith('video/')) return <FileVideo className="w-8 h-8 text-pink-500" />;
-    return <FileIcon className="w-8 h-8 text-gray-500" />;
+  const getFileIcon = (fileType: string): JSX.Element => {
+    const size = "h-6 w-6";
+    
+    if (fileType.startsWith('image/')) {
+      return <FileImage className={`${size} text-blue-500`} />;
+    } else if (fileType.includes('pdf')) {
+      return <FileText className={`${size} text-red-500`} />;
+    } else if (fileType.includes('spreadsheet') || fileType.includes('excel')) {
+      return <FileSpreadsheet className={`${size} text-green-500`} />;
+    } else if (fileType.includes('zip') || fileType.includes('compressed')) {
+      return <FileArchive className={`${size} text-purple-500`} />;
+    } else if (fileType.startsWith('audio/')) {
+      return <FileAudio className={`${size} text-yellow-500`} />;
+    } else if (fileType.startsWith('video/')) {
+      return <FileVideo className={`${size} text-pink-500`} />;
+    } else {
+      return <FileIcon className={`${size} text-gray-500`} />;
+    }
   };
 
   // Função para lidar com o download de um arquivo
@@ -763,18 +1009,104 @@ export default function FilesPage() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    
+    toast({
+      title: "Download iniciado",
+      description: `O download de "${attachment.file_name}" foi iniciado.`,
+      variant: "default",
+      className: "bg-green-100 border-green-400 text-green-900",
+    });
   };
 
   // Função para lidar com a exclusão de um anexo
   const handleDelete = (attachment: UnifiedAttachment) => {
-    if (confirm(`Tem certeza que deseja excluir o anexo "${attachment.file_name}"?`)) {
-      deleteMutation.mutate({
-        type: attachment.type,
-        entityId: attachment.entity_id,
-        attachmentId: attachment.id
-      });
+    deleteMutation.mutate({
+      type: attachment.type,
+      entityId: attachment.entity_id,
+      attachmentId: attachment.id
+    });
+  };
+  
+  // Função para visualizar detalhes de um anexo
+  const handleView = (attachment: UnifiedAttachment) => {
+    setCurrentAttachment(attachment);
+    setShowDetailsDrawer(true);
+  };
+
+  // Função para selecionar/deselecionar um arquivo
+  const handleSelect = (id: number, selected: boolean) => {
+    if (selected) {
+      setSelectedFiles(prev => [...prev, id]);
+    } else {
+      setSelectedFiles(prev => prev.filter(fileId => fileId !== id));
     }
   };
+  
+  // Função para selecionar/deselecionar todos os arquivos
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      const files = filteredAttachments();
+      setSelectedFiles(files.map(att => att.id));
+    } else {
+      setSelectedFiles([]);
+    }
+  };
+  
+  // Função para download em lote
+  const handleBatchDownload = () => {
+    const selectedAttachments = filteredAttachments().filter(att => 
+      selectedFiles.includes(att.id)
+    );
+    
+    // Em um sistema real, ofereceriamos um arquivo ZIP
+    // Por enquanto, vamos baixar um por um com um pequeno atraso
+    selectedAttachments.forEach((att, index) => {
+      setTimeout(() => handleDownload(att), index * 300);
+    });
+    
+    toast({
+      title: "Download em lote iniciado",
+      description: `${selectedAttachments.length} arquivos serão baixados sequencialmente.`,
+      variant: "default",
+      className: "bg-green-100 border-green-400 text-green-900",
+    });
+  };
+  
+  // Função para excluir em lote
+  const handleBatchDelete = () => {
+    batchDeleteMutation.mutate(selectedFiles);
+  };
+
+  // Agrupar anexos por mês para visualização em blocos
+  const groupedAttachments = React.useMemo(() => {
+    const files = filteredAttachments();
+    const groups: { [key: string]: UnifiedAttachment[] } = {};
+    
+    files.forEach(attachment => {
+      const date = new Date(attachment.uploaded_at);
+      const monthYear = format(date, 'MMMM yyyy', { locale: ptBR });
+      
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      
+      groups[monthYear].push(attachment);
+    });
+    
+    // Ordenar os grupos por data (mais recente primeiro)
+    return Object.entries(groups)
+      .sort(([a], [b]) => {
+        const dateA = parseISO(groups[a][0].uploaded_at);
+        const dateB = parseISO(groups[b][0].uploaded_at);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .map(([month, files]) => ({
+        month,
+        files: files.sort((a, b) => 
+          new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+        )
+      }));
+  }, [filteredAttachments]);
 
   // Verificar se está carregando algum dado necessário
   const isLoading = isLoadingAttachments || 
@@ -783,142 +1115,557 @@ export default function FilesPage() {
                    !tasks || 
                    !users;
 
+  // Calcular a porcentagem de uso do espaço
+  const usagePercentage = Math.min(100, (totalUsage.used / totalUsage.total) * 100);
+
+  // Lista de arquivos filtrados
+  const files = filteredAttachments();
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div 
+      className="space-y-4 pb-10" 
+      ref={dropzoneRef}
+    >
+      {/* Barra superior fixa com espaço utilizado e botão de upload */}
+      <div className="bg-white border-b sticky top-0 z-10 py-2 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <HardDrive className="h-4 w-4" />
+            <span>{formatFileSize(totalUsage.used)} de {formatFileSize(totalUsage.total)} utilizados</span>
+            <Progress value={usagePercentage} className="w-32" />
+          </div>
+          
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            ref={fileInputRef}
+            onChange={(e) => handleFileUpload(e.target.files)}
+          />
+          
+          <Button 
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload
+          </Button>
+        </div>
+      </div>
+      
+      <div className="px-4 space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Arquivos</h1>
+            <p className="text-muted-foreground">
+              Visualize, organize e gerencie todos os arquivos do sistema em um só lugar.
+            </p>
+          </div>
+          
+          {/* Botões de ação em lote (aparecem quando há arquivos selecionados) */}
+          {selectedFiles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{selectedFiles.length} selecionados</span>
+              
+              <Button variant="outline" size="sm" onClick={handleBatchDownload}>
+                <DownloadIcon className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir arquivos selecionados?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente
+                      os {selectedFiles.length} arquivos selecionados.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBatchDelete}>
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
+              <Button variant="ghost" size="sm" onClick={() => setSelectedFiles([])}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Limpar seleção</span>
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Barra de busca inteligente com sugestão de filtros */}
+        <div className="relative">
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder='Busque por nome ou use filtros tipo:pdf projeto:"Banco Azul" cliente:"Seara"'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchTerm && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1 h-8 w-8" 
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Alternador de visualização (grade/lista) */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={view === 'grid' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-10 w-10 rounded-none rounded-l-md"
+                onClick={() => setView('grid')}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <Button
+                variant={view === 'list' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-10 w-10 rounded-none rounded-r-md"
+                onClick={() => setView('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Botão de filtros */}
+            <Button
+              variant="outline"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-2"
+            >
+              <FilterIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Filtros</span>
+              <ChevronDown className={cn(
+                "h-4 w-4 transition-transform", 
+                isFilterOpen ? "rotate-180" : ""
+              )} />
+            </Button>
+          </div>
+          
+          {/* Painel de filtros expansível */}
+          <Collapsible open={isFilterOpen} className="mt-2">
+            <CollapsibleContent>
+              <div className="border rounded-md p-4 bg-muted/20 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Filtro por tipo */}
+                <div>
+                  <Label htmlFor="type-filter" className="text-sm font-medium mb-1 block">
+                    Tipo de arquivo
+                  </Label>
+                  <Tabs 
+                    value={activeTab} 
+                    onValueChange={setActiveTab}
+                    className="w-full"
+                  >
+                    <TabsList className="grid grid-cols-3 w-full">
+                      <TabsTrigger value="all">Todos</TabsTrigger>
+                      <TabsTrigger value="client">Clientes</TabsTrigger>
+                      <TabsTrigger value="project">Projetos</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                
+                {/* Filtro por cliente */}
+                <div>
+                  <Label htmlFor="client-filter" className="text-sm font-medium mb-1 block">
+                    Cliente
+                  </Label>
+                  <Select 
+                    value={selectedClient?.toString() || "all"}
+                    onValueChange={(value) => {
+                      setSelectedClient(value === "all" ? "all" : parseInt(value));
+                      // Resetar o projeto selecionado quando o cliente muda
+                      setSelectedProject("all");
+                    }}
+                  >
+                    <SelectTrigger id="client-filter">
+                      <SelectValue placeholder="Todos os clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os clientes</SelectItem>
+                      {clients?.map((client: any) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Filtro por projeto */}
+                <div>
+                  <Label htmlFor="project-filter" className="text-sm font-medium mb-1 block">
+                    Projeto
+                  </Label>
+                  <Select 
+                    value={selectedProject?.toString() || "all"}
+                    onValueChange={(value) => setSelectedProject(value === "all" ? "all" : parseInt(value))}
+                    disabled={selectedClient === "all"}
+                  >
+                    <SelectTrigger id="project-filter">
+                      <SelectValue placeholder={selectedClient !== "all" ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os projetos</SelectItem>
+                      {projects && selectedClient !== "all" && 
+                        projects
+                          .filter((project: any) => {
+                            const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
+                            return project.client_id === clientId;
+                          })
+                          .map((project: any) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))
+                      }
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Filtro adicional por tipo de arquivo */}
+                <div>
+                  <Label htmlFor="filter-type" className="text-sm font-medium mb-1 block">
+                    Categoria
+                  </Label>
+                  <Select
+                    value={filter}
+                    onValueChange={setFilter}
+                  >
+                    <SelectTrigger id="filter-type" className="w-full">
+                      <SelectValue placeholder="Tipo de arquivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os arquivos</SelectItem>
+                      <SelectItem value="images">Apenas imagens</SelectItem>
+                      <SelectItem value="documents">Documentos</SelectItem>
+                      <SelectItem value="media">Mídia (Áudio/Vídeo)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+        
+        {/* Breadcrumb de navegação */}
+        <div className="flex items-center text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Todos os arquivos</span>
+          {activeTab !== 'all' && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-1" />
+              <span className="font-medium text-foreground">
+                {activeTab === 'client' ? 'Clientes' : activeTab === 'project' ? 'Projetos' : 'Tarefas'}
+              </span>
+            </>
+          )}
+          {selectedClient !== 'all' && clients && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-1" />
+              <span className="font-medium text-foreground">
+                {clients.find((c: any) => c.id === Number(selectedClient))?.name}
+              </span>
+            </>
+          )}
+          {selectedProject !== 'all' && projects && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-1" />
+              <span className="font-medium text-foreground">
+                {projects.find((p: any) => p.id === Number(selectedProject))?.name}
+              </span>
+            </>
+          )}
+        </div>
+        
+        {/* Contador de resultados / seleção em massa */}
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            {files.length} {files.length === 1 ? 'arquivo encontrado' : 'arquivos encontrados'}
+          </div>
+          
+          {files.length > 0 && (
+            <div className="flex items-center">
+              <Checkbox 
+                id="select-all"
+                className="mr-2"
+                checked={selectedFiles.length === files.length && files.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="select-all" className="text-sm">
+                Selecionar todos
+              </Label>
+            </div>
+          )}
+        </div>
+
+        {/* Lista de arquivos - visualização condicional em grade ou lista */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Arquivos</h1>
-          <p className="text-muted-foreground">
-            Visualize, organize e gerencie todos os arquivos do sistema em um só lugar.
-          </p>
-        </div>
-      </div>
-
-      {/* Filtros e busca */}
-      <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative w-full md:w-96">
-          <Input
-            placeholder="Buscar por nome de arquivo, cliente ou projeto..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-          <FileIcon className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <Label htmlFor="filter-type" className="sr-only">Tipo de arquivo</Label>
-          <Select
-            value={filter}
-            onValueChange={setFilter}
-          >
-            <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Tipo de arquivo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os arquivos</SelectItem>
-              <SelectItem value="images">Apenas imagens</SelectItem>
-              <SelectItem value="documents">Documentos</SelectItem>
-              <SelectItem value="media">Mídia (Áudio/Vídeo)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Filtros adicionais por cliente e projeto */}
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        <div className="flex-1">
-          <Label htmlFor="filter-client">Filtrar por cliente</Label>
-          <Select 
-            value={selectedClient?.toString() || "all"}
-            onValueChange={(value) => {
-              setSelectedClient(value === "all" ? "all" : parseInt(value));
-              // Resetar o projeto selecionado quando o cliente muda
-              setSelectedProject("all");
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Todos os clientes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os clientes</SelectItem>
-              {clients?.map((client: any) => (
-                <SelectItem key={client.id} value={client.id.toString()}>
-                  {client.name}
-                </SelectItem>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-60">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          ) : files.length === 0 ? (
+            <div className="text-center p-8 border rounded-lg bg-muted/20">
+              <FileIcon className="h-10 w-10 mx-auto text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-medium">Nenhum arquivo encontrado</h3>
+              <p className="text-sm text-muted-foreground">
+                Nenhum arquivo corresponde aos filtros aplicados. Tente ajustar seus critérios de busca.
+              </p>
+            </div>
+          ) : view === 'grid' ? (
+            // Visualização em grade agrupada por mês
+            <div className="space-y-6">
+              {groupedAttachments.map(group => (
+                <div key={group.month} className="space-y-2">
+                  <h3 className="text-lg font-medium capitalize">{group.month}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {group.files.map((attachment) => (
+                      <FileCard
+                        key={`${attachment.type}-${attachment.id}`}
+                        attachment={attachment}
+                        isSelected={selectedFiles.includes(attachment.id)}
+                        onSelect={handleSelect}
+                        onDownload={handleDownload}
+                        onDelete={handleDelete}
+                        onView={handleView}
+                        getFileIcon={getFileIcon}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex-1">
-          <Label htmlFor="filter-project">Filtrar por projeto</Label>
-          <Select 
-            value={selectedProject?.toString() || "all"}
-            onValueChange={(value) => setSelectedProject(value === "all" ? "all" : parseInt(value))}
-            disabled={selectedClient === "all"}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={selectedClient !== "all" ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os projetos</SelectItem>
-              {projects && selectedClient !== "all" && 
-                projects
-                  .filter((project: any) => {
-                    const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
-                    return project.client_id === clientId;
-                  })
-                  .map((project: any) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </SelectItem>
-                  ))
-              }
-            </SelectContent>
-          </Select>
+            </div>
+          ) : (
+            // Visualização em lista
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/20 py-2 px-3 border-b grid grid-cols-[auto_1fr_auto_auto] gap-4">
+                <span className="w-10"></span>
+                <span className="text-sm font-medium">Nome</span>
+                <span className="text-sm font-medium w-36">Tamanho</span>
+                <span className="text-sm font-medium w-48">Data de upload</span>
+              </div>
+              
+              <ScrollArea className="h-[600px]">
+                {groupedAttachments.map(group => (
+                  <div key={group.month}>
+                    <div className="bg-muted/10 py-1 px-3 border-b sticky top-0 z-10">
+                      <h3 className="text-sm font-medium capitalize">{group.month}</h3>
+                    </div>
+                    {group.files.map((attachment) => (
+                      <FileListItem
+                        key={`${attachment.type}-${attachment.id}`}
+                        attachment={attachment}
+                        isSelected={selectedFiles.includes(attachment.id)}
+                        onSelect={handleSelect}
+                        onDownload={handleDownload}
+                        onDelete={handleDelete}
+                        onView={handleView}
+                        getFileIcon={getFileIcon}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </ScrollArea>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Tabs para filtrar por tipo de entidade */}
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 md:w-[400px]">
-          <TabsTrigger value="all">Todos</TabsTrigger>
-          <TabsTrigger value="client">Clientes</TabsTrigger>
-          <TabsTrigger value="project">Projetos</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="mt-6">
-          <AttachmentsList 
-            attachments={filteredAttachments()} 
-            isLoading={isLoading}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            getFileIcon={getFileIcon}
-          />
-        </TabsContent>
-        
-        <TabsContent value="client" className="mt-6">
-          <AttachmentsList 
-            attachments={filteredAttachments()} 
-            isLoading={isLoading}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            getFileIcon={getFileIcon}
-          />
-        </TabsContent>
-        
-        <TabsContent value="project" className="mt-6">
-          <AttachmentsList 
-            attachments={filteredAttachments()} 
-            isLoading={isLoading}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            getFileIcon={getFileIcon}
-          />
-        </TabsContent>
-      </Tabs>
+      
+      {/* Drawer para visualizar detalhes do arquivo */}
+      <Drawer open={showDetailsDrawer} onOpenChange={setShowDetailsDrawer}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="border-b">
+            <DrawerTitle>Detalhes do arquivo</DrawerTitle>
+            <DrawerDescription>
+              Visualize e gerencie as informações do arquivo
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          {currentAttachment && (
+            <ScrollArea className="p-4 h-full max-h-[calc(85vh-120px)]">
+              <div className="space-y-4">
+                {/* Pré-visualização do arquivo */}
+                <div className="rounded-lg border overflow-hidden">
+                  <div className="aspect-video bg-muted flex items-center justify-center">
+                    {currentAttachment.file_type.startsWith('image/') ? (
+                      <img 
+                        src={currentAttachment.file_url} 
+                        alt={currentAttachment.file_name}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center p-4">
+                        {getFileIcon(currentAttachment.file_type)}
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Pré-visualização não disponível
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Informações do arquivo */}
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium">{currentAttachment.file_name}</h3>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Tipo</p>
+                      <p>{getDisplayType(currentAttachment.type, currentAttachment.file_type)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Tamanho</p>
+                      <p>{formatFileSize(currentAttachment.file_size)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Entidade</p>
+                      <p>{currentAttachment.entity_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Data de upload</p>
+                      <p>{format(new Date(currentAttachment.uploaded_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Descrição</p>
+                      <p>{currentAttachment.description || "Sem descrição"}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Tags */}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-1">
+                    {currentAttachment.tags && currentAttachment.tags.length > 0 ? (
+                      currentAttachment.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline">{tag}</Badge>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sem tags</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Enviado por */}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Enviado por</p>
+                  <div className="flex items-center">
+                    {currentAttachment.uploader ? (
+                      <>
+                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-2">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <span>{currentAttachment.uploader.name}</span>
+                      </>
+                    ) : (
+                      <span>Sistema</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+          
+          <DrawerFooter className="border-t">
+            <div className="flex justify-between items-center">
+              <Button variant="outline" onClick={() => setShowDetailsDrawer(false)}>
+                Fechar
+              </Button>
+              
+              <div className="flex gap-2">
+                {currentAttachment && (
+                  <>
+                    <Button variant="outline" onClick={() => handleDownload(currentAttachment)}>
+                      <DownloadIcon className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir arquivo?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente
+                            o arquivo "{currentAttachment.file_name}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => {
+                            handleDelete(currentAttachment);
+                            setShowDetailsDrawer(false);
+                          }}>
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+              </div>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+      
+      {/* Dialog de upload com barra de progresso */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviando arquivos</DialogTitle>
+            <DialogDescription>
+              Por favor, aguarde enquanto seus arquivos são enviados.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progresso</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="w-full" />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              disabled={uploadProgress < 100} 
+              onClick={() => setIsUploadDialogOpen(false)}
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
