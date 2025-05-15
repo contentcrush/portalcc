@@ -252,13 +252,13 @@ export default function Tasks() {
     mutationFn: async ({ id, completed }: { id: number; completed: boolean }) => {
       // Quando a tarefa é marcada como concluída, também mudamos o status para "concluido"
       // Quando é desmarcada, voltamos para o status "pendente"
-      // IMPORTANTE: Não envie o objeto Date diretamente, o servidor espera uma string ISO
+      // IMPORTANTE: Envie a data de conclusão como string ISO, não como objeto Date
       const completionData = { 
         completed: completed,
         // Atualiza o status baseado no estado de conclusão
-        status: completed ? "concluido" : "pendente"
-        // Não enviamos a data de conclusão, deixamos que o servidor a defina
-        // O servidor já tem a lógica para isso
+        status: completed ? "concluido" : "pendente",
+        // Enviamos a data de conclusão formatada corretamente como string ISO
+        completion_date: completed ? new Date().toISOString() : null
       };
       
       return apiRequest('PATCH', `/api/tasks/${id}`, completionData);
