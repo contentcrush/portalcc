@@ -29,6 +29,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register attachments routes
   app.use('/api/attachments', attachmentsRoutes);
   
+  // Cria diretório 'general' se não existir
+  const generalDir = path.join(process.cwd(), 'uploads', 'general');
+  if (!fs.existsSync(generalDir)) {
+    fs.mkdirSync(generalDir, { recursive: true });
+  }
+  
   // Rota genérica para upload de arquivos
   app.post('/api/upload', authenticateJWT, upload.array('files'), async (req, res) => {
     try {
