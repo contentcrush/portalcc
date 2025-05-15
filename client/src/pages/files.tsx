@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,7 +16,26 @@ import {
   FileArchive, 
   FileAudio, 
   FileVideo,
-  Loader2
+  Loader2,
+  Upload,
+  ChevronRight,
+  Calendar,
+  Grid,
+  List,
+  Search,
+  Eye,
+  Copy,
+  Eye as ViewIcon,
+  Info,
+  CheckSquare,
+  Square,
+  MoreHorizontal,
+  ChevronDown,
+  Clock,
+  User,
+  HardDrive,
+  Filter as FilterIcon,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,8 +50,62 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatFileSize } from "@/lib/utils";
+import { formatFileSize, cn } from "@/lib/utils";
 
 // Interface para apresentar anexos de forma unificada
 interface UnifiedAttachment {
@@ -49,6 +122,9 @@ interface UnifiedAttachment {
   description?: string | null;
   tags?: string[] | null;
   uploader?: any;
+  thumbnailUrl?: string;
+  color?: string;
+  origin_id?: string;
 }
 
 // Props para o componente FilesList
@@ -58,7 +134,304 @@ interface FilesListProps {
   onDownload: (attachment: UnifiedAttachment) => void;
   onDelete: (attachment: UnifiedAttachment) => void;
   getFileIcon: (fileType: string) => JSX.Element;
+  view: 'grid' | 'list';
+  selectedFiles: number[];
+  onSelect: (id: number, selected: boolean) => void;
 }
+
+// Componente para exibição de um arquivo em formato de cartão (visualização em grade)
+const FileCard = ({ 
+  attachment, 
+  isSelected, 
+  onSelect, 
+  onDownload, 
+  onDelete, 
+  onView, 
+  getFileIcon 
+}: { 
+  attachment: UnifiedAttachment, 
+  isSelected: boolean, 
+  onSelect: (id: number, selected: boolean) => void, 
+  onDownload: (attachment: UnifiedAttachment) => void, 
+  onDelete: (attachment: UnifiedAttachment) => void, 
+  onView: (attachment: UnifiedAttachment) => void,
+  getFileIcon: (fileType: string) => JSX.Element 
+}) => {
+  const isImage = attachment.file_type.startsWith('image/');
+  const typeColor = getTypeColor(attachment.file_type);
+  
+  return (
+    <Card className={cn(
+      "overflow-hidden transition-all group hover:shadow-md border-l-4",
+      `border-l-${typeColor}-500`,
+      isSelected ? "ring-2 ring-primary ring-offset-2" : ""
+    )}>
+      <div className="relative">
+        {/* Thumbnail ou ícone */}
+        <div className={cn(
+          "w-full aspect-square flex items-center justify-center",
+          `bg-${typeColor}-50`
+        )}>
+          {isImage && attachment.thumbnailUrl ? (
+            <img 
+              src={attachment.thumbnailUrl} 
+              alt={attachment.file_name}
+              className="object-cover w-full h-full"
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full">
+              {getFileIcon(attachment.file_type)}
+            </div>
+          )}
+        </div>
+        
+        {/* Checkbox para seleção */}
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Checkbox 
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelect(attachment.id, !!checked)}
+            className="h-5 w-5 bg-white/80"
+          />
+        </div>
+        
+        {/* Ações rápidas */}
+        <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 bg-black/20 text-white hover:bg-black/40 rounded-full"
+                  onClick={() => onView(attachment)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Visualizar</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 bg-black/20 text-white hover:bg-black/40 rounded-full"
+                  onClick={() => onDownload(attachment)}
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+      
+      <CardHeader className="p-3 pb-2">
+        <div className="flex flex-col">
+          <CardTitle className="text-sm font-medium truncate" title={attachment.file_name}>
+            {attachment.file_name}
+          </CardTitle>
+          <CardDescription className="text-xs truncate">
+            {formatFileSize(attachment.file_size)}
+          </CardDescription>
+        </div>
+      </CardHeader>
+      
+      <CardFooter className="p-3 pt-0 flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <Badge 
+            variant="outline" 
+            className={cn(
+              "text-xs",
+              `bg-${typeColor}-50 text-${typeColor}-700 border-${typeColor}-200`
+            )}
+          >
+            {getDisplayType(attachment.type, attachment.file_type)}
+          </Badge>
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onView(attachment)}>
+              <ViewIcon className="mr-2 h-4 w-4" />
+              <span>Visualizar</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDownload(attachment)}>
+              <DownloadIcon className="mr-2 h-4 w-4" />
+              <span>Download</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onDelete(attachment)} className="text-red-600">
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Excluir</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Componente para exibição de um arquivo em formato de linha (visualização em lista)
+const FileListItem = ({ 
+  attachment, 
+  isSelected, 
+  onSelect, 
+  onDownload, 
+  onDelete, 
+  onView, 
+  getFileIcon 
+}: { 
+  attachment: UnifiedAttachment, 
+  isSelected: boolean, 
+  onSelect: (id: number, selected: boolean) => void, 
+  onDownload: (attachment: UnifiedAttachment) => void, 
+  onDelete: (attachment: UnifiedAttachment) => void, 
+  onView: (attachment: UnifiedAttachment) => void,
+  getFileIcon: (fileType: string) => JSX.Element 
+}) => {
+  const typeColor = getTypeColor(attachment.file_type);
+  
+  return (
+    <div className={cn(
+      "flex items-center p-2 hover:bg-gray-50 rounded-md group border-l-4",
+      `border-l-${typeColor}-500`,
+      isSelected ? "bg-primary/10" : ""
+    )}>
+      <div className="flex items-center flex-1 min-w-0">
+        <Checkbox 
+          checked={isSelected}
+          onCheckedChange={(checked) => onSelect(attachment.id, !!checked)}
+          className="mr-3"
+        />
+        
+        <div className={cn(
+          "flex items-center justify-center w-10 h-10 rounded",
+          `bg-${typeColor}-50`
+        )}>
+          {getFileIcon(attachment.file_type)}
+        </div>
+        
+        <div className="ml-3 flex-1 min-w-0">
+          <p className="text-sm font-medium truncate" title={attachment.file_name}>
+            {attachment.file_name}
+          </p>
+          <div className="flex items-center text-xs text-gray-500 mt-0.5">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "text-xs mr-2",
+                `bg-${typeColor}-50 text-${typeColor}-700 border-${typeColor}-200`
+              )}
+            >
+              {getDisplayType(attachment.type, attachment.file_type)}
+            </Badge>
+            <span className="truncate">{attachment.entity_name}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center text-sm text-gray-500 mx-4 w-36">
+        <span>{formatFileSize(attachment.file_size)}</span>
+      </div>
+      
+      <div className="flex items-center text-sm text-gray-500 mx-4 w-48">
+        <Calendar className="h-4 w-4 mr-1" />
+        <span>{format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+      </div>
+      
+      <div className="flex items-center gap-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => onView(attachment)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Visualizar</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => onDownload(attachment)}
+              >
+                <DownloadIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onView(attachment)}>
+              <ViewIcon className="mr-2 h-4 w-4" />
+              <span>Visualizar</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDownload(attachment)}>
+              <DownloadIcon className="mr-2 h-4 w-4" />
+              <span>Download</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onDelete(attachment)} className="text-red-600">
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Excluir</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+};
+
+// Obtém a cor baseada no tipo de arquivo
+const getTypeColor = (fileType: string): string => {
+  if (fileType.startsWith('image/')) return 'blue';
+  if (fileType.includes('pdf')) return 'red';
+  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'green';
+  if (fileType.includes('zip') || fileType.includes('compressed')) return 'purple';
+  if (fileType.startsWith('audio/')) return 'yellow';
+  if (fileType.startsWith('video/')) return 'pink';
+  if (fileType.includes('word') || fileType.includes('document')) return 'sky';
+  return 'gray';
+};
+
+// Obtém um nome de exibição para o tipo de arquivo
+const getDisplayType = (type: string, fileType: string): string => {
+  if (fileType.startsWith('image/')) return 'Imagem';
+  if (fileType.includes('pdf')) return 'PDF';
+  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'Planilha';
+  if (fileType.includes('zip') || fileType.includes('compressed')) return 'Arquivo';
+  if (fileType.startsWith('audio/')) return 'Áudio';
+  if (fileType.startsWith('video/')) return 'Vídeo';
+  if (fileType.includes('word') || fileType.includes('document')) return 'Documento';
+  return type === 'client' ? 'Cliente' : type === 'project' ? 'Projeto' : 'Tarefa';
+};
 
 // Componente para exibir a lista de arquivos
 const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFileIcon }: FilesListProps) => {
