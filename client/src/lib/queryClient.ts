@@ -41,13 +41,35 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { headers?: HeadersInit }
 ): Promise<Response> {
-  let res = await fetch(url, {
+  // Configuração padrão para headers
+  let headers = options?.headers;
+  
+  if (!headers) {
+    // Se não houver headers especificados, usamos os padrões
+    headers = getAuthHeaders(!!data && !(data instanceof FormData));
+  }
+  
+  // Configuração da requisição
+  const requestOptions: RequestInit = {
     method,
-    headers: getAuthHeaders(!!data),
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
     credentials: "include",
-  });
+  };
+  
+  // Processar o corpo da requisição
+  if (data) {
+    if (data instanceof FormData) {
+      // FormData é tratado automaticamente pelo fetch, não precisamos definir Content-Type
+      requestOptions.body = data;
+    } else {
+      // Outros tipos de dados são convertidos para JSON
+      requestOptions.body = JSON.stringify(data);
+    }
+  }
+  
+  let res = await fetch(url, requestOptions);
 
   // Se recebemos um erro 401 (não autorizado), verificamos se já estamos na página de autenticação
   if (res.status === 401) {
@@ -68,12 +90,23 @@ export async function apiRequest(
         
         if (refreshSuccessful) {
           // Retentar a requisição após renovar o token
-          res = await fetch(url, {
+          const requestOptions: RequestInit = {
             method,
-            headers: getAuthHeaders(!!data),
-            body: data ? JSON.stringify(data) : undefined,
             credentials: "include",
-          });
+          };
+          
+          if (data) {
+            if (data instanceof FormData) {
+              requestOptions.body = data;
+            } else {
+              requestOptions.headers = getAuthHeaders(true);
+              requestOptions.body = JSON.stringify(data);
+            }
+          } else {
+            requestOptions.headers = getAuthHeaders(false);
+          }
+          
+          res = await fetch(url, requestOptions);
         } else {
           // Se não conseguimos renovar o token, redirecionamos para login
           window.location.href = '/auth';

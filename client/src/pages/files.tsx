@@ -802,9 +802,10 @@ export default function FilesPage() {
   // Mutation para upload de arquivos
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const response = await apiRequest('POST', '/api/upload', formData, {
+        // Remove os headers padrão para que o navegador configure corretamente o Content-Type
+        // para FormData com boundary apropriado para upload de arquivos
+        headers: {},
       });
       
       if (!response.ok) {
