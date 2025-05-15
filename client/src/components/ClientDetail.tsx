@@ -44,7 +44,7 @@ import { insertClientSchema, insertProjectSchema, type InsertClient, type Insert
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CLIENT_TYPE_OPTIONS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import RecentDocuments from "@/components/RecentDocuments";
+import FileAttachments from "@/components/FileAttachments";
 import {
   Dialog,
   DialogContent,
@@ -923,9 +923,9 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             </CardContent>
           </Card>
 
-          {/* Documentos Recentes */}
-          <RecentDocuments 
-            documents={financialDocuments?.map(doc => ({
+          {/* Anexos de Cliente */}
+          <FileAttachments 
+            attachments={financialDocuments?.map(doc => ({
               id: doc.id.toString(),
               name: doc.document_type === 'invoice' 
                 ? `Fatura_${doc.document_number || doc.id}.pdf`
@@ -943,8 +943,29 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
                 ? 'xlsx'
                 : 'pdf',
               downloadUrl: `#documento-${doc.id}` // Placeholder para demonstração
-            })).slice(0, 4) || []}
-            viewAllHref="#documentos"
+            })) || []}
+            entityId={clientId}
+            entityType="client"
+            onUploadSuccess={(attachment) => {
+              toast({
+                title: "Arquivo anexado",
+                description: `O arquivo ${attachment.name} foi anexado ao cliente ${client.name}`,
+                variant: "success"
+              });
+              // Em uma implementação real, o arquivo seria enviado ao backend
+              // e o cache seria invalidado para recarregar a lista de anexos
+              // queryClient.invalidateQueries([`/api/clients/${clientId}/attachments`]);
+            }}
+            onDeleteSuccess={(attachmentId) => {
+              toast({
+                title: "Arquivo removido",
+                description: "O arquivo foi removido com sucesso",
+                variant: "default"
+              });
+              // Em uma implementação real, o arquivo seria excluído no backend
+              // e o cache seria invalidado para recarregar a lista de anexos
+              // queryClient.invalidateQueries([`/api/clients/${clientId}/attachments`]);
+            }}
           />
         </div>
       </div>
