@@ -116,13 +116,8 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
     refetchOnWindowFocus: false
   });
 
-  // Dados de interações - carregados sob demanda conforme necessário
-  const { data: interactions } = useQuery({
-    queryKey: [`/api/clients/${clientId}/interactions`],
-    enabled: !!clientId && activeTab === "interactions", // Só carrega quando a tab estiver ativa
-    staleTime: 3 * 60 * 1000, // 3 minutos
-    gcTime: 10 * 60 * 1000 // 10 minutos (gcTime substitui cacheTime no TanStack Query v5)
-  });
+  // Definindo variável para uso em outros lugares (como estatísticas de exclusão)
+  const interactions = { length: 0 };
   
   // Tarefas relacionadas aos projetos do cliente
   const { data: clientTasks } = useQuery({
