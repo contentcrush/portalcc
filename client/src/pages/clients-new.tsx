@@ -418,14 +418,20 @@ export default function Clients() {
     createClientMutation.mutate(clientData);
   };
 
-  // Fetch clients
+  // Fetch clients com cache otimizado
   const { data: clients, isLoading } = useQuery<Client[]>({
-    queryKey: ['/api/clients']
+    queryKey: ['/api/clients'],
+    staleTime: 5 * 60 * 1000, // 5 minutos de stale time
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache time (gcTime substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
   
-  // Fetch projects para cada cliente (para contagem e badges)
+  // Fetch projects para cada cliente (para contagem e badges) com cache otimizado
   const { data: projects } = useQuery<Project[]>({
-    queryKey: ['/api/projects']
+    queryKey: ['/api/projects'],
+    staleTime: 5 * 60 * 1000, // 5 minutos de stale time
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache time
+    refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
 
   // Função para contar o número de projetos por cliente - definida ANTES de ser usada
