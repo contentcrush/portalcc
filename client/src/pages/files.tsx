@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { ClientAttachment, ProjectAttachment, TaskAttachment } from "@shared/schema";
 import { 
-  DownloadIcon, 
+  Download as DownloadIcon, 
   Filter, 
   FileIcon, 
   Trash2, 
@@ -15,21 +15,14 @@ import {
   FileSpreadsheet, 
   FileArchive, 
   FileAudio, 
-  FileVideo
+  FileVideo,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -38,11 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClientAvatar } from "@/components/ClientAvatar";
-import { UserAvatar } from "@/components/UserAvatar";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatFileSize, cn } from "@/lib/utils";
-import { FileAttachments } from "@/components/FileAttachments";
+import { formatFileSize } from "@/lib/utils";
 
 // Interface para apresentar anexos de forma unificada
 interface UnifiedAttachment {
@@ -61,6 +51,101 @@ interface UnifiedAttachment {
   uploader?: any;
 }
 
+// Props para o componente FilesList
+interface FilesListProps {
+  attachments: UnifiedAttachment[];
+  isLoading: boolean;
+  onDownload: (attachment: UnifiedAttachment) => void;
+  onDelete: (attachment: UnifiedAttachment) => void;
+  getFileIcon: (fileType: string) => JSX.Element;
+}
+
+// Componente para exibir a lista de arquivos
+const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFileIcon }: FilesListProps) => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (attachments.length === 0) {
+    return (
+      <div className="text-center p-8 border rounded-lg bg-muted/20">
+        <FileIcon className="h-10 w-10 mx-auto text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">Nenhum arquivo encontrado</h3>
+        <p className="text-sm text-muted-foreground">
+          Nenhum arquivo corresponde aos filtros aplicados. Tente ajustar seus critérios de busca.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {attachments.map((attachment) => (
+        <Card key={`${attachment.type}-${attachment.id}`} className="overflow-hidden hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted">
+              {getFileIcon(attachment.file_type)}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <CardTitle className="text-base truncate" title={attachment.file_name}>
+                {attachment.file_name}
+              </CardTitle>
+              <CardDescription className="truncate">
+                {attachment.entity_name}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-1">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Badge variant="outline" className="mr-2">
+                {attachment.type === 'client' ? 'Cliente' : attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
+              </Badge>
+              <span>{formatFileSize(attachment.file_size)}</span>
+            </div>
+            <div className="mt-2 flex items-center text-xs text-muted-foreground">
+              <span>Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+            </div>
+            {attachment.tags && attachment.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {attachment.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <div className="flex w-full divide-x">
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10 flex-1"
+                onClick={() => onDownload(attachment)}
+              >
+                <DownloadIcon className="mr-1 h-4 w-4" />
+                <span>Download</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(attachment)}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                <span>Excluir</span>
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Página principal de gerenciamento de arquivos
 export default function FilesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -71,7 +156,7 @@ export default function FilesPage() {
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
 
   // Consulta para buscar todos os anexos
-  const { data: attachments, isLoading, refetch } = useQuery<{
+  const { data: attachments, isLoading: isLoadingAttachments } = useQuery<{
     clients: ClientAttachment[],
     projects: ProjectAttachment[],
     tasks: TaskAttachment[]
@@ -139,12 +224,12 @@ export default function FilesPage() {
 
   // Função para processar anexos e normalizar dados
   const processAttachments = (): UnifiedAttachment[] => {
-    if (!attachments) return [];
+    if (!attachments || !clients || !projects || !tasks || !users) return [];
 
-    const clientMap = new Map(clients?.map((c: any) => [c.id, c]) || []);
-    const projectMap = new Map(projects?.map((p: any) => [p.id, p]) || []);
-    const taskMap = new Map(tasks?.map((t: any) => [t.id, t]) || []);
-    const userMap = new Map(users?.map((u: any) => [u.id, u]) || []);
+    const clientMap = new Map(clients?.map((client: any) => [client.id, client]) || []);
+    const projectMap = new Map(projects?.map((project: any) => [project.id, project]) || []);
+    const taskMap = new Map(tasks?.map((task: any) => [task.id, task]) || []);
+    const userMap = new Map(users?.map((user: any) => [user.id, user]) || []);
 
     let allAttachments: UnifiedAttachment[] = [];
 
@@ -158,7 +243,7 @@ export default function FilesPage() {
           entity_id: att.client_id,
           entity_name: clientMap.get(att.client_id)?.name || `Cliente ${att.client_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.updated_at || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
         }))
       ];
     }
@@ -173,7 +258,7 @@ export default function FilesPage() {
           entity_id: att.project_id,
           entity_name: projectMap.get(att.project_id)?.name || `Projeto ${att.project_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.updated_at || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
         }))
       ];
     }
@@ -188,7 +273,7 @@ export default function FilesPage() {
           entity_id: att.task_id,
           entity_name: taskMap.get(att.task_id)?.title || `Tarefa ${att.task_id}`,
           uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
-          uploaded_at: att.created_at || att.updated_at || new Date().toISOString()
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
         }))
       ];
     }
@@ -200,31 +285,34 @@ export default function FilesPage() {
   };
 
   // Filtrar anexos com base no termo de busca e filtros
-  const filteredAttachments = () => {
-    let processed = processAttachments();
+  const filteredAttachments = (): UnifiedAttachment[] => {
+    const processed = processAttachments();
+    if (!processed.length) return [];
+
+    let filtered = processed;
 
     // Filtrar por termo de busca
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      processed = processed.filter(
+      filtered = filtered.filter(
         att => 
           att.file_name.toLowerCase().includes(term) || 
-          att.entity_name?.toLowerCase().includes(term) ||
-          att.description?.toLowerCase().includes(term) ||
+          (att.entity_name && att.entity_name.toLowerCase().includes(term)) ||
+          (att.description && att.description.toLowerCase().includes(term)) ||
           (att.tags && att.tags.some(tag => tag.toLowerCase().includes(term)))
       );
     }
 
     // Filtrar por tipo de anexo
     if (activeTab !== "all") {
-      processed = processed.filter(att => att.type === activeTab);
+      filtered = filtered.filter(att => att.type === activeTab);
     }
 
     // Aplicar filtros adicionais
     if (filter === "images") {
-      processed = processed.filter(att => att.file_type.startsWith('image/'));
+      filtered = filtered.filter(att => att.file_type.startsWith('image/'));
     } else if (filter === "documents") {
-      processed = processed.filter(att => 
+      filtered = filtered.filter(att => 
         att.file_type.includes('pdf') || 
         att.file_type.includes('word') || 
         att.file_type.includes('document') ||
@@ -232,15 +320,21 @@ export default function FilesPage() {
         att.file_type.includes('sheet')
       );
     } else if (filter === "media") {
-      processed = processed.filter(att => 
+      filtered = filtered.filter(att => 
         att.file_type.startsWith('video/') || 
         att.file_type.startsWith('audio/')
       );
     }
 
+    if (!clients || !projects || !tasks) return filtered;
+    
+    const clientMap = new Map(clients?.map((client: any) => [client.id, client]) || []);
+    const projectMap = new Map(projects?.map((project: any) => [project.id, project]) || []);
+    const taskMap = new Map(tasks?.map((task: any) => [task.id, task]) || []);
+
     // Filtrar por cliente selecionado
     if (selectedClient) {
-      processed = processed.filter(att => {
+      filtered = filtered.filter(att => {
         if (att.type === 'client') {
           return att.entity_id === selectedClient;
         } else if (att.type === 'project') {
@@ -259,7 +353,7 @@ export default function FilesPage() {
 
     // Filtrar por projeto selecionado
     if (selectedProject) {
-      processed = processed.filter(att => {
+      filtered = filtered.filter(att => {
         if (att.type === 'project') {
           return att.entity_id === selectedProject;
         } else if (att.type === 'task') {
@@ -270,10 +364,8 @@ export default function FilesPage() {
       });
     }
 
-    return processed;
+    return filtered;
   };
-
-  // Os mapas já estão sendo criados dentro da função processAttachments
 
   // Função para obter o ícone correto com base no tipo de arquivo
   const getFileIcon = (fileType: string) => {
@@ -308,6 +400,13 @@ export default function FilesPage() {
       });
     }
   };
+
+  // Verificar se está carregando algum dado necessário
+  const isLoading = isLoadingAttachments || 
+                   !clients || 
+                   !projects || 
+                   !tasks || 
+                   !users;
 
   return (
     <div className="space-y-6">
@@ -358,7 +457,11 @@ export default function FilesPage() {
           <Label htmlFor="filter-client">Filtrar por cliente</Label>
           <Select 
             value={selectedClient?.toString() || ""}
-            onValueChange={(value) => setSelectedClient(value ? parseInt(value) : null)}
+            onValueChange={(value) => {
+              setSelectedClient(value ? parseInt(value) : null);
+              // Resetar o projeto selecionado quando o cliente muda
+              setSelectedProject(null);
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todos os clientes" />
@@ -386,13 +489,14 @@ export default function FilesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">Todos os projetos</SelectItem>
-              {projects
-                ?.filter((project: any) => !selectedClient || project.client_id === selectedClient)
-                .map((project: any) => (
-                  <SelectItem key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </SelectItem>
-                ))
+              {projects && selectedClient && 
+                projects
+                  .filter((project: any) => project.client_id === selectedClient)
+                  .map((project: any) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </SelectItem>
+                  ))
               }
             </SelectContent>
           </Select>
@@ -408,7 +512,7 @@ export default function FilesPage() {
         </TabsList>
         
         <TabsContent value="all" className="mt-6">
-          <FilesList 
+          <AttachmentsList 
             attachments={filteredAttachments()} 
             isLoading={isLoading}
             onDownload={handleDownload}
@@ -418,7 +522,7 @@ export default function FilesPage() {
         </TabsContent>
         
         <TabsContent value="client" className="mt-6">
-          <FilesList 
+          <AttachmentsList 
             attachments={filteredAttachments()} 
             isLoading={isLoading}
             onDownload={handleDownload}
@@ -428,7 +532,7 @@ export default function FilesPage() {
         </TabsContent>
         
         <TabsContent value="project" className="mt-6">
-          <FilesList 
+          <AttachmentsList 
             attachments={filteredAttachments()} 
             isLoading={isLoading}
             onDownload={handleDownload}
