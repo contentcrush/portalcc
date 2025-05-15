@@ -32,7 +32,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
-import { getInteractionIcon } from "@/lib/utils";
+
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserAvatar } from "./UserAvatar";
@@ -643,64 +643,6 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
             
             <TabsContent value="contacts" className="space-y-4">
               <ClientContacts clientId={clientId} clientName={client.name} />
-            </TabsContent>
-            
-            <TabsContent value="interactions" className="space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium">Histórico de Interações</h3>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Interação
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {interactions?.length > 0 ? (
-                  interactions.map(interaction => {
-                    const user = users?.find(u => u.id === interaction.user_id);
-                    const iconName = getInteractionIcon(interaction.type as any);
-                    
-                    return (
-                      <div key={interaction.id} className="flex gap-3">
-                        <div className={`mt-1 p-2 rounded-full bg-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-100 text-${interaction.type === 'feedback' ? 'yellow' : interaction.type === 'documento' ? 'green' : 'blue'}-600`}>
-                          <div className="h-4 w-4" dangerouslySetInnerHTML={{ __html: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="${iconName === 'video' ? 'M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM19.94 18.75l-2.69-2.69V7.94l2.69-2.69c.944-.945 2.56-.276 2.56 1.06v11.38c0 1.336-1.616 2.005-2.56 1.06z' : iconName === 'mail' ? 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75' : iconName === 'message-square' ? 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z' : 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'}" /></svg>` }} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between">
-                            <div>
-                              <span className="font-medium">{interaction.title}</span>
-                              <Badge variant={interaction.type === 'reuniao' ? 'blue' : interaction.type === 'feedback' ? 'warning' : 'success'} className="ml-2 capitalize">
-                                {interaction.type === 'reuniao' ? 'Reunião' : 
-                                  interaction.type === 'email' ? 'Email' : 
-                                  interaction.type === 'feedback' ? 'Feedback' : 
-                                  'Documento'}
-                              </Badge>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              {formatDate(interaction.date)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {interaction.description}
-                          </p>
-                          <div className="flex items-center mt-2">
-                            <UserAvatar user={user} className="h-5 w-5 mr-2" />
-                            <span className="text-xs text-gray-500">{user?.name || 'Usuário'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Nenhuma interação registrada para este cliente.
-                  </div>
-                )}
-              </div>
-              
-              <Button variant="ghost" size="sm" className="w-full mt-4">
-                Ver histórico completo
-              </Button>
             </TabsContent>
             
             <TabsContent value="financial">
