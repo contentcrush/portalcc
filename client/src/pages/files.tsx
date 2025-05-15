@@ -152,8 +152,8 @@ export default function FilesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [selectedClient, setSelectedClient] = useState<number | null>(null);
-  const [selectedProject, setSelectedProject] = useState<number | null>(null);
+  const [selectedClient, setSelectedClient] = useState<string | number | null>("all");
+  const [selectedProject, setSelectedProject] = useState<string | number | null>("all");
 
   // Consulta para buscar todos os anexos
   const { data: attachments, isLoading: isLoadingAttachments } = useQuery<{
@@ -456,18 +456,18 @@ export default function FilesPage() {
         <div className="flex-1">
           <Label htmlFor="filter-client">Filtrar por cliente</Label>
           <Select 
-            value={selectedClient?.toString() || ""}
+            value={selectedClient?.toString() || "all"}
             onValueChange={(value) => {
-              setSelectedClient(value ? parseInt(value) : null);
+              setSelectedClient(value === "all" ? "all" : parseInt(value));
               // Resetar o projeto selecionado quando o cliente muda
-              setSelectedProject(null);
+              setSelectedProject("all");
             }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todos os clientes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os clientes</SelectItem>
+              <SelectItem value="all">Todos os clientes</SelectItem>
               {clients?.map((client: any) => (
                 <SelectItem key={client.id} value={client.id.toString()}>
                   {client.name}
@@ -480,15 +480,15 @@ export default function FilesPage() {
         <div className="flex-1">
           <Label htmlFor="filter-project">Filtrar por projeto</Label>
           <Select 
-            value={selectedProject?.toString() || ""}
-            onValueChange={(value) => setSelectedProject(value ? parseInt(value) : null)}
-            disabled={!selectedClient}
+            value={selectedProject?.toString() || "all"}
+            onValueChange={(value) => setSelectedProject(value === "all" ? "all" : parseInt(value))}
+            disabled={selectedClient === "all"}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder={selectedClient ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os projetos</SelectItem>
+              <SelectItem value="all">Todos os projetos</SelectItem>
               {projects && selectedClient && 
                 projects
                   .filter((project: any) => project.client_id === selectedClient)
