@@ -428,34 +428,85 @@ export default function Clients() {
     queryKey: ['/api/projects']
   });
 
+  // Função para contar o número de projetos por cliente - definida ANTES de ser usada
+  const getClientProjectsCount = (clientId: number) => {
+    if (!projects || !Array.isArray(projects)) return 0;
+    
+    try {
+      return projects.filter((project) => {
+        if (!project || typeof project !== 'object') return false;
+        return project.client_id === clientId;
+      }).length;
+    } catch (err) {
+      console.error("Erro ao contar projetos do cliente:", err);
+      return 0;
+    }
+  };
+  
+  // Função para calcular a receita total de projetos por cliente - definida ANTES de ser usada
+  const getClientRevenue = (clientId: number) => {
+    if (!projects || !Array.isArray(projects)) return 0;
+    
+    try {
+      return projects
+        .filter((project) => {
+          if (!project || typeof project !== 'object') return false;
+          return project.client_id === clientId;
+        })
+        .reduce((total, project) => {
+          const budget = typeof project.budget === 'number' ? project.budget : 0;
+          return total + budget;
+        }, 0);
+    } catch (err) {
+      console.error("Erro ao calcular receita do cliente:", err);
+      return 0;
+    }
+  };
+
   // Filter clients based on criteria
   const filteredClients = clients?.filter((client: Client) => {
-    // Search term filter
-    if (searchTerm && !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+    // Validação de client para evitar erros de null/undefined
+    if (!client || typeof client !== 'object') return false;
+    
+    // Search term filter - com validação para evitar erros
+    if (searchTerm && client.name && typeof client.name === 'string' && 
+        !client.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
     
-    // Type filter
-    if (typeFilter !== "all" && client.type !== typeFilter) {
+    // Type filter - com validação para evitar erros
+    if (typeFilter !== "all" && client.type && client.type !== typeFilter) {
       return false;
     }
     
     return true;
   });
 
-  // Sort clients
-  const sortedClients = filteredClients?.sort((a: Client, b: Client) => {
-    if (sortBy === "recent") {
-      return new Date(b.since || 0).getTime() - new Date(a.since || 0).getTime();
-    } else if (sortBy === "name") {
-      return a.name.localeCompare(b.name);
-    } else if (sortBy === "revenue") {
-      const revenueA = getClientRevenue(a.id);
-      const revenueB = getClientRevenue(b.id);
-      return revenueB - revenueA; // Ordem decrescente
+  // Sort clients - implementação mais segura com tratamento de erros
+  const sortedClients = Array.isArray(filteredClients) ? [...filteredClients].sort((a, b) => {
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return 0;
+    
+    try {
+      if (sortBy === "recent") {
+        // Usando created_at ao invés de since para garantir que sempre tenha um valor
+        const dateA = a.created_at || a.since || new Date(0);
+        const dateB = b.created_at || b.since || new Date(0);
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      } else if (sortBy === "name") {
+        // Verificando se name existe e é string
+        if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "revenue") {
+        // Prevenimos contra erros com validação adicional
+        const revenueA = typeof a.id === 'number' ? getClientRevenue(a.id) : 0;
+        const revenueB = typeof b.id === 'number' ? getClientRevenue(b.id) : 0;
+        return revenueB - revenueA; // Ordem decrescente
+      }
+    } catch (error) {
+      console.error("Erro ao ordenar clientes:", error);
     }
     return 0;
-  });
+  }) : [];
 
   const handleNewClientClick = () => {
     setIsNewClientDialogOpen(true);
@@ -517,19 +568,8 @@ export default function Clients() {
     }
   };
   
-  // Função para contar o número de projetos por cliente
-  const getClientProjectsCount = (clientId: number) => {
-    if (!projects) return 0;
-    return projects.filter((project: Project) => project.client_id === clientId).length;
-  };
-  
-  // Função para calcular a receita total de projetos por cliente
-  const getClientRevenue = (clientId: number) => {
-    if (!projects) return 0;
-    return projects
-      .filter((project: Project) => project.client_id === clientId)
-      .reduce((total: number, project: Project) => total + (project.budget || 0), 0);
-  };
+  // Funções calculadoras já foram definidas anteriormente
+  // Definição removida para evitar duplicação
   
   // Utilitário para garantir valores não-nulos em campos de formulário
   const getSafeFieldProps = (field: any) => ({
