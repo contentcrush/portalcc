@@ -223,6 +223,23 @@ export const projectAttachments = pgTable("project_attachments", {
   encryption_key_id: text("encryption_key_id"), // Identificador da chave usada
 });
 
+export const clientAttachments = pgTable("client_attachments", {
+  id: serial("id").primaryKey(),
+  client_id: integer("client_id").notNull(),
+  file_name: text("file_name").notNull(),
+  file_size: integer("file_size"),
+  file_type: text("file_type"),
+  file_url: text("file_url").notNull(),
+  uploaded_by: integer("uploaded_by"),
+  upload_date: timestamp("upload_date").defaultNow(),
+  description: text("description"), // Campo opcional para descrever o arquivo
+  tags: text("tags"), // Tags para facilitar a busca e organização
+  // Campos para criptografia
+  encrypted: boolean("encrypted").default(false),
+  encryption_iv: text("encryption_iv"),
+  encryption_key_id: text("encryption_key_id"),
+});
+
 export const clientContacts = pgTable("client_contacts", {
   id: serial("id").primaryKey(),
   client_id: integer("client_id").notNull(),
@@ -408,6 +425,14 @@ export const insertTaskAttachmentSchema = createInsertSchema(taskAttachments).om
 });
 
 export const insertProjectAttachmentSchema = createInsertSchema(projectAttachments).omit({ 
+  id: true, 
+  upload_date: true,
+  encrypted: true,
+  encryption_iv: true,
+  encryption_key_id: true
+});
+
+export const insertClientAttachmentSchema = createInsertSchema(clientAttachments).omit({ 
   id: true, 
   upload_date: true,
   encrypted: true,
@@ -625,7 +650,8 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   clientInteractions: many(clientInteractions),
   clientContacts: many(clientContacts),
   financialDocuments: many(financialDocuments),
-  events: many(events)
+  events: many(events),
+  attachments: many(clientAttachments, { relationName: "client_attachments" })
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -764,6 +790,19 @@ export const projectAttachmentsRelations = relations(projectAttachments, ({ one 
   }),
   uploader: one(users, {
     fields: [projectAttachments.uploaded_by],
+    references: [users.id]
+  })
+}));
+
+export const clientAttachmentsRelations = relations(clientAttachments, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientAttachments.client_id],
+    references: [clients.id],
+    relationName: "client_attachments",
+    onDelete: "cascade"
+  }),
+  uploader: one(users, {
+    fields: [clientAttachments.uploaded_by],
     references: [users.id]
   })
 }));
