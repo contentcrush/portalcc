@@ -5,16 +5,18 @@ import {
   taskComments, taskAttachments, clientInteractions, financialDocuments,
   expenses, events, refreshTokens, userPreferences, commentReactions,
   projectComments, projectCommentReactions, clientContacts, projectAttachments,
+  clientAttachments,
   type User, type Client, type Project, type ProjectMember, type ProjectStage, 
   type Task, type TaskComment, type TaskAttachment, type ClientInteraction,
   type FinancialDocument, type Expense, type Event, type UserPreference,
-  type ProjectComment, type ProjectCommentReaction, type ClientContact, type ProjectAttachment,
+  type ProjectComment, type ProjectCommentReaction, type ClientContact, 
+  type ProjectAttachment, type ClientAttachment,
   type InsertUser, type InsertClient, type InsertProject, type InsertProjectMember,
   type InsertProjectStage, type InsertTask, type InsertTaskComment, type InsertTaskAttachment,
   type InsertClientInteraction, type InsertFinancialDocument, type InsertExpense, type InsertEvent,
   type InsertUserPreference, type InsertCommentReaction, type CommentReaction,
   type InsertProjectComment, type InsertProjectCommentReaction, type InsertClientContact,
-  type InsertProjectAttachment
+  type InsertProjectAttachment, type InsertClientAttachment
 } from "../shared/schema";
 
 export interface IStorage {
@@ -131,6 +133,13 @@ export interface IStorage {
   getProjectAttachment(id: number): Promise<ProjectAttachment | undefined>;
   createProjectAttachment(attachment: InsertProjectAttachment): Promise<ProjectAttachment>;
   deleteProjectAttachment(id: number): Promise<boolean>;
+  
+  // Client Attachments
+  getClientAttachments(clientId: number): Promise<ClientAttachment[]>;
+  getClientAttachment(id: number): Promise<ClientAttachment | undefined>;
+  createClientAttachment(attachment: InsertClientAttachment): Promise<ClientAttachment>;
+  deleteClientAttachment(id: number): Promise<boolean>;
+  getAllAttachments(): Promise<{clients: ClientAttachment[], projects: ProjectAttachment[], tasks: TaskAttachment[]}>;
   
   
   // Client Interactions
@@ -2339,6 +2348,40 @@ export class DatabaseStorage implements IStorage {
   async deleteProjectAttachment(id: number): Promise<boolean> {
     const result = await db.delete(projectAttachments).where(eq(projectAttachments.id, id));
     return true;
+  }
+  
+  // Client Attachments
+  async getClientAttachments(clientId: number): Promise<ClientAttachment[]> {
+    return await db.select().from(clientAttachments).where(eq(clientAttachments.client_id, clientId));
+  }
+  
+  async getClientAttachment(id: number): Promise<ClientAttachment | undefined> {
+    const [attachment] = await db.select().from(clientAttachments).where(eq(clientAttachments.id, id));
+    return attachment || undefined;
+  }
+
+  async createClientAttachment(insertAttachment: InsertClientAttachment): Promise<ClientAttachment> {
+    const [attachment] = await db.insert(clientAttachments).values(insertAttachment).returning();
+    return attachment;
+  }
+
+  async deleteClientAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(clientAttachments).where(eq(clientAttachments.id, id));
+    return true;
+  }
+  
+  async getAllAttachments(): Promise<{clients: ClientAttachment[], projects: ProjectAttachment[], tasks: TaskAttachment[]}> {
+    const [clients, projects, tasks] = await Promise.all([
+      db.select().from(clientAttachments),
+      db.select().from(projectAttachments),
+      db.select().from(taskAttachments)
+    ]);
+    
+    return {
+      clients,
+      projects,
+      tasks
+    };
   }
   
   // Client Contacts
