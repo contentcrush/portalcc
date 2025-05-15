@@ -492,10 +492,20 @@ export default function Clients() {
         const dateA = a.created_at || a.since || new Date(0);
         const dateB = b.created_at || b.since || new Date(0);
         return new Date(dateB).getTime() - new Date(dateA).getTime();
+      } else if (sortBy === "oldest") {
+        // Ordem cronológica inversa - mais antigos primeiro
+        const dateA = a.created_at || a.since || new Date(0);
+        const dateB = b.created_at || b.since || new Date(0);
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
       } else if (sortBy === "name") {
+        // Ordem alfabética (A-Z)
         // Verificando se name existe e é string
         if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
         return a.name.localeCompare(b.name);
+      } else if (sortBy === "nameDesc") {
+        // Ordem alfabética inversa (Z-A)
+        if (typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
+        return b.name.localeCompare(a.name);
       } else if (sortBy === "revenue") {
         // Prevenimos contra erros com validação adicional
         const revenueA = typeof a.id === 'number' ? getClientRevenue(a.id) : 0;
@@ -699,7 +709,9 @@ export default function Clients() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="recent">Mais recentes</SelectItem>
-                    <SelectItem value="name">Nome</SelectItem>
+                    <SelectItem value="oldest">Mais antigos</SelectItem>
+                    <SelectItem value="name">Nome (A-Z)</SelectItem>
+                    <SelectItem value="nameDesc">Nome (Z-A)</SelectItem>
                     <SelectItem value="revenue">Receita</SelectItem>
                   </SelectContent>
                 </Select>
