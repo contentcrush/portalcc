@@ -1,104 +1,157 @@
 import { FC, useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, FileSpreadsheet, FileImage, File, Upload, Download, Plus, Trash2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { FileText, FileSpreadsheet, FileImage, File, Upload, Download, Plus, Trash2, FileArchive, FileAudio, FileVideo } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { formatFileSize } from '@/lib/utils';
 
-interface Attachment {
-  id: string;
-  name: string;
-  size: string;
-  type: string;
-  downloadUrl: string;
+// Interface para anexos que vem da API
+export interface ApiAttachment {
+  id: number;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  file_url: string;
+  description?: string | null;
+  tags?: string[] | null;
+  created_at?: string;
+  updated_at?: string;
+  uploaded_by?: number | null;
+  // Campos específicos do tipo de anexo
+  client_id?: number;
+  project_id?: number;
+  task_id?: number;
 }
 
-interface FileAttachmentsProps {
-  attachments?: Attachment[];
+export interface FileAttachmentsProps {
   entityId: number; // ID do cliente, projeto ou tarefa
   entityType: 'client' | 'project' | 'task'; // Tipo de entidade
   className?: string;
-  onUploadSuccess?: (attachment: Attachment) => void;
-  onDeleteSuccess?: (attachmentId: string) => void;
+  onUploadSuccess?: (attachment: ApiAttachment) => void;
+  onDeleteSuccess?: (attachmentId: number) => void;
+  autoFetch?: boolean; // Se verdadeiro, busca anexos automaticamente
+  initialAttachments?: ApiAttachment[]; // Anexos iniciais, se disponíveis
 }
 
 /**
- * Componente que permite fazer upload e download de anexos
+ * Componente que permite fazer upload e download de anexos conectado com a API
  */
-const FileAttachments: FC<FileAttachmentsProps> = ({
-  attachments = [],
+export const FileAttachments: FC<FileAttachmentsProps> = ({
   entityId,
   entityType,
   className = "",
   onUploadSuccess,
-  onDeleteSuccess
+  onDeleteSuccess,
+  autoFetch = true,
+  initialAttachments
 }) => {
-  // Estado local para gerenciar anexos, incluindo os recém-adicionados
-  const [localAttachments, setLocalAttachments] = useState<Attachment[]>(attachments);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Atualiza o estado local quando as props mudarem
-  useEffect(() => {
-    setLocalAttachments(attachments);
-  }, [attachments]);
-
-  // Determinar o ícone baseado no tipo de arquivo
-  const getFileIcon = (type: string) => {
-    const iconClassName = "h-5 w-5";
-    
-    if (type.includes('excel') || type.includes('spreadsheet') || type.endsWith('.xlsx') || type.endsWith('.xls')) {
-      return <FileSpreadsheet className={iconClassName} />;
-    }
-    
-    if (type.includes('image') || type.includes('jpg') || type.includes('jpeg') || type.includes('png') || type.includes('gif')) {
-      return <FileImage className={iconClassName} />;
-    }
-    
-    if (type.includes('pdf')) {
-      return <FileText className={iconClassName} />;
-    }
-    
-    if (type.includes('document') || type.includes('doc') || type.includes('docx')) {
-      return <FileText className={iconClassName} />;
-    }
-    
-    return <File className={iconClassName} />;
-  };
-
-  // Determinar a cor de fundo baseada no tipo de arquivo
-  const getFileColor = (type: string) => {
-    if (type.includes('pdf') || type.endsWith('.pdf')) {
-      return "bg-red-100";
-    }
-    if (type.includes('excel') || type.includes('spreadsheet') || type.endsWith('.xlsx') || type.endsWith('.xls')) {
-      return "bg-green-100";
-    }
-    if (type.includes('word') || type.includes('document') || type.endsWith('.docx') || type.endsWith('.doc')) {
-      return "bg-blue-100";
-    }
-    if (type.includes('presentation') || type.endsWith('.pptx') || type.endsWith('.ppt')) {
-      return "bg-yellow-100";
-    }
-    
-    return "bg-gray-100";
-  };
+  // Construa a chave de consulta baseada no tipo de entidade e ID
+  const queryKey = [`/api/attachments/${entityType}s/${entityId}`];
   
-  const getFileTextColor = (type: string) => {
-    if (type.includes('pdf') || type.endsWith('.pdf')) {
-      return "text-red-500";
+  // Buscar anexos da API
+  const { data: attachments, isLoading } = useQuery<ApiAttachment[]>({
+    queryKey,
+    enabled: autoFetch && !!entityId,
+    initialData: initialAttachments,
+  });
+
+  // Mutation para upload de arquivos
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(`/api/attachments/${entityType}s/${entityId}/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao fazer upload do arquivo');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Atualizar o cache de consulta para incluir o novo anexo
+      queryClient.invalidateQueries({ queryKey });
+      
+      // Notificar o componente pai sobre o upload bem-sucedido
+      if (onUploadSuccess) {
+        onUploadSuccess(data);
+      }
+      
+      toast({
+        title: "Arquivo enviado com sucesso",
+        description: `O arquivo ${data.file_name} foi anexado com sucesso.`,
+        variant: "default",
+        className: "bg-green-100 border-green-400 text-green-900",
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Erro ao fazer upload do arquivo:', error);
+      toast({
+        title: "Erro ao enviar arquivo",
+        description: error.message || "Ocorreu um erro ao enviar o arquivo. Tente novamente.",
+        variant: "destructive"
+      });
+    },
+    onSettled: () => {
+      setIsUploading(false);
+      
+      // Limpar o input de arquivo para permitir selecionar o mesmo arquivo novamente
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-    if (type.includes('excel') || type.includes('spreadsheet') || type.endsWith('.xlsx') || type.endsWith('.xls')) {
-      return "text-green-500";
+  });
+  
+  // Mutation para excluir anexos
+  const deleteMutation = useMutation({
+    mutationFn: async (attachmentId: number) => {
+      const response = await apiRequest('DELETE', `/api/attachments/${entityType}s/${entityId}/${attachmentId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao excluir anexo');
+      }
+      
+      return attachmentId;
+    },
+    onSuccess: (attachmentId) => {
+      // Atualizar o cache de consulta para remover o anexo
+      queryClient.invalidateQueries({ queryKey });
+      
+      // Notificar o componente pai sobre a exclusão bem-sucedida
+      if (onDeleteSuccess) {
+        onDeleteSuccess(attachmentId);
+      }
+      
+      toast({
+        title: "Arquivo excluído",
+        description: "O arquivo foi excluído com sucesso.",
+        variant: "default",
+        className: "bg-green-100 border-green-400 text-green-900",
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Erro ao excluir o arquivo:', error);
+      toast({
+        title: "Erro ao excluir arquivo",
+        description: error.message || "Ocorreu um erro ao excluir o arquivo. Tente novamente.",
+        variant: "destructive"
+      });
     }
-    if (type.includes('word') || type.includes('document') || type.endsWith('.docx') || type.endsWith('.doc')) {
-      return "text-blue-500";
-    }
-    if (type.includes('presentation') || type.endsWith('.pptx') || type.endsWith('.ppt')) {
-      return "text-yellow-500";
-    }
-    
-    return "text-gray-500";
-  };
+  });
 
   // Função para iniciar o processo de upload
   const handleUploadClick = () => {
@@ -113,112 +166,136 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
     if (!file) return;
 
     setIsUploading(true);
-
-    try {
-      // Simular o upload do arquivo
-      // Em uma implementação real, você enviaria o arquivo para o servidor
-      // e receberia a URL de download
-      setTimeout(() => {
-        const newAttachment: Attachment = {
-          id: `temp-${Date.now()}`,
-          name: file.name,
-          size: formatFileSize(file.size),
-          type: file.type || getExtension(file.name),
-          downloadUrl: '#' // Placeholder
-        };
-
-        // Atualizar o estado local com o novo anexo
-        setLocalAttachments(prev => [...prev, newAttachment]);
-
-        // Notificar o componente pai sobre o upload bem-sucedido
-        if (onUploadSuccess) {
-          onUploadSuccess(newAttachment);
-        }
-
-        toast({
-          title: "Arquivo enviado com sucesso",
-          description: `O arquivo ${file.name} foi anexado com sucesso.`,
-          variant: "success"
-        });
-
-        setIsUploading(false);
-        
-        // Limpar o input de arquivo para permitir selecionar o mesmo arquivo novamente
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      }, 1500);
-    } catch (error) {
-      console.error('Erro ao fazer upload do arquivo:', error);
-      toast({
-        title: "Erro ao enviar arquivo",
-        description: "Ocorreu um erro ao enviar o arquivo. Tente novamente.",
-        variant: "destructive"
-      });
-      setIsUploading(false);
-    }
+    uploadMutation.mutate(file);
   };
 
   // Função para download de arquivo
-  const handleDownload = (attachment: Attachment) => {
-    // Se o anexo tiver uma URL válida, abra em nova aba
-    if (attachment.downloadUrl && attachment.downloadUrl !== '#') {
-      window.open(attachment.downloadUrl, '_blank');
-    } else {
-      toast({
-        title: "Download não disponível",
-        description: "Este arquivo ainda não está disponível para download.",
-        variant: "default"
-      });
-    }
+  const handleDownload = (attachment: ApiAttachment) => {
+    const downloadUrl = `/api/attachments/${entityType}s/${entityId}/download/${attachment.id}`;
+    
+    // Criar um link temporário para download
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = attachment.file_name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // Função para excluir um anexo
-  const handleDelete = async (attachment: Attachment) => {
-    try {
-      // Simular a exclusão do arquivo
-      // Em uma implementação real, você enviaria uma requisição para excluir o arquivo no servidor
-      setTimeout(() => {
-        // Atualizar o estado local removendo o anexo
-        setLocalAttachments(prev => 
-          prev.filter(item => item.id !== attachment.id)
-        );
-        
-        // Notificar o componente pai sobre a exclusão bem-sucedida
-        if (onDeleteSuccess) {
-          onDeleteSuccess(attachment.id);
-        }
-
-        toast({
-          title: "Arquivo excluído",
-          description: `O arquivo ${attachment.name} foi excluído com sucesso.`,
-          variant: "default"
-        });
-      }, 500);
-    } catch (error) {
-      console.error('Erro ao excluir o arquivo:', error);
-      toast({
-        title: "Erro ao excluir arquivo",
-        description: "Ocorreu um erro ao excluir o arquivo. Tente novamente.",
-        variant: "destructive"
-      });
+  const handleDelete = async (attachment: ApiAttachment) => {
+    if (confirm(`Tem certeza que deseja excluir o arquivo "${attachment.file_name}"?`)) {
+      deleteMutation.mutate(attachment.id);
     }
   };
 
-  // Formatação do tamanho do arquivo
-  const formatFileSize = (sizeInBytes: number): string => {
-    if (sizeInBytes < 1024) {
-      return `${sizeInBytes} B`;
-    } else if (sizeInBytes < 1024 * 1024) {
-      return `${Math.round(sizeInBytes / 1024)} KB`;
-    } else {
-      return `${Math.round(sizeInBytes / (1024 * 1024) * 10) / 10} MB`;
+  // Determinar o ícone baseado no tipo de arquivo
+  const getFileIcon = (type: string) => {
+    const iconClassName = "h-5 w-5";
+    
+    if (type.startsWith('image/')) {
+      return <FileImage className={iconClassName} />;
     }
+    
+    if (type.includes('pdf')) {
+      return <FileText className={iconClassName} />;
+    }
+    
+    if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+      return <FileSpreadsheet className={iconClassName} />;
+    }
+    
+    if (type.includes('document') || type.includes('word') || type.includes('text/')) {
+      return <FileText className={iconClassName} />;
+    }
+    
+    if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+      return <FileArchive className={iconClassName} />;
+    }
+    
+    if (type.startsWith('audio/')) {
+      return <FileAudio className={iconClassName} />;
+    }
+    
+    if (type.startsWith('video/')) {
+      return <FileVideo className={iconClassName} />;
+    }
+    
+    return <File className={iconClassName} />;
   };
 
-  // Obter a extensão de um arquivo a partir do nome
-  const getExtension = (filename: string): string => {
-    return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+  // Determinar a cor de fundo baseada no tipo de arquivo
+  const getFileColor = (type: string) => {
+    if (type.includes('pdf')) {
+      return "bg-red-100";
+    }
+    
+    if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+      return "bg-green-100";
+    }
+    
+    if (type.includes('document') || type.includes('word') || type.includes('text/')) {
+      return "bg-blue-100";
+    }
+    
+    if (type.includes('presentation') || type.includes('powerpoint')) {
+      return "bg-yellow-100";
+    }
+    
+    if (type.startsWith('image/')) {
+      return "bg-purple-100";
+    }
+    
+    if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+      return "bg-orange-100";
+    }
+    
+    if (type.startsWith('audio/')) {
+      return "bg-pink-100";
+    }
+    
+    if (type.startsWith('video/')) {
+      return "bg-indigo-100";
+    }
+    
+    return "bg-gray-100";
+  };
+  
+  // Determinar a cor do texto baseada no tipo de arquivo
+  const getFileTextColor = (type: string) => {
+    if (type.includes('pdf')) {
+      return "text-red-500";
+    }
+    
+    if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+      return "text-green-500";
+    }
+    
+    if (type.includes('document') || type.includes('word') || type.includes('text/')) {
+      return "text-blue-500";
+    }
+    
+    if (type.includes('presentation') || type.includes('powerpoint')) {
+      return "text-yellow-500";
+    }
+    
+    if (type.startsWith('image/')) {
+      return "text-purple-500";
+    }
+    
+    if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+      return "text-orange-500";
+    }
+    
+    if (type.startsWith('audio/')) {
+      return "text-pink-500";
+    }
+    
+    if (type.startsWith('video/')) {
+      return "text-indigo-500";
+    }
+    
+    return "text-gray-500";
   };
 
   return (
@@ -255,16 +332,20 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
       </CardHeader>
       
       <CardContent className="px-6 pb-4 pt-0 space-y-3">
-        {localAttachments.length > 0 ? (
-          localAttachments.map((attachment) => (
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin h-5 w-5 border-2 border-gray-500 border-t-transparent rounded-full"></div>
+          </div>
+        ) : attachments && attachments.length > 0 ? (
+          attachments.map((attachment) => (
             <div key={attachment.id} className="flex items-center justify-between py-1.5">
               <div className="flex items-center flex-1 min-w-0">
-                <div className={`${getFileColor(attachment.type)} ${getFileTextColor(attachment.type)} p-1.5 rounded mr-3 flex-shrink-0`}>
-                  {getFileIcon(attachment.type)}
+                <div className={`${getFileColor(attachment.file_type)} ${getFileTextColor(attachment.file_type)} p-1.5 rounded mr-3 flex-shrink-0`}>
+                  {getFileIcon(attachment.file_type)}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{attachment.name}</p>
-                  <p className="text-xs text-gray-500">{attachment.size}</p>
+                  <p className="font-medium text-sm truncate">{attachment.file_name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size)}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-1 ml-2">

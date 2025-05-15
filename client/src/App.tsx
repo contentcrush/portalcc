@@ -16,6 +16,7 @@ import Team from "@/pages/team";
 import UserProfile from "@/pages/user-profile";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
+import Files from "@/pages/files";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
@@ -50,6 +51,7 @@ function Router() {
       <ProtectedRoute path="/team" component={Team} />
       <ProtectedRoute path="/team/user/:id" component={UserProfile} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/files" component={Files} />
       <Route component={NotFound} />
     </Switch>
   );
