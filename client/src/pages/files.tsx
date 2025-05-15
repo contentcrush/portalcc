@@ -347,7 +347,18 @@ const FileListItem = ({
       
       <div className="flex items-center text-sm text-gray-500 mx-4 w-48">
         <Calendar className="h-4 w-4 mr-1" />
-        <span>{format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+        <span>
+          {(() => {
+            try {
+              const date = attachment.uploaded_at ? new Date(attachment.uploaded_at) : new Date();
+              return isNaN(date.getTime()) 
+                ? format(new Date(), 'dd/MM/yyyy', { locale: ptBR }) 
+                : format(date, 'dd/MM/yyyy', { locale: ptBR });
+            } catch (e) {
+              return format(new Date(), 'dd/MM/yyyy', { locale: ptBR });
+            }
+          })()}
+        </span>
       </div>
       
       <div className="flex items-center gap-1">
@@ -477,7 +488,23 @@ const FilesList = ({
     const groups: { [key: string]: UnifiedAttachment[] } = {};
     
     attachments.forEach(attachment => {
-      const date = new Date(attachment.uploaded_at);
+      let date;
+      try {
+        // Tratar possíveis formatos de data inválidos
+        if (!attachment.uploaded_at) {
+          date = new Date(); // Usar data atual se não houver data de upload
+        } else {
+          date = new Date(attachment.uploaded_at);
+          // Verificar se a data é válida
+          if (isNaN(date.getTime())) {
+            date = new Date();
+          }
+        }
+      } catch (e) {
+        console.warn('Data de upload inválida:', attachment.uploaded_at);
+        date = new Date(); // Fallback para data atual
+      }
+      
       const monthYear = format(date, 'MMMM yyyy', { locale: ptBR });
       
       if (!groups[monthYear]) {
@@ -487,12 +514,35 @@ const FilesList = ({
       groups[monthYear].push(attachment);
     });
     
+    // Função auxiliar para extrair data a partir do nome do mês em português
+    const getMonthIndex = (monthName: string) => {
+      const months = [
+        'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+      ];
+      const monthPart = monthName.split(' ')[0].toLowerCase();
+      return months.indexOf(monthPart);
+    };
+    
+    // Função para extrair o ano do formato "mês ano"
+    const getYear = (monthYearStr: string) => {
+      const parts = monthYearStr.split(' ');
+      return parts.length > 1 ? parseInt(parts[1], 10) : new Date().getFullYear();
+    };
+    
     // Ordenar os grupos por data (mais recente primeiro)
     return Object.entries(groups)
       .sort(([a], [b]) => {
-        const dateA = new Date(parseISO(format(new Date(a), 'yyyy-MM-dd')));
-        const dateB = new Date(parseISO(format(new Date(b), 'yyyy-MM-dd')));
-        return dateB.getTime() - dateA.getTime();
+        const yearA = getYear(a);
+        const yearB = getYear(b);
+        
+        if (yearA !== yearB) {
+          return yearB - yearA; // Ordenar por ano descendente
+        }
+        
+        const monthIndexA = getMonthIndex(a);
+        const monthIndexB = getMonthIndex(b);
+        return monthIndexB - monthIndexA; // Ordenar por mês descendente dentro do mesmo ano
       })
       .map(([month, files]) => ({
         month: month.charAt(0).toUpperCase() + month.slice(1),
