@@ -1,4 +1,4 @@
-import { FC, useState, useRef } from 'react';
+import { FC, useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, FileSpreadsheet, FileImage, File, Upload, Download, Plus, Trash2 } from 'lucide-react';
@@ -32,8 +32,15 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
   onUploadSuccess,
   onDeleteSuccess
 }) => {
+  // Estado local para gerenciar anexos, incluindo os recém-adicionados
+  const [localAttachments, setLocalAttachments] = useState<Attachment[]>(attachments);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Atualiza o estado local quando as props mudarem
+  useEffect(() => {
+    setLocalAttachments(attachments);
+  }, [attachments]);
 
   // Determinar o ícone baseado no tipo de arquivo
   const getFileIcon = (type: string) => {
@@ -120,6 +127,9 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
           downloadUrl: '#' // Placeholder
         };
 
+        // Atualizar o estado local com o novo anexo
+        setLocalAttachments(prev => [...prev, newAttachment]);
+
         // Notificar o componente pai sobre o upload bem-sucedido
         if (onUploadSuccess) {
           onUploadSuccess(newAttachment);
@@ -169,6 +179,11 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
       // Simular a exclusão do arquivo
       // Em uma implementação real, você enviaria uma requisição para excluir o arquivo no servidor
       setTimeout(() => {
+        // Atualizar o estado local removendo o anexo
+        setLocalAttachments(prev => 
+          prev.filter(item => item.id !== attachment.id)
+        );
+        
         // Notificar o componente pai sobre a exclusão bem-sucedida
         if (onDeleteSuccess) {
           onDeleteSuccess(attachment.id);
@@ -240,8 +255,8 @@ const FileAttachments: FC<FileAttachmentsProps> = ({
       </CardHeader>
       
       <CardContent className="px-6 pb-4 pt-0 space-y-3">
-        {attachments.length > 0 ? (
-          attachments.map((attachment) => (
+        {localAttachments.length > 0 ? (
+          localAttachments.map((attachment) => (
             <div key={attachment.id} className="flex items-center justify-between py-1.5">
               <div className="flex items-center flex-1 min-w-0">
                 <div className={`${getFileColor(attachment.type)} ${getFileTextColor(attachment.type)} p-1.5 rounded mr-3 flex-shrink-0`}>
