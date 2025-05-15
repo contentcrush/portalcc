@@ -8,6 +8,16 @@ export const SIDEBAR_ITEMS = [
     icon: "home"
   },
   {
+    path: "/team",
+    name: "Equipe",
+    icon: "users"
+  },
+  {
+    path: "/clients",
+    name: "Clientes",
+    icon: "users"
+  },
+  {
     path: "/projects",
     name: "Projetos",
     icon: "folder"
@@ -16,11 +26,6 @@ export const SIDEBAR_ITEMS = [
     path: "/tasks",
     name: "Tarefas",
     icon: "list"
-  },
-  {
-    path: "/clients",
-    name: "Clientes",
-    icon: "users"
   },
   {
     path: "/financial",
@@ -36,11 +41,6 @@ export const SIDEBAR_ITEMS = [
     path: "/files",
     name: "Arquivos",
     icon: "file"
-  },
-  {
-    path: "/team",
-    name: "Equipe",
-    icon: "users"
   }
 ];
 
