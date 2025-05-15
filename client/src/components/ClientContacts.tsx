@@ -69,14 +69,17 @@ export default function ClientContacts({ clientId, className = "" }: ClientConta
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Carregar contatos do cliente
+  // Carregar contatos do cliente com cache otimizado
   const { 
     data: contacts, 
     isLoading: isLoadingContacts,
     error 
   } = useQuery<ClientContact[]>({
     queryKey: [`/api/clients/${clientId}/contacts`],
-    enabled: !!clientId
+    enabled: !!clientId,
+    staleTime: 3 * 60 * 1000, // 3 minutos de stale time
+    gcTime: 10 * 60 * 1000, // 10 minutos de cache time
+    refetchOnWindowFocus: false // Evita refetches constantes ao focar na janela
   });
 
   // Form para adicionar novo contato
