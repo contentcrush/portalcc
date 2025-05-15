@@ -582,6 +582,7 @@ export default function FilesPage() {
     data: clientAttachments = [],
     isLoading: clientLoading,
     isError: clientError,
+    refetch: refetchClientAttachments,
   } = useQuery({
     queryKey: ["/api/attachments/clients"],
     queryFn: async () => {
@@ -613,6 +614,7 @@ export default function FilesPage() {
     data: projectAttachments = [],
     isLoading: projectLoading,
     isError: projectError,
+    refetch: refetchProjectAttachments,
   } = useQuery({
     queryKey: ["/api/attachments/projects"],
     queryFn: async () => {
@@ -644,6 +646,7 @@ export default function FilesPage() {
     data: taskAttachments = [],
     isLoading: taskLoading,
     isError: taskError,
+    refetch: refetchTaskAttachments,
   } = useQuery({
     queryKey: ["/api/attachments/tasks"],
     queryFn: async () => {
@@ -897,6 +900,18 @@ export default function FilesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/attachments/projects"] });
       queryClient.invalidateQueries({ queryKey: ["/api/attachments/tasks"] });
       
+      // Invalidar também as consultas específicas
+      if (clientId !== 'all') {
+        queryClient.invalidateQueries({ queryKey: ["/api/attachments/clients", clientId] });
+      }
+      
+      if (projectId !== 'all') {
+        queryClient.invalidateQueries({ queryKey: ["/api/attachments/projects", projectId] });
+      }
+      
+      // Forçar o recarregamento imediato dos dados
+      refetchAttachments();
+      
       setUploading(false);
       setUploadProgress(0);
       
@@ -904,6 +919,11 @@ export default function FilesPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      // Forçar recarga dos dados após upload bem-sucedido
+      setTimeout(() => {
+        refetchAttachments();
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -989,6 +1009,13 @@ export default function FilesPage() {
       console.error('Erro no upload:', error);
     }
   };
+  
+  // Função para refrescar todos os dados de anexos
+  const refetchAttachments = useCallback(() => {
+    refetchClientAttachments();
+    refetchProjectAttachments();
+    refetchTaskAttachments();
+  }, [refetchClientAttachments, refetchProjectAttachments, refetchTaskAttachments]);
   
   // Configura evento de arrastar e soltar arquivos
   useEffect(() => {
