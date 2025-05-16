@@ -16,8 +16,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-// Configuração do worker do PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configuração do worker do PDF.js - Usando uma versão local para evitar problemas de CORS
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// Fallback caso o worker falhe
+if (typeof window !== 'undefined') {
+  // Apenas execute no cliente
+  window.onerror = function(message) {
+    if (message.toString().includes('fake worker')) {
+      console.warn('Usando worker alternativo para PDFs');
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+    }
+  };
+}
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +127,7 @@ export default function FilesPage() {
       {/* Dialog para detalhes do arquivo selecionado */}
       {selectedFile && (
         <Dialog open={showFileDetails} onOpenChange={setShowFileDetails}>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 {getFileIcon(selectedFile.file_type)}
@@ -175,7 +186,9 @@ export default function FilesPage() {
             {/* Visualização prévia do arquivo */}
             <div className="mt-4 border rounded-md p-2">
               <h4 className="text-sm font-medium mb-2">Visualização do arquivo</h4>
-              <FilePreview file={selectedFile} />
+              <div className="max-h-[400px] overflow-auto rounded-md">
+                <FilePreview file={selectedFile} />
+              </div>
             </div>
             
             <DialogFooter className="mt-4">
@@ -304,66 +317,85 @@ function FilePreview({ file }: FilePreviewProps) {
       {isPdf && (
         <div className="flex flex-col w-full">
           {pdfLoading && (
-            <div className="flex justify-center items-center min-h-[300px]">
+            <div className="flex justify-center items-center min-h-[200px]">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
           
-          <div className={cn("flex justify-center", pdfLoading ? "hidden" : "")}>
-            <Document
-              file={fileUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={
-                <div className="flex justify-center items-center min-h-[300px]">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              }
-              className="border rounded-md overflow-hidden"
-            >
-              <Page 
-                pageNumber={currentPage} 
-                width={450}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
-          </div>
-          
-          {!pdfLoading && numPages && numPages > 0 && (
-            <div className="flex justify-between items-center mt-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => changePage(-1)} 
-                disabled={currentPage <= 1}
-              >
-                Anterior
-              </Button>
-              
-              <span className="text-sm">
-                Página {currentPage} de {numPages}
-              </span>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => changePage(1)} 
-                disabled={currentPage >= numPages}
-              >
-                Próxima
+          {error ? (
+            <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-md">
+              <FileText className="h-12 w-12 text-red-500 mb-2" />
+              <p className="text-sm text-center mb-3">Não foi possível carregar o PDF</p>
+              <p className="text-xs text-muted-foreground text-center mb-4 max-w-[300px]">
+                {error}
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir PDF em nova aba
+                </a>
               </Button>
             </div>
-          )}
+          ) : (
+            <>
+              <div className={cn("flex justify-center", pdfLoading ? "hidden" : "")}>
+                <Document
+                  file={fileUrl}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={
+                    <div className="flex justify-center items-center min-h-[200px]">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  }
+                  className="border rounded-md overflow-hidden"
+                >
+                  <Page 
+                    pageNumber={currentPage} 
+                    width={400}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="max-w-full"
+                  />
+                </Document>
+              </div>
+              
+              {!pdfLoading && numPages && numPages > 0 && (
+                <div className="flex justify-between items-center mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => changePage(-1)} 
+                    disabled={currentPage <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  
+                  <span className="text-sm">
+                    Página {currentPage} de {numPages}
+                  </span>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => changePage(1)} 
+                    disabled={currentPage >= numPages}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              )}
 
-          <div className="flex justify-center mt-4">
-            <Button variant="outline" size="sm" asChild>
-              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                <ExternalLink className="h-4 w-4" />
-                Abrir PDF em nova aba
-              </a>
-            </Button>
-          </div>
+              <div className="flex justify-center mt-4">
+                <Button variant="outline" size="sm" asChild>
+                  <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                    <ExternalLink className="h-4 w-4" />
+                    Abrir PDF em nova aba
+                  </a>
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
