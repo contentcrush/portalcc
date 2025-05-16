@@ -83,7 +83,7 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(`/api/attachments/${entityType}s/${entityId}/upload`, {
+      const response = await fetch(`/api/attachments/${entityType}s/${entityId}`, {
         method: 'POST',
         body: formData,
         credentials: 'include'
