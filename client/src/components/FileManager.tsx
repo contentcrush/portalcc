@@ -418,43 +418,91 @@ export default function FileManager({
 
   // Função para obter o thumbnail ou ícone correto com base no tipo de arquivo
   const getFilePreview = (file: UnifiedAttachment) => {
+    // Determinar o tipo de arquivo pelo nome se o mime type não for fornecido
+    const fileName = file.file_name.toLowerCase();
+    const isPdf = file.file_type.includes('pdf') || fileName.endsWith('.pdf');
+    const isImage = file.file_type.startsWith('image/') || 
+                    fileName.endsWith('.jpg') || 
+                    fileName.endsWith('.jpeg') || 
+                    fileName.endsWith('.png') || 
+                    fileName.endsWith('.gif') || 
+                    fileName.endsWith('.webp');
+    
     // Se for uma imagem, mostrar thumbnail real
-    if (file.file_type.startsWith('image/')) {
+    if (isImage) {
       return (
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-muted rounded-md">
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-muted/10 rounded-md">
           <img 
             src={`/api/attachments/${file.type}s/${file.entity_id}/download/${file.id}`} 
             alt={file.file_name}
             className="object-cover w-full h-full"
             onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><circle cx="10" cy="13" r="2"/><path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"/></svg>';
+              // Se a imagem falhar, mostrar um ícone de imagem estilizado
+              const parentDiv = e.currentTarget.parentElement;
+              if (parentDiv) {
+                e.currentTarget.style.display = 'none';
+                const iconDiv = document.createElement('div');
+                iconDiv.className = "w-full h-full flex items-center justify-center";
+                iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
+                parentDiv.appendChild(iconDiv);
+              }
             }}
           />
         </div>
       );
     }
     
+    // PDF também pode ter preview via thumb
+    if (isPdf) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-muted/10 rounded-md border border-muted/5">
+          <FileText className="w-5 h-5 text-red-500 stroke-[1.75]" />
+        </div>
+      );
+    }
+    
     // Ícones no estilo AirBnB (simples, uniformes e minimalistas)
-    let icon;
-    if (file.file_type.includes('pdf')) 
-      icon = <FileText className="file-icon-pdf w-4 h-4 text-red-500 stroke-[1.75]" />;
-    else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="file-icon-spreadsheet w-4 h-4 text-green-500 stroke-[1.75]" />;
-    else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="file-icon-archive w-4 h-4 text-purple-500 stroke-[1.75]" />;
-    else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="file-icon-audio w-4 h-4 text-amber-500 stroke-[1.75]" />;
-    else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="file-icon-video w-4 h-4 text-blue-500 stroke-[1.75]" />;
-    else if (file.file_type.includes('image') || file.file_type.includes('jpg') || file.file_type.includes('jpeg') || file.file_type.includes('png')) 
-      icon = <FileImage className="file-icon-image w-4 h-4 text-emerald-500 stroke-[1.75]" />;
-    else 
-      icon = <FileIcon className="file-icon-default w-4 h-4 text-slate-500 stroke-[1.75]" />;
+    // Cores mais vibrantes e uniformes com tamanho consistente
+    const getIconByType = () => {
+      // Documentos de texto/escritório
+      if (fileName.endsWith('.doc') || fileName.endsWith('.docx') || file.file_type.includes('word'))
+        return <FileText className="w-5 h-5 text-blue-500 stroke-[1.75]" />;
+      
+      // Planilhas
+      if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx') || fileName.endsWith('.csv') || 
+          file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet'))
+        return <FileSpreadsheet className="w-5 h-5 text-green-500 stroke-[1.75]" />;
+      
+      // Apresentações
+      if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx') || file.file_type.includes('presentation'))
+        return <FileText className="w-5 h-5 text-orange-500 stroke-[1.75]" />;
+        
+      // Arquivos comprimidos
+      if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z') || 
+          file.file_type.includes('zip') || file.file_type.includes('compressed'))
+        return <FileArchive className="w-5 h-5 text-purple-500 stroke-[1.75]" />;
+      
+      // Áudio
+      if (fileName.endsWith('.mp3') || fileName.endsWith('.wav') || fileName.endsWith('.ogg') || 
+          file.file_type.startsWith('audio/'))
+        return <FileAudio className="w-5 h-5 text-amber-500 stroke-[1.75]" />;
+      
+      // Vídeo
+      if (fileName.endsWith('.mp4') || fileName.endsWith('.mov') || fileName.endsWith('.avi') || 
+          file.file_type.startsWith('video/'))
+        return <FileVideo className="w-5 h-5 text-blue-500 stroke-[1.75]" />;
+      
+      // Imagens (caso caia aqui apesar da verificação anterior)
+      if (isImage || file.file_type.includes('image'))
+        return <FileImage className="w-5 h-5 text-emerald-500 stroke-[1.75]" />;
+      
+      // Arquivo genérico
+      return <FileIcon className="w-5 h-5 text-slate-500 stroke-[1.75]" />;
+    };
     
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/10 rounded-md border border-muted/5">
-        {icon}
+        {getIconByType()}
       </div>
     );
   };

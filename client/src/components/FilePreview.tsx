@@ -10,7 +10,8 @@ import { formatFileSize } from "@/lib/utils";
 
 // React PDF para visualização de PDFs
 import { Document, Page, pdfjs } from 'react-pdf';
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Configurar o worker do PDF corretamente
+pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
 
 // Interface para o arquivo a ser visualizado
 interface FileData {
@@ -57,7 +58,19 @@ export default function FilePreview({ file, open, onClose, onDownload }: FilePre
       const url = `/api/attachments/${file.type}s/${file.entity_id}/download/${file.id}`;
       setFileUrl(url);
       
-      setLoading(false);
+      // Verificar se o arquivo é acessível
+      fetch(url, { method: 'HEAD' })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Arquivo não encontrado (status ${response.status})`);
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Erro ao verificar arquivo:', err);
+          setError(`Não foi possível acessar o arquivo: ${err.message}`);
+          setLoading(false);
+        });
     } else {
       setFileUrl(null);
     }
