@@ -170,19 +170,12 @@ export default function FileManager({
   }, [defaultClientId, defaultProjectId]);
 
   // Consulta para buscar todos os anexos
-  const { data: attachments, isLoading: isLoadingAttachments, refetch } = useQuery<{
+  const { data: attachments = { clients: [], projects: [], tasks: [] }, isLoading: isLoadingAttachments, refetch } = useQuery<{
     clients: ClientAttachment[],
     projects: ProjectAttachment[],
     tasks: TaskAttachment[]
   }>({
-    queryKey: ['/api/attachments/all'],
-    onError: () => {
-      toast({
-        title: "Erro ao carregar anexos",
-        description: "Não foi possível carregar os anexos. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    }
+    queryKey: ['/api/attachments/all']
   });
 
   // Buscar dados de clientes para mostrar nomes
