@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 
 import AdvancedFileUpload from "./AdvancedFileUpload";
+import FilePreview from "./FilePreview";
 import { formatFileSize } from "@/lib/utils";
 import { clientAttachments, projectAttachments, taskAttachments, clients, projects, tasks, users } from "@shared/schema";
 
@@ -125,6 +126,8 @@ export default function FileManager({
   const [sortField, setSortField] = useState<string>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedFilePreview, setSelectedFilePreview] = useState<UnifiedAttachment | null>(null);
+  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -511,8 +514,15 @@ export default function FileManager({
         {items.map((attachment) => (
           <Card 
             key={`${attachment.type}-${attachment.id}`} 
-            className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col"
-            onClick={() => onSelectFile && onSelectFile(attachment)}
+            className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col cursor-pointer"
+            onClick={() => {
+              if (onSelectFile) {
+                onSelectFile(attachment);
+              } else {
+                setSelectedFilePreview(attachment);
+                setPreviewOpen(true);
+              }
+            }}
           >
             <CardHeader className="p-3 pb-2 space-y-0">
               <div className="flex flex-row gap-3 items-start">
@@ -662,7 +672,14 @@ export default function FileManager({
             <TableRow 
               key={`${attachment.type}-${attachment.id}`}
               className="cursor-pointer"
-              onClick={() => onSelectFile && onSelectFile(attachment)}
+              onClick={() => {
+                if (onSelectFile) {
+                  onSelectFile(attachment);
+                } else {
+                  setSelectedFilePreview(attachment);
+                  setPreviewOpen(true);
+                }
+              }}
             >
               <TableCell>
                 <div className="flex items-center justify-center w-10 h-10 rounded overflow-hidden">
@@ -739,6 +756,12 @@ export default function FileManager({
         </TableBody>
       </Table>
     );
+  };
+
+  // Função para fechar a visualização do arquivo
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setSelectedFilePreview(null);
   };
 
   return (
@@ -928,6 +951,14 @@ export default function FileManager({
           </div>
         )}
       </div>
+      
+      {/* Componente de visualização de arquivos */}
+      <FilePreview 
+        file={selectedFilePreview}
+        open={previewOpen}
+        onClose={handleClosePreview}
+        onDownload={handleDownload}
+      />
     </div>
   );
 }
