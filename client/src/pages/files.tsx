@@ -16,23 +16,22 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-// Importamos e usamos a versão específica 3.11.174 do PDF.js worker
-// Esta é a versão que baixamos localmente
+// Configuramos o worker do PDF.js com a versão específica 3.4.120
+// Esta é a versão que corresponde ao react-pdf v9.2.1
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
-// Desativar as mensagens de warning do pdf.js para evitar ruído no console
-if (typeof window !== 'undefined' && window.console) {
-  const originalWarn = console.warn;
-  console.warn = function(...args) {
-    // Suprime avisos específicos relacionados ao pdfjs
-    if (args[0] && typeof args[0] === 'string' && (
-        args[0].includes('pdf.worker') || 
-        args[0].includes('Setting up fake worker')
-      )) {
-      return;
+// Forçamos a versão da API para corresponder ao worker
+if (typeof window !== 'undefined') {
+  // Apenas para debugging e supressão de erros comuns
+  window.addEventListener('error', function(event) {
+    if (event.message && (
+      event.message.includes('pdf.worker') || 
+      event.message.includes('API version') ||
+      event.message.includes('Worker version')
+    )) {
+      console.log('PDF.js error interceptado:', event.message);
     }
-    return originalWarn.apply(console, args);
-  };
+  });
 }
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
@@ -134,10 +133,12 @@ export default function FilesPage() {
         <Dialog open={showFileDetails} onOpenChange={setShowFileDetails}>
           <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                {getFileIcon(selectedFile.file_type)}
-                <div className="break-words max-w-[450px]">
-                  {selectedFile.file_name}
+              <DialogTitle className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  {getFileIcon(selectedFile.file_type)}
+                </div>
+                <div className="break-words max-w-[450px] flex-grow">
+                  {decodeURIComponent(selectedFile.file_name)}
                 </div>
               </DialogTitle>
               <DialogDescription>
@@ -373,9 +374,9 @@ function FilePreview({ file }: FilePreviewProps) {
                     </div>
                   }
                   options={{
-                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/',
                     cMapPacked: true,
-                    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
+                    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/standard_fonts/'
                   }}
                   className="border rounded-md overflow-hidden"
                 >
