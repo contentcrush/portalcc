@@ -9,7 +9,10 @@ import {
   FileArchive, 
   FileAudio, 
   FileVideo,
+  ExternalLink,
+  Download
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
@@ -164,7 +167,13 @@ export default function FilesPage() {
               )}
             </div>
             
-            <DialogFooter>
+            {/* Visualização prévia do arquivo */}
+            <div className="mt-4 border rounded-md p-2">
+              <h4 className="text-sm font-medium mb-2">Visualização do arquivo</h4>
+              <FilePreview file={selectedFile} />
+            </div>
+            
+            <DialogFooter className="mt-4">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -187,13 +196,108 @@ export default function FilesPage() {
   );
 }
 
+// Componente de visualização de arquivos
+interface FilePreviewProps {
+  file: UnifiedAttachment;
+}
+
+function FilePreview({ file }: FilePreviewProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fileUrl = `/api/attachments/${file.type}s/${file.entity_id}/download/${file.id}`;
+
+  const isImage = file.file_type.startsWith('image/');
+  const isPdf = file.file_type.includes('pdf');
+  const isAudio = file.file_type.startsWith('audio/');
+  const isVideo = file.file_type.startsWith('video/');
+  const isText = file.file_type.includes('text') || file.file_type.includes('document');
+
+  const handleImageLoad = () => {
+    setLoading(false);
+  };
+
+  const handleImageError = () => {
+    setLoading(false);
+    setError('Não foi possível carregar a imagem');
+  };
+
+  return (
+    <div className="w-full">
+      {/* Visualizadores específicos por tipo */}
+      {isImage && (
+        <div className={cn("relative flex justify-center", loading ? "min-h-[200px]" : "")}>
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+          <img 
+            src={fileUrl} 
+            alt={file.file_name} 
+            className="max-w-full max-h-[300px] object-contain rounded-md"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        </div>
+      )}
+
+      {isPdf && (
+        <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+          <FileText className="h-12 w-12 text-red-500 mb-2" />
+          <p className="text-sm text-center mb-2">Visualização de PDF incorporada não disponível</p>
+          <Button variant="outline" size="sm" asChild>
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+              <ExternalLink className="h-4 w-4" />
+              Abrir PDF
+            </a>
+          </Button>
+        </div>
+      )}
+
+      {isAudio && (
+        <div className="w-full">
+          <audio controls className="w-full" src={fileUrl}>
+            Seu navegador não suporta o elemento de áudio.
+          </audio>
+        </div>
+      )}
+
+      {isVideo && (
+        <div className="w-full">
+          <video 
+            controls 
+            className="w-full max-h-[300px] rounded-md" 
+            src={fileUrl}
+          >
+            Seu navegador não suporta o elemento de vídeo.
+          </video>
+        </div>
+      )}
+
+      {!isImage && !isPdf && !isAudio && !isVideo && (
+        <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-md">
+          {getFileIcon(file.file_type, "h-12 w-12 mb-2")}
+          <p className="text-sm text-center">Visualização não disponível para este tipo de arquivo</p>
+          <p className="text-xs text-muted-foreground mb-3">Clique em download para baixar o arquivo</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 bg-destructive/10 text-destructive text-sm rounded-md mt-2">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Função auxiliar para obter ícone de arquivo
-function getFileIcon(fileType: string) {
-  if (fileType.startsWith('image/')) return <FileImage className="h-5 w-5 text-blue-500" />;
-  if (fileType.includes('pdf') || fileType.includes('text')) return <FileText className="h-5 w-5 text-red-500" />;
-  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
-  if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className="h-5 w-5 text-purple-500" />;
-  if (fileType.startsWith('audio/')) return <FileAudio className="h-5 w-5 text-yellow-500" />;
-  if (fileType.startsWith('video/')) return <FileVideo className="h-5 w-5 text-pink-500" />;
-  return <FileIcon className="h-5 w-5 text-gray-500" />;
+function getFileIcon(fileType: string, className = "h-5 w-5") {
+  if (fileType.startsWith('image/')) return <FileImage className={cn(className, "text-blue-500")} />;
+  if (fileType.includes('pdf') || fileType.includes('text')) return <FileText className={cn(className, "text-red-500")} />;
+  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className={cn(className, "text-green-500")} />;
+  if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className={cn(className, "text-purple-500")} />;
+  if (fileType.startsWith('audio/')) return <FileAudio className={cn(className, "text-yellow-500")} />;
+  if (fileType.startsWith('video/')) return <FileVideo className={cn(className, "text-pink-500")} />;
+  return <FileIcon className={cn(className, "text-gray-500")} />;
 }
