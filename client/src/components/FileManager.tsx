@@ -609,7 +609,7 @@ export default function FileManager({
                   className="rounded-none flex-1 h-9 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDelete(attachment);
+                    handleDelete(e, attachment);
                   }}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
@@ -766,7 +766,7 @@ export default function FileManager({
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(attachment);
+                      handleDelete(e, attachment);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
