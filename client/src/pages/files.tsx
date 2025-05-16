@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-// Configuramos exatamente a mesma versão para react-pdf e pdfjs-dist
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+// Desabilitamos completamente o worker para evitar problemas de compatibilidade
+// Em vez disso, vamos oferecer uma melhor mensagem e um botão para abrir em nova aba
+const isPdfViewerEnabled = false;
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
@@ -122,8 +124,8 @@ export default function FilesPage() {
                 <div className="flex-shrink-0 mt-1">
                   {getFileIcon(selectedFile.file_type)}
                 </div>
-                <div className="break-words max-w-[450px] flex-grow">
-                  {decodeURIComponent(selectedFile.file_name)}
+                <div className="break-words max-w-[450px] flex-grow font-medium">
+                  {selectedFile.file_name}
                 </div>
               </DialogTitle>
               <DialogDescription>
@@ -326,91 +328,19 @@ function FilePreview({ file }: FilePreviewProps) {
 
       {isPdf && (
         <div className="flex flex-col w-full">
-          {pdfLoading && (
-            <div className="flex justify-center items-center min-h-[200px]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )}
-          
-          {error ? (
-            <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-md">
-              <FileText className="h-12 w-12 text-red-500 mb-2" />
-              <p className="text-sm text-center mb-3">Não foi possível carregar o PDF</p>
-              <p className="text-xs text-muted-foreground text-center mb-4 max-w-[300px]">
-                {error}
-              </p>
-              <Button variant="outline" size="sm" asChild>
-                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir PDF em nova aba
-                </a>
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className={cn("flex justify-center", pdfLoading ? "hidden" : "")}>
-                <Document
-                  file={fileUrl}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={onDocumentLoadError}
-                  loading={
-                    <div className="flex justify-center items-center min-h-[200px]">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  }
-                  options={{
-                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/',
-                    cMapPacked: true,
-                    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/standard_fonts/'
-                  }}
-                  className="border rounded-md overflow-hidden"
-                >
-                  <Page 
-                    pageNumber={currentPage} 
-                    width={350}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    className="max-w-full"
-                  />
-                </Document>
-              </div>
-              
-              {!pdfLoading && numPages && numPages > 0 && (
-                <div className="flex justify-between items-center mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => changePage(-1)} 
-                    disabled={currentPage <= 1}
-                  >
-                    Anterior
-                  </Button>
-                  
-                  <span className="text-sm">
-                    Página {currentPage} de {numPages}
-                  </span>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => changePage(1)} 
-                    disabled={currentPage >= numPages}
-                  >
-                    Próxima
-                  </Button>
-                </div>
-              )}
-
-              <div className="flex justify-center mt-4">
-                <Button variant="outline" size="sm" asChild>
-                  <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                    <ExternalLink className="h-4 w-4" />
-                    Abrir PDF em nova aba
-                  </a>
-                </Button>
-              </div>
-            </>
-          )}
+          <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-md">
+            <FileText className="h-16 w-16 text-primary mb-4" />
+            <p className="text-lg font-medium text-center mb-3">Visualizador de PDF</p>
+            <p className="text-sm text-muted-foreground text-center mb-6 max-w-[400px]">
+              Para melhor compatibilidade e experiência de visualização, por favor utilize o botão abaixo para abrir o PDF em uma nova aba.
+            </p>
+            <Button size="lg" asChild>
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                Abrir PDF em nova aba
+              </a>
+            </Button>
+          </div>
         </div>
       )}
 
