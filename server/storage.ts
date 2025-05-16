@@ -2859,6 +2859,37 @@ export class DatabaseStorage implements IStorage {
     
     return updatedContact;
   }
+
+  // Função para buscar todos os anexos para a página de Gerenciamento de Arquivos
+  async getAllAttachments(): Promise<{
+    clients: ClientAttachment[];
+    projects: ProjectAttachment[];
+    tasks: TaskAttachment[];
+  }> {
+    try {
+      // Buscar anexos de clientes
+      const clientAttachmentsList = await db.select().from(clientAttachments);
+      
+      // Buscar anexos de projetos
+      const projectAttachmentsList = await db.select().from(projectAttachments);
+      
+      // Buscar anexos de tarefas
+      const taskAttachmentsList = await db.select().from(taskAttachments);
+      
+      return {
+        clients: clientAttachmentsList,
+        projects: projectAttachmentsList,
+        tasks: taskAttachmentsList
+      };
+    } catch (error) {
+      console.error('Erro ao buscar todos os anexos:', error);
+      return {
+        clients: [],
+        projects: [],
+        tasks: []
+      };
+    }
+  }
 }
 
 // Use DatabaseStorage instead of MemStorage
