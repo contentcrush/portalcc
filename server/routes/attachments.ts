@@ -168,6 +168,11 @@ router.post('/projects/:projectId', upload.single('file'), async (req, res) => {
       fileUrl = moveFile(filePath, 'projects', projectId);
     }
     
+    // Garantir que o caminho começa sem barra para consistência
+    if (fileUrl.startsWith('/')) {
+      fileUrl = fileUrl.substring(1);
+    }
+    
     // Save to database
     const attachment = await storage.createProjectAttachment({
       project_id: projectId,
@@ -195,10 +200,27 @@ router.get('/projects/:projectId/download/:attachmentId', async (req, res) => {
       return res.status(404).json({ message: 'Attachment not found' });
     }
     
-    const filePath = path.join(process.cwd(), attachment.file_url);
+    // Verificar várias possibilidades de caminho do arquivo
+    let filePath = path.join(process.cwd(), attachment.file_url);
+    
+    // Se o caminho não começa com /, adicionar
+    if (!attachment.file_url.startsWith('/')) {
+      filePath = path.join(process.cwd(), '/', attachment.file_url);
+    }
+    
+    console.log('Tentando acessar arquivo em:', filePath);
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'File not found on server' });
+      // Tentar caminho alternativo
+      const fileName = path.basename(attachment.file_url);
+      const altPath = path.join(process.cwd(), 'uploads', 'projects', String(attachment.project_id), fileName);
+      console.log('Tentando caminho alternativo:', altPath);
+      
+      if (!fs.existsSync(altPath)) {
+        return res.status(404).json({ message: 'File not found on server', checked_paths: [filePath, altPath] });
+      }
+      
+      return res.download(altPath, attachment.file_name);
     }
     
     res.download(filePath, attachment.file_name);
@@ -301,10 +323,27 @@ router.get('/tasks/:taskId/download/:attachmentId', async (req, res) => {
       return res.status(404).json({ message: 'Attachment not found' });
     }
     
-    const filePath = path.join(process.cwd(), attachment.file_url);
+    // Verificar várias possibilidades de caminho do arquivo
+    let filePath = path.join(process.cwd(), attachment.file_url);
+    
+    // Se o caminho não começa com /, adicionar
+    if (!attachment.file_url.startsWith('/')) {
+      filePath = path.join(process.cwd(), '/', attachment.file_url);
+    }
+    
+    console.log('Tentando acessar arquivo em:', filePath);
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'File not found on server' });
+      // Tentar caminho alternativo
+      const fileName = path.basename(attachment.file_url);
+      const altPath = path.join(process.cwd(), 'uploads', 'tasks', String(attachment.task_id), fileName);
+      console.log('Tentando caminho alternativo:', altPath);
+      
+      if (!fs.existsSync(altPath)) {
+        return res.status(404).json({ message: 'File not found on server', checked_paths: [filePath, altPath] });
+      }
+      
+      return res.download(altPath, attachment.file_name);
     }
     
     res.download(filePath, attachment.file_name);
