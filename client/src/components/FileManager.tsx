@@ -934,18 +934,22 @@ export default function FileManager({
               <Pagination.First
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
+                className="cursor-pointer"
               />
               <Pagination.Prev
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
+                className="cursor-pointer"
               />
               <Pagination.Next
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
+                className="cursor-pointer"
               />
               <Pagination.Last
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
+                className="cursor-pointer"
               />
             </Pagination>
           </div>
