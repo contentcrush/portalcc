@@ -16,18 +16,23 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-// Configuração do worker do PDF.js - Usando uma versão local para evitar problemas de CORS
-// Fixamos a versão 3.11.174 que está disponível no nosso servidor
+// Importamos e usamos a versão específica 3.11.174 do PDF.js worker
+// Esta é a versão que baixamos localmente
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
-// Fallback caso o worker falhe
-if (typeof window !== 'undefined') {
-  // Apenas execute no cliente
-  window.addEventListener('error', function(event) {
-    if (event.message && event.message.includes('pdf.worker')) {
-      console.warn('Problema com PDF worker, usando fallback');
+// Desativar as mensagens de warning do pdf.js para evitar ruído no console
+if (typeof window !== 'undefined' && window.console) {
+  const originalWarn = console.warn;
+  console.warn = function(...args) {
+    // Suprime avisos específicos relacionados ao pdfjs
+    if (args[0] && typeof args[0] === 'string' && (
+        args[0].includes('pdf.worker') || 
+        args[0].includes('Setting up fake worker')
+      )) {
+      return;
     }
-  });
+    return originalWarn.apply(console, args);
+  };
 }
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
