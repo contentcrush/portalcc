@@ -435,22 +435,22 @@ export default function FileManager({
       );
     }
     
-    // Ícones redesenhados no estilo AirBnB (consistentes e minimalistas)
+    // Ícones no estilo AirBnB (simples, uniformes e minimalistas)
     let icon;
     if (file.file_type.includes('pdf')) 
-      icon = <FileText className="file-icon-pdf w-5 h-5 text-red-600 stroke-[1.5]" />;
+      icon = <FileText className="file-icon-pdf w-4 h-4 text-red-500 stroke-[1.75]" />;
     else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="file-icon-spreadsheet w-5 h-5 text-green-600 stroke-[1.5]" />;
+      icon = <FileSpreadsheet className="file-icon-spreadsheet w-4 h-4 text-green-500 stroke-[1.75]" />;
     else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="file-icon-archive w-5 h-5 text-purple-600 stroke-[1.5]" />;
+      icon = <FileArchive className="file-icon-archive w-4 h-4 text-purple-500 stroke-[1.75]" />;
     else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="file-icon-audio w-5 h-5 text-amber-600 stroke-[1.5]" />;
+      icon = <FileAudio className="file-icon-audio w-4 h-4 text-amber-500 stroke-[1.75]" />;
     else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="file-icon-video w-5 h-5 text-blue-600 stroke-[1.5]" />;
+      icon = <FileVideo className="file-icon-video w-4 h-4 text-blue-500 stroke-[1.75]" />;
     else if (file.file_type.includes('image') || file.file_type.includes('jpg') || file.file_type.includes('jpeg') || file.file_type.includes('png')) 
-      icon = <FileImage className="file-icon-image w-5 h-5 text-emerald-600 stroke-[1.5]" />;
+      icon = <FileImage className="file-icon-image w-4 h-4 text-emerald-500 stroke-[1.75]" />;
     else 
-      icon = <FileIcon className="file-icon-default w-5 h-5 text-gray-600 stroke-[1.5]" />;
+      icon = <FileIcon className="file-icon-default w-4 h-4 text-slate-500 stroke-[1.75]" />;
     
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/10 rounded-md border border-muted/5">
@@ -544,7 +544,7 @@ export default function FileManager({
           >
             <div className="flex p-3 items-center gap-3">
               {/* Ícone do arquivo - Versão menor */}
-              <div className="w-9 h-9 rounded-md overflow-hidden flex-shrink-0 bg-muted/15 flex items-center justify-center border border-muted/10">
+              <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-muted/15 flex items-center justify-center border border-muted/10">
                 {getFilePreview(attachment)}
               </div>
               
@@ -723,7 +723,7 @@ export default function FileManager({
               }}
             >
               <TableCell>
-                <div className="flex items-center justify-center w-9 h-9 rounded-md overflow-hidden bg-muted/15 border border-muted/10">
+                <div className="flex items-center justify-center w-8 h-8 rounded-md overflow-hidden bg-muted/15 border border-muted/10">
                   {getFilePreview(attachment)}
                 </div>
               </TableCell>
