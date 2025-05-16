@@ -19,6 +19,17 @@ import {
 } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCaption,
@@ -128,6 +139,10 @@ export default function FileManager({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedFilePreview, setSelectedFilePreview] = useState<UnifiedAttachment | null>(null);
   const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  
+  // Estados para o diálogo de confirmação de exclusão
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [fileToDelete, setFileToDelete] = useState<UnifiedAttachment | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
