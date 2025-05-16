@@ -53,7 +53,7 @@ import {
 
 import AdvancedFileUpload from "./AdvancedFileUpload";
 import { formatFileSize } from "@/lib/utils";
-import { ClientAttachment, ProjectAttachment, TaskAttachment } from "@shared/schema";
+import { clientAttachments, projectAttachments, taskAttachments } from "@shared/schema";
 
 // Interface para apresentar anexos de forma unificada
 interface UnifiedAttachment {
