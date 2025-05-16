@@ -404,15 +404,45 @@ export default function FileManager({
   // Calcular número total de páginas
   const totalPages = Math.ceil(getFilteredAttachments().length / pageSize);
 
-  // Função para obter o ícone correto com base no tipo de arquivo
-  const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return <FileImage className="w-8 h-8 text-blue-500" />;
-    if (fileType.includes('pdf') || fileType.includes('text')) return <FileText className="w-8 h-8 text-red-500" />;
-    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
-    if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className="w-8 h-8 text-purple-500" />;
-    if (fileType.startsWith('audio/')) return <FileAudio className="w-8 h-8 text-yellow-500" />;
-    if (fileType.startsWith('video/')) return <FileVideo className="w-8 h-8 text-pink-500" />;
-    return <FileIcon className="w-8 h-8 text-gray-500" />;
+  // Função para obter o thumbnail ou ícone correto com base no tipo de arquivo
+  const getFilePreview = (file: UnifiedAttachment) => {
+    // Se for uma imagem, mostrar thumbnail real
+    if (file.file_type.startsWith('image/')) {
+      return (
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-muted rounded-md">
+          <img 
+            src={`/api/attachments/${file.type}s/${file.entity_id}/download/${file.id}`} 
+            alt={file.file_name}
+            className="object-cover w-full h-full"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><circle cx="10" cy="13" r="2"/><path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"/></svg>';
+            }}
+          />
+        </div>
+      );
+    }
+    
+    // Para outros tipos de arquivo, mostrar ícones apropriados
+    let icon;
+    if (file.file_type.includes('pdf')) 
+      icon = <FileText className="w-8 h-8 text-red-500" />;
+    else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
+      icon = <FileSpreadsheet className="w-8 h-8 text-green-500" />;
+    else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
+      icon = <FileArchive className="w-8 h-8 text-purple-500" />;
+    else if (file.file_type.startsWith('audio/')) 
+      icon = <FileAudio className="w-8 h-8 text-yellow-500" />;
+    else if (file.file_type.startsWith('video/')) 
+      icon = <FileVideo className="w-8 h-8 text-pink-500" />;
+    else 
+      icon = <FileIcon className="w-8 h-8 text-gray-500" />;
+    
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/50 rounded-md">
+        {icon}
+      </div>
+    );
   };
 
   // Função para lidar com o download de um arquivo
@@ -484,17 +514,19 @@ export default function FileManager({
             className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col"
             onClick={() => onSelectFile && onSelectFile(attachment)}
           >
-            <CardHeader className="flex flex-row items-start gap-3 pb-2 space-y-0">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted flex-shrink-0 mt-1">
-                {getFileIcon(attachment.file_type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-base truncate" title={attachment.file_name}>
-                  {attachment.file_name}
-                </CardTitle>
-                <CardDescription className="truncate" title={attachment.entity_name}>
-                  {attachment.entity_name}
-                </CardDescription>
+            <CardHeader className="p-3 pb-2 space-y-0">
+              <div className="flex flex-row gap-3 items-start">
+                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                  {getFilePreview(attachment)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base truncate" title={attachment.file_name}>
+                    {attachment.file_name}
+                  </CardTitle>
+                  <CardDescription className="truncate" title={attachment.entity_name}>
+                    {attachment.entity_name}
+                  </CardDescription>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pb-1 flex-grow">
@@ -633,8 +665,8 @@ export default function FileManager({
               onClick={() => onSelectFile && onSelectFile(attachment)}
             >
               <TableCell>
-                <div className="flex items-center justify-center">
-                  {getFileIcon(attachment.file_type)}
+                <div className="flex items-center justify-center w-10 h-10 rounded overflow-hidden">
+                  {getFilePreview(attachment)}
                 </div>
               </TableCell>
               <TableCell className="font-medium">
