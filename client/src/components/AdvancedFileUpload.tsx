@@ -187,7 +187,7 @@ export default function AdvancedFileUpload({
       }, 300);
       
       try {
-        const response = await fetch(`/api/attachments/${data.entityType}s/${data.entityId}`, {
+        const response = await fetch(`/api/attachments/${data.entityType}s/${data.entityId}/upload`, {
           method: 'POST',
           body: data.formData,
           credentials: 'include'
