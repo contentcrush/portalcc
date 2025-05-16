@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ImageUpload } from "@/components/ui/image-upload";
 import ClientContacts from "@/components/ClientContacts";
+import EntityFileManager from "@/components/EntityFileManager";
 import { 
   Building, 
   Mail, 
@@ -628,16 +629,29 @@ export default function ClientDetail({ clientId }: ClientDetailProps) {
           </Card>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-4">
+            <TabsList className="grid grid-cols-3 mb-4">
               <TabsTrigger value="contacts">
                 <Users className="h-4 w-4 mr-2" />
                 Contatos
+              </TabsTrigger>
+              <TabsTrigger value="files">
+                <FileText className="h-4 w-4 mr-2" />
+                Arquivos
               </TabsTrigger>
               <TabsTrigger value="financial">Documentos Financeiros</TabsTrigger>
             </TabsList>
             
             <TabsContent value="contacts" className="space-y-4">
               <ClientContacts clientId={clientId} clientName={client.name} />
+            </TabsContent>
+            
+            <TabsContent value="files" className="space-y-4">
+              <EntityFileManager 
+                entityId={clientId} 
+                entityType="client" 
+                title="Arquivos do Cliente" 
+                enableAdvancedUpload={true}
+              />
             </TabsContent>
             
             <TabsContent value="financial">

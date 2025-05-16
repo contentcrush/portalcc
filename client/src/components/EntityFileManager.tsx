@@ -73,9 +73,19 @@ export default function EntityFileManager({
       {selectedFile && (
         <FilePreview
           open={previewOpen}
-          onOpenChange={setPreviewOpen}
-          file={selectedFile}
-          downloadUrl={`/api/attachments/${entityType}s/${entityId}/download/${selectedFile.id}`}
+          onClose={() => setPreviewOpen(false)}
+          file={{
+            id: selectedFile.id,
+            name: selectedFile.file_name,
+            file_name: selectedFile.file_name,
+            file_size: selectedFile.file_size || 0,
+            file_type: selectedFile.file_type || 'application/octet-stream',
+            file_url: selectedFile.file_url || '',
+            type: entityType,
+            entity_id: entityId,
+            uploaded_at: selectedFile.created_at || new Date().toISOString(),
+            uploaded_by: selectedFile.uploaded_by || null
+          }}
         />
       )}
     </div>
