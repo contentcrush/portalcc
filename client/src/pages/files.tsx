@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   FileIcon, 
@@ -10,9 +10,14 @@ import {
   FileAudio, 
   FileVideo,
   ExternalLink,
-  Download
+  Download,
+  Maximize,
+  Minimize
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Document, Page, pdfjs } from 'react-pdf';
+// Configuração do worker do PDF.js
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +209,10 @@ interface FilePreviewProps {
 function FilePreview({ file }: FilePreviewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [fullscreen, setFullscreen] = useState(false);
   const fileUrl = `/api/attachments/${file.type}s/${file.entity_id}/download/${file.id}`;
 
   const isImage = file.file_type.startsWith('image/');
@@ -221,11 +230,46 @@ function FilePreview({ file }: FilePreviewProps) {
     setError('Não foi possível carregar a imagem');
   };
 
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setPdfLoading(false);
+    setNumPages(numPages);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    setPdfLoading(false);
+    setError(`Erro ao carregar o PDF: ${error.message}`);
+  };
+
+  // Ajustar para página anterior ou próxima
+  const changePage = (offset: number) => {
+    setCurrentPage(prevPage => {
+      const newPage = prevPage + offset;
+      return newPage >= 1 && newPage <= (numPages || 1) ? newPage : prevPage;
+    });
+  };
+
+  // Alternar modo de tela cheia para imagens
+  const toggleFullscreen = () => {
+    setFullscreen(!fullscreen);
+  };
+
   return (
-    <div className="w-full">
+    <div className={cn("w-full", fullscreen ? "fixed inset-0 bg-background/95 z-50 p-4" : "")}>
+      {fullscreen && (
+        <div className="absolute top-4 right-4 z-50">
+          <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
+            <Minimize className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
       {/* Visualizadores específicos por tipo */}
       {isImage && (
-        <div className={cn("relative flex justify-center", loading ? "min-h-[200px]" : "")}>
+        <div className={cn(
+          "relative flex justify-center items-center", 
+          loading ? "min-h-[200px]" : "",
+          fullscreen ? "h-full" : ""
+        )}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -234,23 +278,92 @@ function FilePreview({ file }: FilePreviewProps) {
           <img 
             src={fileUrl} 
             alt={file.file_name} 
-            className="max-w-full max-h-[300px] object-contain rounded-md"
+            className={cn(
+              "max-w-full object-contain rounded-md",
+              fullscreen ? "max-h-[90vh]" : "max-h-[300px]"
+            )}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />
+          
+          {!loading && !fullscreen && (
+            <div className="absolute top-2 right-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="bg-background/80 hover:bg-background" 
+                onClick={toggleFullscreen}
+              >
+                <Maximize className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
       {isPdf && (
-        <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-          <FileText className="h-12 w-12 text-red-500 mb-2" />
-          <p className="text-sm text-center mb-2">Visualização de PDF incorporada não disponível</p>
-          <Button variant="outline" size="sm" asChild>
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-              <ExternalLink className="h-4 w-4" />
-              Abrir PDF
-            </a>
-          </Button>
+        <div className="flex flex-col w-full">
+          {pdfLoading && (
+            <div className="flex justify-center items-center min-h-[300px]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+          
+          <div className={cn("flex justify-center", pdfLoading ? "hidden" : "")}>
+            <Document
+              file={fileUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="flex justify-center items-center min-h-[300px]">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              }
+              className="border rounded-md overflow-hidden"
+            >
+              <Page 
+                pageNumber={currentPage} 
+                width={450}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+          </div>
+          
+          {!pdfLoading && numPages && numPages > 0 && (
+            <div className="flex justify-between items-center mt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => changePage(-1)} 
+                disabled={currentPage <= 1}
+              >
+                Anterior
+              </Button>
+              
+              <span className="text-sm">
+                Página {currentPage} de {numPages}
+              </span>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => changePage(1)} 
+                disabled={currentPage >= numPages}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
+
+          <div className="flex justify-center mt-4">
+            <Button variant="outline" size="sm" asChild>
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                <ExternalLink className="h-4 w-4" />
+                Abrir PDF em nova aba
+              </a>
+            </Button>
+          </div>
         </div>
       )}
 
