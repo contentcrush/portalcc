@@ -434,20 +434,20 @@ export default function FileManager({
       );
     }
     
-    // Para outros tipos de arquivo, mostrar ícones apropriados (menor tamanho)
+    // Para outros tipos de arquivo, mostrar ícones apropriados (tamanho padronizado)
     let icon;
     if (file.file_type.includes('pdf')) 
-      icon = <FileText className="w-6 h-6 text-red-500" />;
+      icon = <FileText className="w-5 h-5 text-red-500" />;
     else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="w-6 h-6 text-green-500" />;
+      icon = <FileSpreadsheet className="w-5 h-5 text-green-500" />;
     else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="w-6 h-6 text-purple-500" />;
+      icon = <FileArchive className="w-5 h-5 text-purple-500" />;
     else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="w-6 h-6 text-yellow-500" />;
+      icon = <FileAudio className="w-5 h-5 text-yellow-500" />;
     else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="w-6 h-6 text-blue-500" />;
+      icon = <FileVideo className="w-5 h-5 text-blue-500" />;
     else 
-      icon = <FileIcon className="w-6 h-6 text-gray-500" />;
+      icon = <FileIcon className="w-5 h-5 text-gray-500" />;
     
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/20 rounded-md">
@@ -541,7 +541,7 @@ export default function FileManager({
           >
             <div className="flex p-3 items-center gap-3">
               {/* Ícone do arquivo - Versão menor */}
-              <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 bg-muted/30 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-md overflow-hidden flex-shrink-0 bg-muted/15 flex items-center justify-center border border-muted/10">
                 {getFilePreview(attachment)}
               </div>
               
@@ -553,6 +553,14 @@ export default function FileManager({
                 <p className="text-xs text-muted-foreground truncate" title={attachment.entity_name}>
                   {attachment.entity_name}
                 </p>
+                {attachment.type !== 'client' && (
+                  <p className="text-xs text-muted-foreground/70 truncate">
+                    {clientsData?.find(c => 
+                      (attachment.type === 'project' && clients?.find(p => p.id === attachment.entity_id)?.client_id === c.id) ||
+                      (attachment.type === 'task' && tasks?.find(t => t.id === attachment.entity_id)?.project?.client_id === c.id)
+                    )?.name || ''}
+                  </p>
+                )}
               </div>
             </div>
             
@@ -650,7 +658,7 @@ export default function FileManager({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]"></TableHead>
+            <TableHead className="w-[40px]"></TableHead>
             <TableHead className="cursor-pointer" onClick={() => handleSortChange("name")}>
               <div className="flex items-center">
                 Nome do Arquivo
@@ -662,6 +670,7 @@ export default function FileManager({
               </div>
             </TableHead>
             <TableHead>Entidade</TableHead>
+            <TableHead>Cliente</TableHead>
             <TableHead className="cursor-pointer" onClick={() => handleSortChange("type")}>
               <div className="flex items-center">
                 Tipo
@@ -734,6 +743,23 @@ export default function FileManager({
                     {attachment.entity_name}
                   </span>
                 </div>
+              </TableCell>
+              <TableCell>
+                <span className="text-sm truncate max-w-[120px]" title={
+                  attachment.type === 'client' 
+                    ? attachment.entity_name 
+                    : clientsData?.find(c => 
+                        (attachment.type === 'project' && clients?.find(p => p.id === attachment.entity_id)?.client_id === c.id) ||
+                        (attachment.type === 'task' && tasks?.find(t => t.id === attachment.entity_id)?.project?.client_id === c.id)
+                      )?.name || ''
+                }>
+                  {attachment.type === 'client' 
+                    ? attachment.entity_name 
+                    : clientsData?.find(c => 
+                        (attachment.type === 'project' && clients?.find(p => p.id === attachment.entity_id)?.client_id === c.id) ||
+                        (attachment.type === 'task' && tasks?.find(t => t.id === attachment.entity_id)?.project?.client_id === c.id)
+                      )?.name || '-'}
+                </span>
               </TableCell>
               <TableCell>
                 {attachment.file_type.split('/')[1] || attachment.file_type}
