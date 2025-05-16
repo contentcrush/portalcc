@@ -435,25 +435,25 @@ export default function FileManager({
       );
     }
     
-    // Para outros tipos de arquivo, mostrar ícones padronizados estilo AirBnB (limpo e elegante)
+    // Ícones redesenhados no estilo AirBnB (consistentes e minimalistas)
     let icon;
     if (file.file_type.includes('pdf')) 
-      icon = <FileText className="w-5 h-5 text-red-500/90 stroke-[1.5]" />;
+      icon = <FileText className="file-icon-pdf w-5 h-5 text-red-600 stroke-[1.5]" />;
     else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="w-5 h-5 text-green-500/90 stroke-[1.5]" />;
+      icon = <FileSpreadsheet className="file-icon-spreadsheet w-5 h-5 text-green-600 stroke-[1.5]" />;
     else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="w-5 h-5 text-purple-500/90 stroke-[1.5]" />;
+      icon = <FileArchive className="file-icon-archive w-5 h-5 text-purple-600 stroke-[1.5]" />;
     else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="w-5 h-5 text-amber-500/90 stroke-[1.5]" />;
+      icon = <FileAudio className="file-icon-audio w-5 h-5 text-amber-600 stroke-[1.5]" />;
     else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="w-5 h-5 text-blue-500/90 stroke-[1.5]" />;
+      icon = <FileVideo className="file-icon-video w-5 h-5 text-blue-600 stroke-[1.5]" />;
     else if (file.file_type.includes('image') || file.file_type.includes('jpg') || file.file_type.includes('jpeg') || file.file_type.includes('png')) 
-      icon = <FileImage className="w-5 h-5 text-emerald-500/90 stroke-[1.5]" />;
+      icon = <FileImage className="file-icon-image w-5 h-5 text-emerald-600 stroke-[1.5]" />;
     else 
-      icon = <FileIcon className="w-5 h-5 text-gray-500/90 stroke-[1.5]" />;
+      icon = <FileIcon className="file-icon-default w-5 h-5 text-gray-600 stroke-[1.5]" />;
     
     return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/20 rounded-md">
+      <div className="w-full h-full flex items-center justify-center bg-muted/10 rounded-md border border-muted/5">
         {icon}
       </div>
     );
