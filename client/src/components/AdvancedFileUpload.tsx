@@ -105,8 +105,15 @@ export default function AdvancedFileUpload({
 
   // Filtrar projetos com base no cliente selecionado
   const filteredProjects = (clientId: string) => {
-    if (!clientId || clientId === "" || !projects) return [];
-    return projects.filter((project: any) => project.client_id === parseInt(clientId));
+    // Se não há clientId ou é "all", retorna todos os projetos
+    if (!clientId || clientId === "" || clientId === "all" || !projects) return projects;
+    
+    // Filtrar projetos pelo cliente selecionado
+    const filtered = projects.filter((project: any) => 
+      project.client_id && project.client_id.toString() === clientId
+    );
+    
+    return filtered;
   };
 
   // Filtrar tarefas com base no projeto selecionado
