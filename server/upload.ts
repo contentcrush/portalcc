@@ -136,7 +136,7 @@ export function moveFile(filePath: string, category: string, id: string | number
     fs.unlinkSync(filePath);
     
     // Retornar o caminho relativo para o banco de dados
-    return `/uploads/${category}/${id}/${fileName}`;
+    return `uploads/${category}/${id}/${fileName}`;
   } catch (error) {
     console.error('Erro ao mover arquivo:', error);
     throw error;

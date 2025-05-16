@@ -180,7 +180,7 @@ export default function AdvancedFileUpload({
       }, 300);
       
       try {
-        const response = await fetch(`/api/attachments/${data.entityType}s/${data.entityId}/upload`, {
+        const response = await fetch(`/api/attachments/${data.entityType}s/${data.entityId}`, {
           method: 'POST',
           body: data.formData,
           credentials: 'include'
@@ -308,8 +308,9 @@ export default function AdvancedFileUpload({
 
   // Função para adicionar tag personalizada
   const handleAddCustomTag = () => {
-    if (customTagInput.trim() && !customTags.includes(customTagInput.trim())) {
-      setCustomTags([...customTags, customTagInput.trim()]);
+    const trimmedTag = customTagInput.trim();
+    if (trimmedTag && !customTags.includes(trimmedTag)) {
+      setCustomTags([...customTags, trimmedTag]);
       setCustomTagInput("");
     }
   };
