@@ -85,20 +85,23 @@ export default function AdvancedFileUpload({
   const progressIntervalRef = useRef<number | null>(null);
   
   // Buscar clientes, projetos e tarefas para os selects
-  const { data: clients = [] } = useQuery({
+  const { data: clientsData = [] } = useQuery({
     queryKey: ['/api/clients'],
     enabled: open,
   });
+  const clients = Array.isArray(clientsData) ? clientsData : [];
   
-  const { data: projects = [] } = useQuery({
+  const { data: projectsData = [] } = useQuery({
     queryKey: ['/api/projects'],
     enabled: open,
   });
+  const projects = Array.isArray(projectsData) ? projectsData : [];
   
-  const { data: tasks = [] } = useQuery({
+  const { data: tasksData = [] } = useQuery({
     queryKey: ['/api/tasks'],
     enabled: open,
   });
+  const tasks = Array.isArray(tasksData) ? tasksData : [];
 
   // Filtrar projetos com base no cliente selecionado
   const filteredProjects = (clientId: string) => {

@@ -158,30 +158,32 @@ export default function FileManager({
     tasks: TaskAttachment[]
   }>({
     queryKey: ['/api/attachments/all'],
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Erro ao carregar anexos",
         description: "Não foi possível carregar os anexos. Tente novamente mais tarde.",
         variant: "destructive",
       });
-      console.error("Erro ao buscar anexos:", error);
     }
   });
 
   // Buscar dados de clientes para mostrar nomes
-  const { data: clients } = useQuery({
+  const { data: clientsData = [] } = useQuery({
     queryKey: ['/api/clients'],
   });
+  const clients = Array.isArray(clientsData) ? clientsData : [];
 
   // Buscar dados de projetos para mostrar nomes
-  const { data: projects } = useQuery({
+  const { data: projectsData = [] } = useQuery({
     queryKey: ['/api/projects'],
   });
+  const projects = Array.isArray(projectsData) ? projectsData : [];
   
   // Buscar dados de tarefas para mostrar nomes
-  const { data: tasks } = useQuery({
+  const { data: tasksData = [] } = useQuery({
     queryKey: ['/api/tasks'],
   });
+  const tasks = Array.isArray(tasksData) ? tasksData : [];
 
   // Buscar dados de usuários para mostrar nomes
   const { data: users } = useQuery({
