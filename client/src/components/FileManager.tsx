@@ -524,29 +524,32 @@ export default function FileManager({
                 </div>
               )}
             </CardContent>
-            <CardFooter className="pt-0 mt-auto">
-              <div className="flex w-full divide-x border-t mt-2 -mx-6 px-6">
+            <CardFooter className="p-0 mt-auto">
+              <div className="flex w-full border-t">
                 <Button 
                   variant="ghost" 
-                  className="rounded-none h-10 flex-1"
+                  size="sm"
+                  className="rounded-none flex-1 h-9 px-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDownload(attachment);
                   }}
                 >
                   <Download className="mr-1 h-4 w-4" />
-                  <span>Download</span>
+                  <span className="text-xs">Download</span>
                 </Button>
+                <div className="w-px bg-border"></div>
                 <Button 
                   variant="ghost" 
-                  className="rounded-none h-10 flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  size="sm"
+                  className="rounded-none flex-1 h-9 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDelete(attachment);
                   }}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
-                  <span>Excluir</span>
+                  <span className="text-xs">Excluir</span>
                 </Button>
               </div>
             </CardFooter>
