@@ -17,6 +17,7 @@ import UserProfile from "@/pages/user-profile";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Files from "@/pages/files";
+import EnhancedFiles from "@/pages/enhanced-files";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
@@ -52,6 +53,7 @@ function Router() {
       <ProtectedRoute path="/team/user/:id" component={UserProfile} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/files" component={Files} />
+      <ProtectedRoute path="/files-aprimorado" component={EnhancedFiles} />
       <Route component={NotFound} />
     </Switch>
   );

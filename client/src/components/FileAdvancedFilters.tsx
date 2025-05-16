@@ -376,9 +376,9 @@ const FileAdvancedFilters: React.FC<FileAdvancedFiltersProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Qualquer tamanho</SelectItem>
-                    <SelectItem value="0-1048576">Pequeno (< 1MB)</SelectItem>
+                    <SelectItem value="0-1048576">Pequeno (&lt; 1MB)</SelectItem>
                     <SelectItem value="1048576-10485760">Médio (1MB - 10MB)</SelectItem>
-                    <SelectItem value="10485760-max">Grande (> 10MB)</SelectItem>
+                    <SelectItem value="10485760-max">Grande (&gt; 10MB)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

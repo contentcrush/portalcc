@@ -251,7 +251,7 @@ const FileShareDialog: React.FC<FileShareDialogProps> = ({
           <h3 className="text-sm font-medium mb-2">Arquivo:</h3>
           <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
             <div className="p-2 bg-primary/10 rounded">
-              <FileIcon file={file} />
+              <FileIconComponent file={file} />
             </div>
             <div className="overflow-hidden">
               <p className="font-medium truncate">{file.name}</p>
@@ -512,7 +512,7 @@ const FileShareDialog: React.FC<FileShareDialogProps> = ({
 };
 
 // Componente auxiliar para renderizar ícone para o tipo de arquivo
-const FileIcon = ({ file }: { file: { type: string, name: string } }) => {
+const FileIconComponent = ({ file }: { file: { type: string, name: string } }) => {
   if (file.type.startsWith('image/')) {
     return <FileImage className="h-5 w-5 text-blue-500" />;
   } else if (file.type === 'application/pdf') {
