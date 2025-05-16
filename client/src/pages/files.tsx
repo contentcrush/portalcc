@@ -16,23 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
-// Configuramos o worker do PDF.js com a versão específica 3.4.120
-// Esta é a versão que corresponde ao react-pdf v9.2.1
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-
-// Forçamos a versão da API para corresponder ao worker
-if (typeof window !== 'undefined') {
-  // Apenas para debugging e supressão de erros comuns
-  window.addEventListener('error', function(event) {
-    if (event.message && (
-      event.message.includes('pdf.worker') || 
-      event.message.includes('API version') ||
-      event.message.includes('Worker version')
-    )) {
-      console.log('PDF.js error interceptado:', event.message);
-    }
-  });
-}
+// Configuramos exatamente a mesma versão para react-pdf e pdfjs-dist
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
