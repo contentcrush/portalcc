@@ -481,36 +481,38 @@ export default function FileManager({
         {items.map((attachment) => (
           <Card 
             key={`${attachment.type}-${attachment.id}`} 
-            className="overflow-hidden hover:shadow-md transition-shadow"
+            className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col"
             onClick={() => onSelectFile && onSelectFile(attachment)}
           >
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted">
+            <CardHeader className="flex flex-row items-start gap-3 pb-2 space-y-0">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted flex-shrink-0 mt-1">
                 {getFileIcon(attachment.file_type)}
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-w-0">
                 <CardTitle className="text-base truncate" title={attachment.file_name}>
                   {attachment.file_name}
                 </CardTitle>
-                <CardDescription className="truncate">
+                <CardDescription className="truncate" title={attachment.entity_name}>
                   {attachment.entity_name}
                 </CardDescription>
               </div>
             </CardHeader>
-            <CardContent className="pb-1">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Badge variant="outline" className="mr-2">
+            <CardContent className="pb-1 flex-grow">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline">
                   {attachment.type === 'client' ? 'Cliente' : attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
                 </Badge>
-                <span>{formatFileSize(attachment.file_size)}</span>
+                <Badge variant="secondary">
+                  {formatFileSize(attachment.file_size)}
+                </Badge>
               </div>
               {attachment.description && (
-                <div className="mt-2 text-sm line-clamp-2">
+                <div className="mt-2 text-sm line-clamp-2 text-muted-foreground" title={attachment.description}>
                   {attachment.description}
                 </div>
               )}
-              <div className="mt-2 flex items-center text-xs text-muted-foreground">
-                <span>Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               {attachment.tags && attachment.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
@@ -522,8 +524,8 @@ export default function FileManager({
                 </div>
               )}
             </CardContent>
-            <CardFooter>
-              <div className="flex w-full divide-x">
+            <CardFooter className="pt-0 mt-auto">
+              <div className="flex w-full divide-x border-t mt-2 -mx-6 px-6">
                 <Button 
                   variant="ghost" 
                   className="rounded-none h-10 flex-1"
@@ -537,7 +539,7 @@ export default function FileManager({
                 </Button>
                 <Button 
                   variant="ghost" 
-                  className="rounded-none h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="rounded-none h-10 flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDelete(attachment);
