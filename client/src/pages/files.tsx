@@ -125,7 +125,7 @@ export default function FilesPage() {
                   {getFileIcon(selectedFile.file_type)}
                 </div>
                 <div className="break-words max-w-[450px] flex-grow font-medium">
-                  {selectedFile.file_name}
+                  {decodeURI(encodeURI(selectedFile.file_name))}
                 </div>
               </DialogTitle>
               <DialogDescription>
