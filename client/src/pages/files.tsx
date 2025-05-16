@@ -17,17 +17,17 @@ import {
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
 // Configuração do worker do PDF.js - Usando uma versão local para evitar problemas de CORS
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Fixamos a versão 3.11.174 que está disponível no nosso servidor
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 // Fallback caso o worker falhe
 if (typeof window !== 'undefined') {
   // Apenas execute no cliente
-  window.onerror = function(message) {
-    if (message.toString().includes('fake worker')) {
-      console.warn('Usando worker alternativo para PDFs');
-      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  window.addEventListener('error', function(event) {
+    if (event.message && event.message.includes('pdf.worker')) {
+      console.warn('Problema com PDF worker, usando fallback');
     }
-  };
+  });
 }
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
@@ -131,7 +131,9 @@ export default function FilesPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 {getFileIcon(selectedFile.file_type)}
-                <span className="truncate">{selectedFile.file_name}</span>
+                <div className="break-words max-w-[450px]">
+                  {selectedFile.file_name}
+                </div>
               </DialogTitle>
               <DialogDescription>
                 {selectedFile.type === 'client' ? 'Cliente' : selectedFile.type === 'project' ? 'Projeto' : 'Tarefa'}: {selectedFile.entity_name}
@@ -281,35 +283,52 @@ function FilePreview({ file }: FilePreviewProps) {
         <div className={cn(
           "relative flex justify-center items-center", 
           loading ? "min-h-[200px]" : "",
-          fullscreen ? "h-full" : ""
+          fullscreen ? "h-full" : "",
+          error ? "bg-muted rounded-md p-4" : ""
         )}>
-          {loading && (
+          {loading && !error && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
-          <img 
-            src={fileUrl} 
-            alt={file.file_name} 
-            className={cn(
-              "max-w-full object-contain rounded-md",
-              fullscreen ? "max-h-[90vh]" : "max-h-[300px]"
-            )}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
           
-          {!loading && !fullscreen && (
-            <div className="absolute top-2 right-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="bg-background/80 hover:bg-background" 
-                onClick={toggleFullscreen}
-              >
-                <Maximize className="h-4 w-4" />
+          {error ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <FileImage className="h-12 w-12 text-red-500 mb-2" />
+              <p className="text-sm text-center mb-3">Não foi possível carregar a imagem</p>
+              <Button variant="outline" size="sm" asChild>
+                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir imagem em nova aba
+                </a>
               </Button>
             </div>
+          ) : (
+            <>
+              <img 
+                src={fileUrl} 
+                alt={file.file_name} 
+                className={cn(
+                  "max-w-full object-contain rounded-md",
+                  fullscreen ? "max-h-[90vh]" : "max-h-[300px]"
+                )}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+              
+              {!loading && !fullscreen && (
+                <div className="absolute top-2 right-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="bg-background/80 hover:bg-background" 
+                    onClick={toggleFullscreen}
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -348,11 +367,16 @@ function FilePreview({ file }: FilePreviewProps) {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   }
+                  options={{
+                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                    cMapPacked: true,
+                    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
+                  }}
                   className="border rounded-md overflow-hidden"
                 >
                   <Page 
                     pageNumber={currentPage} 
-                    width={400}
+                    width={350}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     className="max-w-full"
