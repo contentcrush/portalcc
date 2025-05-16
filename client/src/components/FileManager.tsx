@@ -60,6 +60,7 @@ import {
   CalendarIcon,
   User,
   RefreshCw,
+  Image,
 } from "lucide-react";
 
 import AdvancedFileUpload from "./AdvancedFileUpload";
@@ -434,20 +435,22 @@ export default function FileManager({
       );
     }
     
-    // Para outros tipos de arquivo, mostrar ícones apropriados (tamanho padronizado)
+    // Para outros tipos de arquivo, mostrar ícones padronizados estilo AirBnB (limpo e elegante)
     let icon;
     if (file.file_type.includes('pdf')) 
-      icon = <FileText className="w-5 h-5 text-red-500" />;
+      icon = <FileText className="w-5 h-5 text-red-500/90 stroke-[1.5]" />;
     else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="w-5 h-5 text-green-500" />;
+      icon = <FileSpreadsheet className="w-5 h-5 text-green-500/90 stroke-[1.5]" />;
     else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="w-5 h-5 text-purple-500" />;
+      icon = <FileArchive className="w-5 h-5 text-purple-500/90 stroke-[1.5]" />;
     else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="w-5 h-5 text-yellow-500" />;
+      icon = <FileAudio className="w-5 h-5 text-amber-500/90 stroke-[1.5]" />;
     else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="w-5 h-5 text-blue-500" />;
+      icon = <FileVideo className="w-5 h-5 text-blue-500/90 stroke-[1.5]" />;
+    else if (file.file_type.includes('image') || file.file_type.includes('jpg') || file.file_type.includes('jpeg') || file.file_type.includes('png')) 
+      icon = <FileImage className="w-5 h-5 text-emerald-500/90 stroke-[1.5]" />;
     else 
-      icon = <FileIcon className="w-5 h-5 text-gray-500" />;
+      icon = <FileIcon className="w-5 h-5 text-gray-500/90 stroke-[1.5]" />;
     
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/20 rounded-md">
@@ -720,7 +723,7 @@ export default function FileManager({
               }}
             >
               <TableCell>
-                <div className="flex items-center justify-center w-10 h-10 rounded overflow-hidden">
+                <div className="flex items-center justify-center w-9 h-9 rounded-md overflow-hidden bg-muted/15 border border-muted/10">
                   {getFilePreview(attachment)}
                 </div>
               </TableCell>
