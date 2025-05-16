@@ -434,23 +434,23 @@ export default function FileManager({
       );
     }
     
-    // Para outros tipos de arquivo, mostrar ícones apropriados
+    // Para outros tipos de arquivo, mostrar ícones apropriados (menor tamanho)
     let icon;
     if (file.file_type.includes('pdf')) 
-      icon = <FileText className="w-8 h-8 text-red-500" />;
+      icon = <FileText className="w-6 h-6 text-red-500" />;
     else if (file.file_type.includes('spreadsheet') || file.file_type.includes('excel') || file.file_type.includes('sheet')) 
-      icon = <FileSpreadsheet className="w-8 h-8 text-green-500" />;
+      icon = <FileSpreadsheet className="w-6 h-6 text-green-500" />;
     else if (file.file_type.includes('zip') || file.file_type.includes('compressed')) 
-      icon = <FileArchive className="w-8 h-8 text-purple-500" />;
+      icon = <FileArchive className="w-6 h-6 text-purple-500" />;
     else if (file.file_type.startsWith('audio/')) 
-      icon = <FileAudio className="w-8 h-8 text-yellow-500" />;
+      icon = <FileAudio className="w-6 h-6 text-yellow-500" />;
     else if (file.file_type.startsWith('video/')) 
-      icon = <FileVideo className="w-8 h-8 text-pink-500" />;
+      icon = <FileVideo className="w-6 h-6 text-blue-500" />;
     else 
-      icon = <FileIcon className="w-8 h-8 text-gray-500" />;
+      icon = <FileIcon className="w-6 h-6 text-gray-500" />;
     
     return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/50 rounded-md">
+      <div className="w-full h-full flex items-center justify-center bg-muted/20 rounded-md">
         {icon}
       </div>
     );
@@ -529,7 +529,7 @@ export default function FileManager({
         {items.map((attachment) => (
           <Card 
             key={`${attachment.type}-${attachment.id}`} 
-            className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col cursor-pointer"
+            className="overflow-hidden hover:shadow-md transition-shadow flex flex-col cursor-pointer border-muted/80"
             onClick={() => {
               if (onSelectFile) {
                 onSelectFile(attachment);
@@ -539,77 +539,91 @@ export default function FileManager({
               }
             }}
           >
-            <CardHeader className="p-3 pb-2 space-y-0">
-              <div className="flex flex-row gap-3 items-start">
-                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                  {getFilePreview(attachment)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base truncate" title={attachment.file_name}>
-                    {attachment.file_name}
-                  </CardTitle>
-                  <CardDescription className="truncate" title={attachment.entity_name}>
-                    {attachment.entity_name}
-                  </CardDescription>
-                </div>
+            <div className="flex p-3 items-center gap-3">
+              {/* Ícone do arquivo - Versão menor */}
+              <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 bg-muted/30 flex items-center justify-center">
+                {getFilePreview(attachment)}
               </div>
-            </CardHeader>
-            <CardContent className="pb-1 flex-grow">
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline">
+              
+              {/* Informações do arquivo */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm truncate" title={attachment.file_name}>
+                  {attachment.file_name}
+                </h3>
+                <p className="text-xs text-muted-foreground truncate" title={attachment.entity_name}>
+                  {attachment.entity_name}
+                </p>
+              </div>
+            </div>
+            
+            {/* Metadados do arquivo */}
+            <div className="px-3 pb-2">
+              <div className="flex items-center gap-2 justify-between">
+                <Badge variant="outline" className="text-xs py-0 h-5">
                   {attachment.type === 'client' ? 'Cliente' : attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
                 </Badge>
-                <Badge variant="secondary">
+                <span className="text-xs text-muted-foreground">
                   {formatFileSize(attachment.file_size)}
-                </Badge>
+                </span>
               </div>
+              
+              {/* Descrição (se houver) */}
               {attachment.description && (
-                <div className="mt-2 text-sm line-clamp-2 text-muted-foreground" title={attachment.description}>
+                <div className="mt-2 text-xs line-clamp-1 text-muted-foreground" title={attachment.description}>
                   {attachment.description}
                 </div>
               )}
-              <div className="mt-2 text-xs text-muted-foreground">
+              
+              {/* Data de upload */}
+              <div className="mt-1 text-xs text-muted-foreground">
                 Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
+              
+              {/* Tags (se houver) */}
               {attachment.tags && attachment.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {attachment.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {attachment.tags.slice(0, 2).map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs py-0 h-5">
                       {tag}
                     </Badge>
                   ))}
+                  {attachment.tags.length > 2 && (
+                    <Badge variant="secondary" className="text-xs py-0 h-5">
+                      +{attachment.tags.length - 2}
+                    </Badge>
+                  )}
                 </div>
               )}
-            </CardContent>
-            <CardFooter className="p-0 mt-auto">
-              <div className="flex w-full border-t">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="rounded-none flex-1 h-9 px-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownload(attachment);
-                  }}
-                >
-                  <Download className="mr-1 h-4 w-4" />
-                  <span className="text-xs">Download</span>
-                </Button>
-                <div className="w-px bg-border"></div>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="rounded-none flex-1 h-9 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(e, attachment);
-                  }}
-                >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  <span className="text-xs">Excluir</span>
-                </Button>
-              </div>
-            </CardFooter>
+            </div>
+            
+            {/* Botões de ação */}
+            <div className="mt-auto border-t flex text-xs">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-primary flex-1 h-8 rounded-none rounded-bl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload(attachment);
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" />
+                Download
+              </Button>
+              <div className="w-px bg-border h-8"></div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-destructive flex-1 h-8 rounded-none rounded-br"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(e, attachment);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Excluir
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
