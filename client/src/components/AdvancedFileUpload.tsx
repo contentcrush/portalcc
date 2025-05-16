@@ -201,8 +201,16 @@ export default function AdvancedFileUpload({
         
         if (!response.ok) {
           setUploadProgress(0);
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Erro ao fazer upload do arquivo');
+          // Verifica se a resposta é JSON antes de tentar parsear
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Erro ao fazer upload do arquivo');
+          } else {
+            const textError = await response.text();
+            console.error("Erro de resposta não-JSON:", textError);
+            throw new Error("Erro no servidor ao processar arquivo. Tente novamente.");
+          }
         }
         
         setUploadProgress(100);

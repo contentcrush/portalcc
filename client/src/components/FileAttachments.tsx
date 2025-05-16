@@ -1,11 +1,22 @@
-import { FC, useState, useRef, useEffect } from 'react';
+import { FC, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, FileSpreadsheet, FileImage, File, Upload, Download, Plus, Trash2, FileArchive, FileAudio, FileVideo } from 'lucide-react';
+import { FileText, FileSpreadsheet, FileImage, File, Upload, Download, Plus, Trash2, FileArchive, FileAudio, FileVideo, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { formatFileSize } from '@/lib/utils';
+import FilePreview from '@/components/FilePreview';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Interface para anexos que vem da API
 export interface ApiAttachment {
@@ -50,6 +61,10 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<ApiAttachment | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<ApiAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Construa a chave de consulta baseada no tipo de entidade e ID
