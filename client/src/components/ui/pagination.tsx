@@ -76,10 +76,21 @@ const PaginationPrev = React.forwardRef<
 ))
 PaginationPrev.displayName = "PaginationPrev"
 
+// Estendendo o tipo para incluir as propriedades compostas
+interface PaginationComponent
+  extends React.ForwardRefExoticComponent<
+    React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>
+  > {
+  First: typeof PaginationFirst;
+  Last: typeof PaginationLast;
+  Next: typeof PaginationNext;
+  Prev: typeof PaginationPrev;
+}
+
 // Compondo os componentes
-Pagination.First = PaginationFirst
-Pagination.Last = PaginationLast
-Pagination.Next = PaginationNext
-Pagination.Prev = PaginationPrev
+(Pagination as PaginationComponent).First = PaginationFirst;
+(Pagination as PaginationComponent).Last = PaginationLast;
+(Pagination as PaginationComponent).Next = PaginationNext;
+(Pagination as PaginationComponent).Prev = PaginationPrev;
 
 export { Pagination }

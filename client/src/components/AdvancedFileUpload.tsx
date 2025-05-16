@@ -102,13 +102,13 @@ export default function AdvancedFileUpload({
 
   // Filtrar projetos com base no cliente selecionado
   const filteredProjects = (clientId: string) => {
-    if (!clientId || clientId === "") return projects;
+    if (!clientId || clientId === "" || !projects) return [];
     return projects.filter((project: any) => project.client_id === parseInt(clientId));
   };
 
   // Filtrar tarefas com base no projeto selecionado
   const filteredTasks = (projectId: string) => {
-    if (!projectId || projectId === "") return tasks;
+    if (!projectId || projectId === "" || !tasks) return [];
     return tasks.filter((task: any) => task.project_id === parseInt(projectId));
   };
 
@@ -480,7 +480,7 @@ export default function AdvancedFileUpload({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Todos os clientes</SelectItem>
+                          <SelectItem value="all">Todos os clientes</SelectItem>
                           {clients.map((client: any) => (
                             <SelectItem key={client.id} value={String(client.id)}>
                               {client.name}

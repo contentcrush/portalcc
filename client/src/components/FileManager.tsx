@@ -53,7 +53,12 @@ import {
 
 import AdvancedFileUpload from "./AdvancedFileUpload";
 import { formatFileSize } from "@/lib/utils";
-import { clientAttachments, projectAttachments, taskAttachments } from "@shared/schema";
+import { clientAttachments, projectAttachments, taskAttachments, clients, projects, tasks, users } from "@shared/schema";
+
+// Tipos para as entidades do anexo
+type ClientAttachment = typeof clientAttachments.$inferSelect;
+type ProjectAttachment = typeof projectAttachments.$inferSelect;
+type TaskAttachment = typeof taskAttachments.$inferSelect;
 
 // Interface para apresentar anexos de forma unificada
 interface UnifiedAttachment {
