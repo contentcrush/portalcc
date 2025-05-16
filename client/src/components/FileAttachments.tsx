@@ -90,8 +90,16 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao fazer upload do arquivo');
+        // Verificar se a resposta é JSON antes de tentar parsear
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao fazer upload do arquivo');
+        } else {
+          const textError = await response.text();
+          console.error("Erro de resposta não-JSON:", textError);
+          throw new Error("Erro no servidor ao processar arquivo. Tente novamente.");
+        }
       }
       
       return await response.json();
@@ -185,7 +193,8 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
   };
 
   // Função para download de arquivo
-  const handleDownload = (attachment: ApiAttachment) => {
+  const handleDownload = (e: React.MouseEvent, attachment: ApiAttachment) => {
+    e.stopPropagation();
     const downloadUrl = `/api/attachments/${entityType}s/${entityId}/download/${attachment.id}`;
     
     // Criar um link temporário para download
@@ -197,10 +206,25 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
     document.body.removeChild(a);
   };
 
-  // Função para excluir um anexo
-  const handleDelete = async (attachment: ApiAttachment) => {
-    if (confirm(`Tem certeza que deseja excluir o arquivo "${attachment.file_name}"?`)) {
-      deleteMutation.mutate(attachment.id);
+  // Função para abrir a visualização do arquivo
+  const handlePreview = (attachment: ApiAttachment) => {
+    setSelectedFile(attachment);
+    setPreviewOpen(true);
+  };
+
+  // Função para iniciar o processo de exclusão
+  const handleDelete = (e: React.MouseEvent, attachment: ApiAttachment) => {
+    e.stopPropagation();
+    setAttachmentToDelete(attachment);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Função para confirmar a exclusão do anexo
+  const confirmDelete = () => {
+    if (attachmentToDelete) {
+      deleteMutation.mutate(attachmentToDelete.id);
+      setDeleteDialogOpen(false);
+      setAttachmentToDelete(null);
     }
   };
 
@@ -353,7 +377,11 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
           </div>
         ) : attachments && attachments.length > 0 ? (
           attachments.map((attachment) => (
-            <div key={attachment.id} className="flex items-center justify-between py-1.5">
+            <div 
+              key={attachment.id} 
+              className="flex items-center justify-between py-1.5 hover:bg-gray-50 rounded-md px-2 cursor-pointer" 
+              onClick={() => handlePreview(attachment)}
+            >
               <div className="flex items-center flex-1 min-w-0">
                 <div className={`${getFileColor(attachment.file_type)} ${getFileTextColor(attachment.file_type)} p-1.5 rounded mr-3 flex-shrink-0`}>
                   {getFileIcon(attachment.file_type)}
@@ -367,16 +395,30 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => handleDownload(attachment)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePreview(attachment);
+                  }}
+                  className="h-8 w-8 hover:bg-blue-100 hover:text-blue-500"
+                  title="Visualizar"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={(e) => handleDownload(e, attachment)}
                   className="h-8 w-8 hover:bg-gray-100"
+                  title="Baixar"
                 >
                   <Download className="h-4 w-4" />
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => handleDelete(attachment)}
+                  onClick={(e) => handleDelete(e, attachment)}
                   className="h-8 w-8 hover:bg-red-100 hover:text-red-500"
+                  title="Excluir"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -391,6 +433,40 @@ export const FileAttachments: FC<FileAttachmentsProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Diálogo de confirmação para exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {attachmentToDelete && `O arquivo "${attachmentToDelete.file_name}" será excluído permanentemente.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Componente de visualização de arquivo */}
+      {selectedFile && (
+        <FilePreview
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          file={{
+            id: selectedFile.id,
+            name: selectedFile.file_name,
+            type: selectedFile.file_type,
+            entity_id: entityId,
+            uploaded_at: selectedFile.created_at || new Date().toISOString(),
+          }}
+          downloadUrl={`/api/attachments/${entityType}s/${entityId}/download/${selectedFile.id}`}
+        />
+      )}
     </Card>
   );
 };
