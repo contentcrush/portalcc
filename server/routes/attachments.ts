@@ -89,13 +89,45 @@ router.get('/clients/:clientId/download/:attachmentId', async (req, res) => {
       return res.status(404).json({ message: 'Attachment not found' });
     }
     
-    const filePath = path.join(process.cwd(), attachment.file_url);
+    // Verificar várias possibilidades de caminho do arquivo
+    let filePath = attachment.file_url;
     
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'File not found on server' });
+    // Garantir que estamos trabalhando com caminho relativo sem barras iniciais
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
     }
     
-    res.download(filePath, attachment.file_name);
+    // Verificar caminho absoluto baseado no path armazenado
+    const absolutePath = path.join(process.cwd(), filePath);
+    console.log('Tentando acessar arquivo em:', absolutePath);
+    
+    if (fs.existsSync(absolutePath)) {
+      return res.download(absolutePath, attachment.file_name);
+    }
+    
+    // Tentar caminho alternativo baseado na estrutura de upload
+    const fileName = path.basename(filePath);
+    const altPath = path.join(process.cwd(), 'uploads', 'clients', String(attachment.client_id), fileName);
+    console.log('Tentando caminho alternativo:', altPath);
+    
+    if (fs.existsSync(altPath)) {
+      return res.download(altPath, attachment.file_name);
+    }
+    
+    // Última tentativa - buscar diretamente na pasta de uploads raiz
+    const rootUploadPath = path.join(process.cwd(), 'uploads', fileName);
+    console.log('Tentando caminho root upload:', rootUploadPath);
+    
+    if (fs.existsSync(rootUploadPath)) {
+      return res.download(rootUploadPath, attachment.file_name);
+    }
+    
+    // Se chegou aqui, não encontrou o arquivo
+    return res.status(404).json({ 
+      message: 'File not found on server', 
+      checked_paths: [absolutePath, altPath, rootUploadPath],
+      file_url: attachment.file_url
+    });
   } catch (error) {
     console.error('Error downloading attachment:', error);
     res.status(500).json({ message: 'Error downloading file', error: error instanceof Error ? error.message : String(error) });
@@ -201,29 +233,44 @@ router.get('/projects/:projectId/download/:attachmentId', async (req, res) => {
     }
     
     // Verificar várias possibilidades de caminho do arquivo
-    let filePath = path.join(process.cwd(), attachment.file_url);
+    let filePath = attachment.file_url;
     
-    // Se o caminho não começa com /, adicionar
-    if (!attachment.file_url.startsWith('/')) {
-      filePath = path.join(process.cwd(), '/', attachment.file_url);
+    // Garantir que estamos trabalhando com caminho relativo sem barras iniciais
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
     }
     
-    console.log('Tentando acessar arquivo em:', filePath);
+    // Verificar caminho absoluto baseado no path armazenado
+    const absolutePath = path.join(process.cwd(), filePath);
+    console.log('Tentando acessar arquivo em:', absolutePath);
     
-    if (!fs.existsSync(filePath)) {
-      // Tentar caminho alternativo
-      const fileName = path.basename(attachment.file_url);
-      const altPath = path.join(process.cwd(), 'uploads', 'projects', String(attachment.project_id), fileName);
-      console.log('Tentando caminho alternativo:', altPath);
-      
-      if (!fs.existsSync(altPath)) {
-        return res.status(404).json({ message: 'File not found on server', checked_paths: [filePath, altPath] });
-      }
-      
+    if (fs.existsSync(absolutePath)) {
+      return res.download(absolutePath, attachment.file_name);
+    }
+    
+    // Tentar caminho alternativo baseado na estrutura de upload
+    const fileName = path.basename(filePath);
+    const altPath = path.join(process.cwd(), 'uploads', 'projects', String(attachment.project_id), fileName);
+    console.log('Tentando caminho alternativo:', altPath);
+    
+    if (fs.existsSync(altPath)) {
       return res.download(altPath, attachment.file_name);
     }
     
-    res.download(filePath, attachment.file_name);
+    // Última tentativa - buscar diretamente na pasta de uploads raiz
+    const rootUploadPath = path.join(process.cwd(), 'uploads', fileName);
+    console.log('Tentando caminho root upload:', rootUploadPath);
+    
+    if (fs.existsSync(rootUploadPath)) {
+      return res.download(rootUploadPath, attachment.file_name);
+    }
+    
+    // Se chegou aqui, não encontrou o arquivo
+    return res.status(404).json({ 
+      message: 'File not found on server', 
+      checked_paths: [absolutePath, altPath, rootUploadPath],
+      file_url: attachment.file_url
+    });
   } catch (error) {
     console.error('Error downloading attachment:', error);
     res.status(500).json({ message: 'Error downloading file', error: error instanceof Error ? error.message : String(error) });
@@ -324,29 +371,44 @@ router.get('/tasks/:taskId/download/:attachmentId', async (req, res) => {
     }
     
     // Verificar várias possibilidades de caminho do arquivo
-    let filePath = path.join(process.cwd(), attachment.file_url);
+    let filePath = attachment.file_url;
     
-    // Se o caminho não começa com /, adicionar
-    if (!attachment.file_url.startsWith('/')) {
-      filePath = path.join(process.cwd(), '/', attachment.file_url);
+    // Garantir que estamos trabalhando com caminho relativo sem barras iniciais
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
     }
     
-    console.log('Tentando acessar arquivo em:', filePath);
+    // Verificar caminho absoluto baseado no path armazenado
+    const absolutePath = path.join(process.cwd(), filePath);
+    console.log('Tentando acessar arquivo em:', absolutePath);
     
-    if (!fs.existsSync(filePath)) {
-      // Tentar caminho alternativo
-      const fileName = path.basename(attachment.file_url);
-      const altPath = path.join(process.cwd(), 'uploads', 'tasks', String(attachment.task_id), fileName);
-      console.log('Tentando caminho alternativo:', altPath);
-      
-      if (!fs.existsSync(altPath)) {
-        return res.status(404).json({ message: 'File not found on server', checked_paths: [filePath, altPath] });
-      }
-      
+    if (fs.existsSync(absolutePath)) {
+      return res.download(absolutePath, attachment.file_name);
+    }
+    
+    // Tentar caminho alternativo baseado na estrutura de upload
+    const fileName = path.basename(filePath);
+    const altPath = path.join(process.cwd(), 'uploads', 'tasks', String(attachment.task_id), fileName);
+    console.log('Tentando caminho alternativo:', altPath);
+    
+    if (fs.existsSync(altPath)) {
       return res.download(altPath, attachment.file_name);
     }
     
-    res.download(filePath, attachment.file_name);
+    // Última tentativa - buscar diretamente na pasta de uploads raiz
+    const rootUploadPath = path.join(process.cwd(), 'uploads', fileName);
+    console.log('Tentando caminho root upload:', rootUploadPath);
+    
+    if (fs.existsSync(rootUploadPath)) {
+      return res.download(rootUploadPath, attachment.file_name);
+    }
+    
+    // Se chegou aqui, não encontrou o arquivo
+    return res.status(404).json({ 
+      message: 'File not found on server', 
+      checked_paths: [absolutePath, altPath, rootUploadPath],
+      file_url: attachment.file_url
+    });
   } catch (error) {
     console.error('Error downloading attachment:', error);
     res.status(500).json({ message: 'Error downloading file', error: error instanceof Error ? error.message : String(error) });
