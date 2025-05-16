@@ -476,14 +476,21 @@ export default function FileManager({
   };
 
   // Função para lidar com a exclusão de um anexo
-  const handleDelete = (attachment: UnifiedAttachment) => {
-    if (confirm(`Tem certeza que deseja excluir o anexo "${attachment.file_name}"?`)) {
-      deleteMutation.mutate({
-        type: attachment.type,
-        entityId: attachment.entity_id,
-        attachmentId: attachment.id
-      });
-    }
+  const handleDelete = (e: React.MouseEvent, attachment: UnifiedAttachment) => {
+    e.stopPropagation(); // Impede que o clique propague para o card e abra o preview
+    setFileToDelete(attachment);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Função para confirmar exclusão no diálogo
+  const confirmDelete = () => {
+    if (!fileToDelete) return;
+    
+    deleteMutation.mutate({
+      type: fileToDelete.type,
+      entityId: fileToDelete.entity_id,
+      attachmentId: fileToDelete.id
+    });
   };
 
   // Verificar se está carregando algum dado necessário
@@ -970,6 +977,25 @@ export default function FileManager({
           </div>
         )}
       </div>
+      
+      {/* Diálogo de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o arquivo <span className="font-medium">{fileToDelete?.file_name}</span>?
+              <br />Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {/* Componente de visualização de arquivos */}
       <FilePreview 
