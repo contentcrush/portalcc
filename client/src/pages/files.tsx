@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO, isSameMonth } from "date-fns";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import FileUploadForm from "@/components/FileUploadForm";
-import { clientAttachments, projectAttachments, taskAttachments } from "@shared/schema";
+import { ClientAttachment, ProjectAttachment, TaskAttachment } from "@shared/schema";
 import { 
   Download as DownloadIcon, 
   Filter, 
@@ -17,26 +16,7 @@ import {
   FileArchive, 
   FileAudio, 
   FileVideo,
-  Loader2,
-  Upload,
-  ChevronRight,
-  Calendar,
-  Grid,
-  List,
-  Search,
-  Eye,
-  Copy,
-  Eye as ViewIcon,
-  Info,
-  CheckSquare,
-  Square,
-  MoreHorizontal,
-  ChevronDown,
-  Clock,
-  User,
-  HardDrive,
-  Filter as FilterIcon,
-  X
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,62 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-  DrawerClose,
-} from "@/components/ui/drawer";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatFileSize, cn } from "@/lib/utils";
+import { formatFileSize } from "@/lib/utils";
 
 // Interface para apresentar anexos de forma unificada
 interface UnifiedAttachment {
@@ -123,9 +49,6 @@ interface UnifiedAttachment {
   description?: string | null;
   tags?: string[] | null;
   uploader?: any;
-  thumbnailUrl?: string;
-  color?: string;
-  origin_id?: string;
 }
 
 // Props para o componente FilesList
@@ -135,334 +58,10 @@ interface FilesListProps {
   onDownload: (attachment: UnifiedAttachment) => void;
   onDelete: (attachment: UnifiedAttachment) => void;
   getFileIcon: (fileType: string) => JSX.Element;
-  view: 'grid' | 'list';
-  selectedFiles: number[];
-  onSelect: (id: number, selected: boolean) => void;
 }
 
-// Componente para exibição de um arquivo em formato de cartão (visualização em grade)
-const FileCard = ({ 
-  attachment, 
-  isSelected, 
-  onSelect, 
-  onDownload, 
-  onDelete, 
-  onView, 
-  getFileIcon 
-}: { 
-  attachment: UnifiedAttachment, 
-  isSelected: boolean, 
-  onSelect: (id: number, selected: boolean) => void, 
-  onDownload: (attachment: UnifiedAttachment) => void, 
-  onDelete: (attachment: UnifiedAttachment) => void, 
-  onView: (attachment: UnifiedAttachment) => void,
-  getFileIcon: (fileType: string) => JSX.Element 
-}) => {
-  const isImage = attachment.file_type.startsWith('image/');
-  const typeColor = getTypeColor(attachment.file_type);
-  
-  return (
-    <Card className={cn(
-      "overflow-hidden transition-all group hover:shadow-md border-l-4",
-      `border-l-${typeColor}-500`,
-      isSelected ? "ring-2 ring-primary ring-offset-2" : ""
-    )}>
-      <div className="relative">
-        {/* Thumbnail ou ícone */}
-        <div className={cn(
-          "w-full aspect-square flex items-center justify-center",
-          `bg-${typeColor}-50`
-        )}>
-          {isImage && attachment.thumbnailUrl ? (
-            <img 
-              src={attachment.thumbnailUrl} 
-              alt={attachment.file_name}
-              className="object-cover w-full h-full"
-            />
-          ) : (
-            <div className="flex items-center justify-center w-full h-full">
-              {getFileIcon(attachment.file_type)}
-            </div>
-          )}
-        </div>
-        
-        {/* Checkbox para seleção */}
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Checkbox 
-            checked={isSelected}
-            onCheckedChange={(checked) => onSelect(attachment.id, !!checked)}
-            className="h-5 w-5 bg-white/80"
-          />
-        </div>
-        
-        {/* Ações rápidas */}
-        <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 bg-black/20 text-white hover:bg-black/40 rounded-full"
-                  onClick={() => onView(attachment)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Visualizar</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 bg-black/20 text-white hover:bg-black/40 rounded-full"
-                  onClick={() => onDownload(attachment)}
-                >
-                  <DownloadIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Download</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-      
-      <CardHeader className="p-3 pb-2">
-        <div className="flex flex-col">
-          <CardTitle className="text-sm font-medium truncate" title={attachment.file_name}>
-            {attachment.file_name}
-          </CardTitle>
-          <CardDescription className="text-xs truncate">
-            {formatFileSize(attachment.file_size)}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      
-      <CardFooter className="p-3 pt-0 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <Badge 
-            variant="outline" 
-            className={cn(
-              "text-xs",
-              `bg-${typeColor}-50 text-${typeColor}-700 border-${typeColor}-200`
-            )}
-          >
-            {getDisplayType(attachment.type, attachment.file_type)}
-          </Badge>
-        </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(attachment)}>
-              <ViewIcon className="mr-2 h-4 w-4" />
-              <span>Visualizar</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDownload(attachment)}>
-              <DownloadIcon className="mr-2 h-4 w-4" />
-              <span>Download</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(attachment)} className="text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Excluir</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Componente para exibição de um arquivo em formato de linha (visualização em lista)
-const FileListItem = ({ 
-  attachment, 
-  isSelected, 
-  onSelect, 
-  onDownload, 
-  onDelete, 
-  onView, 
-  getFileIcon 
-}: { 
-  attachment: UnifiedAttachment, 
-  isSelected: boolean, 
-  onSelect: (id: number, selected: boolean) => void, 
-  onDownload: (attachment: UnifiedAttachment) => void, 
-  onDelete: (attachment: UnifiedAttachment) => void, 
-  onView: (attachment: UnifiedAttachment) => void,
-  getFileIcon: (fileType: string) => JSX.Element 
-}) => {
-  const typeColor = getTypeColor(attachment.file_type);
-  
-  return (
-    <div className={cn(
-      "flex items-center p-2 hover:bg-gray-50 rounded-md group border-l-4",
-      `border-l-${typeColor}-500`,
-      isSelected ? "bg-primary/10" : ""
-    )}>
-      <div className="flex items-center flex-1 min-w-0">
-        <Checkbox 
-          checked={isSelected}
-          onCheckedChange={(checked) => onSelect(attachment.id, !!checked)}
-          className="mr-3"
-        />
-        
-        <div className={cn(
-          "flex items-center justify-center w-10 h-10 rounded",
-          `bg-${typeColor}-50`
-        )}>
-          {getFileIcon(attachment.file_type)}
-        </div>
-        
-        <div className="ml-3 flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" title={attachment.file_name}>
-            {attachment.file_name}
-          </p>
-          <div className="flex items-center text-xs text-gray-500 mt-0.5">
-            <Badge 
-              variant="outline" 
-              className={cn(
-                "text-xs mr-2",
-                `bg-${typeColor}-50 text-${typeColor}-700 border-${typeColor}-200`
-              )}
-            >
-              {getDisplayType(attachment.type, attachment.file_type)}
-            </Badge>
-            <span className="truncate">{attachment.entity_name}</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex items-center text-sm text-gray-500 mx-4 w-36">
-        <span>{formatFileSize(attachment.file_size)}</span>
-      </div>
-      
-      <div className="flex items-center text-sm text-gray-500 mx-4 w-48">
-        <Calendar className="h-4 w-4 mr-1" />
-        <span>
-          {(() => {
-            try {
-              const date = attachment.uploaded_at ? new Date(attachment.uploaded_at) : new Date();
-              return isNaN(date.getTime()) 
-                ? format(new Date(), 'dd/MM/yyyy', { locale: ptBR }) 
-                : format(date, 'dd/MM/yyyy', { locale: ptBR });
-            } catch (e) {
-              return format(new Date(), 'dd/MM/yyyy', { locale: ptBR });
-            }
-          })()}
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8"
-                onClick={() => onView(attachment)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Visualizar</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8"
-                onClick={() => onDownload(attachment)}
-              >
-                <DownloadIcon className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Download</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(attachment)}>
-              <ViewIcon className="mr-2 h-4 w-4" />
-              <span>Visualizar</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDownload(attachment)}>
-              <DownloadIcon className="mr-2 h-4 w-4" />
-              <span>Download</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(attachment)} className="text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Excluir</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-};
-
-// Obtém a cor baseada no tipo de arquivo
-const getTypeColor = (fileType: string): string => {
-  if (fileType.startsWith('image/')) return 'blue';
-  if (fileType.includes('pdf')) return 'red';
-  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'green';
-  if (fileType.includes('zip') || fileType.includes('compressed')) return 'purple';
-  if (fileType.startsWith('audio/')) return 'yellow';
-  if (fileType.startsWith('video/')) return 'pink';
-  if (fileType.includes('word') || fileType.includes('document')) return 'sky';
-  return 'gray';
-};
-
-// Obtém um nome de exibição para o tipo de arquivo
-const getDisplayType = (type: string, fileType: string): string => {
-  if (fileType.startsWith('image/')) return 'Imagem';
-  if (fileType.includes('pdf')) return 'PDF';
-  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'Planilha';
-  if (fileType.includes('zip') || fileType.includes('compressed')) return 'Arquivo';
-  if (fileType.startsWith('audio/')) return 'Áudio';
-  if (fileType.startsWith('video/')) return 'Vídeo';
-  if (fileType.includes('word') || fileType.includes('document')) return 'Documento';
-  return type === 'client' ? 'Cliente' : type === 'project' ? 'Projeto' : 'Tarefa';
-};
-
 // Componente para exibir a lista de arquivos
-const FilesList = ({ 
-  attachments, 
-  isLoading, 
-  onDownload, 
-  onDelete, 
-  getFileIcon,
-  view = 'grid',
-  selectedFiles = [],
-  onSelect = () => {}
-}: FilesListProps) => {
-  // Função auxiliar para lidar com visualização
-  const handleView = (attachment: UnifiedAttachment) => {
-    // Como não foi fornecida a função onView diretamente, vamos simular
-    // abrindo o arquivo em uma nova aba
-    window.open(attachment.file_url, '_blank');
-  };
-  
+const AttachmentsList = ({ attachments, isLoading, onDownload, onDelete, getFileIcon }: FilesListProps) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40">
@@ -483,877 +82,592 @@ const FilesList = ({
     );
   }
 
-  // Agrupar anexos por mês para visualização em blocos
-  const groupedAttachments = (() => {
-    const groups: { [key: string]: UnifiedAttachment[] } = {};
-    
-    attachments.forEach(attachment => {
-      let date;
-      try {
-        // Tratar possíveis formatos de data inválidos
-        if (!attachment.uploaded_at) {
-          date = new Date(); // Usar data atual se não houver data de upload
-        } else {
-          date = new Date(attachment.uploaded_at);
-          // Verificar se a data é válida
-          if (isNaN(date.getTime())) {
-            date = new Date();
-          }
-        }
-      } catch (e) {
-        console.warn('Data de upload inválida:', attachment.uploaded_at);
-        date = new Date(); // Fallback para data atual
-      }
-      
-      const monthYear = format(date, 'MMMM yyyy', { locale: ptBR });
-      
-      if (!groups[monthYear]) {
-        groups[monthYear] = [];
-      }
-      
-      groups[monthYear].push(attachment);
-    });
-    
-    // Função auxiliar para extrair data a partir do nome do mês em português
-    const getMonthIndex = (monthName: string) => {
-      const months = [
-        'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-      ];
-      const monthPart = monthName.split(' ')[0].toLowerCase();
-      return months.indexOf(monthPart);
-    };
-    
-    // Função para extrair o ano do formato "mês ano"
-    const getYear = (monthYearStr: string) => {
-      const parts = monthYearStr.split(' ');
-      return parts.length > 1 ? parseInt(parts[1], 10) : new Date().getFullYear();
-    };
-    
-    // Ordenar os grupos por data (mais recente primeiro)
-    return Object.entries(groups)
-      .sort(([a], [b]) => {
-        const yearA = getYear(a);
-        const yearB = getYear(b);
-        
-        if (yearA !== yearB) {
-          return yearB - yearA; // Ordenar por ano descendente
-        }
-        
-        const monthIndexA = getMonthIndex(a);
-        const monthIndexB = getMonthIndex(b);
-        return monthIndexB - monthIndexA; // Ordenar por mês descendente dentro do mesmo ano
-      })
-      .map(([month, files]) => ({
-        month: month.charAt(0).toUpperCase() + month.slice(1),
-        files
-      }));
-  })();
-
-  if (view === 'grid') {
-    return (
-      <div className="space-y-8">
-        {groupedAttachments.map((group) => (
-          <div key={group.month} className="space-y-3">
-            <h3 className="text-sm font-medium capitalize">{group.month}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {group.files.map((attachment) => (
-                <FileCard
-                  key={`${attachment.type}-${attachment.id}`}
-                  attachment={attachment}
-                  isSelected={selectedFiles.includes(attachment.id)}
-                  onSelect={onSelect}
-                  onDownload={onDownload}
-                  onDelete={onDelete}
-                  onView={handleView}
-                  getFileIcon={getFileIcon}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {groupedAttachments.map((group) => (
-        <div key={group.month} className="space-y-2">
-          <h3 className="text-sm font-medium capitalize">{group.month}</h3>
-          <div className="border rounded-md overflow-hidden">
-            {group.files.map((attachment) => (
-              <FileListItem
-                key={`${attachment.type}-${attachment.id}`}
-                attachment={attachment}
-                isSelected={selectedFiles.includes(attachment.id)}
-                onSelect={onSelect}
-                onDownload={onDownload}
-                onDelete={onDelete}
-                onView={handleView}
-                getFileIcon={getFileIcon}
-              />
-            ))}
-          </div>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {attachments.map((attachment) => (
+        <Card key={`${attachment.type}-${attachment.id}`} className="overflow-hidden hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center gap-4 pb-2">
+            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-muted">
+              {getFileIcon(attachment.file_type)}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <CardTitle className="text-base truncate" title={attachment.file_name}>
+                {attachment.file_name}
+              </CardTitle>
+              <CardDescription className="truncate">
+                {attachment.entity_name}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-1">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Badge variant="outline" className="mr-2">
+                {attachment.type === 'client' ? 'Cliente' : attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
+              </Badge>
+              <span>{formatFileSize(attachment.file_size)}</span>
+            </div>
+            <div className="mt-2 flex items-center text-xs text-muted-foreground">
+              <span>Adicionado em {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy', { locale: ptBR })}</span>
+            </div>
+            {attachment.tags && attachment.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {attachment.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <div className="flex w-full divide-x">
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10 flex-1"
+                onClick={() => onDownload(attachment)}
+              >
+                <DownloadIcon className="mr-1 h-4 w-4" />
+                <span>Download</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(attachment)}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                <span>Excluir</span>
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
       ))}
     </div>
   );
 };
 
+// Página principal de gerenciamento de arquivos
 export default function FilesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [clientId, setClientId] = useState<string>("all");
-  const [projectId, setProjectId] = useState<string>("all");
-  const [attachmentType, setAttachmentType] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [uploading, setUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
-  const [isUploadFormOpen, setIsUploadFormOpen] = useState<boolean>(false);
-  
-  // Busca clientes para o filtro
-  const { data: clients = [] } = useQuery({
-    queryKey: ["/api/clients"],
-    staleTime: 5 * 60 * 1000, // 5 minutos
-  });
-  
-  // Busca projetos para o filtro
-  const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects"],
-    staleTime: 5 * 60 * 1000, // 5 minutos
-  });
-  
-  // Busca anexos do cliente
-  const {
-    data: clientAttachments = [],
-    isLoading: clientLoading,
-    isError: clientError,
-    refetch: refetchClientAttachments,
-  } = useQuery({
-    queryKey: ["/api/attachments/clients"],
-    queryFn: async () => {
-      // Se o clientId for específico, filtra os resultados no cliente
-      let url = '/api/attachments/clients';
-      
-      if (clientId !== 'all') {
-        url = `/api/attachments/clients/${clientId}`;
-      }
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
-        if (response.status === 401) {
-          console.warn('Não autenticado ao carregar anexos de clientes, retornando lista vazia');
-          return [];
-        }
-        throw new Error('Falha ao carregar anexos de clientes');
-      }
-      
-      return await response.json();
-    },
-    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
-  });
-  
-  // Busca anexos de projeto
-  const {
-    data: projectAttachments = [],
-    isLoading: projectLoading,
-    isError: projectError,
-    refetch: refetchProjectAttachments,
-  } = useQuery({
-    queryKey: ["/api/attachments/projects"],
-    queryFn: async () => {
-      // Se o projectId for específico, filtra os resultados no cliente
-      let url = '/api/attachments/projects';
-      
-      if (projectId !== 'all') {
-        url = `/api/attachments/projects/${projectId}`;
-      }
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
-        if (response.status === 401) {
-          console.warn('Não autenticado ao carregar anexos de projetos, retornando lista vazia');
-          return [];
-        }
-        throw new Error('Falha ao carregar anexos de projetos');
-      }
-      
-      return await response.json();
-    },
-    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
-  });
-  
-  // Busca anexos de tarefas
-  const {
-    data: taskAttachments = [],
-    isLoading: taskLoading,
-    isError: taskError,
-    refetch: refetchTaskAttachments,
-  } = useQuery({
-    queryKey: ["/api/attachments/tasks"],
-    queryFn: async () => {
-      // Obtém todos os anexos de tarefas
-      const response = await fetch('/api/attachments/tasks');
-      if (!response.ok) {
-        // Se for erro de autenticação (401), retornamos um array vazio em vez de lançar um erro
-        if (response.status === 401) {
-          console.warn('Não autenticado ao carregar anexos de tarefas, retornando lista vazia');
-          return [];
-        }
-        throw new Error('Falha ao carregar anexos de tarefas');
-      }
-      
-      const attachments = await response.json();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [selectedClient, setSelectedClient] = useState<string | number | null>("all");
+  const [selectedProject, setSelectedProject] = useState<string | number | null>("all");
 
-      // Busca títulos das tarefas para melhorar a exibição
-      const tasksResponse = await fetch('/api/tasks');
-      if (tasksResponse.ok) {
-        const tasks = await tasksResponse.json();
-        // Cria um mapa de id -> título para eficiência
-        const taskMap = tasks.reduce((map: any, task: any) => {
-          map[task.id] = task.title;
-          return map;
-        }, {});
-        
-        // Adiciona o título da tarefa a cada anexo
-        return attachments.map((att: any) => ({
-          ...att,
-          task_title: taskMap[att.task_id] || 'Tarefa não encontrada'
-        }));
-      }
-      
-      return attachments;
-    },
-    // A opção onError foi movida para um evento de useEffect, pois ela não é suportada no TanStack Query v5
-  });
-  
-  // Carrega metadados completos para cada anexo
-  useEffect(() => {
-    // Aqui poderia ter uma lógica para carregar dados adicionais como thumbnails
-    // ou metadados mais detalhados para cada anexo
-  }, [clientAttachments, projectAttachments, taskAttachments]);
-  
-  // Unifica os anexos em um único array com tipagem consistente
-  const unifiedAttachments: UnifiedAttachment[] = [
-    ...(Array.isArray(clientAttachments) ? clientAttachments.map((att: any) => ({
-      ...att,
-      type: 'client' as const,
-      entity_id: att.client_id,
-      entity_name: Array.isArray(clients) ? clients.find((c: any) => c.id === att.client_id)?.name || 'Cliente não encontrado' : `Cliente ${att.client_id}`,
-      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
-    })) : []),
-    ...(Array.isArray(projectAttachments) ? projectAttachments.map((att: any) => ({
-      ...att,
-      type: 'project' as const,
-      entity_id: att.project_id,
-      entity_name: Array.isArray(projects) ? projects.find((p: any) => p.id === att.project_id)?.name || 'Projeto não encontrado' : `Projeto ${att.project_id}`,
-      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
-    })) : []),
-    ...(Array.isArray(taskAttachments) ? taskAttachments.map((att: any) => ({
-      ...att,
-      type: 'task' as const,
-      entity_id: att.task_id,
-      entity_name: att.title || `Tarefa ${att.task_id}`,
-      tags: att.tags ? (typeof att.tags === 'string' ? att.tags.split(',') : att.tags) : null,
-    })) : [])
-  ];
-  
-  // Filtra os anexos com base nos critérios selecionados
-  const filteredAttachments = unifiedAttachments.filter(att => {
-    // Filtrar por cliente
-    if (clientId !== 'all') {
-      if (att.type === 'client' && att.entity_id.toString() !== clientId) {
-        return false;
-      }
-      
-      if (att.type === 'project' && Array.isArray(projects)) {
-        const project = projects.find((p: any) => p.id === att.entity_id);
-        if (!project || project.client_id?.toString() !== clientId) {
-          return false;
-        }
-      }
-      
-      if (att.type === 'task') {
-        // Aqui precisaria de uma lógica para relacionar tarefas com clientes
-        // Por exemplo, através do projeto vinculado à tarefa
-        // const task = tasks.find(t => t.id === att.entity_id);
-        // if (!task || task.project.client_id.toString() !== clientId) {
-        //   return false;
-        // }
-      }
-    }
-    
-    // Filtrar por projeto
-    if (projectId !== 'all') {
-      if (att.type === 'project' && att.entity_id.toString() !== projectId) {
-        return false;
-      }
-      
-      if (att.type === 'task') {
-        // Simplificando por enquanto, sem verificação de projeto vinculado à tarefa
-        // const task = tasks.find(t => t.id === att.entity_id);
-        // if (!task || task.project_id.toString() !== projectId) {
-        //   return false;
-        // }
-      }
-      
-      if (att.type === 'client') {
-        return false; // Anexos de clientes não estão diretamente vinculados a projetos
-      }
-    }
-    
-    // Filtrar por tipo de entidade
-    if (attachmentType !== 'all' && att.type !== attachmentType) {
-      return false;
-    }
-    
-    // Filtrar por termo de busca (no nome do arquivo, descrição ou tags)
-    if (searchTerm && searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase();
-      const nameMatch = att.file_name.toLowerCase().includes(term);
-      const descMatch = att.description ? att.description.toLowerCase().includes(term) : false;
-      const tagsMatch = att.tags ? att.tags.some(tag => tag.toLowerCase().includes(term)) : false;
-      const entityMatch = att.entity_name ? att.entity_name.toLowerCase().includes(term) : false;
-      
-      if (!nameMatch && !descMatch && !tagsMatch && !entityMatch) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-  
-  // Obtém o ícone apropriado com base no tipo de arquivo
-  const getFileIcon = (fileType: string): JSX.Element => {
-    const size = 32;
-    
-    if (fileType.startsWith('image/')) {
-      return <FileImage size={size} className="text-blue-500" />;
-    }
-    if (fileType.includes('pdf')) {
-      return <FileText size={size} className="text-red-500" />;
-    }
-    if (fileType.includes('excel') || fileType.includes('spreadsheet')) {
-      return <FileSpreadsheet size={size} className="text-green-500" />;
-    }
-    if (fileType.includes('zip') || fileType.includes('compressed')) {
-      return <FileArchive size={size} className="text-purple-500" />;
-    }
-    if (fileType.startsWith('audio/')) {
-      return <FileAudio size={size} className="text-yellow-500" />;
-    }
-    if (fileType.startsWith('video/')) {
-      return <FileVideo size={size} className="text-pink-500" />;
-    }
-    if (fileType.includes('word') || fileType.includes('document')) {
-      return <FileText size={size} className="text-sky-500" />;
-    }
-    
-    return <FileIcon size={size} className="text-gray-500" />;
-  };
-  
-  // Mutation para excluir um anexo
-  const deleteMutation = useMutation({
-    mutationFn: async ({ id, type }: { id: number; type: string }) => {
-      let endpoint = '';
-      
-      switch (type) {
-        case 'client':
-          endpoint = `/api/client-attachments/${id}`;
-          break;
-        case 'project':
-          endpoint = `/api/project-attachments/${id}`;
-          break;
-        case 'task':
-          endpoint = `/api/task-attachments/${id}`;
-          break;
-        default:
-          throw new Error('Tipo de anexo inválido');
-      }
-      
-      await apiRequest('DELETE', endpoint);
-      return { id, type };
-    },
-    onSuccess: ({ type }) => {
+  // Consulta para buscar todos os anexos
+  const { data: attachments, isLoading: isLoadingAttachments } = useQuery<{
+    clients: ClientAttachment[],
+    projects: ProjectAttachment[],
+    tasks: TaskAttachment[]
+  }>({
+    queryKey: ['/api/attachments/all'],
+    onError: (error) => {
       toast({
-        title: "Arquivo excluído",
-        description: "O arquivo foi excluído com sucesso",
-        variant: "default",
-        className: "bg-green-50 text-green-900 border-green-200",
-      });
-      
-      // Invalidar a consulta para recarregar os dados
-      switch (type) {
-        case 'client':
-          queryClient.invalidateQueries({ queryKey: ["/api/client-attachments"] });
-          break;
-        case 'project':
-          queryClient.invalidateQueries({ queryKey: ["/api/project-attachments"] });
-          break;
-        case 'task':
-          queryClient.invalidateQueries({ queryKey: ["/api/task-attachments"] });
-          break;
-      }
-      
-      // Limpar seleção de arquivos
-      setSelectedFiles(prev => prev.filter(id => id !== id));
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao excluir arquivo",
-        description: error.message,
+        title: "Erro ao carregar anexos",
+        description: "Não foi possível carregar os anexos. Tente novamente mais tarde.",
         variant: "destructive",
       });
-    },
+      console.error("Erro ao buscar anexos:", error);
+    }
+  });
+
+  // Buscar dados de clientes para mostrar nomes
+  const { data: clients } = useQuery({
+    queryKey: ['/api/clients'],
+  });
+
+  // Buscar dados de projetos para mostrar nomes
+  const { data: projects } = useQuery({
+    queryKey: ['/api/projects'],
   });
   
-  // Mutation para upload de arquivos
-  const uploadMutation = useMutation({
-    mutationFn: async ({
-      entityType,
-      entityId,
-      formData
-    }: {
-      entityType: 'client' | 'project' | 'task';
-      entityId: string;
-      formData: FormData;
-    }) => {
-      // Constrói o endpoint correto baseado no tipo de entidade
-      const endpoint = `/api/attachments/${entityType}s/${entityId}`;
-      
-      const response = await apiRequest('POST', endpoint, formData, {
-        // Remove os headers padrão para que o navegador configure corretamente o Content-Type
-        // para FormData com boundary apropriado para upload de arquivos
-        headers: {},
-      });
-      
+  // Buscar dados de tarefas para mostrar nomes
+  const { data: tasks } = useQuery({
+    queryKey: ['/api/tasks'],
+  });
+
+  // Buscar dados de usuários para mostrar nomes
+  const { data: users } = useQuery({
+    queryKey: ['/api/users'],
+  });
+
+  // Mutation para excluir um anexo
+  const deleteMutation = useMutation({
+    mutationFn: async ({ type, entityId, attachmentId }: { type: string, entityId: number, attachmentId: number }) => {
+      const response = await apiRequest('DELETE', `/api/attachments/${type}s/${entityId}/${attachmentId}`);
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao fazer upload do arquivo');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao excluir anexo');
       }
-      
       return await response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Upload concluído",
-        description: "Os arquivos foram enviados com sucesso",
+        title: "Anexo excluído",
+        description: "O anexo foi excluído com sucesso.",
         variant: "default",
-        className: "bg-green-50 text-green-900 border-green-200",
+        className: "bg-green-100 border-green-400 text-green-900",
       });
       
-      // Invalidar as consultas para recarregar os dados
-      queryClient.invalidateQueries({ queryKey: ["/api/attachments/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/attachments/projects"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/attachments/tasks"] });
-      
-      // Invalidar também as consultas específicas
-      if (clientId !== 'all') {
-        queryClient.invalidateQueries({ queryKey: ["/api/attachments/clients", clientId] });
-      }
-      
-      if (projectId !== 'all') {
-        queryClient.invalidateQueries({ queryKey: ["/api/attachments/projects", projectId] });
-      }
-      
-      // Forçar o recarregamento imediato dos dados
-      refetchAttachments();
-      
-      setUploading(false);
-      setUploadProgress(0);
-      
-      // Limpar o input de arquivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // Forçar recarga dos dados após upload bem-sucedido
-      setTimeout(() => {
-        refetchAttachments();
-      }, 500);
+      // Atualizar a lista de anexos
+      queryClient.invalidateQueries({ queryKey: ['/api/attachments/all'] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro no upload",
-        description: error.message,
+        title: "Erro ao excluir anexo",
+        description: error.message || "Ocorreu um erro ao excluir o anexo.",
         variant: "destructive",
       });
-      
-      setUploading(false);
-      setUploadProgress(0);
-    },
+    }
   });
-  
-  // Gerencia o upload de arquivos
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    
-    // Verifica se temos pelo menos um tipo de entidade e ID para associar o arquivo
-    let entityType: 'client' | 'project' | 'task';
-    let entityId: string;
-    
-    if (attachmentType === 'client' && clientId !== 'all') {
-      entityType = 'client';
-      entityId = clientId;
-    } else if (attachmentType === 'project' && projectId !== 'all') {
-      entityType = 'project';
-      entityId = projectId;
-    } else if (clientId !== 'all') { 
-      // Se um cliente específico estiver selecionado, usá-lo como padrão
-      entityType = 'client';
-      entityId = clientId;
-    } else if (projectId !== 'all') {
-      // Se um projeto específico estiver selecionado, usá-lo como padrão
-      entityType = 'project';
-      entityId = projectId;
-    } else {
-      // Se nenhuma entidade for selecionada, mostrar mensagem de erro
-      toast({
-        title: "Seleção necessária",
-        description: "Por favor, selecione um cliente ou projeto para associar o arquivo",
-        variant: "destructive",
-      });
-      return;
+
+  // Função para processar anexos e normalizar dados
+  const processAttachments = (): UnifiedAttachment[] => {
+    if (!attachments || !clients || !projects || !tasks || !users) return [];
+
+    const clientMap = new Map(clients?.map((client: any) => [client.id, client]) || []);
+    const projectMap = new Map(projects?.map((project: any) => [project.id, project]) || []);
+    const taskMap = new Map(tasks?.map((task: any) => [task.id, task]) || []);
+    const userMap = new Map(users?.map((user: any) => [user.id, user]) || []);
+
+    let allAttachments: UnifiedAttachment[] = [];
+
+    // Processar anexos de clientes
+    if (attachments.clients) {
+      allAttachments = [
+        ...allAttachments,
+        ...attachments.clients.map(att => ({
+          ...att,
+          type: 'client' as const,
+          entity_id: att.client_id,
+          entity_name: clientMap.get(att.client_id)?.name || `Cliente ${att.client_id}`,
+          uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+        }))
+      ];
     }
-    
-    setUploading(true);
-    setUploadProgress(10);
-    
-    const formData = new FormData();
-    
-    // Adiciona o arquivo ao FormData - importante: nosso backend espera um único arquivo com o campo 'file'
-    formData.append('file', files[0]);
-    
-    // Adiciona descrição ou informações adicionais se necessário
-    if (user) {
-      formData.append('description', `Arquivo enviado por ${user.name}`);
+
+    // Processar anexos de projetos
+    if (attachments.projects) {
+      allAttachments = [
+        ...allAttachments,
+        ...attachments.projects.map(att => ({
+          ...att,
+          type: 'project' as const,
+          entity_id: att.project_id,
+          entity_name: projectMap.get(att.project_id)?.name || `Projeto ${att.project_id}`,
+          uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+        }))
+      ];
     }
+
+    // Processar anexos de tarefas
+    if (attachments.tasks) {
+      allAttachments = [
+        ...allAttachments,
+        ...attachments.tasks.map(att => ({
+          ...att,
+          type: 'task' as const,
+          entity_id: att.task_id,
+          entity_name: taskMap.get(att.task_id)?.title || `Tarefa ${att.task_id}`,
+          uploader: att.uploaded_by ? userMap.get(att.uploaded_by) : null,
+          uploaded_at: att.created_at || att.upload_date || new Date().toISOString()
+        }))
+      ];
+    }
+
+    // Ordenar por data de upload (mais recente primeiro)
+    return allAttachments.sort((a, b) => 
+      new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+    );
+  };
+
+  // Filtrar anexos com base no termo de busca e filtros
+  const filteredAttachments = (): UnifiedAttachment[] => {
+    const processed = processAttachments();
+    if (!processed.length) return [];
+
+    let filtered = processed;
+
+    // Filtrar por termo de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        att => 
+          att.file_name.toLowerCase().includes(term) || 
+          (att.entity_name && att.entity_name.toLowerCase().includes(term)) ||
+          (att.description && att.description.toLowerCase().includes(term)) ||
+          (att.tags && att.tags.some(tag => tag.toLowerCase().includes(term)))
+      );
+    }
+
+    // Filtrar por tipo de anexo
+    if (activeTab !== "all") {
+      filtered = filtered.filter(att => att.type === activeTab);
+    }
+
+    // Aplicar filtros adicionais
+    if (filter === "images") {
+      filtered = filtered.filter(att => att.file_type.startsWith('image/'));
+    } else if (filter === "documents") {
+      filtered = filtered.filter(att => 
+        att.file_type.includes('pdf') || 
+        att.file_type.includes('word') || 
+        att.file_type.includes('document') ||
+        att.file_type.includes('text') ||
+        att.file_type.includes('sheet')
+      );
+    } else if (filter === "media") {
+      filtered = filtered.filter(att => 
+        att.file_type.startsWith('video/') || 
+        att.file_type.startsWith('audio/')
+      );
+    }
+
+    if (!clients || !projects || !tasks) return filtered;
     
-    setUploadProgress(30);
-    
-    // Simula um progresso gradual durante o upload
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return prev;
+    const clientMap = new Map(clients?.map((client: any) => [client.id, client]) || []);
+    const projectMap = new Map(projects?.map((project: any) => [project.id, project]) || []);
+    const taskMap = new Map(tasks?.map((task: any) => [task.id, task]) || []);
+
+    // Filtrar por cliente selecionado
+    if (selectedClient && selectedClient !== "all") {
+      const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
+      filtered = filtered.filter(att => {
+        if (att.type === 'client') {
+          return att.entity_id === clientId;
+        } else if (att.type === 'project') {
+          const project = projectMap.get(att.entity_id);
+          return project && project.client_id === clientId;
+        } else if (att.type === 'task') {
+          const task = taskMap.get(att.entity_id);
+          if (task && task.project_id) {
+            const project = projectMap.get(task.project_id);
+            return project && project.client_id === clientId;
+          }
         }
-        return prev + 10;
-      });
-    }, 500);
-    
-    try {
-      await uploadMutation.mutateAsync({
-        entityType,
-        entityId,
-        formData
-      });
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
-      // Atualizar a lista de anexos após o upload com sucesso
-      refetchAttachments();
-    } catch (error) {
-      clearInterval(progressInterval);
-      console.error('Erro no upload:', error);
-      
-      toast({
-        title: "Erro no upload",
-        description: "Não foi possível enviar o arquivo.",
-        variant: "destructive",
+        return false;
       });
     }
+
+    // Filtrar por projeto selecionado
+    if (selectedProject && selectedProject !== "all") {
+      const projectId = typeof selectedProject === 'number' ? selectedProject : parseInt(selectedProject);
+      filtered = filtered.filter(att => {
+        if (att.type === 'project') {
+          return att.entity_id === projectId;
+        } else if (att.type === 'task') {
+          const task = taskMap.get(att.entity_id);
+          return task && task.project_id === projectId;
+        }
+        return false;
+      });
+    }
+
+    return filtered;
   };
-  
-  // Função para refrescar todos os dados de anexos
-  const refetchAttachments = useCallback(() => {
-    refetchClientAttachments();
-    refetchProjectAttachments();
-    refetchTaskAttachments();
-  }, [refetchClientAttachments, refetchProjectAttachments, refetchTaskAttachments]);
-  
-  // Configura evento de arrastar e soltar arquivos
-  useEffect(() => {
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(true);
-    };
-    
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-    };
-    
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      
-      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-        handleFileUpload(e.dataTransfer.files);
-      }
-    };
-    
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
-    
-    return () => {
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
-    };
-  }, [clientId, projectId, user]);
-  
-  // Função para baixar um arquivo
+
+  // Função para obter o ícone correto com base no tipo de arquivo
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) return <FileImage className="w-8 h-8 text-blue-500" />;
+    if (fileType.includes('pdf') || fileType.includes('text')) return <FileText className="w-8 h-8 text-red-500" />;
+    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
+    if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className="w-8 h-8 text-purple-500" />;
+    if (fileType.startsWith('audio/')) return <FileAudio className="w-8 h-8 text-yellow-500" />;
+    if (fileType.startsWith('video/')) return <FileVideo className="w-8 h-8 text-pink-500" />;
+    return <FileIcon className="w-8 h-8 text-gray-500" />;
+  };
+
+  // Função para lidar com o download de um arquivo
   const handleDownload = (attachment: UnifiedAttachment) => {
-    // Criação de um link temporário para download
-    const link = document.createElement('a');
-    link.href = attachment.file_url;
-    link.download = attachment.file_name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const url = `/api/attachments/${attachment.type}s/${attachment.entity_id}/download/${attachment.id}`;
+    // Criar um link temporário para download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = attachment.file_name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
-  
-  // Função para excluir um arquivo
+
+  // Função para lidar com a exclusão de um anexo
   const handleDelete = (attachment: UnifiedAttachment) => {
-    deleteMutation.mutate({ id: attachment.id, type: attachment.type });
-  };
-  
-  // Função para visualizar um arquivo
-  const handleView = (attachment: UnifiedAttachment) => {
-    window.open(attachment.file_url, '_blank');
-  };
-  
-  // Função para selecionar/deselecionar um arquivo
-  const handleSelectFile = (id: number, selected: boolean) => {
-    if (selected) {
-      setSelectedFiles(prev => [...prev, id]);
-    } else {
-      setSelectedFiles(prev => prev.filter(fileId => fileId !== id));
-    }
-  };
-  
-  // Função para excluir arquivos selecionados
-  const handleDeleteSelected = () => {
-    const selectedAttachments = unifiedAttachments.filter(att => selectedFiles.includes(att.id));
-    
-    // Confirmação de exclusão
-    if (window.confirm(`Tem certeza que deseja excluir ${selectedFiles.length} arquivos?`)) {
-      // Excluir cada arquivo selecionado
-      selectedAttachments.forEach(att => {
-        deleteMutation.mutate({ id: att.id, type: att.type });
+    if (confirm(`Tem certeza que deseja excluir o anexo "${attachment.file_name}"?`)) {
+      deleteMutation.mutate({
+        type: attachment.type,
+        entityId: attachment.entity_id,
+        attachmentId: attachment.id
       });
-      
-      // Limpar seleção
-      setSelectedFiles([]);
     }
   };
-  
-  // Determina o status de loading
-  const isLoading = clientLoading || projectLoading || taskLoading;
-  
+
+  // Verificar se está carregando algum dado necessário
+  const isLoading = isLoadingAttachments || 
+                   !clients || 
+                   !projects || 
+                   !tasks || 
+                   !users;
+
   return (
-    <div className={`relative min-h-screen`}>
-      {/* Área de upload por drag-and-drop */}
-      {isDragging && (
-        <div className="fixed inset-0 bg-primary-100/90 z-50 flex items-center justify-center">
-          <div className="bg-white p-10 rounded-lg shadow-xl text-center">
-            <Upload className="h-16 w-16 mx-auto text-primary mb-4" />
-            <h2 className="text-2xl font-semibold">Solte os arquivos aqui</h2>
-            <p className="mt-2 text-gray-500">Os arquivos serão enviados para a entidade selecionada</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Arquivos</h1>
+          <p className="text-muted-foreground">
+            Visualize, organize e gerencie todos os arquivos do sistema em um só lugar.
+          </p>
         </div>
-      )}
-      
-      {/* Indicador de progresso do upload */}
-      {uploading && (
-        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-lg p-4 z-50">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">Enviando arquivos...</h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setUploading(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <Progress value={uploadProgress} className="mb-2" />
-          <p className="text-sm text-gray-500">{uploadProgress}% concluído</p>
+      </div>
+
+      {/* Filtros e busca */}
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative w-full md:w-96">
+          <Input
+            placeholder="Buscar por nome de arquivo, cliente ou projeto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          <FileIcon className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
         </div>
-      )}
-      
-      <div className="container mx-auto py-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Arquivos</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Gerencie todos os arquivos do sistema em um único lugar
-            </p>
-          </div>
-          
-          <div className="mt-4 md:mt-0 flex gap-2">
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => setView(view === 'grid' ? 'list' : 'grid')}
-              className="flex items-center gap-1"
-            >
-              {view === 'grid' ? (
-                <>
-                  <List className="h-4 w-4" />
-                  Lista
-                </>
-              ) : (
-                <>
-                  <Grid className="h-4 w-4" />
-                  Grade
-                </>
-              )}
-            </Button>
-            
-            <Button 
-              size="sm"
-              onClick={() => setIsUploadFormOpen(true)}
-              className="flex items-center gap-1"
-            >
-              <Upload className="h-4 w-4" />
-              Enviar arquivo
-            </Button>
-            
-            {selectedFiles.length > 0 && (
-              <Button 
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteSelected}
-                className="flex items-center gap-1"
-              >
-                <Trash2 className="h-4 w-4" />
-                Excluir ({selectedFiles.length})
-              </Button>
-            )}
-          </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Label htmlFor="filter-type" className="sr-only">Tipo de arquivo</Label>
+          <Select
+            value={filter}
+            onValueChange={setFilter}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Tipo de arquivo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os arquivos</SelectItem>
+              <SelectItem value="images">Apenas imagens</SelectItem>
+              <SelectItem value="documents">Documentos</SelectItem>
+              <SelectItem value="media">Mídia (Áudio/Vídeo)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
-          <div className="md:col-span-12">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar arquivos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-              
-              <Select
-                value={clientId}
-                onValueChange={setClientId}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Todos os clientes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os clientes</SelectItem>
-                  {Array.isArray(clients) && clients.map((client: any) => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select
-                value={projectId}
-                onValueChange={setProjectId}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Todos os projetos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os projetos</SelectItem>
-                  {Array.isArray(projects) && projects.map((project: any) => (
+      </div>
+
+      {/* Filtros adicionais por cliente e projeto */}
+      <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="flex-1">
+          <Label htmlFor="filter-client">Filtrar por cliente</Label>
+          <Select 
+            value={selectedClient?.toString() || "all"}
+            onValueChange={(value) => {
+              setSelectedClient(value === "all" ? "all" : parseInt(value));
+              // Resetar o projeto selecionado quando o cliente muda
+              setSelectedProject("all");
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Todos os clientes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os clientes</SelectItem>
+              {clients?.map((client: any) => (
+                <SelectItem key={client.id} value={client.id.toString()}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1">
+          <Label htmlFor="filter-project">Filtrar por projeto</Label>
+          <Select 
+            value={selectedProject?.toString() || "all"}
+            onValueChange={(value) => setSelectedProject(value === "all" ? "all" : parseInt(value))}
+            disabled={selectedClient === "all"}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={selectedClient !== "all" ? "Selecione um projeto" : "Selecione um cliente primeiro"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os projetos</SelectItem>
+              {projects && selectedClient !== "all" && 
+                projects
+                  .filter((project: any) => {
+                    const clientId = typeof selectedClient === 'number' ? selectedClient : parseInt(selectedClient);
+                    return project.client_id === clientId;
+                  })
+                  .map((project: any) => (
                     <SelectItem key={project.id} value={project.id.toString()}>
                       {project.name}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select
-                value={attachmentType}
-                onValueChange={setAttachmentType}
-              >
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  <SelectItem value="client">Clientes</SelectItem>
-                  <SelectItem value="project">Projetos</SelectItem>
-                  <SelectItem value="task">Tarefas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                  ))
+              }
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      {/* Tabs para filtrar por tipo de entidade */}
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-3 md:w-[400px]">
+          <TabsTrigger value="all">Todos</TabsTrigger>
+          <TabsTrigger value="client">Clientes</TabsTrigger>
+          <TabsTrigger value="project">Projetos</TabsTrigger>
+        </TabsList>
         
-        {/* Exibição dos arquivos */}
-        <div className="bg-white p-6 rounded-lg border">
-          <FilesList
-            attachments={filteredAttachments}
+        <TabsContent value="all" className="mt-6">
+          <AttachmentsList 
+            attachments={filteredAttachments()} 
             isLoading={isLoading}
             onDownload={handleDownload}
             onDelete={handleDelete}
             getFileIcon={getFileIcon}
-            view={view}
-            selectedFiles={selectedFiles}
-            onSelect={handleSelectFile}
           />
-        </div>
+        </TabsContent>
+        
+        <TabsContent value="client" className="mt-6">
+          <AttachmentsList 
+            attachments={filteredAttachments()} 
+            isLoading={isLoading}
+            onDownload={handleDownload}
+            onDelete={handleDelete}
+            getFileIcon={getFileIcon}
+          />
+        </TabsContent>
+        
+        <TabsContent value="project" className="mt-6">
+          <AttachmentsList 
+            attachments={filteredAttachments()} 
+            isLoading={isLoading}
+            onDownload={handleDownload}
+            onDelete={handleDelete}
+            getFileIcon={getFileIcon}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// Componente para renderizar a lista de arquivos
+interface FilesListProps {
+  attachments: UnifiedAttachment[];
+  isLoading: boolean;
+  onDownload: (attachment: UnifiedAttachment) => void;
+  onDelete: (attachment: UnifiedAttachment) => void;
+  getFileIcon: (fileType: string) => JSX.Element;
+}
+
+function FilesList({ attachments, isLoading, onDownload, onDelete, getFileIcon }: FilesListProps) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
-      
-      {/* Input oculto para upload de arquivos */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        multiple
-        onChange={(e) => handleFileUpload(e.target.files)}
-      />
-      
-      {/* Formulário de upload de arquivos */}
-      <FileUploadForm
-        open={isUploadFormOpen}
-        onClose={() => setIsUploadFormOpen(false)}
-        onSuccess={() => {
-          refetchAttachments();
-          toast({
-            title: "Upload concluído",
-            description: "O arquivo foi enviado com sucesso",
-            variant: "default",
-            className: "bg-green-50 text-green-900 border-green-200",
-          });
-        }}
-        initialEntityType={clientId !== 'all' ? 'client' : projectId !== 'all' ? 'project' : 'client'}
-        initialEntityId={clientId !== 'all' ? clientId : projectId !== 'all' ? projectId : 'all'}
-      />
+    );
+  }
+
+  if (attachments.length === 0) {
+    return (
+      <div className="text-center p-8 border rounded-lg bg-gray-50">
+        <FileIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-semibold text-gray-900">Nenhum arquivo encontrado</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Não há arquivos disponíveis com os filtros selecionados.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {attachments.map((attachment) => (
+        <Card key={`${attachment.type}-${attachment.id}`} className="overflow-hidden transition-all hover:shadow-md">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                {getFileIcon(attachment.file_type)}
+                <div>
+                  <CardTitle className="text-base truncate max-w-[200px]">{attachment.file_name}</CardTitle>
+                  <CardDescription className="text-xs">
+                    {formatFileSize(attachment.file_size)} • {attachment.file_type.split('/')[1].toUpperCase()}
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge 
+                variant="outline"
+                className={cn(
+                  "text-xs uppercase",
+                  attachment.type === 'client' && "bg-blue-50 text-blue-700 border-blue-200",
+                  attachment.type === 'project' && "bg-green-50 text-green-700 border-green-200",
+                  attachment.type === 'task' && "bg-amber-50 text-amber-700 border-amber-200",
+                )}
+              >
+                {attachment.type === 'client' ? 'Cliente' : 
+                 attachment.type === 'project' ? 'Projeto' : 'Tarefa'}
+              </Badge>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="p-4 pt-2">
+            <div className="mt-1">
+              <p className="text-sm font-medium">{attachment.entity_name}</p>
+              {attachment.description && (
+                <p className="text-sm text-gray-500 mt-1 truncate">{attachment.description}</p>
+              )}
+              {attachment.tags && attachment.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {attachment.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">{tag}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-3 flex items-center text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                {attachment.uploader ? (
+                  <>
+                    <UserAvatar 
+                      user={attachment.uploader} 
+                      className="h-5 w-5" 
+                    />
+                    <span>{attachment.uploader.name}</span>
+                  </>
+                ) : (
+                  "Sistema"
+                )}
+              </span>
+              <span className="mx-1">•</span>
+              <span>
+                {format(new Date(attachment.uploaded_at), "dd MMM yyyy", { locale: ptBR })}
+              </span>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="p-0 border-t">
+            <div className="grid grid-cols-2 w-full divide-x">
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10"
+                onClick={() => onDownload(attachment)}
+              >
+                <DownloadIcon className="mr-1 h-4 w-4" />
+                <span>Download</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="rounded-none h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(attachment)}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                <span>Excluir</span>
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   );
 }

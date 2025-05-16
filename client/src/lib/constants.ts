@@ -41,11 +41,6 @@ export const SIDEBAR_ITEMS = [
     path: "/files",
     name: "Arquivos",
     icon: "file"
-  },
-  {
-    path: "/files-aprimorado",
-    name: "Arquivos Aprimorados",
-    icon: "file-plus"
   }
 ];
 

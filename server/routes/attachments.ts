@@ -22,42 +22,6 @@ router.get('/all', async (req, res) => {
   }
 });
 
-// Route to get all client attachments
-router.get('/clients', async (req, res) => {
-  try {
-    // Get all client attachments (without filter)
-    const attachments = await storage.getAllClientAttachments();
-    res.json(attachments);
-  } catch (error) {
-    console.error('Error getting all client attachments:', error);
-    res.status(500).json({ message: 'Error getting client attachments', error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// Route to get all project attachments
-router.get('/projects', async (req, res) => {
-  try {
-    // Get all project attachments (without filter)
-    const attachments = await storage.getAllProjectAttachments();
-    res.json(attachments);
-  } catch (error) {
-    console.error('Error getting all project attachments:', error);
-    res.status(500).json({ message: 'Error getting project attachments', error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// Route to get all task attachments
-router.get('/tasks', async (req, res) => {
-  try {
-    // Get all task attachments (without filter)
-    const attachments = await storage.getAllTaskAttachments();
-    res.json(attachments);
-  } catch (error) {
-    console.error('Error getting all task attachments:', error);
-    res.status(500).json({ message: 'Error getting task attachments', error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
 // Client Attachments
 // Route to get client attachments
 router.get('/clients/:clientId', async (req, res) => {

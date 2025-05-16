@@ -140,9 +140,6 @@ export interface IStorage {
   createClientAttachment(attachment: InsertClientAttachment): Promise<ClientAttachment>;
   deleteClientAttachment(id: number): Promise<boolean>;
   getAllAttachments(): Promise<{clients: ClientAttachment[], projects: ProjectAttachment[], tasks: TaskAttachment[]}>;
-  getAllClientAttachments(): Promise<ClientAttachment[]>;
-  getAllProjectAttachments(): Promise<ProjectAttachment[]>;
-  getAllTaskAttachments(): Promise<TaskAttachment[]>;
   
   
   // Client Interactions
@@ -2385,36 +2382,6 @@ export class DatabaseStorage implements IStorage {
       projects,
       tasks
     };
-  }
-  
-  // Get all client attachments
-  async getAllClientAttachments(): Promise<ClientAttachment[]> {
-    try {
-      return await db.select().from(clientAttachments);
-    } catch (error) {
-      console.error('Error getting all client attachments:', error);
-      return [];
-    }
-  }
-  
-  // Get all project attachments
-  async getAllProjectAttachments(): Promise<ProjectAttachment[]> {
-    try {
-      return await db.select().from(projectAttachments);
-    } catch (error) {
-      console.error('Error getting all project attachments:', error);
-      return [];
-    }
-  }
-  
-  // Get all task attachments
-  async getAllTaskAttachments(): Promise<TaskAttachment[]> {
-    try {
-      return await db.select().from(taskAttachments);
-    } catch (error) {
-      console.error('Error getting all task attachments:', error);
-      return [];
-    }
   }
   
   // Client Contacts
