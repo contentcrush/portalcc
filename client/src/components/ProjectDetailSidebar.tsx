@@ -235,11 +235,27 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
+  // Query para verificar se já existe um documento financeiro para o projeto
+  const { data: financialDocuments } = useQuery({
+    queryKey: [`/api/financial-documents/project/${projectId}`],
+    enabled: !!projectId,
+    staleTime: 1 * 60 * 1000, // 1 minuto
+  });
+
   // Mutation para criar um documento financeiro automaticamente quando o projeto atinge o estágio "proposta_aceita"
   const createFinancialDocumentMutation = useMutation({
     mutationFn: async (projectData: any) => {
       if (!projectData || !projectData.client_id || !projectData.id) {
         throw new Error('Dados do projeto incompletos para criar documento financeiro');
+      }
+      
+      // Verifica se já existe um documento financeiro para este projeto
+      const existingDocs = await apiRequest('GET', `/api/financial-documents/project/${projectData.id}`);
+      const existingDocsData = await existingDocs.json();
+      
+      if (existingDocsData && existingDocsData.length > 0) {
+        console.log("Documento financeiro já existe para este projeto. Não será criado um novo.");
+        return null; // Retorna null para indicar que não foi necessário criar
       }
       
       // Calcula a data de vencimento com base no termo de pagamento do projeto
@@ -259,18 +275,63 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       
       return apiRequest('POST', '/api/financial-documents', financialDocumentData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
-      toast({
-        title: "Documento financeiro criado",
-        description: "Um documento financeiro 'A Receber' foi criado para este projeto."
-      });
+    onSuccess: (response) => {
+      if (response) { // Se um novo documento foi criado
+        queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${projectId}`] });
+        toast({
+          title: "Documento financeiro criado",
+          description: "Um documento financeiro 'A Receber' foi criado para este projeto."
+        });
+      }
     },
     onError: (error) => {
       console.error("Erro ao criar documento financeiro:", error);
       toast({
         title: "Erro ao criar documento financeiro",
         description: error.message || "Não foi possível criar o documento financeiro para o projeto.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Mutation para remover documentos financeiros quando o projeto volta para um estágio anterior
+  const removeFinancialDocumentMutation = useMutation({
+    mutationFn: async (projectId: number) => {
+      // Primeiro obtém todos os documentos financeiros do projeto
+      const response = await apiRequest('GET', `/api/financial-documents/project/${projectId}`);
+      const documents = await response.json();
+      
+      // Se não houver documentos, não faz nada
+      if (!documents || documents.length === 0) {
+        return null;
+      }
+      
+      // Remove apenas documentos com status "pending" (não pagos)
+      const pendingDocs = documents.filter((doc: any) => doc.status === 'pending' && !doc.paid);
+      
+      // Executa a exclusão de cada documento pendente
+      const deletePromises = pendingDocs.map((doc: any) => 
+        apiRequest('DELETE', `/api/financial-documents/${doc.id}`)
+      );
+      
+      return Promise.all(deletePromises);
+    },
+    onSuccess: (response) => {
+      if (response) {
+        queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+        queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${projectId}`] });
+        toast({
+          title: "Documentos financeiros removidos",
+          description: "Os documentos financeiros pendentes foram removidos deste projeto."
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Erro ao remover documentos financeiros:", error);
+      toast({
+        title: "Erro ao remover documentos financeiros",
+        description: error.message || "Não foi possível remover os documentos financeiros do projeto.",
         variant: "destructive"
       });
     }

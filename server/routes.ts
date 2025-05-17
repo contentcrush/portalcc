@@ -2133,6 +2133,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch project financial documents" });
     }
   });
+  
+  // Nova rota específica para o frontend buscar documentos por projeto
+  app.get("/api/financial-documents/project/:id", authenticateJWT, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const documents = await storage.getFinancialDocumentsByProject(projectId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching project financial documents:", error);
+      res.status(500).json({ message: "Failed to fetch project financial documents" });
+    }
+  });
 
   app.post("/api/financial-documents", authenticateJWT, requirePermission('manage_financials'), (req, res, next) => {
     // Pré-processamento de data antes da validação
@@ -2175,6 +2187,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao criar documento financeiro:", error);
       res.status(500).json({ message: "Failed to create financial document" });
+    }
+  });
+
+  // Rota para excluir um documento financeiro
+  app.delete("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o documento existe
+      const document = await storage.getFinancialDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Financial document not found" });
+      }
+      
+      // Verificar se o documento já foi pago (não deve ser excluído se já estiver pago)
+      if (document.paid) {
+        return res.status(400).json({ 
+          message: "Cannot delete a paid financial document",
+          details: "Documentos financeiros já pagos não podem ser excluídos"
+        });
+      }
+      
+      // Importação para lidar com eventos de calendário
+      const { removeFinancialDocumentEvents } = await import('./utils/calendarSync');
+      
+      // Remover evento associado do calendário
+      await removeFinancialDocumentEvents(id);
+      
+      // Excluir o documento
+      await storage.deleteFinancialDocument(id);
+      
+      // Notificar usuários sobre atualização financeira
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'delete', 
+        documentId: id,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi removido'
+      });
+      
+      // Notificar sobre atualização do calendário
+      io.emit('calendar_updated', {
+        type: 'calendar_updated',
+        timestamp: new Date().toISOString(),
+        message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+      });
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting financial document:", error);
+      res.status(500).json({ message: "Failed to delete financial document" });
     }
   });
 
