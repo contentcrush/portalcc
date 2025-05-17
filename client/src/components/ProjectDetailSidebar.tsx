@@ -734,6 +734,33 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               {project?.endDate ? <DateDisplay date={project.endDate} /> : 'Não definido'}
             </div>
           </div>
+          
+          {/* Botão de sincronização de datas para documentos financeiros */}
+          {project?.status === 'proposta_aceita' && (
+            <div className="mt-4 flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  if (projectId) {
+                    import('@/components/SyncFinancialDatesButton').then(({SyncFinancialDatesButton}) => {
+                      const syncButton = SyncFinancialDatesButton({projectId});
+                      // Simulando o clique no botão importado
+                      const clickEvent = syncButton.props.onClick;
+                      if (typeof clickEvent === 'function') {
+                        clickEvent();
+                      }
+                    });
+                  }
+                }}
+                className="h-7 px-2 text-xs"
+                title="Sincronizar datas do projeto com documentos financeiros"
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                Sincronizar Docs. Financeiros
+              </Button>
+            </div>
+          )}
         </div>
         
         <div className="mb-8">

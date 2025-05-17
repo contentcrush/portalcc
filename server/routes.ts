@@ -26,6 +26,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register attachments routes
   app.use('/api/attachments', attachmentsRoutes);
+  
+  // Register sync financial routes
+  app.use('/api', syncFinancialRoutes);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
@@ -3801,6 +3804,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     .catch(error => {
       console.error("🤖 Erro ao executar automações iniciais:", error);
     });
+  
+  // Configure sync financial routes with WebSocket servers
+  setupSyncFinancialRoutes(io, wss);
   
   return httpServer;
 }
