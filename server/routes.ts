@@ -990,11 +990,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verificar se houve alteração na data de emissão ou prazo de pagamento
+      const issueDateChanged = req.body.issue_date !== undefined && 
+        (!currentProject.issue_date || 
+         new Date(currentProject.issue_date).toISOString() !== new Date(req.body.issue_date).toISOString());
+      
+      const paymentTermChanged = req.body.payment_term !== undefined && 
+        currentProject.payment_term !== req.body.payment_term;
+      
       // Extrair os membros da equipe e suas funções do corpo da requisição
       const { team_members, team_members_roles, ...projectData } = req.body;
       
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, projectData);
+      
+      // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
+      if (issueDateChanged || paymentTermChanged) {
+        console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
+        // Importar a função de sincronização que implementamos em automation.ts
+        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
+        const syncResult = await syncProjectDatesWithFinancialDocuments(id);
+        console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
+      }
       
       // Processar membros da equipe se fornecidos
       if (team_members) {
@@ -1141,11 +1158,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Verificar se houve alteração na data de emissão ou prazo de pagamento
+      const issueDateChanged = req.body.issue_date !== undefined && 
+        (!currentProject.issue_date || 
+         new Date(currentProject.issue_date).toISOString() !== new Date(req.body.issue_date).toISOString());
+      
+      const paymentTermChanged = req.body.payment_term !== undefined && 
+        currentProject.payment_term !== req.body.payment_term;
+      
       // Extrair os membros da equipe e suas funções do corpo da requisição
       const { team_members, team_members_roles, ...projectData } = req.body;
       
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, projectData);
+      
+      // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
+      if (issueDateChanged || paymentTermChanged) {
+        console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas via PUT: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
+        // Importar a função de sincronização que implementamos em automation.ts
+        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
+        const syncResult = await syncProjectDatesWithFinancialDocuments(id);
+        console.log(`[Sistema] Resultado da sincronização via PUT: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
+      }
       
       // Processar membros da equipe se fornecidos
       if (team_members) {
