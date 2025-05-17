@@ -1496,55 +1496,78 @@ export default function Team() {
         />
       </div>
       
-      {/* Team grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredUsers?.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <User className="h-12 w-12 mx-auto text-gray-300" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Nenhum membro encontrado</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Não encontramos nenhum membro da equipe com os critérios de busca.
-            </p>
-            <Button 
-              onClick={() => {
-                setEditingUser(null);
-                setIsUserDialogOpen(true);
-              }}
-              className="mt-4"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar membro
-            </Button>
-          </div>
-        ) : (
-          filteredUsers?.map((user: any) => (
-            <Card key={user.id} className="overflow-hidden">
-              <CardHeader className="p-0">
-                <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 h-16 relative">
-                  <UserAvatar user={user} className="h-16 w-16 absolute -bottom-8 left-4 border-4 border-white" />
-                  <div className="absolute top-3 right-3">
-                    <Badge variant={
-                      user.role === "admin" ? "destructive" : 
-                      user.role === "manager" ? "default" : 
-                      user.role === "editor" ? "secondary" : 
-                      "outline"
-                    }>
-                      {user.role === "admin" ? "Admin" : 
-                      user.role === "manager" ? "Gestor" : 
-                      user.role === "editor" ? "Editor" : 
-                      "Visualizador"}
-                    </Badge>
-                    {/* Debug info (remover após depuração) */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="mt-1 text-[8px] text-black/50">Role: {user.role}</div>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
+      {/* Tabela Compacta de Membros */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center">
+            <User className="mr-2 h-5 w-5 text-primary" />
+            Lista de Membros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-md">
+            <div className="grid grid-cols-12 gap-4 bg-muted py-3 px-4 border-b text-sm font-medium text-gray-500">
+              <div className="col-span-5 md:col-span-3">Nome</div>
+              <div className="col-span-4 md:col-span-3 hidden md:block">Função</div>
+              <div className="col-span-3 md:col-span-2 hidden md:block">Departamento</div>
+              <div className="col-span-3 md:col-span-2 text-center">Tarefas</div>
+              <div className="col-span-4 md:col-span-2 text-right">Ações</div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredUsers?.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <User className="h-12 w-12 mx-auto text-gray-300" />
+                <h3 className="mt-4 text-lg font-medium text-gray-900">Nenhum membro encontrado</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Não encontramos nenhum membro da equipe com os critérios de busca.
+                </p>
+                <Button 
+                  onClick={() => {
+                    setEditingUser(null);
+                    setIsUserDialogOpen(true);
+                  }}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar membro
+                </Button>
+              </div>
+            ) : (
+              <div className="max-h-[500px] overflow-y-auto">
+                {filteredUsers?.map((user: any) => {
+                  const userTasks = getTasksForUser(user.id) || [];
+                  const pendingTasks = userTasks.filter((t: any) => t.status !== "done");
+                  
+                  return (
+                    <div 
+                      key={user.id} 
+                      className="grid grid-cols-12 gap-4 py-3 px-4 border-b hover:bg-gray-50 items-center text-sm"
+                    >
+                      {/* Nome + Avatar */}
+                      <div className="col-span-5 md:col-span-3 flex items-center">
+                        <UserAvatar user={user} className="h-8 w-8 mr-2" />
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-xs text-gray-500 md:hidden">{user.position || "-"}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Função */}
+                      <div className="col-span-4 md:col-span-3 hidden md:flex items-center">
+                        <Badge variant={
+                          user.role === "admin" ? "default" : 
+                          user.role === "manager" ? "outline" : 
+                          user.role === "editor" ? "secondary" : "outline"
+                        } className="text-xs py-0 px-2">
+                          {user.role === "admin" ? "Admin" : 
+                           user.role === "manager" ? "Gestor" : 
+                           user.role === "editor" ? "Editor" : "Visualizador"}
+                        </Badge>
+                      </div>
               <CardContent className="pt-10 pb-4">
                 <div className="space-y-1 mb-3">
                   <h3 className="font-semibold text-lg">{user.name}</h3>
