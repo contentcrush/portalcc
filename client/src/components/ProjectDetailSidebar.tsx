@@ -259,25 +259,31 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       }
       
       // Calcula a data de vencimento com base no termo de pagamento do projeto
-      // Padrão: 30 dias a partir da data estimada de conclusão do projeto
-      // Se não houver data de conclusão estimada, considera a data atual + 30 dias
+      // A partir da Data de Emissão + Prazo de Pagamento
       let dueDate;
+      let issueDate;
       
-      if (projectData.endDate) {
-        // Usa a data de conclusão do projeto como base para o cálculo
-        dueDate = new Date(projectData.endDate);
-        dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+      // Se o projeto tem data de emissão definida, usa ela
+      if (projectData.issue_date) {
+        issueDate = new Date(projectData.issue_date);
+      } else if (projectData.endDate) {
+        // Se não tem data de emissão, mas tem data de conclusão, usa a data de conclusão
+        issueDate = new Date(projectData.endDate);
       } else {
-        // Sem data de conclusão definida, usa a data atual + prazo de pagamento
-        dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+        // Se não tem nem data de emissão nem de conclusão, usa a data atual
+        issueDate = new Date();
       }
+      
+      // Calcula data de vencimento: Data de Emissão + Prazo de Pagamento
+      dueDate = new Date(issueDate);
+      dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
       
       const financialDocumentData = {
         project_id: projectData.id,
         client_id: projectData.client_id,
         document_type: 'invoice',
         amount: projectData.budget || 0,
+        creation_date: issueDate.toISOString(), // Define a data de emissão da fatura
         due_date: dueDate.toISOString(),
         status: 'pending',
         description: `Fatura referente ao projeto: ${projectData.name} (Prazo: ${projectData.payment_term || 30} dias)`

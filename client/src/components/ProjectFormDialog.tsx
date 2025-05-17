@@ -129,6 +129,7 @@ export function ProjectFormDialog() {
         budget: projectToEdit.budget || undefined,
         startDate: projectToEdit.startDate ? new Date(projectToEdit.startDate) : null,
         endDate: projectToEdit.endDate ? new Date(projectToEdit.endDate) : null,
+        issue_date: projectToEdit.issue_date ? new Date(projectToEdit.issue_date) : null,
         payment_term: projectToEdit.payment_term || 30,
         priority: projectToEdit.priority || "media",
         complexity: projectToEdit.complexity || "moderada",
@@ -646,6 +647,47 @@ export function ProjectFormDialog() {
                       )}
                     />
                   </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="issue_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Data de Emissão</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP", { locale: ptBR })
+                                  ) : (
+                                    <span>Selecione a data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value || undefined}
+                                onSelect={field.onChange}
+                                initialFocus
+                                locale={ptBR}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormDescription>
+                            Data de emissão do documento fiscal (para cálculo do vencimento)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <FormField
