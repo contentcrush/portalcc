@@ -18,6 +18,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
+import syncFinancialRoutes, { setupSyncFinancialRoutes } from "./routes/sync-financial";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
