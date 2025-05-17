@@ -1010,6 +1010,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Função já está importada no topo do arquivo
         const syncResult = await syncProjectDatesWithFinancialDocuments(id);
         console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
+        
+        // Notificar os clientes sobre a atualização
+        io.emit('financial_update', { 
+          type: 'updated', 
+          projectId: id, 
+          message: `Documentos financeiros atualizados com novas datas` 
+        });
       }
       
       // Processar membros da equipe se fornecidos
@@ -1174,10 +1181,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
       if (issueDateChanged || paymentTermChanged) {
         console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas via PUT: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
-        // Importar a função de sincronização que implementamos em automation.ts
-        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
+        // Função já está importada no topo do arquivo
         const syncResult = await syncProjectDatesWithFinancialDocuments(id);
         console.log(`[Sistema] Resultado da sincronização via PUT: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
+        
+        // Notificar os clientes sobre a atualização
+        io.emit('financial_update', { 
+          type: 'updated', 
+          projectId: id, 
+          message: `Documentos financeiros atualizados com novas datas` 
+        });
       }
       
       // Processar membros da equipe se fornecidos
