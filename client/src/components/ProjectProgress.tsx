@@ -30,7 +30,10 @@ export function ProjectProgress({
     // Para status especiais, usamos o status de etapa subjacente
     switch(stageStatus) {
       case 'proposta':
-        progressValue = 10;
+        progressValue = 5;
+        break;
+      case 'proposta_aceita':
+        progressValue = 15;
         break;
       case 'pre_producao':
         progressValue = 30;

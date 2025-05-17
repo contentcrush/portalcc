@@ -76,7 +76,7 @@ export interface DashboardSummary {
   };
 }
 
-export type ProjectStageStatus = 'proposta' | 'pre_producao' | 'producao' | 'pos_revisao' | 'entregue' | 'concluido';
+export type ProjectStageStatus = 'proposta' | 'proposta_aceita' | 'pre_producao' | 'producao' | 'pos_revisao' | 'entregue' | 'concluido';
 
 export type ProjectSpecialStatus = 'atrasado' | 'pausado' | 'cancelado';
 
@@ -84,7 +84,7 @@ export type ProjectStatus = ProjectStageStatus | ProjectSpecialStatus;
 
 // Função para verificar se o status é um status de etapa do projeto
 export function isProjectStage(status: string): status is ProjectStageStatus {
-  return ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(status);
+  return ['proposta', 'proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(status);
 }
 
 // Função para verificar se o status é um status especial
@@ -107,6 +107,7 @@ export type EventType = 'reuniao' | 'gravacao' | 'entrega' | 'edicao' | 'finance
 export const StatusColors = {
   // Project Status
   proposta: 'slate',
+  proposta_aceita: 'blue',
   pre_producao: 'indigo',
   producao: 'yellow',
   pos_revisao: 'purple',
@@ -133,6 +134,7 @@ export const StatusColors = {
 export const StatusLabels = {
   // Project Status
   proposta: 'Proposta',
+  proposta_aceita: 'Proposta Aceita',
   pre_producao: 'Pré-produção',
   producao: 'Produção',
   pos_revisao: 'Pós / Revisão',
