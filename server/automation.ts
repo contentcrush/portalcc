@@ -26,24 +26,24 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
       return { success: false, message: "Projeto sem data de emissão" };
     }
     
-    // Buscar documentos financeiros pendentes relacionados ao projeto
+    // Buscar todos os documentos financeiros relacionados ao projeto
+    // Removido o filtro de paid=false para atualizar todos os documentos
     const financialDocs = await db
       .select()
       .from(financialDocuments)
       .where(
         and(
           eq(financialDocuments.project_id, projectId),
-          eq(financialDocuments.document_type, "invoice"),
-          eq(financialDocuments.paid, false)
+          eq(financialDocuments.document_type, "invoice")
         )
       );
     
     if (financialDocs.length === 0) {
-      console.log(`[Automação] Nenhum documento financeiro pendente encontrado para o projeto ID:${projectId}`);
-      return { success: false, message: "Nenhum documento pendente" };
+      console.log(`[Automação] Nenhum documento financeiro encontrado para o projeto ID:${projectId}`);
+      return { success: false, message: "Nenhum documento encontrado" };
     }
     
-    // Para cada documento financeiro pendente, atualizar as datas
+    // Para cada documento financeiro, atualizar as datas
     for (const doc of financialDocs) {
       // Padroniza a data de emissão para meio-dia (12:00)
       const issueDate = new Date(project.issue_date);
