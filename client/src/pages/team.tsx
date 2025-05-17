@@ -1213,6 +1213,24 @@ export default function Team() {
         </div>
         
         <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input 
+              placeholder="Buscar membros..." 
+              className="pl-9 w-full md:w-64"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <Button variant="default" onClick={() => {
+            setEditingUser(null);
+            setIsUserDialogOpen(true);
+          }}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Novo Membro
+          </Button>
+          
           {isAdmin && (
             <Button 
               variant="outline" 
@@ -1220,16 +1238,9 @@ export default function Team() {
               className={isAdminPanelOpen ? "bg-primary/10" : ""}
             >
               <ShieldCheck className="h-4 w-4 mr-2" />
-              Painel Admin
+              Admin
             </Button>
           )}
-          <Button onClick={() => {
-            setEditingUser(null);
-            setIsUserDialogOpen(true);
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Membro
-          </Button>
         </div>
       </div>
       
