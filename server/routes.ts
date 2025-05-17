@@ -850,29 +850,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Função auxiliar para criar faturas com prazo de pagamento
   async function createProjectInvoice(projectId: number, clientId: number, projectName: string, budget: number, endDate: Date | null, paymentTerm: number = 30) {
-    // Calcular data de vencimento baseada no prazo de pagamento
-    let dueDate = new Date();
+    // Buscar o projeto para obter a data de emissão, se disponível
+    const project = await storage.getProject(projectId);
     
-    if (endDate) {
-      // Se tiver data de fim, usamos ela como referência
-      dueDate = new Date(endDate);
+    // Definir data de emissão
+    let creationDate: Date;
+    
+    if (project && project.issue_date) {
+      // Se o projeto tem data de emissão, usamos ela
+      creationDate = new Date(project.issue_date);
       
-      // Se a data de fim já passou, definir o início como hoje
-      if (dueDate < new Date()) {
-        dueDate = new Date();
-      }
+      // Padroniza a data de emissão para meio-dia (12:00)
+      creationDate = new Date(
+        creationDate.getFullYear(),
+        creationDate.getMonth(),
+        creationDate.getDate(),
+        12, 0, 0
+      );
+      
+      console.log(`[Sistema] Usando data de emissão do projeto: ${creationDate.toISOString()}`);
+    } else {
+      // Se não tem data de emissão, usa a data atual
+      creationDate = new Date();
+      console.log(`[Sistema] Projeto sem data de emissão. Usando data atual: ${creationDate.toISOString()}`);
     }
     
-    // Adicionar dias do prazo de pagamento
+    // Calcular data de vencimento baseada na data de emissão + prazo de pagamento
+    const dueDate = new Date(creationDate);
     dueDate.setDate(dueDate.getDate() + paymentTerm);
     
-    console.log(`[Sistema] Criando fatura com prazo de pagamento de ${paymentTerm} dias. Vencimento: ${dueDate.toISOString()}`);
+    console.log(`[Sistema] Criando fatura com prazo de pagamento de ${paymentTerm} dias.`);
+    console.log(`[Sistema] Data de emissão: ${creationDate.toISOString()}`);
+    console.log(`[Sistema] Data de vencimento: ${dueDate.toISOString()}`);
     
     const financialDocument = await storage.createFinancialDocument({
       project_id: projectId,
       client_id: clientId,
       document_type: "invoice",
       amount: budget,
+      creation_date: creationDate,
       due_date: dueDate,
       status: "pending",
       description: `Fatura referente ao projeto: ${projectName} (Prazo: ${paymentTerm} dias)`
