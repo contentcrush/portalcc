@@ -781,13 +781,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 onClick={() => handleUpdateProjectStatus('proposta')}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
-                  ${['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                  ${['proposta', 'proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                     ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
                   <Check className={`h-3.5 w-3.5 ${
-                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
+                    ['proposta', 'proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
                       ? 'text-white'
                       : 'text-slate-300'
                   }`} />
@@ -795,11 +795,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 <div>
                   <p className="text-sm font-medium">Proposta</p>
                   <p className={`text-xs ${
-                    ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                    ['proposta', 'proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
-                    {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                    {['proposta', 'proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
