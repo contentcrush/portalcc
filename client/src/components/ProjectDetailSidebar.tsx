@@ -259,9 +259,19 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       }
       
       // Calcula a data de vencimento com base no termo de pagamento do projeto
-      // Padrão: 30 dias a partir da data atual
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+      // Padrão: 30 dias a partir da data estimada de conclusão do projeto
+      // Se não houver data de conclusão estimada, considera a data atual + 30 dias
+      let dueDate;
+      
+      if (projectData.endDate) {
+        // Usa a data de conclusão do projeto como base para o cálculo
+        dueDate = new Date(projectData.endDate);
+        dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+      } else {
+        // Sem data de conclusão definida, usa a data atual + prazo de pagamento
+        dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+      }
       
       const financialDocumentData = {
         project_id: projectData.id,
@@ -814,7 +824,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
                   ${['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
-                    ? 'bg-blue-500'
+                    ? 'bg-green-500'
                     : 'bg-slate-100'
                   }`}
                 >
@@ -828,7 +838,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                   <p className="text-sm font-medium">Proposta Aceita</p>
                   <p className={`text-xs ${
                     ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
-                      ? 'text-blue-600'
+                      ? 'text-slate-600'
                       : 'text-gray-500'
                   }`}>
                     {['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
