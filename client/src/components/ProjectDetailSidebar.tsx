@@ -358,9 +358,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
-      // Se o status foi alterado para "proposta_aceita", criar automáticamente o documento financeiro
-      if (status === 'proposta_aceita' && project) {
-        createFinancialDocumentMutation.mutate(project);
+      if (project) {
+        // Se o status foi alterado PARA "proposta_aceita", criar automaticamente o documento financeiro
+        if (status === 'proposta_aceita') {
+          console.log("Status alterado para 'proposta_aceita'. Criando documento financeiro...");
+          createFinancialDocumentMutation.mutate(project);
+        } 
+        // Se o status foi alterado DE "proposta_aceita" PARA outro status, remover documentos financeiros
+        else if (project.status === 'proposta_aceita' && status !== 'proposta_aceita') {
+          console.log("Status alterado de 'proposta_aceita' para outro. Removendo documentos financeiros...");
+          removeFinancialDocumentMutation.mutate(projectId);
+        }
       }
       
       toast({
