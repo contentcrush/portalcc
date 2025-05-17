@@ -109,6 +109,7 @@ export const projects = pgTable("projects", {
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  issue_date: timestamp("issue_date"), // Data de emissão para documentos financeiros
   payment_term: integer("payment_term").default(30), // Prazo de pagamento em dias: 30, 60 ou 75
   progress: integer("progress").default(0),
   thumbnail: text("thumbnail"),
@@ -346,6 +347,9 @@ export const insertProjectSchema = projectBaseSchema.extend({
     val === null ? null : typeof val === 'string' ? new Date(val) : val
   ).nullable().optional(),
   endDate: z.union([z.string(), z.date(), z.null()]).transform(val => 
+    val === null ? null : typeof val === 'string' ? new Date(val) : val
+  ).nullable().optional(),
+  issue_date: z.union([z.string(), z.date(), z.null()]).transform(val => 
     val === null ? null : typeof val === 'string' ? new Date(val) : val
   ).nullable().optional(),
   payment_term: z.union([z.string(), z.number()]).transform(val => 

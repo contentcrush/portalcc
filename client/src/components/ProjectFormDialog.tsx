@@ -108,6 +108,7 @@ export function ProjectFormDialog() {
       budget: projectToEdit?.budget || undefined,
       startDate: projectToEdit?.startDate ? new Date(projectToEdit.startDate) : null,
       endDate: projectToEdit?.endDate ? new Date(projectToEdit.endDate) : null,
+      issue_date: projectToEdit?.issue_date ? new Date(projectToEdit.issue_date) : null,
       payment_term: projectToEdit?.payment_term || 30,
       priority: projectToEdit?.priority || "media",
       complexity: projectToEdit?.complexity || "moderada",
