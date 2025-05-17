@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initWebSocket, onWebSocketMessage } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccessToast } from "@/lib/utils";
-import { format, addDays, isBefore } from "date-fns";
+import { format, addDays, isBefore, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Card,
@@ -1069,12 +1069,16 @@ export default function Financial() {
                           <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
-                          <TableCell>{doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}</TableCell>
+                          <TableCell>
+                            {/* Formatação da data de emissão com dia/mês/ano */}
+                            {doc.creation_date ? format(parseISO(doc.creation_date), 'dd/MM/yyyy') : '-'}
+                          </TableCell>
                           <TableCell>
                             {doc.due_date ? (
                               <div className="flex items-center">
                                 <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
-                                  {format(new Date(doc.due_date), 'dd/MM/yyyy')}
+                                  {/* Formatação da data de vencimento com dia/mês/ano */}
+                                  {format(parseISO(doc.due_date), 'dd/MM/yyyy')}
                                 </span>
                                 {isOverdue && (
                                   <Badge variant="destructive" className="ml-2 text-xs">
