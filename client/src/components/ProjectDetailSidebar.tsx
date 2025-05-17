@@ -281,7 +281,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${projectId}`] });
         toast({
           title: "Documento financeiro criado",
-          description: "Um documento financeiro 'A Receber' foi criado para este projeto."
+          description: "Um documento financeiro 'A Receber' foi criado para este projeto.",
+          variant: "success"
         });
       }
     },
@@ -323,7 +324,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${projectId}`] });
         toast({
           title: "Documentos financeiros removidos",
-          description: "Os documentos financeiros pendentes foram removidos deste projeto."
+          description: "Os documentos financeiros pendentes foram removidos deste projeto.",
+          variant: "success"
         });
       }
     },
@@ -373,7 +375,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       
       toast({
         title: "Status atualizado",
-        description: "O status do projeto foi atualizado com sucesso."
+        description: "O status do projeto foi atualizado com sucesso.",
+        variant: "success"
       });
     },
     onError: (error) => {
