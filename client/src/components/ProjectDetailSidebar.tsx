@@ -278,13 +278,38 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       dueDate = new Date(issueDate);
       dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
       
+      // Formatando as datas para manterem apenas a parte da data (sem hora/minuto/segundo)
+      // Isso garante que a exibição será consistente com o que foi configurado no projeto
+      // Definimos a hora para meio-dia (12:00) para evitar problemas com fusos horários
+      let issueDateFormatted, dueDateFormatted;
+
+      if (issueDate) {
+        // Formata para YYYY-MM-DDT12:00:00.000Z para garantir consistência
+        issueDateFormatted = new Date(
+          issueDate.getFullYear(),
+          issueDate.getMonth(),
+          issueDate.getDate(),
+          12, 0, 0
+        ).toISOString();
+      }
+
+      if (dueDate) {
+        // Formata para YYYY-MM-DDT12:00:00.000Z para garantir consistência
+        dueDateFormatted = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate(),
+          12, 0, 0
+        ).toISOString();
+      }
+
       const financialDocumentData = {
         project_id: projectData.id,
         client_id: projectData.client_id,
         document_type: 'invoice',
         amount: projectData.budget || 0,
-        creation_date: issueDate.toISOString(), // Define a data de emissão da fatura
-        due_date: dueDate.toISOString(),
+        creation_date: issueDateFormatted,
+        due_date: dueDateFormatted,
         status: 'pending',
         description: `Fatura referente ao projeto: ${projectData.name} (Prazo: ${projectData.payment_term || 30} dias)`
       };
