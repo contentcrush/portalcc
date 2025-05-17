@@ -11,14 +11,13 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePassword, hashPassword } from "./auth";
-import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates, syncProjectDatesWithFinancialDocuments } from "./automation";
+import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
-import syncFinancialRoutes, { setupSyncFinancialRoutes } from "./routes/sync-financial";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -26,9 +25,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register attachments routes
   app.use('/api/attachments', attachmentsRoutes);
-  
-  // Register sync financial routes
-  app.use('/api', syncFinancialRoutes);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
@@ -1011,16 +1007,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
       if (issueDateChanged || paymentTermChanged) {
         console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
-        // Função já está importada no topo do arquivo
+        // Importar a função de sincronização que implementamos em automation.ts
+        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
         const syncResult = await syncProjectDatesWithFinancialDocuments(id);
         console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
-        
-        // Notificar os clientes sobre a atualização
-        io.emit('financial_update', { 
-          type: 'updated', 
-          projectId: id, 
-          message: `Documentos financeiros atualizados com novas datas` 
-        });
       }
       
       // Processar membros da equipe se fornecidos
@@ -1185,16 +1175,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
       if (issueDateChanged || paymentTermChanged) {
         console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas via PUT: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
-        // Função já está importada no topo do arquivo
+        // Importar a função de sincronização que implementamos em automation.ts
+        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
         const syncResult = await syncProjectDatesWithFinancialDocuments(id);
         console.log(`[Sistema] Resultado da sincronização via PUT: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
-        
-        // Notificar os clientes sobre a atualização
-        io.emit('financial_update', { 
-          type: 'updated', 
-          projectId: id, 
-          message: `Documentos financeiros atualizados com novas datas` 
-        });
       }
       
       // Processar membros da equipe se fornecidos
@@ -2197,39 +2181,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(documents);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch project financial documents" });
-    }
-  });
-  
-  // Endpoint manual para sincronizar datas entre projeto e documentos financeiros
-  app.post("/api/projects/:id/sync-financial-dates", authenticateJWT, requirePermission('manage_projects'), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      
-      console.log(`[Sistema] Solicitação manual de sincronização para o projeto ID:${id}`);
-      
-      // Chamar a função de sincronização
-      const result = await syncProjectDatesWithFinancialDocuments(id);
-      
-      if (result.success) {
-        // Notificar os clientes sobre a mudança nos documentos financeiros via WebSocket
-        io.emit('financial_update', { 
-          type: 'updated', 
-          projectId: id, 
-          message: `Documentos financeiros do projeto atualizados: ${result.message}` 
-        });
-        
-        res.json(result);
-      } else {
-        // Se não houver documentos financeiros, ainda retorna 200 mas com a mensagem explicativa
-        res.json(result);
-      }
-    } catch (error) {
-      console.error("Erro na sincronização de datas:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Erro ao sincronizar datas do projeto com documentos financeiros", 
-        error: error.message 
-      });
     }
   });
   
@@ -3804,9 +3755,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     .catch(error => {
       console.error("🤖 Erro ao executar automações iniciais:", error);
     });
-  
-  // Configure sync financial routes with WebSocket servers
-  setupSyncFinancialRoutes(io, wss);
   
   return httpServer;
 }

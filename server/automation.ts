@@ -26,53 +26,27 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
       return { success: false, message: "Projeto sem data de emissão" };
     }
     
-    // Buscar todos os documentos financeiros relacionados ao projeto
-    // Removido o filtro de paid=false para atualizar todos os documentos
+    // Buscar documentos financeiros pendentes relacionados ao projeto
     const financialDocs = await db
       .select()
       .from(financialDocuments)
       .where(
         and(
           eq(financialDocuments.project_id, projectId),
-          eq(financialDocuments.document_type, "invoice")
+          eq(financialDocuments.document_type, "invoice"),
+          eq(financialDocuments.paid, false)
         )
       );
     
     if (financialDocs.length === 0) {
-      console.log(`[Automação] Nenhum documento financeiro encontrado para o projeto ID:${projectId}`);
-      return { success: false, message: "Nenhum documento encontrado" };
+      console.log(`[Automação] Nenhum documento financeiro pendente encontrado para o projeto ID:${projectId}`);
+      return { success: false, message: "Nenhum documento pendente" };
     }
     
-    console.log(`[Automação] Iniciando sincronização de datas para o projeto ID:${projectId}. Data de emissão:`, project.issue_date);
-    
-    // Para cada documento financeiro, atualizar as datas
+    // Para cada documento financeiro pendente, atualizar as datas
     for (const doc of financialDocs) {
-      // Garantir que temos uma data de emissão válida
-      let issueDate;
-      try {
-        // Tenta converter para Data se for string
-        if (typeof project.issue_date === 'string') {
-          issueDate = new Date(project.issue_date);
-        } else if (project.issue_date instanceof Date) {
-          issueDate = project.issue_date;
-        } else {
-          // Se não for nem string nem Date, usa a data atual
-          console.log(`[Automação] Formato de data inválido, usando data atual.`);
-          issueDate = new Date();
-        }
-        
-        // Verificar se a data é válida
-        if (isNaN(issueDate.getTime())) {
-          console.log(`[Automação] Data inválida após conversão, usando data atual.`);
-          issueDate = new Date();
-        }
-      } catch (e) {
-        console.error(`[Automação] Erro ao processar a data de emissão:`, e);
-        // Usa a data atual como fallback
-        issueDate = new Date();
-      }
-      
       // Padroniza a data de emissão para meio-dia (12:00)
+      const issueDate = new Date(project.issue_date);
       const formattedIssueDate = new Date(
         issueDate.getFullYear(),
         issueDate.getMonth(),
@@ -85,28 +59,18 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
       const dueDate = new Date(formattedIssueDate);
       dueDate.setDate(dueDate.getDate() + paymentTerm);
       
-      // Strings ISO para armazenar no banco
-      const issueDateISO = formattedIssueDate.toISOString();
-      const dueDateISO = dueDate.toISOString();
+      // Atualizar o documento financeiro
+      await db.update(financialDocuments)
+        .set({
+          creation_date: formattedIssueDate.toISOString(),
+          due_date: dueDate.toISOString(),
+          description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
+        })
+        .where(eq(financialDocuments.id, doc.id));
       
-      console.log(`[Automação] Calculadas novas datas para documento ID:${doc.id}`);
-      console.log(`[Automação] - Data de emissão: ${issueDateISO}`);
-      console.log(`[Automação] - Data de vencimento: ${dueDateISO}`);
-      
-      // Atualizar o documento financeiro com as novas datas
-      try {
-        await db.update(financialDocuments)
-          .set({
-            creation_date: issueDateISO,
-            due_date: dueDateISO,
-            description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
-          })
-          .where(eq(financialDocuments.id, doc.id));
-        
-        console.log(`[Automação] Documento financeiro ID:${doc.id} sincronizado com sucesso`);
-      } catch (updateError) {
-        console.error(`[Automação] Erro ao atualizar documento ID:${doc.id}:`, updateError);
-      }
+      console.log(`[Automação] Documento financeiro ID:${doc.id} sincronizado com as datas do projeto ID:${projectId}`);
+      console.log(`[Automação] Data de emissão: ${formattedIssueDate.toISOString()}`);
+      console.log(`[Automação] Data de vencimento: ${dueDate.toISOString()}`);
     }
     
     return {
@@ -116,7 +80,7 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
     };
   } catch (error) {
     console.error("[Automação] Erro ao sincronizar datas do projeto com documentos financeiros:", error);
-    return { success: false, message: "Erro ao sincronizar documentos", error: error.message };
+    return { success: false, message: "Erro ao sincronizar documentos", error };
   }
 }
 
