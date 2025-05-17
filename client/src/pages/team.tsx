@@ -936,6 +936,77 @@ export default function Team() {
         </div>
       </div>
       
+      {/* Admin Panel */}
+      {isAdmin && isAdminPanelOpen && (
+        <Card className="mb-6 border-primary/30">
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg flex items-center">
+                <ShieldCheck className="mr-2 h-5 w-5 text-primary" />
+                Painel de Administração de Usuários
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {/* Lista de usuários */}
+              {users.length > 0 ? (
+                <>
+                  {users.map((user: any) => (
+                    <div 
+                      key={`admin-${user.id}`} 
+                      className="p-3 rounded-md border flex justify-between items-center hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center">
+                        <UserAvatar user={user} className="h-8 w-8 mr-3" />
+                        <div>
+                          <h3 className="font-medium text-base">{user.name}</h3>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Mail className="h-3 w-3 mr-1" />
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={
+                          user.role === "admin" ? "default" : 
+                          user.role === "manager" ? "outline" : 
+                          user.role === "editor" ? "secondary" : "outline"
+                        }>
+                          {user.role === "admin" ? "Admin" : 
+                           user.role === "manager" ? "Gestor" : 
+                           user.role === "editor" ? "Editor" : "Visualizador"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={user.id === currentUser?.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  Nenhum usuário encontrado
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Métricas Acionáveis */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Tarefas atrasadas por membro */}
