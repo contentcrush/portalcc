@@ -7,6 +7,84 @@ import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
 
 /**
+ * Sincroniza as datas de emissão e vencimento dos documentos financeiros com as datas do projeto
+ * @param projectId O ID do projeto a sincronizar
+ */
+export async function syncProjectDatesWithFinancialDocuments(projectId: number) {
+  try {
+    // Buscar o projeto pelo ID
+    const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
+    
+    if (!project) {
+      console.log(`[Automação] Projeto ID:${projectId} não encontrado para sincronização de datas.`);
+      return { success: false, message: "Projeto não encontrado" };
+    }
+    
+    // Verificar se o projeto tem data de emissão e prazo de pagamento configurados
+    if (!project.issue_date) {
+      console.log(`[Automação] Projeto ID:${projectId} não tem data de emissão configurada. Sincronização ignorada.`);
+      return { success: false, message: "Projeto sem data de emissão" };
+    }
+    
+    // Buscar documentos financeiros pendentes relacionados ao projeto
+    const financialDocs = await db
+      .select()
+      .from(financialDocuments)
+      .where(
+        and(
+          eq(financialDocuments.project_id, projectId),
+          eq(financialDocuments.document_type, "invoice"),
+          eq(financialDocuments.paid, false)
+        )
+      );
+    
+    if (financialDocs.length === 0) {
+      console.log(`[Automação] Nenhum documento financeiro pendente encontrado para o projeto ID:${projectId}`);
+      return { success: false, message: "Nenhum documento pendente" };
+    }
+    
+    // Para cada documento financeiro pendente, atualizar as datas
+    for (const doc of financialDocs) {
+      // Padroniza a data de emissão para meio-dia (12:00)
+      const issueDate = new Date(project.issue_date);
+      const formattedIssueDate = new Date(
+        issueDate.getFullYear(),
+        issueDate.getMonth(),
+        issueDate.getDate(),
+        12, 0, 0
+      );
+      
+      // Calcula o vencimento: Data de Emissão + Prazo de Pagamento
+      const paymentTerm = project.payment_term || 30;
+      const dueDate = new Date(formattedIssueDate);
+      dueDate.setDate(dueDate.getDate() + paymentTerm);
+      
+      // Atualizar o documento financeiro
+      await db.update(financialDocuments)
+        .set({
+          creation_date: formattedIssueDate.toISOString(),
+          due_date: dueDate.toISOString(),
+          description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
+        })
+        .where(eq(financialDocuments.id, doc.id));
+      
+      console.log(`[Automação] Documento financeiro ID:${doc.id} sincronizado com as datas do projeto ID:${projectId}`);
+      console.log(`[Automação] Data de emissão: ${formattedIssueDate.toISOString()}`);
+      console.log(`[Automação] Data de vencimento: ${dueDate.toISOString()}`);
+    }
+    
+    return {
+      success: true,
+      message: `${financialDocs.length} documentos financeiros sincronizados com sucesso`,
+      affectedDocuments: financialDocs.length
+    };
+  } catch (error) {
+    console.error("[Automação] Erro ao sincronizar datas do projeto com documentos financeiros:", error);
+    return { success: false, message: "Erro ao sincronizar documentos", error };
+  }
+}
+
+/**
  * Verifica projetos atrasados e atualiza o status automaticamente
  * Condição: Se a data de entrega já passou E o status é um dos status de desenvolvimento
  * (proposta, pre_producao, producao, pos_revisao)
