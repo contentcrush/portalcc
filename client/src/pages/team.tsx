@@ -1370,34 +1370,104 @@ export default function Team() {
           </CardContent>
         </Card>
       )}
-      {/* Estatísticas da equipe */}
+      {/* Métricas Acionáveis */}
       {showTeamStats && (
-        <>
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-medium">Visão Geral da Equipe</h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowTeamStats(!showTeamStats)}
-              className="h-8 text-xs"
-            >
-              <ChevronDown className="h-4 w-4 mr-1" />
-              Esconder Estatísticas
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Tarefas atrasadas por membro */}
+          <Card className="border-l-4 border-l-red-500">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-semibold text-gray-900 flex items-center">
+                  <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                  Tarefas atrasadas por membro
+                </h3>
+                <Badge variant="destructive" className="text-xs">{tasks?.filter((t: any) => new Date(t.due_date) < new Date() && t.status !== "done").length || 0} total</Badge>
+              </div>
+              
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                {users && users.map((user: any) => {
+                  const overdueTasks = tasks?.filter((t: any) => 
+                    t.assigned_to === user.id && 
+                    new Date(t.due_date) < new Date() && 
+                    t.status !== "done"
+                  ) || [];
+                  
+                  if (overdueTasks.length === 0) return null;
+                  
+                  return (
+                    <div key={`overdue-${user.id}`} className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-gray-50">
+                      <div className="flex items-center">
+                        <UserAvatar user={user} className="h-8 w-8 mr-2" />
+                        <span className="font-medium text-sm">{user.name}</span>
+                      </div>
+                      <Badge variant="destructive" className="ml-2">{overdueTasks.length}</Badge>
+                    </div>
+                  );
+                })}
+                
+                {!tasks || tasks.filter((t: any) => new Date(t.due_date) < new Date() && t.status !== "done").length === 0 && (
+                  <div className="text-center py-3 text-sm text-gray-500">
+                    Sem tarefas atrasadas. Bom trabalho!
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
           
-          {/* Estatísticas principais */}
-          <TeamStatistics users={users || []} tasks={tasks || []} projects={projects || []} />
-          
-          {/* Grid para módulos adicionais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {/* Atividades recentes */}
-            <TeamActivities users={users || []} tasks={tasks || []} />
-            
-            {/* Distribuição de projetos */}
-            <TeamProjectAllocation users={users || []} projects={projects || []} />
-          </div>
-        </>
+          {/* Capacidade livre */}
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-semibold text-gray-900 flex items-center">
+                  <ChevronUp className="h-4 w-4 text-green-500 mr-2" />
+                  Capacidade livre
+                </h3>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Horas disponíveis</Badge>
+              </div>
+              
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                {users && users.slice(0, 10).map((user: any) => {
+                  const activeTasks = tasks?.filter((t: any) => 
+                    t.assigned_to === user.id && 
+                    t.status !== "done"
+                  ).length || 0;
+                  
+                  // Cálculo teórico - assumindo que cada pessoa tem 40h semanais
+                  // e cada tarefa consome em média 8h
+                  const capacity = 40;
+                  const estimatedUsage = activeTasks * 8;
+                  const availableHours = Math.max(0, capacity - estimatedUsage);
+                  
+                  return (
+                    <div key={`capacity-${user.id}`} className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-gray-50">
+                      <div className="flex items-center">
+                        <UserAvatar user={user} className="h-8 w-8 mr-2" />
+                        <span className="font-medium text-sm">{user.name}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium mr-2">
+                          {availableHours}h
+                        </span>
+                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full" 
+                            style={{ width: `${Math.min(100, (availableHours/capacity)*100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {!users || users.length === 0 && (
+                  <div className="text-center py-3 text-sm text-gray-500">
+                    Nenhum dado disponível
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
       
       {!showTeamStats && (
