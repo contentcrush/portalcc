@@ -235,6 +235,47 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
+  // Mutation para criar um documento financeiro automaticamente quando o projeto atinge o estágio "proposta_aceita"
+  const createFinancialDocumentMutation = useMutation({
+    mutationFn: async (projectData: any) => {
+      if (!projectData || !projectData.client_id || !projectData.id) {
+        throw new Error('Dados do projeto incompletos para criar documento financeiro');
+      }
+      
+      // Calcula a data de vencimento com base no termo de pagamento do projeto
+      // Padrão: 30 dias a partir da data atual
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + (projectData.payment_term || 30));
+      
+      const financialDocumentData = {
+        project_id: projectData.id,
+        client_id: projectData.client_id,
+        document_type: 'invoice',
+        amount: projectData.budget || 0,
+        due_date: dueDate.toISOString(),
+        status: 'pending',
+        description: `Fatura referente ao projeto: ${projectData.name} (Prazo: ${projectData.payment_term || 30} dias)`
+      };
+      
+      return apiRequest('POST', '/api/financial-documents', financialDocumentData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      toast({
+        title: "Documento financeiro criado",
+        description: "Um documento financeiro 'A Receber' foi criado para este projeto."
+      });
+    },
+    onError: (error) => {
+      console.error("Erro ao criar documento financeiro:", error);
+      toast({
+        title: "Erro ao criar documento financeiro",
+        description: error.message || "Não foi possível criar o documento financeiro para o projeto.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Mutation para atualizar o status do projeto
   const updateProjectStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -252,9 +293,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       // Retornamos a resposta da API
       return apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
     },
-    onSuccess: () => {
+    onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      // Se o status foi alterado para "proposta_aceita", criar automáticamente o documento financeiro
+      if (status === 'proposta_aceita' && project) {
+        createFinancialDocumentMutation.mutate(project);
+      }
+      
       toast({
         title: "Status atualizado",
         description: "O status do projeto foi atualizado com sucesso."
@@ -681,6 +728,38 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                       : 'text-gray-500'
                   }`}>
                     {['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                      ? 'Concluído'
+                      : 'Pendente'}
+                  </p>
+                </div>
+              </div>
+              
+              <div 
+                className={`flex items-start cursor-pointer group ${
+                  hasInteractiveStages(project) ? "" : "opacity-80"
+                }`}
+                onClick={() => handleUpdateProjectStatus('proposta_aceita')}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 transition-colors
+                  ${['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                    ? 'bg-blue-500'
+                    : 'bg-slate-100'
+                  }`}
+                >
+                  <Check className={`h-3.5 w-3.5 ${
+                    ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus) 
+                      ? 'text-white'
+                      : 'text-slate-300'
+                  }`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Proposta Aceita</p>
+                  <p className={`text-xs ${
+                    ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
+                      ? 'text-blue-600'
+                      : 'text-gray-500'
+                  }`}>
+                    {['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'].includes(getNormalizedProjectStatus(project).stageStatus)
                       ? 'Concluído'
                       : 'Pendente'}
                   </p>
