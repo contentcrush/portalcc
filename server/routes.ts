@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePassword, hashPassword } from "./auth";
-import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
+import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates, syncProjectDatesWithFinancialDocuments } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
@@ -1007,8 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
       if (issueDateChanged || paymentTermChanged) {
         console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
-        // Importar a função de sincronização que implementamos em automation.ts
-        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
+        // Função já está importada no topo do arquivo
         const syncResult = await syncProjectDatesWithFinancialDocuments(id);
         console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
       }
