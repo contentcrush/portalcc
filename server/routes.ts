@@ -1092,11 +1092,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          // Invalidar o cache de dados relacionados
-          queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}`] });
-          queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
-          queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${id}`] });
-          queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
+          // Adicionamos cabeçalho para indicar ao front-end que deve invalidar o cache
+          res.setHeader('X-Invalidate-Cache', JSON.stringify([
+            `/api/projects/${id}`,
+            `/api/financial-documents`,
+            `/api/financial-documents/project/${id}`,
+            `/api/calendar`
+          ]));
         } catch (syncError) {
           console.error(`[Sistema] Erro ao sincronizar datas do projeto ID:${id}:`, syncError);
         }

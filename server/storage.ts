@@ -2531,7 +2531,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFinancialDocument(insertDocument: InsertFinancialDocument): Promise<FinancialDocument> {
-    const [document] = await db.insert(financialDocuments).values(insertDocument).returning();
+    // Verificar se o documento está vinculado a um projeto
+    if (insertDocument.project_id) {
+      try {
+        // Buscar o projeto para obter a data de emissão (issue_date)
+        const [project] = await db.select().from(projects).where(eq(projects.id, insertDocument.project_id));
+        
+        if (project && project.issue_date) {
+          // Usar a data de emissão do projeto como data de criação do documento
+          const documentData = {
+            ...insertDocument,
+            creation_date: project.issue_date
+          };
+          
+          const [document] = await db.insert(financialDocuments).values(documentData).returning();
+          console.log(`[Sistema] Documento financeiro criado com data do projeto: ${new Date(project.issue_date).toISOString()}`);
+          return document;
+        }
+      } catch (error) {
+        console.error("[Sistema] Erro ao buscar data de emissão do projeto:", error);
+      }
+    }
+    
+    // Se não tiver projeto ou ocorrer algum erro, cria com a data atual
+    const [document] = await db.insert(financialDocuments).values({
+      ...insertDocument,
+      creation_date: new Date()
+    }).returning();
+    
     return document;
   }
 
