@@ -466,6 +466,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         }
       }
       
+      // Verificar se estamos saindo do status "proposta_aceita" para outro status
+      // Nesse caso, precisamos remover os documentos financeiros antes de atualizar UI
+      if (project.status === 'proposta_aceita' && status !== 'proposta_aceita') {
+        console.log("Status alterado de 'proposta_aceita' para outro. Removendo documentos financeiros...");
+        // Remove documentos financeiros primeiro
+        removeFinancialDocumentMutation.mutate(projectId);
+      }
+      
       // Atualização otimista da interface
       // Cria uma cópia atualizada do projeto para mostrar mudanças imediatamente
       const updatedProject = {
