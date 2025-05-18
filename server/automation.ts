@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
 
 /**
- * Sincroniza as datas de emissão e vencimento dos documentos financeiros com as datas do projeto
+ * Sincroniza todas as datas importantes do projeto com documentos financeiros e eventos relacionados
  * @param projectId O ID do projeto a sincronizar
  */
 export async function syncProjectDatesWithFinancialDocuments(projectId: number) {
@@ -20,68 +20,223 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
       return { success: false, message: "Projeto não encontrado" };
     }
     
-    // Verificar se o projeto tem data de emissão e prazo de pagamento configurados
-    if (!project.issue_date) {
-      console.log(`[Automação] Projeto ID:${projectId} não tem data de emissão configurada. Sincronização ignorada.`);
-      return { success: false, message: "Projeto sem data de emissão" };
-    }
+    let updatedCount = 0;
+    let eventsUpdated = 0;
     
-    // Buscar documentos financeiros pendentes relacionados ao projeto
+    // PARTE 1: SINCRONIZAR DOCUMENTOS FINANCEIROS
+    // -----------------------------------------
+    
+    // Buscar todos os documentos financeiros relacionados ao projeto (mesmo os pagos)
     const financialDocs = await db
       .select()
       .from(financialDocuments)
-      .where(
-        and(
-          eq(financialDocuments.project_id, projectId),
-          eq(financialDocuments.document_type, "invoice"),
-          eq(financialDocuments.paid, false)
-        )
-      );
+      .where(eq(financialDocuments.project_id, projectId));
     
-    if (financialDocs.length === 0) {
-      console.log(`[Automação] Nenhum documento financeiro pendente encontrado para o projeto ID:${projectId}`);
-      return { success: false, message: "Nenhum documento pendente" };
+    // Verificar se existem documentos financeiros para sincronizar
+    if (financialDocs.length > 0) {
+      // Verificar se o projeto tem data de emissão configurada
+      if (project.issue_date) {
+        // Padroniza a data de emissão para meio-dia (12:00) para evitar problemas de fuso horário
+        const issueDate = new Date(project.issue_date);
+        const formattedIssueDate = new Date(
+          Date.UTC(
+            issueDate.getFullYear(),
+            issueDate.getMonth(),
+            issueDate.getDate(),
+            12, 0, 0
+          )
+        );
+        
+        // Calcula o vencimento: Data de Emissão + Prazo de Pagamento
+        const paymentTerm = project.payment_term || 30;
+        const dueDate = new Date(formattedIssueDate);
+        dueDate.setDate(dueDate.getDate() + paymentTerm);
+        
+        console.log(`[Automação] Sincronizando datas para projeto ID:${projectId}`);
+        console.log(`[Automação] Data de emissão padronizada: ${formattedIssueDate.toISOString()}`);
+        console.log(`[Automação] Data de vencimento calculada: ${dueDate.toISOString()}`);
+        
+        // Para cada documento financeiro, atualizar as datas
+        for (const doc of financialDocs) {
+          // Só atualiza documentos não pagos ou faturados recentemente (nos últimos 30 dias)
+          if (!doc.paid || (doc.creation_date && new Date(doc.creation_date) > subDays(new Date(), 30))) {
+            await db.update(financialDocuments)
+              .set({
+                creation_date: formattedIssueDate,
+                due_date: dueDate,
+                description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
+              })
+              .where(eq(financialDocuments.id, doc.id));
+            
+            updatedCount++;
+            console.log(`[Automação] Documento financeiro ID:${doc.id} sincronizado com as datas do projeto`);
+          }
+        }
+      } else {
+        console.log(`[Automação] Projeto ID:${projectId} não tem data de emissão configurada. Usando datas alternativas.`);
+        
+        // Se não tiver data de emissão, usar a data de início ou a data atual
+        const fallbackDate = project.startDate ? new Date(project.startDate) : new Date();
+        const formattedFallbackDate = new Date(
+          Date.UTC(
+            fallbackDate.getFullYear(),
+            fallbackDate.getMonth(),
+            fallbackDate.getDate(),
+            12, 0, 0
+          )
+        );
+        
+        // Calcular data de vencimento baseada na data alternativa
+        const paymentTerm = project.payment_term || 30;
+        const fallbackDueDate = new Date(formattedFallbackDate);
+        fallbackDueDate.setDate(fallbackDueDate.getDate() + paymentTerm);
+        
+        // Para documentos pendentes, atualizar com as datas alternativas
+        for (const doc of financialDocs) {
+          if (!doc.paid) {
+            await db.update(financialDocuments)
+              .set({
+                due_date: fallbackDueDate,
+                description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
+              })
+              .where(eq(financialDocuments.id, doc.id));
+            
+            updatedCount++;
+            console.log(`[Automação] Documento financeiro ID:${doc.id} atualizado com data alternativa`);
+          }
+        }
+      }
     }
     
-    // Para cada documento financeiro pendente, atualizar as datas
-    for (const doc of financialDocs) {
-      // Padroniza a data de emissão para meio-dia (12:00)
-      const issueDate = new Date(project.issue_date);
-      const formattedIssueDate = new Date(
-        issueDate.getFullYear(),
-        issueDate.getMonth(),
-        issueDate.getDate(),
-        12, 0, 0
+    // PARTE 2: SINCRONIZAR EVENTOS DE CALENDÁRIO RELACIONADOS
+    // ------------------------------------------------------
+    
+    // Buscar eventos de calendário relacionados ao projeto
+    const projectEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.project_id, projectId));
+    
+    // Atualizar eventos de prazo do projeto
+    if (project.endDate) {
+      const projectDeadlineEvents = projectEvents.filter(event => 
+        event.type === 'prazo' || event.title?.includes('Entrega')
       );
       
-      // Calcula o vencimento: Data de Emissão + Prazo de Pagamento
-      const paymentTerm = project.payment_term || 30;
-      const dueDate = new Date(formattedIssueDate);
-      dueDate.setDate(dueDate.getDate() + paymentTerm);
-      
-      // Atualizar o documento financeiro
-      await db.update(financialDocuments)
-        .set({
-          creation_date: formattedIssueDate.toISOString(),
-          due_date: dueDate.toISOString(),
-          description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
-        })
-        .where(eq(financialDocuments.id, doc.id));
-      
-      console.log(`[Automação] Documento financeiro ID:${doc.id} sincronizado com as datas do projeto ID:${projectId}`);
-      console.log(`[Automação] Data de emissão: ${formattedIssueDate.toISOString()}`);
-      console.log(`[Automação] Data de vencimento: ${dueDate.toISOString()}`);
+      // Se encontrou eventos de prazo, atualizar datas
+      if (projectDeadlineEvents.length > 0) {
+        for (const event of projectDeadlineEvents) {
+          await db.update(events)
+            .set({
+              start_date: project.endDate,
+              end_date: project.endDate,
+              title: `Entrega - ${project.name}`
+            })
+            .where(eq(events.id, event.id));
+          
+          eventsUpdated++;
+          console.log(`[Automação] Evento de prazo ID:${event.id} atualizado para nova data de conclusão`);
+        }
+      } else {
+        // Se não encontrou eventos de prazo mas tem data de conclusão, criar novo evento
+        if (isAfter(new Date(project.endDate), new Date())) {
+          const [newEvent] = await db.insert(events)
+            .values({
+              title: `Entrega - ${project.name}`,
+              description: `Data de entrega do projeto ${project.name}`,
+              user_id: 1, // ID do sistema ou admin
+              project_id: project.id,
+              type: 'prazo',
+              start_date: project.endDate,
+              end_date: project.endDate,
+              all_day: true,
+              color: '#ef4444', // Vermelho para prazos
+            })
+            .returning();
+          
+          eventsUpdated++;
+          console.log(`[Automação] Novo evento de prazo criado para o projeto ID:${project.id}`);
+        }
+      }
+    }
+    
+    // PARTE 3: SINCRONIZAR EVENTOS FINANCEIROS DE VENCIMENTO
+    // ----------------------------------------------------
+    
+    // Para cada documento financeiro, verificar se há eventos de vencimento
+    for (const doc of financialDocs) {
+      if (!doc.paid && doc.due_date) {
+        // Buscar eventos específicos para este documento financeiro
+        const docEvents = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.type, 'financeiro'),
+              eq(events.financial_document_id, doc.id)
+            )
+          );
+        
+        if (docEvents.length > 0) {
+          // Atualizar eventos existentes
+          for (const event of docEvents) {
+            await db.update(events)
+              .set({
+                start_date: doc.due_date,
+                end_date: doc.due_date,
+                title: `Vencimento - ${project.name}`,
+                description: `Vencimento da fatura no valor de ${formatCurrency(doc.amount || 0)}`
+              })
+              .where(eq(events.id, event.id));
+            
+            eventsUpdated++;
+            console.log(`[Automação] Evento financeiro ID:${event.id} atualizado para nova data de vencimento`);
+          }
+        } else {
+          // Criar um novo evento para este documento financeiro
+          const [newEvent] = await db.insert(events)
+            .values({
+              title: `Vencimento - ${project.name}`,
+              description: `Vencimento da fatura no valor de ${formatCurrency(doc.amount || 0)}`,
+              user_id: 1, // ID do sistema ou admin
+              project_id: project.id,
+              client_id: project.client_id,
+              financial_document_id: doc.id,
+              type: 'financeiro',
+              start_date: doc.due_date,
+              end_date: doc.due_date,
+              all_day: true,
+              color: '#f97316', // Laranja para eventos financeiros
+            })
+            .returning();
+          
+          eventsUpdated++;
+          console.log(`[Automação] Novo evento financeiro criado para o documento ID:${doc.id}`);
+        }
+      }
     }
     
     return {
       success: true,
-      message: `${financialDocs.length} documentos financeiros sincronizados com sucesso`,
-      affectedDocuments: financialDocs.length
+      message: `Sincronização concluída: ${updatedCount} documentos financeiros e ${eventsUpdated} eventos atualizados`,
+      affectedDocuments: updatedCount,
+      affectedEvents: eventsUpdated
     };
   } catch (error) {
     console.error("[Automação] Erro ao sincronizar datas do projeto com documentos financeiros:", error);
-    return { success: false, message: "Erro ao sincronizar documentos", error };
+    return { 
+      success: false, 
+      message: `Erro ao sincronizar: ${error.message || 'Erro desconhecido'}`, 
+      error 
+    };
   }
+}
+
+// Função auxiliar para formatação de valores monetários
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
 }
 
 /**

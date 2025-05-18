@@ -1004,13 +1004,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // O Zod já está fazendo a conversão de string para Date através do transform no schema
       const updatedProject = await storage.updateProject(id, projectData);
       
-      // Se a data de emissão ou prazo de pagamento foram alterados, sincroniza os documentos financeiros
-      if (issueDateChanged || paymentTermChanged) {
-        console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas: Data de Emissão: ${issueDateChanged}, Prazo de Pagamento: ${paymentTermChanged}`);
-        // Importar a função de sincronização que implementamos em automation.ts
-        const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
-        const syncResult = await syncProjectDatesWithFinancialDocuments(id);
-        console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'} - ${syncResult.message}`);
+      // Verificar se houve alterações nas datas do projeto
+      let datesChanged = false;
+      
+      // Verificar alterações de data de início
+      if (req.body.startDate !== undefined) {
+        const oldDate = currentProject.startDate ? new Date(currentProject.startDate) : null;
+        const newDate = req.body.startDate ? new Date(req.body.startDate) : null;
+        
+        if ((!oldDate && newDate) || 
+            (oldDate && !newDate) || 
+            (oldDate && newDate && oldDate.toISOString() !== newDate.toISOString())) {
+          datesChanged = true;
+          console.log(`[Sistema] Data de Início alterada: ${oldDate?.toISOString() || 'null'} -> ${newDate?.toISOString() || 'null'}`);
+        }
+      }
+      
+      // Verificar alterações de data de conclusão
+      if (req.body.endDate !== undefined) {
+        const oldDate = currentProject.endDate ? new Date(currentProject.endDate) : null;
+        const newDate = req.body.endDate ? new Date(req.body.endDate) : null;
+        
+        if ((!oldDate && newDate) || 
+            (oldDate && !newDate) || 
+            (oldDate && newDate && oldDate.toISOString() !== newDate.toISOString())) {
+          datesChanged = true;
+          console.log(`[Sistema] Data de Conclusão alterada: ${oldDate?.toISOString() || 'null'} -> ${newDate?.toISOString() || 'null'}`);
+        }
+      }
+      
+      // Verificar alterações de data de emissão
+      if (req.body.issue_date !== undefined) {
+        const oldDate = currentProject.issue_date ? new Date(currentProject.issue_date) : null;
+        const newDate = req.body.issue_date ? new Date(req.body.issue_date) : null;
+        
+        if ((!oldDate && newDate) || 
+            (oldDate && !newDate) || 
+            (oldDate && newDate && oldDate.toISOString() !== newDate.toISOString())) {
+          datesChanged = true;
+          console.log(`[Sistema] Data de Emissão alterada: ${oldDate?.toISOString() || 'null'} -> ${newDate?.toISOString() || 'null'}`);
+        }
+      }
+      
+      // Verificar alterações no prazo de pagamento
+      if (req.body.payment_term !== undefined && 
+          currentProject.payment_term !== req.body.payment_term) {
+        datesChanged = true;
+        console.log(`[Sistema] Prazo de Pagamento alterado: ${currentProject.payment_term || 'null'} -> ${req.body.payment_term}`);
+      }
+      
+      // Se qualquer uma das datas importantes foi alterada, sincronizar em todo o sistema
+      if (datesChanged) {
+        console.log(`[Sistema] Projeto ID:${id} teve alterações nas datas - iniciando sincronização`);
+        
+        try {
+          // Importar a função de sincronização melhorada que implementamos em automation.ts
+          const { syncProjectDatesWithFinancialDocuments } = await import('./automation');
+          
+          // Executar a sincronização para atualizar documentos financeiros e eventos de calendário
+          const syncResult = await syncProjectDatesWithFinancialDocuments(id);
+          
+          console.log(`[Sistema] Resultado da sincronização: ${syncResult.success ? 'Sucesso' : 'Falha'}`);
+          console.log(`[Sistema] Detalhes: ${syncResult.message}`);
+          
+          // Emitir notificação por Socket.IO sobre alterações de datas
+          if (typeof io !== 'undefined' && io) {
+            io.emit("project_dates_updated", { 
+              projectId: id,
+              success: syncResult.success,
+              message: syncResult.message
+            });
+          }
+          
+          // Emitir notificação por WebSocket sobre alterações de datas
+          if (typeof wss !== 'undefined' && wss) {
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ 
+                  type: "project_dates_updated",
+                  data: { 
+                    projectId: id, 
+                    success: syncResult.success,
+                    message: syncResult.message
+                  } 
+                }));
+              }
+            });
+          }
+          
+          // Invalidar o cache de dados relacionados
+          queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}`] });
+          queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+          queryClient.invalidateQueries({ queryKey: [`/api/financial-documents/project/${id}`] });
+          queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
+        } catch (syncError) {
+          console.error(`[Sistema] Erro ao sincronizar datas do projeto ID:${id}:`, syncError);
+        }
       }
       
       // Processar membros da equipe se fornecidos
