@@ -168,11 +168,21 @@ export function ProjectFormDialog() {
   // Mutation para criar projeto
   const createProjectMutation = useMutation({
     mutationFn: async (data: ProjectFormValues) => {
-      // Formatação de alguns campos se necessário
+      // Padronizar todas as datas do projeto para garantir consistência global
+      const standardizedDates = standardizeProjectDates(
+        data.startDate,
+        data.endDate,
+        data.issue_date,
+        data.payment_term
+      );
+      
+      // Formatação final dos dados com datas padronizadas
       const formatted = {
         ...data,
-        startDate: data.startDate ? data.startDate.toISOString() : null,
-        endDate: data.endDate ? data.endDate.toISOString() : null,
+        startDate: standardizedDates.startDate ? standardizedDates.startDate.toISOString() : null,
+        endDate: standardizedDates.endDate ? standardizedDates.endDate.toISOString() : null,
+        issue_date: standardizedDates.issueDate ? standardizedDates.issueDate.toISOString() : null,
+        // Os outros campos permanecem inalterados
         budget: data.budget || null
       };
       
@@ -212,11 +222,21 @@ export function ProjectFormDialog() {
         throw new Error("ID do projeto não encontrado");
       }
       
-      // Formatação de alguns campos se necessário
+      // Padronizar todas as datas do projeto para garantir consistência global
+      const standardizedDates = standardizeProjectDates(
+        data.startDate,
+        data.endDate,
+        data.issue_date,
+        data.payment_term
+      );
+      
+      // Formatação final dos dados com datas padronizadas
       const formatted = {
         ...data,
-        startDate: data.startDate ? data.startDate.toISOString() : null,
-        endDate: data.endDate ? data.endDate.toISOString() : null,
+        startDate: standardizedDates.startDate ? standardizedDates.startDate.toISOString() : null,
+        endDate: standardizedDates.endDate ? standardizedDates.endDate.toISOString() : null,
+        issue_date: standardizedDates.issueDate ? standardizedDates.issueDate.toISOString() : null,
+        // A data de vencimento é calculada automaticamente no backend com base em issue_date e payment_term
         budget: data.budget || null
       };
       
@@ -772,7 +792,15 @@ export function ProjectFormDialog() {
                             </SelectContent>
                           </Select>
                           <FormDescription>
-                            Prazo para pagamento a partir da data de faturamento
+                            Prazo para pagamento a partir da data de emissão
+                            {field.value && form.getValues("issue_date") && (
+                              <span className="block mt-1 text-xs font-medium text-green-600">
+                                {formatPaymentTermDisplay(
+                                  calculateDueDate(form.getValues("issue_date"), field.value),
+                                  form.getValues("issue_date")
+                                )}
+                              </span>
+                            )}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
