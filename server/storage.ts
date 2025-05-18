@@ -2534,29 +2534,57 @@ export class DatabaseStorage implements IStorage {
     // Verificar se o documento está vinculado a um projeto
     if (insertDocument.project_id) {
       try {
-        // Buscar o projeto para obter a data de emissão (issue_date)
+        // Buscar o projeto para obter a data de emissão oficial (issue_date)
         const [project] = await db.select().from(projects).where(eq(projects.id, insertDocument.project_id));
         
         if (project && project.issue_date) {
-          // Usar a data de emissão do projeto como data de criação do documento
+          // Formatar a data de emissão para meio-dia UTC para evitar problemas de fuso
+          const issueDate = new Date(project.issue_date);
+          const formattedIssueDate = new Date(
+            Date.UTC(
+              issueDate.getFullYear(),
+              issueDate.getMonth(),
+              issueDate.getDate(),
+              12, 0, 0
+            )
+          );
+          
+          console.log(`[Sistema] Documento financeiro usando Data de Emissão do projeto: ${formattedIssueDate.toLocaleDateString('pt-BR')}`);
+          
+          // Usar a data de emissão do projeto como data de emissão oficial do documento financeiro
           const documentData = {
             ...insertDocument,
-            creation_date: project.issue_date
+            creation_date: formattedIssueDate
           };
           
           const [document] = await db.insert(financialDocuments).values(documentData).returning();
-          console.log(`[Sistema] Documento financeiro criado com data do projeto: ${new Date(project.issue_date).toISOString()}`);
+          console.log(`[Sistema] Documento financeiro #${document.id} criado com Data de Emissão: ${formattedIssueDate.toLocaleDateString('pt-BR')}`);
           return document;
+        } else {
+          console.log(`[Sistema] Projeto ID:${project?.id} não tem Data de Emissão definida. Usando data atual.`);
         }
       } catch (error) {
         console.error("[Sistema] Erro ao buscar data de emissão do projeto:", error);
       }
     }
     
-    // Se não tiver projeto ou ocorrer algum erro, cria com a data atual
+    // Se não houver projeto, não tiver data de emissão, ou ocorrer erro:
+    // Usa a data atual formatada adequadamente para a data de emissão
+    const today = new Date();
+    const formattedToday = new Date(
+      Date.UTC(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        12, 0, 0
+      )
+    );
+    
+    console.log(`[Sistema] Criando documento financeiro com Data de Emissão = hoje: ${formattedToday.toLocaleDateString('pt-BR')}`);
+    
     const [document] = await db.insert(financialDocuments).values({
       ...insertDocument,
-      creation_date: new Date()
+      creation_date: formattedToday
     }).returning();
     
     return document;
