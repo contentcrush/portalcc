@@ -395,9 +395,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       };
       
       // Retornamos a resposta da API
-      return apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
+      const response = await apiRequest('PATCH', `/api/projects/${projectId}`, updateData);
+      return response.json(); // Retorna os dados atualizados do projeto
     },
-    onSuccess: (_, status) => {
+    onSuccess: (updatedProject, status) => {
+      // Atualiza o cache do React Query imediatamente com os dados atualizados
+      queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
+      
+      // Invalida as queries para forçar um refetch quando necessário
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
@@ -405,7 +410,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         // Se o status foi alterado PARA "proposta_aceita", criar automaticamente o documento financeiro
         if (status === 'proposta_aceita') {
           console.log("Status alterado para 'proposta_aceita'. Criando documento financeiro...");
-          createFinancialDocumentMutation.mutate(project);
+          createFinancialDocumentMutation.mutate(updatedProject);
         } 
         // Se o status foi alterado DE "proposta_aceita" PARA outro status, remover documentos financeiros
         else if (project.status === 'proposta_aceita' && status !== 'proposta_aceita') {
@@ -414,11 +419,21 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         }
       }
       
+      // Notifica o usuário sobre a atualização bem-sucedida
       toast({
         title: "Status atualizado",
         description: "O status do projeto foi atualizado com sucesso.",
         variant: "success"
       });
+      
+      // Emite um evento via WebSocket para notificar outros usuários
+      if (window.socket) {
+        window.socket.emit('project_updated', { 
+          projectId, 
+          status,
+          message: `Status do projeto atualizado para: ${status}`
+        });
+      }
     },
     onError: (error) => {
       console.error("Erro ao atualizar status:", error);
