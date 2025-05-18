@@ -31,6 +31,7 @@ const DynamicIcon = ({ name }: { name: string }) => {
     "list-checks": "ListChecks",
     "users": "Users",
     "users-2": "Users2",
+    "user-circle-2": "UserCircle2",
     "dollar-sign": "DollarSign",
     "calendar": "Calendar",
     "video": "Video",

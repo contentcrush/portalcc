@@ -10,7 +10,7 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/team",
     name: "Equipe",
-    icon: "users-2" // Ícone mais moderno para equipe
+    icon: "user-circle-2" // Ícone de pessoas em uma equipe de trabalho
   },
   {
     path: "/clients",
