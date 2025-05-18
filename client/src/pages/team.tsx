@@ -922,17 +922,6 @@ export default function Team() {
             <UserPlus className="h-4 w-4 mr-2" />
             Novo Membro
           </Button>
-          
-          {isAdmin && (
-            <Button 
-              variant="outline" 
-              onClick={() => setIsAdminPanelOpen(!isAdminPanelOpen)}
-              className={isAdminPanelOpen ? "bg-primary/10" : ""}
-            >
-              <ShieldCheck className="h-4 w-4 mr-2" />
-              Admin
-            </Button>
-          )}
         </div>
       </div>
       
