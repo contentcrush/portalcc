@@ -26,12 +26,19 @@ const DynamicIcon = ({ name }: { name: string }) => {
     // Ícones básicos que sabemos que existem na biblioteca Lucide
     "home": "Home",
     "folder": "Folder",
+    "folder-open": "FolderOpen",
     "list": "List",
+    "list-checks": "ListChecks",
     "users": "Users",
+    "users-2": "Users2",
     "dollar-sign": "DollarSign",
     "calendar": "Calendar",
     "video": "Video",
-    "settings": "Settings"
+    "settings": "Settings",
+    "gauge": "Gauge",
+    "chart": "BarChart",
+    "clapperboard": "Clapperboard",
+    "file": "File"
   };
 
   // Usar o nome mapeado se existir, caso contrário, converter com a primeira letra maiúscula
@@ -43,10 +50,12 @@ const DynamicIcon = ({ name }: { name: string }) => {
   // Se não encontrou o componente, mostrar qual ícone está faltando para depuração
   if (!IconComponent) {
     console.warn(`Ícone não encontrado: ${name} (como ${iconName})`);
-    return null;
+    // Fallback para o ícone File se não encontrar o componente
+    return <LucideIcons.File />;
   }
   
-  return <IconComponent />;
+  // Aplicar estilo padrão para todos os ícones: stroke mais fino, tamanho uniforme
+  return <IconComponent className="w-5 h-5" strokeWidth={1.5} />;
 };
 
 interface SidebarProps {

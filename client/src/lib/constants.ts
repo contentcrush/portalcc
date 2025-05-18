@@ -5,42 +5,42 @@ export const SIDEBAR_ITEMS = [
   {
     path: "/dashboard",
     name: "Dashboard",
-    icon: "home"
+    icon: "gauge" // Ícone de painel/dashboard com estilo de medidor
   },
   {
     path: "/team",
     name: "Equipe",
-    icon: "users"
+    icon: "users-2" // Ícone mais moderno para equipe
   },
   {
     path: "/clients",
     name: "Clientes",
-    icon: "users"
+    icon: "users" // Mantemos users para clientes conforme a imagem de referência
   },
   {
     path: "/projects",
     name: "Projetos",
-    icon: "folder"
+    icon: "clapperboard" // Ícone de claquete para projetos, conforme referência
   },
   {
     path: "/tasks",
     name: "Tarefas",
-    icon: "list"
+    icon: "list-checks" // Ícone de lista com checkboxes para tarefas
   },
   {
     path: "/financial",
     name: "Financeiro",
-    icon: "dollar-sign"
+    icon: "chart" // Ícone de gráfico para financeiro, conforme referência
   },
   {
     path: "/calendar",
     name: "Calendário",
-    icon: "calendar"
+    icon: "calendar" // Mantemos o calendário
   },
   {
     path: "/files",
     name: "Arquivos",
-    icon: "file"
+    icon: "folder-open" // Ícone mais moderno para arquivos
   }
 ];
 
