@@ -466,6 +466,17 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         }
       }
       
+      // Atualização otimista da interface
+      // Cria uma cópia atualizada do projeto para mostrar mudanças imediatamente
+      const updatedProject = {
+        ...project,
+        status: status
+      };
+      
+      // Atualiza o cache imediatamente para uma resposta instantânea da UI
+      queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
+      
+      // Em seguida, dispara a mutation para atualizar o servidor
       updateProjectStatusMutation.mutate(status);
     }
   };
