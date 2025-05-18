@@ -3,14 +3,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { CalendarIcon, Loader2, X } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarIcon, Loader2, X, Info } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccessToast } from "@/lib/utils";
 import { insertProjectSchema } from "@shared/schema";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
+import { 
+  standardizeToUTC, 
+  calculateDueDate, 
+  formatDateForDisplay,
+  formatPaymentTermDisplay,
+  standardizeProjectDates
+} from "@/lib/date-handlers";
 import { ImageUpload } from "@/components/ui/image-upload";
 
 import { Button } from "@/components/ui/button";
@@ -672,10 +679,23 @@ export function ProjectFormDialog() {
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
+                              <div className="p-2 mb-1 bg-muted/50 rounded flex items-center gap-2 text-xs text-muted-foreground">
+                                <Info className="h-3.5 w-3.5" />
+                                <span>Data para cálculo do prazo de pagamento</span>
+                              </div>
                               <Calendar
                                 mode="single"
                                 selected={field.value || undefined}
-                                onSelect={field.onChange}
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                  // Se tiver prazo de pagamento definido, recalcular a data de vencimento
+                                  const paymentTerm = form.getValues("payment_term");
+                                  if (date && paymentTerm) {
+                                    const dueDate = calculateDueDate(date, paymentTerm);
+                                    // Atualizar data estimada de pagamento
+                                    console.log("Data de vencimento calculada:", dueDate ? formatDateForDisplay(dueDate) : "N/A");
+                                  }
+                                }}
                                 initialFocus
                                 locale={ptBR}
                               />
@@ -726,7 +746,17 @@ export function ProjectFormDialog() {
                         <FormItem>
                           <FormLabel>Prazo de Pagamento</FormLabel>
                           <Select 
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) => {
+                              const paymentTerm = parseInt(value);
+                              field.onChange(paymentTerm);
+                              
+                              // Recalcular a data de vencimento ao alterar o prazo
+                              const issueDate = form.getValues("issue_date");
+                              if (issueDate) {
+                                // Ao alterar o prazo, atualizar a descrição com a nova data de vencimento
+                                form.trigger("payment_term");
+                              }
+                            }}
                             value={field.value?.toString()}
                             defaultValue="30"
                           >
