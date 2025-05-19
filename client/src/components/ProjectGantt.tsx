@@ -236,22 +236,28 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
       return { display: 'none' };
     }
     
+    // Certifica-se de que estamos trabalhando com objetos Date
     const projectStart = new Date(project.startDate);
     const projectEnd = new Date(project.endDate);
     
-    // Check if project is within view range
+    // Verifica se o projeto está dentro do período visível
     if (isAfter(projectStart, endDate) || isBefore(projectEnd, startDate)) {
       return { display: 'none' };
     }
     
-    // Calculate left position (start date)
-    const daysFromStart = Math.max(0, differenceInDays(projectStart, startDate));
+    // Para projetos que começam antes do período visível, ajusta para o início da visualização
+    const visibleStart = isBefore(projectStart, startDate) ? startDate : projectStart;
+    
+    // Para projetos que terminam depois do período visível, ajusta para o fim da visualização
+    const visibleEnd = isAfter(projectEnd, endDate) ? endDate : projectEnd;
+    
+    // Calcula a posição à esquerda (data de início)
+    const daysFromStart = Math.max(0, differenceInDays(visibleStart, startDate));
     const leftPercent = (daysFromStart / daysInView) * 100;
     
-    // Calculate width (duration)
-    const durationDays = differenceInDays(projectEnd, projectStart) + 1; // +1 to include end date
-    const visibleDuration = Math.min(durationDays, daysInView - daysFromStart);
-    const widthPercent = (visibleDuration / daysInView) * 100;
+    // Calcula a largura (duração)
+    const visibleDurationDays = differenceInDays(visibleEnd, visibleStart) + 1; // +1 para incluir o dia final
+    const widthPercent = (visibleDurationDays / daysInView) * 100;
     
     return {
       left: `${leftPercent}%`,
