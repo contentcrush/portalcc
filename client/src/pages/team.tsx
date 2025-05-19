@@ -859,8 +859,12 @@ export default function Team() {
 
   // Handler for editing user
   const handleEditUser = (user: any) => {
-    setEditingUser(user);
-    setIsUserDialogOpen(true);
+    // Certifica-se de que temos todos os dados do usuário antes de abrir o formulário
+    if (user && user.id) {
+      // Salva uma cópia dos dados para evitar referências diretas
+      setEditingUser({...user});
+      setIsUserDialogOpen(true);
+    }
   };
   
   // Handler for deleting user

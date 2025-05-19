@@ -1701,7 +1701,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTasksByUserId(userId: number): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+    // Busca tarefas onde o usuário é assignee_id OU assigned_to
+    return await db.select().from(tasks).where(
+      or(
+        eq(tasks.assignee_id, userId),
+        eq(tasks.assigned_to, userId)
+      )
+    );
   }
   
   async getTransactionsByUserId(userId: number): Promise<FinancialDocument[]> {
@@ -2186,7 +2192,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTasksByUser(userId: number): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+    // Busca tarefas onde o usuário é assignee_id OU assigned_to
+    return await db.select().from(tasks).where(
+      or(
+        eq(tasks.assignee_id, userId),
+        eq(tasks.assigned_to, userId)
+      )
+    );
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
