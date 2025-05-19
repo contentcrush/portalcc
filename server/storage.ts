@@ -1703,10 +1703,7 @@ export class DatabaseStorage implements IStorage {
   async getTasksByUserId(userId: number): Promise<Task[]> {
     // Busca tarefas onde o usuário é assignee_id OU assigned_to
     return await db.select().from(tasks).where(
-      or(
-        eq(tasks.assignee_id, userId),
-        eq(tasks.assigned_to, userId)
-      )
+      sql`(${tasks.assignee_id} = ${userId} OR ${tasks.assigned_to} = ${userId})`
     );
   }
   
@@ -2194,10 +2191,7 @@ export class DatabaseStorage implements IStorage {
   async getTasksByUser(userId: number): Promise<Task[]> {
     // Busca tarefas onde o usuário é assignee_id OU assigned_to
     return await db.select().from(tasks).where(
-      or(
-        eq(tasks.assignee_id, userId),
-        eq(tasks.assigned_to, userId)
-      )
+      sql`(${tasks.assignee_id} = ${userId} OR ${tasks.assigned_to} = ${userId})`
     );
   }
 
