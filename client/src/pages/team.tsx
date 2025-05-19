@@ -438,7 +438,12 @@ export function UserEditDialog({
                         <FormItem>
                           <FormLabel>CNPJ/CPF</FormLabel>
                           <FormControl>
-                            <Input placeholder="CNPJ ou CPF" {...field} value={field.value || ""} />
+                            <Input 
+                              placeholder="CNPJ ou CPF" 
+                              {...field} 
+                              value={field.value || ""} 
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
                           </FormControl>
                         </FormItem>
                       )}
