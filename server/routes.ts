@@ -2488,6 +2488,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota para reverter pagamento de um documento financeiro
+  app.post("/api/financial-documents/:id/revert-payment", authenticateJWT, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verificar se o documento existe
+      const document = await storage.getFinancialDocument(id);
+      if (!document) {
+        return res.status(404).json({ message: "Documento financeiro não encontrado" });
+      }
+      
+      // Se não estiver pago, retornar erro
+      if (!document.paid) {
+        return res.status(400).json({ message: "Este documento não está pago para ser revertido" });
+      }
+      
+      // Reverter o pagamento
+      const updatedDocument = await storage.updateFinancialDocument(id, {
+        paid: false,
+        status: 'pending',
+        payment_date: null,
+        payment_notes: null
+      });
+      
+      // Importação aqui para evitar problemas de importação circular
+      const { syncFinancialDocumentToCalendar } = await import('./utils/calendarSync');
+      
+      // Recriar eventos de calendário para este documento já que voltou a ser não pago
+      await syncFinancialDocumentToCalendar(updatedDocument, req.user?.id || 1);
+      
+      // Notificar usuários sobre a atualização do calendário
+      io.emit('calendar_updated', {
+        type: 'calendar_updated',
+        timestamp: new Date().toISOString(),
+        message: 'O calendário foi atualizado. Atualize a visualização para ver as mudanças.'
+      });
+      
+      // Notificar sobre reversão do pagamento
+      io.emit('financial_updated', { 
+        type: 'financial_updated',
+        action: 'payment_reversal', 
+        document: updatedDocument,
+        timestamp: new Date().toISOString(),
+        message: 'O pagamento de um documento financeiro foi revertido'
+      });
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Erro ao reverter pagamento:", error);
+      res.status(500).json({ message: "Erro ao reverter pagamento do documento" });
+    }
+  });
+  
   // Excluir um documento financeiro
   app.delete("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
