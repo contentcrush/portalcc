@@ -154,6 +154,58 @@ export function FinancialRecordActions({
     },
   });
 
+  // Mutação para reverter pagamento
+  const revertPaymentMutation = useMutation({
+    mutationFn: async () => {
+      let endpoint = "";
+      
+      if (type === "document") {
+        endpoint = `/api/financial-documents/${record.id}/revert-payment`;
+      } else {
+        endpoint = `/api/expenses/${record.id}/unapprove`;
+      }
+      
+      const response = await apiRequest("POST", endpoint);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Erro ao reverter pagamento");
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      showSuccessToast({
+        title: "Pagamento revertido com sucesso",
+        description: type === "document" 
+          ? "O documento foi marcado como pendente novamente."
+          : "A despesa foi marcada como não aprovada."
+      });
+      
+      // Recarregar os dados após reverter pagamento
+      if (type === "document") {
+        queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      }
+      
+      // Atualizar o calendário
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
+      
+      // Atualizar projetos se for um documento ligado a projeto
+      if (isLinkedToProject()) {
+        queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao reverter pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Função para exportar PDF
   const handleExportPDF = () => {
     showSuccessToast({
@@ -190,6 +242,13 @@ export function FinancialRecordActions({
             <DropdownMenuItem onClick={() => onRegisterPayment(record)}>
               <FileCheck className="mr-2 h-4 w-4" />
               <span>Registrar Pagamento</span>
+            </DropdownMenuItem>
+          )}
+          
+          {canRevertPayment() && (
+            <DropdownMenuItem onClick={() => revertPaymentMutation.mutate()}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              <span>{revertPaymentMutation.isPending ? "Revertendo..." : "Reverter Pagamento"}</span>
             </DropdownMenuItem>
           )}
           
