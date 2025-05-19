@@ -1701,10 +1701,28 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTasksByUserId(userId: number): Promise<Task[]> {
-    // Busca tarefas onde o usuário é assignee_id OU assigned_to
-    return await db.select().from(tasks).where(
-      sql`(${tasks.assignee_id} = ${userId} OR ${tasks.assigned_to} = ${userId})`
-    );
+    // Busca tarefas por assignee_id e depois por assigned_to, e combina os resultados
+    const assigneeTasks = await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+    const assignedToTasks = await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+    
+    // Combinamos os resultados, evitando duplicatas
+    const allTaskIds = new Set();
+    const allTasks = [];
+    
+    // Primeiro adiciona as tarefas por assignee_id
+    for (const task of assigneeTasks) {
+      allTaskIds.add(task.id);
+      allTasks.push(task);
+    }
+    
+    // Depois adiciona as tarefas por assigned_to que ainda não foram incluídas
+    for (const task of assignedToTasks) {
+      if (!allTaskIds.has(task.id)) {
+        allTasks.push(task);
+      }
+    }
+    
+    return allTasks;
   }
   
   async getTransactionsByUserId(userId: number): Promise<FinancialDocument[]> {
@@ -2189,10 +2207,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTasksByUser(userId: number): Promise<Task[]> {
-    // Busca tarefas onde o usuário é assignee_id OU assigned_to
-    return await db.select().from(tasks).where(
-      sql`(${tasks.assignee_id} = ${userId} OR ${tasks.assigned_to} = ${userId})`
-    );
+    // Busca tarefas por assignee_id e depois por assigned_to, e combina os resultados
+    const assigneeTasks = await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+    const assignedToTasks = await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+    
+    // Combinamos os resultados, evitando duplicatas
+    const allTaskIds = new Set();
+    const allTasks = [];
+    
+    // Primeiro adiciona as tarefas por assignee_id
+    for (const task of assigneeTasks) {
+      allTaskIds.add(task.id);
+      allTasks.push(task);
+    }
+    
+    // Depois adiciona as tarefas por assigned_to que ainda não foram incluídas
+    for (const task of assignedToTasks) {
+      if (!allTaskIds.has(task.id)) {
+        allTasks.push(task);
+      }
+    }
+    
+    return allTasks;
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
