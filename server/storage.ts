@@ -1686,40 +1686,67 @@ export class DatabaseStorage implements IStorage {
   
   async getProjectsByUserId(userId: number): Promise<Project[]> {
     // Encontrar ids de projetos pelos membros do projeto
-    const projectMembersResult = await db.select().from(projectMembers).where(eq(projectMembers.user_id, userId));
+    const projectMembers = await db.select().from(projectMembers).where(eq(projectMembers.user_id, userId));
     
     // Sem projetos encontrados
-    if (projectMembersResult.length === 0) {
+    if (projectMembers.length === 0) {
       return [];
     }
     
     // Extrair os IDs dos projetos
-    const projectIds = projectMembersResult.map(member => member.project_id);
+    const projectIds = projectMembers.map(member => member.project_id);
     
     // Buscar projetos
     return await db.select().from(projects).where(inArray(projects.id, projectIds));
   }
   
   async getTasksByUserId(userId: number): Promise<Task[]> {
-    try {
-      // Método simplificado que retorna todas as tarefas
-      // A filtragem será feita no frontend
-      return await this.getTasks();
-    } catch (error) {
-      console.error("Erro ao buscar tarefas do usuário:", error);
-      return [];
+    // Busca tarefas por assignee_id e depois por assigned_to, e combina os resultados
+    const assigneeTasks = await db.select().from(tasks).where(eq(tasks.assignee_id, userId));
+    const assignedToTasks = await db.select().from(tasks).where(eq(tasks.assigned_to, userId));
+    
+    // Combinamos os resultados, evitando duplicatas
+    const allTaskIds = new Set();
+    const allTasks = [];
+    
+    // Primeiro adiciona as tarefas por assignee_id
+    for (const task of assigneeTasks) {
+      allTaskIds.add(task.id);
+      allTasks.push(task);
     }
+    
+    // Depois adiciona as tarefas por assigned_to que ainda não foram incluídas
+    for (const task of assignedToTasks) {
+      if (!allTaskIds.has(task.id)) {
+        allTasks.push(task);
+      }
+    }
+    
+    return allTasks;
   }
   
   async getTransactionsByUserId(userId: number): Promise<FinancialDocument[]> {
-    try {
-      // Método simplificado que retorna todas as transações financeiras
-      // A filtragem será feita no frontend
-      return await db.select().from(financialDocuments);
-    } catch (error) {
-      console.error("Erro ao buscar transações do usuário:", error);
-      return [];
+    // Encontrar todos os projetos do usuário
+    const userProjects = await this.getProjectsByUserId(userId);
+    
+    // Sem projetos encontrados
+    if (userProjects.length === 0) {
+      // Retornar apenas transações diretamente associadas ao usuário
+      return await db.select().from(financialDocuments).where(eq(financialDocuments.user_id, userId));
     }
+    
+    // Extrair os IDs dos projetos
+    const projectIds = userProjects.map(project => project.id);
+    
+    // Buscar transações relacionadas ao usuário diretamente ou via projetos
+    return await db.select()
+      .from(financialDocuments)
+      .where(
+        or(
+          eq(financialDocuments.user_id, userId),
+          inArray(financialDocuments.project_id, projectIds)
+        )
+      );
   }
   
   async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {

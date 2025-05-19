@@ -445,7 +445,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
-  const handleUpdateProjectStatus = async (status: string) => {
+  const handleUpdateProjectStatus = (status: string) => {
     // Verifica se o status é diferente do atual para evitar chamadas desnecessárias
     if (project && project.status !== status) {
       // Verificar se o projeto tem status especial e se o usuário está tentando alterar para uma etapa
@@ -454,49 +454,6 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         
         // Se o projeto tiver um status especial, confirmar se o usuário quer remover o status especial
         if (specialStatus && !window.confirm(`Este projeto está marcado como "${specialStatus}". Deseja remover esse status e atualizar para "${status}"?`)) {
-          return;
-        }
-      }
-      
-      // Verificação específica para status "concluido" - verificar se a fatura foi paga
-      if (status === 'concluido') {
-        try {
-          // Buscar documentos financeiros do projeto
-          const response = await fetch(`/api/financial-documents/project/${projectId}`);
-          const financialDocuments = await response.json();
-          
-          // Verificar se existe pelo menos um documento não pago
-          const hasPendingInvoices = financialDocuments.some(doc => 
-            doc.document_type === 'invoice' && (!doc.paid || doc.status !== 'paid')
-          );
-          
-          if (hasPendingInvoices) {
-            toast({
-              title: "Ação não permitida",
-              description: "Para marcar o projeto como 'Concluído', todas as faturas devem estar pagas. Por favor, acesse o painel financeiro e registre o pagamento pendente.",
-              variant: "destructive",
-              duration: 6000
-            });
-            return;
-          }
-          
-          // Se não houver documentos, também não pode marcar como concluído
-          if (financialDocuments.length === 0) {
-            toast({
-              title: "Ação não permitida",
-              description: "Este projeto não possui documentos financeiros. Para marcá-lo como 'Concluído', é necessário primeiro criar e registrar o pagamento de uma fatura.",
-              variant: "destructive",
-              duration: 6000
-            });
-            return;
-          }
-        } catch (error) {
-          console.error("Erro ao verificar status financeiro do projeto:", error);
-          toast({
-            title: "Erro ao verificar status financeiro",
-            description: "Não foi possível verificar o status financeiro do projeto. Tente novamente.",
-            variant: "destructive"
-          });
           return;
         }
       }
