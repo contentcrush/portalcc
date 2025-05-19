@@ -439,12 +439,12 @@ export function UserEditDialog({
                           <FormLabel>CNPJ/CPF</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="CNPJ ou CPF" 
-                              {...field} 
-                              value={field.value || ""} 
-                              onChange={(e) => field.onChange(e.target.value)}
+                              placeholder="CNPJ ou CPF"
+                              {...field}
+                              value={field.value || ""}
                             />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
