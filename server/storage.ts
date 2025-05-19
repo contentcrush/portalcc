@@ -1686,15 +1686,15 @@ export class DatabaseStorage implements IStorage {
   
   async getProjectsByUserId(userId: number): Promise<Project[]> {
     // Encontrar ids de projetos pelos membros do projeto
-    const projectMembers = await db.select().from(projectMembers).where(eq(projectMembers.user_id, userId));
+    const projectMembersResult = await db.select().from(projectMembers).where(eq(projectMembers.user_id, userId));
     
     // Sem projetos encontrados
-    if (projectMembers.length === 0) {
+    if (projectMembersResult.length === 0) {
       return [];
     }
     
     // Extrair os IDs dos projetos
-    const projectIds = projectMembers.map(member => member.project_id);
+    const projectIds = projectMembersResult.map(member => member.project_id);
     
     // Buscar projetos
     return await db.select().from(projects).where(inArray(projects.id, projectIds));
