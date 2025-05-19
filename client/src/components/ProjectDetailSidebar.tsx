@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useRoute } from "wouter";
+import { useLocation, useRoute, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { UserPlus, X, Edit, CheckCircle2, Circle, MoreHorizontal, Copy, FileText, DollarSign, Trash2, Clock, Pause, Check, Loader2, Plus, File, Download } from "lucide-react";
 import { formatCurrency, getInitials, formatTeamRole, getNormalizedProjectStatus, hasInteractiveStages, showSuccessToast } from "@/lib/utils";
@@ -445,9 +445,82 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   });
   
-  const handleUpdateProjectStatus = (status: string) => {
+  // Função para verificar se todos os documentos financeiros do projeto estão pagos
+  const checkProjectPaymentStatus = async () => {
+    try {
+      // Buscar documentos financeiros do projeto
+      const response = await apiRequest('GET', `/api/financial-documents/project/${projectId}`);
+      const documents = await response.json();
+      
+      // Se não houver documentos financeiros, não pode ser marcado como concluído
+      if (!documents || documents.length === 0) {
+        return {
+          isPaid: false,
+          message: "Não existem documentos financeiros associados a este projeto. É necessário ter uma fatura para marcar como concluído."
+        };
+      }
+      
+      // Verifica se todos os documentos estão pagos
+      const unpaidDocuments = documents.filter(doc => !doc.paid);
+      
+      if (unpaidDocuments.length > 0) {
+        return {
+          isPaid: false,
+          message: "Existem faturas pendentes associadas a este projeto. Todas as faturas devem estar pagas antes de marcar o projeto como concluído.",
+          documents: unpaidDocuments
+        };
+      }
+      
+      return {
+        isPaid: true,
+        message: "Todas as faturas estão pagas. O projeto pode ser marcado como concluído."
+      };
+    } catch (error) {
+      console.error("Erro ao verificar status de pagamento:", error);
+      return {
+        isPaid: false,
+        message: "Erro ao verificar o status de pagamento do projeto.",
+        error
+      };
+    }
+  };
+
+  const handleUpdateProjectStatus = async (status: string) => {
     // Verifica se o status é diferente do atual para evitar chamadas desnecessárias
     if (project && project.status !== status) {
+      // Se o usuário estiver tentando marcar como "concluido", verificar status de pagamento
+      if (status === 'concluido') {
+        // Abre um diálogo antes de verificar pagamento, para melhorar a experiência do usuário
+        toast({
+          title: "Verificando pagamento...",
+          description: "Aguarde enquanto verificamos o status de pagamento do projeto.",
+        });
+        
+        const paymentStatus = await checkProjectPaymentStatus();
+        
+        if (!paymentStatus.isPaid) {
+          // Cria um diálogo personalizado usando o componente Dialog do shadcn
+          toast({
+            title: "Ação não permitida",
+            description: (
+              <div className="space-y-3">
+                <p>{paymentStatus.message}</p>
+                <p className="font-semibold mt-2">Para marcar este projeto como concluído:</p>
+                <ol className="list-decimal pl-4 space-y-1">
+                  <li>Acesse a página <Link to="/financial" className="text-primary underline font-medium">Financeiro</Link></li>
+                  <li>Localize a fatura relacionada a este projeto</li>
+                  <li>Clique em "Registrar Pagamento" e confirme a transação</li>
+                  <li>Retorne a esta página para finalizar o projeto</li>
+                </ol>
+              </div>
+            ),
+            variant: "destructive",
+            duration: 10000, // 10 segundos para dar tempo de ler
+          });
+          return;
+        }
+      }
+      
       // Verificar se o projeto tem status especial e se o usuário está tentando alterar para uma etapa
       if (isProjectSpecialStatus(project.status) && isProjectStage(status)) {
         const { specialStatus } = getNormalizedProjectStatus(project);
