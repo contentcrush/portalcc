@@ -299,9 +299,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userId = parseInt(req.params.id);
-      const tasks = await storage.getTasksByUserId(userId);
+      const allTasks = await storage.getAllTasks();
       
-      res.json(tasks);
+      // Filtra tarefas no lado da aplicação em vez de no banco de dados
+      const userTasks = allTasks.filter(task => 
+        task.assignee_id === userId || task.assigned_to === userId
+      );
+      
+      res.json(userTasks);
     } catch (error) {
       console.error("Error retrieving user tasks:", error);
       res.status(500).json({ message: "Failed to retrieve user tasks" });
@@ -312,9 +317,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:id/transactions", authenticateJWT, requireRole(['admin']), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const transactions = await storage.getTransactionsByUserId(userId);
       
-      res.json(transactions);
+      // Obter todos os projetos do usuário
+      const userProjects = await storage.getProjectsByUserId(userId);
+      const projectIds = userProjects.map(project => project.id);
+      
+      // Obter todas as transações financeiras
+      const allFinancials = await storage.getFinancialDocuments();
+      
+      // Filtrar apenas as transações do usuário (diretamente atribuídas ou via projetos)
+      const userTransactions = allFinancials.filter(doc => 
+        doc.user_id === userId || (doc.project_id && projectIds.includes(doc.project_id))
+      );
+      
+      res.json(userTransactions);
     } catch (error) {
       console.error("Error retrieving user transactions:", error);
       res.status(500).json({ message: "Failed to retrieve user financial transactions" });
