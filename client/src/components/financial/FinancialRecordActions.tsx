@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download } from "lucide-react";
+import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -78,6 +78,17 @@ export function FinancialRecordActions({
     } else {
       const expense = record as Expense;
       return !expense.approved;
+    }
+  };
+
+  // Função para determinar se é possível reverter um pagamento
+  const canRevertPayment = () => {
+    if (type === "document") {
+      const doc = record as FinancialDocument;
+      return doc.paid === true;
+    } else {
+      const expense = record as Expense;
+      return expense.approved === true;
     }
   };
 
