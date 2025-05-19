@@ -840,7 +840,7 @@ export default function Team() {
   // Get tasks for a user
   const getTasksForUser = (userId: number) => {
     return tasks.length > 0 
-      ? tasks.filter((task: any) => task.assigned_to === userId) 
+      ? tasks.filter((task: any) => task.assignee_id === userId || task.assigned_to === userId) 
       : [];
   };
   
@@ -1014,7 +1014,7 @@ export default function Team() {
             <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
               {users.map((user: any) => {
                 const overdueTasks = tasks.filter((t: any) => 
-                  t.assigned_to === user.id && 
+                  (t.assignee_id === user.id || t.assigned_to === user.id) && 
                   new Date(t.due_date) < new Date() && 
                   t.status !== "done"
                 );
@@ -1055,7 +1055,7 @@ export default function Team() {
             <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
               {users.slice(0, 10).map((user: any) => {
                 const activeTasks = tasks.filter((t: any) => 
-                  t.assigned_to === user.id && 
+                  (t.assignee_id === user.id || t.assigned_to === user.id) && 
                   t.status !== "done"
                 ).length;
                 
