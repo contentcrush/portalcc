@@ -248,10 +248,14 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - com log para debug
+  // Receivables total - considera apenas documentos não pagos
   console.log('Documentos financeiros (receivables):', receivablesData);
-  const totalReceivables = receivablesData.reduce((sum: number, doc: any) => {
-    console.log(`Documento #${doc.id}: R$${doc.amount}`);
+  
+  // Filtra apenas documentos não pagos para "A Receber"
+  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
+  
+  const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
+    console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
     return sum + (doc.amount || 0);
   }, 0);
   console.log('Total calculado (soma real):', totalReceivables);
@@ -300,17 +304,25 @@ export default function Financial() {
     .filter((exp: any) => exp.date && isBefore(new Date(exp.date), sevenDaysFromNow))
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Monthly revenue
+  // Monthly revenue - apenas pagamentos recebidos no mês atual
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   
-  const monthlyRevenue = financialDocuments
-    ?.filter((doc: any) => {
-      if (!doc.paid || !doc.payment_date) return false;
-      const paymentDate = new Date(doc.payment_date);
-      return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
-    })
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
+  // Documentos pagos no mês atual
+  const paidDocumentsThisMonth = financialDocuments?.filter((doc: any) => {
+    if (!doc.paid || !doc.payment_date) return false;
+    const paymentDate = new Date(doc.payment_date);
+    return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
+  }) || [];
+  
+  console.log('Documentos pagos neste mês:', paidDocumentsThisMonth.length);
+  
+  // Valor total dos documentos pagos no mês atual 
+  const monthlyRevenue = paidDocumentsThisMonth
+    .reduce((sum: number, doc: any) => {
+      console.log(`Documento #${doc.id} (Receita Mensal): R$${doc.amount}`);
+      return sum + (doc.amount || 0);
+    }, 0);
   
   // Monthly expenses - incluindo todas as despesas do mês atual, mesmo as pendentes
   const monthlyExpenses = expenses
