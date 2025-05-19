@@ -395,7 +395,7 @@ export default function Financial() {
       title: "Receita Mensal",
       value: monthlyRevenue,
       icon: <Banknote className="h-5 w-5" />,
-      description: "Valor recebido no mês",
+      description: `${paidDocumentsThisMonth.length} pagamento(s) recebido(s) em ${format(now, 'MMMM', { locale: ptBR })}`,
       variant: "green"
     },
     {
