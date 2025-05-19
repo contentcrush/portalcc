@@ -12,9 +12,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'content-crush-jwt-secret-key-2025'
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'content-crush-refresh-secret-key-2025';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-key-32chars!';
 
+// Importar configurações de autenticação
+import { AUTH_CONFIG } from './auth-config';
+
 // Constantes para tokens
-const ACCESS_TOKEN_EXPIRY = '4h'; // 4 horas
-const REFRESH_TOKEN_EXPIRY = '30d'; // 30 dias
+const ACCESS_TOKEN_EXPIRY = AUTH_CONFIG.ACCESS_TOKEN_EXPIRY;
+const REFRESH_TOKEN_EXPIRY = AUTH_CONFIG.REFRESH_TOKEN_EXPIRY;
 
 // Interface para payload do token JWT
 interface JwtPayload {
