@@ -23,6 +23,7 @@ import { PreferencesProvider } from "@/hooks/use-preferences";
 import { DateFormatterProvider } from "@/hooks/use-date-formatter";
 import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
 import { SocketProvider } from "@/contexts/SocketContext";
+import { FormPersistenceProvider } from "@/contexts/FormPersistenceContext";
 import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
@@ -64,18 +65,20 @@ function App() {
         <PreferencesProvider>
           <AccessibilityProvider>
             <DateFormatterProvider>
-              <ProjectFormProvider>
-                <SocketProvider>
-                  <TooltipProvider>
-                    <Layout>
-                      <Router />
-                    </Layout>
-                    {/* Renderizar o diálogo de formulário de projeto globalmente */}
-                    <ProjectFormDialog />
-                    <Toaster />
-                  </TooltipProvider>
-                </SocketProvider>
-              </ProjectFormProvider>
+              <FormPersistenceProvider>
+                <ProjectFormProvider>
+                  <SocketProvider>
+                    <TooltipProvider>
+                      <Layout>
+                        <Router />
+                      </Layout>
+                      {/* Renderizar o diálogo de formulário de projeto globalmente */}
+                      <ProjectFormDialog />
+                      <Toaster />
+                    </TooltipProvider>
+                  </SocketProvider>
+                </ProjectFormProvider>
+              </FormPersistenceProvider>
             </DateFormatterProvider>
           </AccessibilityProvider>
         </PreferencesProvider>
