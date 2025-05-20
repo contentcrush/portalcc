@@ -2076,6 +2076,21 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
   
+  // Métodos de otimização para a página de projetos
+  async getAllProjectMembers(): Promise<ProjectMember[]> {
+    console.time('get-all-project-members');
+    const members = await db.select().from(projectMembers);
+    console.timeEnd('get-all-project-members');
+    return members;
+  }
+  
+  async getAllProjectStages(): Promise<ProjectStage[]> {
+    console.time('get-all-project-stages');
+    const stages = await db.select().from(projectStages);
+    console.timeEnd('get-all-project-stages');
+    return stages;
+  }
+  
   // Project Stages
   async getProjectStages(projectId: number): Promise<ProjectStage[]> {
     return await db.select()

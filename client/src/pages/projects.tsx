@@ -79,21 +79,26 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects com cache otimizado
-  const { data: projects, isLoading } = useQuery({
-    queryKey: ['/api/projects'],
+  // Fetch projects com a nova rota otimizada que inclui clientes, membros e estágios
+  const { data: projectsWithData, isLoading } = useQuery({
+    queryKey: ['/api/projects-with-data'],
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos (substitui cacheTime no TanStack Query v5)
-    refetchOnWindowFocus: false // Evita refetches desnecessários
+    refetchOnWindowFocus: false, // Evita refetches desnecessários
   });
-
-  // Fetch clients com cache otimizado
-  const { data: clients } = useQuery({
-    queryKey: ['/api/clients'],
-    staleTime: 10 * 60 * 1000, // 10 minutos - clientes mudam com menos frequência
-    gcTime: 15 * 60 * 1000, // 15 minutos
-    refetchOnWindowFocus: false // Evita refetches desnecessários
-  });
+  
+  // Extrair projetos e clientes dos dados unificados
+  const projects = projectsWithData ? projectsWithData.map(p => ({
+    ...p,
+    client_id: p.client?.id || p.client_id
+  })) : [];
+  
+  const clients = projectsWithData ? 
+    Array.from(new Map(projectsWithData
+      .filter(p => p.client)
+      .map(p => [p.client.id, p.client]))
+      .values()
+    ) : [];
 
   // Mutação para duplicar projeto
   const duplicateProjectMutation = useMutation({
@@ -106,8 +111,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         title: "Projeto duplicado com sucesso",
         description: "Uma cópia do projeto foi criada"
       });
-      // Atualiza a lista de projetos
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      // Atualiza a lista de projetos usando a nova query otimizada
+      queryClient.invalidateQueries({ queryKey: ['/api/projects-with-data'] });
     },
     onError: (error: Error) => {
       toast({
@@ -130,8 +135,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       });
       // Fecha o sidebar de detalhes caso esteja aberto
       setSelectedProjectId(null);
-      // Atualiza a lista de projetos e todos os dados relacionados
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      // Atualiza a lista de projetos usando a nova query otimizada
+      queryClient.invalidateQueries({ queryKey: ['/api/projects-with-data'] });
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
