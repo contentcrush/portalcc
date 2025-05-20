@@ -154,5 +154,9 @@ export {
   PaginationContent,
   PaginationItem,
   PaginationLink,
-  PaginationEllipsis
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationNext,
+  PaginationPrev,
+  PaginationLast
 }
