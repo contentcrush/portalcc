@@ -79,9 +79,15 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects
+  // Fetch projects com debug adicional
   const { data: projects, isLoading } = useQuery({
-    queryKey: ['/api/projects']
+    queryKey: ['/api/projects'],
+    onSuccess: (data) => {
+      console.log("Dados de projetos recebidos com sucesso:", data);
+    },
+    onError: (error) => {
+      console.error("Erro ao buscar projetos:", error);
+    }
   });
 
   // Fetch clients for dropdown and project details
@@ -140,31 +146,67 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   });
 
   // Apply filters
-  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
-    // Search term filter
-    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
+  // Debug logs
+  console.log("Dados recebidos para filtro:", { 
+    projects, 
+    searchTerm, 
+    statusFilter, 
+    clientFilter, 
+    dateFilter 
+  });
+
+  // Aplicando filtros com tratamento mais robusto
+  const filteredProjects = Array.isArray(projects) && projects.length > 0 
+    ? projects.filter((project: any) => {
+        // Verificar se o projeto é válido
+        if (!project || typeof project !== 'object') {
+          console.warn("Projeto inválido encontrado na filtragem:", project);
+          return false;
+        }
+        
+        // Search term filter (com verificações de segurança)
+        if (searchTerm && project.name && typeof project.name === 'string') {
+          if (!project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+          }
+        } else if (searchTerm) {
+          // Se temos um termo de busca mas o projeto não tem nome válido, não inclua
+          return false;
+        }
+        
+        // Status filter (com verificações de segurança)
+        if (statusFilter !== "all") {
+          if (!project.status || project.status !== statusFilter) {
+            return false;
+          }
+        }
+        
+        // Client filter (com verificações de segurança)
+        if (clientFilter !== "all") {
+          const clientIdNum = parseInt(clientFilter);
+          if (isNaN(clientIdNum) || project.client_id !== clientIdNum) {
+            return false;
+          }
+        }
+        
+        // Date filter (com verificações de segurança)
+        if (dateFilter === "recent" && project.creation_date) {
+          try {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return new Date(project.creation_date) > thirtyDaysAgo;
+          } catch (e) {
+            console.warn("Erro ao processar data:", e);
+            return true; // Em caso de erro, incluímos o projeto
+          }
+        }
+        
+        return true;
+      }) 
+    : [];
     
-    // Status filter
-    if (statusFilter !== "all" && project.status !== statusFilter) {
-      return false;
-    }
-    
-    // Client filter
-    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
-      return false;
-    }
-    
-    // Date filter (simplified for now)
-    if (dateFilter === "recent" && project.creation_date) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return new Date(project.creation_date) > thirtyDaysAgo;
-    }
-    
-    return true;
-  }) : [];
+  // Log dos projetos filtrados para debug
+  console.log("Projetos após filtragem:", filteredProjects);
 
   // Combine project with client data
   const projectsWithClient = filteredProjects && filteredProjects.length > 0 
