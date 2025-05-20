@@ -9,7 +9,8 @@ import { ptBR } from "date-fns/locale";
 import { formatFileSize } from "@/lib/utils";
 
 // React PDF para visualização de PDFs
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
+import { pdfjs } from 'react-pdf/dist/esm/entry.webpack';
 // Configurar o worker do PDF corretamente
 pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
 

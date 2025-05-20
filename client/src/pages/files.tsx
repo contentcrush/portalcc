@@ -15,7 +15,8 @@ import {
   Minimize
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
+import { pdfjs } from 'react-pdf/dist/esm/entry.webpack';
 
 // Desabilitamos completamente o worker para evitar problemas de compatibilidade
 // Em vez disso, vamos oferecer uma melhor mensagem e um botão para abrir em nova aba
