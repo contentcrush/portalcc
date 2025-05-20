@@ -1926,21 +1926,21 @@ export class DatabaseStorage implements IStorage {
 
   async getProjects(): Promise<Project[]> {
     console.time('getProjects');
-    // Otimizando a consulta para seleção apenas dos campos necessários para a lista
-    const result = await db.select({
-      id: projects.id,
-      name: projects.name,
-      description: projects.description,
-      client_id: projects.client_id,
-      status: projects.status,
-      budget: projects.budget,
-      startDate: projects.startDate,
-      endDate: projects.endDate,
-      progress: projects.progress,
-      thumbnail: projects.thumbnail,
-    }).from(projects);
-    console.timeEnd('getProjects');
-    return result;
+    try {
+      // Usar consulta SQL simples diretamente
+      const result = await db.execute(`SELECT * FROM projects`);
+      console.timeEnd('getProjects');
+      
+      if (result && Array.isArray(result.rows)) {
+        return result.rows;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error("Erro ao buscar projetos:", error);
+      console.timeEnd('getProjects');
+      return [];
+    }
   }
 
   async getProjectsByClient(clientId: number): Promise<Project[]> {

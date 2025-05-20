@@ -902,23 +902,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.time('projects-api');
       
-      // Executando a consulta diretamente no banco de dados para evitar processamento excessivo
-      // Selecionando apenas os campos essenciais
-      const projects = await db.select({
-        id: projects.id,
-        name: projects.name,
-        description: projects.description,
-        client_id: projects.client_id,
-        status: projects.status,
-        budget: projects.budget,
-        startDate: projects.startDate,
-        endDate: projects.endDate,
-        progress: projects.progress,
-        thumbnail: projects.thumbnail,
-      }).from(projects);
+      // Vamos usar o método de storage para garantir consistência
+      const projectsList = await storage.getProjects();
       
       console.timeEnd('projects-api');
-      res.json(projects);
+      res.json(projectsList);
     } catch (error) {
       console.error("Erro ao buscar projetos:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
