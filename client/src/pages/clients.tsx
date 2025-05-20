@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { NewClientForm } from "@/components/NewClientForm";
 import { Calendar, DatePickerWithYearNavigation } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -1110,15 +1111,34 @@ export default function Clients() {
         </Card>
       )}
       
-      {/* Dialog para novo cliente */}
+      {/* Dialog para novo cliente - Versão simplificada */}
       <Dialog open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] p-0">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Adicionar novo cliente</DialogTitle>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
             <DialogDescription>
-              Preencha as informações abaixo para adicionar um novo cliente à sua base.
+              Preencha as informações básicas para adicionar um novo cliente.
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Novo formulário simplificado */}
+          <div className="py-1">
+            <NewClientForm 
+              onSuccess={() => {
+                setIsNewClientDialogOpen(false);
+                queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+                showSuccessToast({
+                  title: "Cliente criado com sucesso!",
+                  description: "O novo cliente foi adicionado à sua lista"
+                });
+              }}
+              onCancel={() => setIsNewClientDialogOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog para novo projeto */}
           
           {/* Formulário multi-etapas para novo cliente */}
           <Form {...form}>
