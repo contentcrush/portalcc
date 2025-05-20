@@ -906,6 +906,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
+  
+  // Rota otimizada para projetos com dados completos
+  app.get("/api/projects-with-data", authenticateJWT, async (_req, res) => {
+    try {
+      console.time("fetch-projects-with-data");
+      const projects = await storage.getProjects();
+      
+      // Obter clientes para unir aos projetos
+      const clients = await storage.getClients();
+      const clientsMap = new Map();
+      clients.forEach(client => clientsMap.set(client.id, client));
+      
+      // Obter todos os membros e estágios de projetos de uma vez só
+      const allProjectMembers = await storage.getAllProjectMembers();
+      const allProjectStages = await storage.getAllProjectStages();
+      
+      // Agrupar por project_id para acesso rápido
+      const membersByProject = new Map();
+      const stagesByProject = new Map();
+      
+      allProjectMembers.forEach(member => {
+        if (!membersByProject.has(member.project_id)) {
+          membersByProject.set(member.project_id, []);
+        }
+        membersByProject.get(member.project_id).push(member);
+      });
+      
+      allProjectStages.forEach(stage => {
+        if (!stagesByProject.has(stage.project_id)) {
+          stagesByProject.set(stage.project_id, []);
+        }
+        stagesByProject.get(stage.project_id).push(stage);
+      });
+      
+      // Unir todos os dados em um único objeto para cada projeto
+      const projectsWithData = projects.map(project => {
+        const client = clientsMap.get(project.client_id) || {};
+        const members = membersByProject.get(project.id) || [];
+        const stages = stagesByProject.get(project.id) || [];
+        
+        return {
+          ...project,
+          client,
+          members,
+          stages
+        };
+      });
+      
+      console.timeEnd("fetch-projects-with-data");
+      res.json(projectsWithData);
+    } catch (error) {
+      console.error("Erro ao buscar projetos com dados:", error);
+      res.status(500).json({ message: "Falha ao buscar projetos com dados completos" });
+    }
+  });
 
   app.get("/api/projects/:id", authenticateJWT, async (req, res) => {
     try {
