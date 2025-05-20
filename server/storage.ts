@@ -98,6 +98,10 @@ export interface IStorage {
   
   // Project Members
   getProjectMembers(projectId: number): Promise<ProjectMember[]>;
+  
+  // Métodos de otimização
+  getAllProjectMembers(): Promise<ProjectMember[]>;
+  getAllProjectStages(): Promise<ProjectStage[]>;
   addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
   removeProjectMember(projectId: number, userId: number): Promise<boolean>;
   
