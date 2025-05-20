@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign, Loader2 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { ClientAvatar } from './ClientAvatar';
 import { getNormalizedProjectStatus, getProgressBarColor, showSuccessToast } from '@/lib/utils';
