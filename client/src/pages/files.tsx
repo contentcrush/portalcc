@@ -16,9 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Document, Page } from 'react-pdf';
-import { pdfjs } from 'react-pdf/dist/esm/entry.webpack';
 
-// Desabilitamos completamente o worker para evitar problemas de compatibilidade
+// Após a atualização de segurança das bibliotecas PDF, usamos abordagem simplificada
 // Em vez disso, vamos oferecer uma melhor mensagem e um botão para abrir em nova aba
 const isPdfViewerEnabled = false;
 import FileManager from "@/components/FileManager";

@@ -10,9 +10,9 @@ import { formatFileSize } from "@/lib/utils";
 
 // React PDF para visualização de PDFs
 import { Document, Page } from 'react-pdf';
-import { pdfjs } from 'react-pdf/dist/esm/entry.webpack';
-// Configurar o worker do PDF corretamente
-pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
+// Since we're not using the full worker capabilities due to 
+// security updates, we'll provide a simplified approach
+// We'll focus on providing a button to open PDFs in a new tab instead
 
 // Interface para o arquivo a ser visualizado
 interface FileData {
@@ -149,61 +149,16 @@ export default function FilePreview({ file, open, onClose, onDownload }: FilePre
     if (file.file_type.includes('pdf')) {
       return (
         <div className="flex flex-col items-center max-h-[70vh]">
-          <div className="flex items-center justify-between w-full mb-2">
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={() => setPdfPage(prev => Math.max(prev - 1, 1))} 
-                disabled={pdfPage <= 1}
-                variant="outline" 
-                size="sm"
-              >
-                Anterior
-              </Button>
-              <span className="text-sm">
-                Página {pdfPage} {pdfNumPages ? `de ${pdfNumPages}` : ''}
-              </span>
-              <Button 
-                onClick={() => setPdfPage(prev => Math.min(prev + 1, pdfNumPages || 1))} 
-                disabled={pdfNumPages !== null && pdfPage >= pdfNumPages}
-                variant="outline" 
-                size="sm"
-              >
-                Próxima
-              </Button>
-            </div>
-            <Button 
-              onClick={handleOpenInNewTab} 
-              variant="outline" 
-              size="sm"
-              title="Abrir PDF em nova aba"
-            >
-              <ExternalLink className="h-4 w-4" />
+          <div className="flex flex-col items-center justify-center p-6 bg-muted rounded-md w-full">
+            <FileText className="h-16 w-16 text-primary mb-4" />
+            <p className="text-lg font-medium text-center mb-3">Visualizador de PDF</p>
+            <p className="text-sm text-muted-foreground text-center mb-6 max-w-[400px]">
+              Para melhor compatibilidade e experiência após a atualização de segurança, por favor utilize o botão abaixo para abrir o PDF em uma nova aba.
+            </p>
+            <Button size="lg" onClick={handleOpenInNewTab} className="flex items-center gap-2">
+              <ExternalLink className="h-5 w-5" />
+              Abrir PDF em nova aba
             </Button>
-          </div>
-          <div className="overflow-auto max-h-full w-full flex justify-center">
-            <Document
-              file={fileUrl}
-              onLoadSuccess={({ numPages }) => setPdfNumPages(numPages)}
-              onLoadError={() => setError('Erro ao carregar o PDF. Tente baixar o arquivo.')}
-              loading={
-                <div className="flex items-center justify-center h-96">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-              }
-              error={
-                <div className="flex flex-col items-center justify-center h-96">
-                  <AlertTriangle className="h-10 w-10 text-destructive mb-2" />
-                  <p className="text-muted-foreground">Erro ao carregar o PDF</p>
-                </div>
-              }
-            >
-              <Page 
-                pageNumber={pdfPage} 
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                width={containerRef.current?.clientWidth ? containerRef.current.clientWidth - 40 : undefined}
-              />
-            </Document>
           </div>
         </div>
       );
