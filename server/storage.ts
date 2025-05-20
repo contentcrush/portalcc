@@ -98,10 +98,6 @@ export interface IStorage {
   
   // Project Members
   getProjectMembers(projectId: number): Promise<ProjectMember[]>;
-  
-  // Métodos de otimização
-  getAllProjectMembers(): Promise<ProjectMember[]>;
-  getAllProjectStages(): Promise<ProjectStage[]>;
   addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
   removeProjectMember(projectId: number, userId: number): Promise<boolean>;
   
@@ -2074,21 +2070,6 @@ export class DatabaseStorage implements IStorage {
         eq(projectMembers.user_id, userId)
       ));
     return true;
-  }
-  
-  // Métodos de otimização para a página de projetos
-  async getAllProjectMembers(): Promise<ProjectMember[]> {
-    console.time('get-all-project-members');
-    const members = await db.select().from(projectMembers);
-    console.timeEnd('get-all-project-members');
-    return members;
-  }
-  
-  async getAllProjectStages(): Promise<ProjectStage[]> {
-    console.time('get-all-project-stages');
-    const stages = await db.select().from(projectStages);
-    console.timeEnd('get-all-project-stages');
-    return stages;
   }
   
   // Project Stages

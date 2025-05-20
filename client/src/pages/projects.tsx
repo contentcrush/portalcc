@@ -79,26 +79,15 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects com a nova rota otimizada que inclui clientes, membros e estágios
-  const { data: projectsWithData, isLoading } = useQuery({
-    queryKey: ['/api/projects-with-data'],
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos (substitui cacheTime no TanStack Query v5)
-    refetchOnWindowFocus: false, // Evita refetches desnecessários
+  // Fetch projects
+  const { data: projects, isLoading } = useQuery({
+    queryKey: ['/api/projects']
   });
-  
-  // Extrair projetos e clientes dos dados unificados
-  const projects = projectsWithData ? projectsWithData.map((p: any) => ({
-    ...p,
-    client_id: p.client?.id || p.client_id
-  })) : [];
-  
-  const clients = projectsWithData ? 
-    Array.from(new Map(projectsWithData
-      .filter((p: any) => p.client)
-      .map((p: any) => [p.client.id, p.client]))
-      .values()
-    ) : [];
+
+  // Fetch clients for dropdown and project details
+  const { data: clients } = useQuery({
+    queryKey: ['/api/clients']
+  });
 
   // Mutação para duplicar projeto
   const duplicateProjectMutation = useMutation({
@@ -111,8 +100,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         title: "Projeto duplicado com sucesso",
         description: "Uma cópia do projeto foi criada"
       });
-      // Atualiza a lista de projetos usando a nova query otimizada
-      queryClient.invalidateQueries({ queryKey: ['/api/projects-with-data'] });
+      // Atualiza a lista de projetos
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     },
     onError: (error: Error) => {
       toast({
@@ -135,8 +124,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       });
       // Fecha o sidebar de detalhes caso esteja aberto
       setSelectedProjectId(null);
-      // Atualiza a lista de projetos usando a nova query otimizada
-      queryClient.invalidateQueries({ queryKey: ['/api/projects-with-data'] });
+      // Atualiza a lista de projetos e todos os dados relacionados
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
