@@ -80,14 +80,12 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
   // Fetch projects com debug adicional
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, isError, error } = useQuery({
     queryKey: ['/api/projects'],
-    onSuccess: (data) => {
-      console.log("Dados de projetos recebidos com sucesso:", data);
-    },
-    onError: (error) => {
-      console.error("Erro ao buscar projetos:", error);
-    }
+    retry: 2, // Adicionar retentativas para melhorar a confiabilidade
+    staleTime: 30000, // Reduzir staleTime para garantir dados mais frescos
+    refetchOnWindowFocus: true, // Recarregar ao focar a janela
+    gcTime: 5 * 60 * 1000, // 5 minutos de cache
   });
 
   // Fetch clients for dropdown and project details

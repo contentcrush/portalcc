@@ -102,7 +102,13 @@ export const getQueryFn: <T>(options?: {
   (options) => {
     const unauthorizedBehavior = options?.on401 || "throw";
     return async ({ queryKey }) => {
-    let res = await fetch(queryKey[0] as string, {
+    // Diagnóstico do ambiente e requisição
+    const isDeployed = window.location.hostname.includes('.replit.app');
+    const requestUrl = queryKey[0] as string;
+    console.log(`[QueryClient] Ambiente: ${isDeployed ? 'Deployed' : 'Sandbox'}, Requisição: ${requestUrl}, Host: ${window.location.hostname}`);
+    
+    const startTime = performance.now();
+    let res = await fetch(requestUrl, {
       credentials: "include",
       headers: getAuthHeaders(),
     });
