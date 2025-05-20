@@ -32,6 +32,14 @@ export default function ProjectGantt() {
   const [startDate, setStartDate] = useState(new Date());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Buscar todos os projetos (limit=1000 para pegar todos os projetos sem paginação visual)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['/api/projects', { includeRelations: true, limit: 1000 }],
+  });
+  
+  // Precisamos extrair os projetos do retorno da API paginada
+  const projects = data?.data || [];
+  
   // Get the number of days in the current view
   const daysInView = ZOOM_LEVELS[zoomIndex];
   
@@ -63,7 +71,8 @@ export default function ProjectGantt() {
       const updateData: any = {
         name: projectToUpdate.name,
         client_id: projectToUpdate.client_id || null,
-        status: projectToUpdate.status || 'em_andamento'
+        status: projectToUpdate.status || 'em_andamento',
+        payment_term: projectToUpdate.payment_term || 30, // Mantém o payment_term existente ou usa 30 como padrão
       };
       
       // Adiciona os campos de data no formato correto (ISO string sem a parte de tempo)
@@ -276,6 +285,34 @@ export default function ProjectGantt() {
     const day = date.getDay();
     return day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
   };
+  
+  // Se estiver carregando, mostrar um indicador
+  if (isLoading) {
+    return (
+      <div className="my-8">
+        <h2 className="text-xl font-semibold mb-6">Linha do Tempo de Projetos</h2>
+        <div className="flex items-center justify-center h-[500px]">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Carregando projetos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Se tiver algum erro na API
+  if (error) {
+    return (
+      <div className="my-8">
+        <h2 className="text-xl font-semibold mb-6">Linha do Tempo de Projetos</h2>
+        <div className="bg-destructive/10 p-4 rounded-md">
+          <p className="text-destructive font-medium">Erro ao carregar projetos</p>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="my-8">
