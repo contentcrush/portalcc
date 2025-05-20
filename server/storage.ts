@@ -89,6 +89,19 @@ export interface IStorage {
   // Projects
   getProject(id: number): Promise<Project | undefined>;
   getProjects(): Promise<Project[]>;
+  getProjectsPaginated(options: {
+    page?: number; 
+    limit?: number; 
+    includeRelations?: boolean;
+    clientId?: number;
+    status?: string;
+    searchTerm?: string;
+  }): Promise<{
+    data: Project[]; 
+    total: number; 
+    page: number; 
+    totalPages: number;
+  }>;
   getProjectsByClient(clientId: number): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
