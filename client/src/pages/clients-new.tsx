@@ -1068,8 +1068,7 @@ export default function Clients() {
       )}
       
       {/* Sheet para novo cliente (formulário simplificado) */}
-      {/* Formulário simplificado de novo cliente */}
-      <Sheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
+      <ClientSheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen} />
         <SheetContent 
           side="bottom" 
           className="h-auto max-h-[90%] rounded-t-xl border-t border-border p-0"

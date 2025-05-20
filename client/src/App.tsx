@@ -8,7 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import DashboardNovo from "@/pages/dashboard-novo";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
-import Clients from "@/pages/clients-new";
+import Clients from "@/pages/clients-patched";
 import ClientDetail from "@/pages/client-detail";
 import Financial from "@/pages/financial";
 import Calendar from "@/pages/calendar";
