@@ -4,7 +4,6 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ClientSheet } from "@/components/ClientSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1067,11 +1066,11 @@ export default function Clients() {
         </ClientListPreloader>
       )}
       
-      {/* Sheet para novo cliente (formulário simplificado) */}
-      <ClientSheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen} />
+      {/* Sheet para novo cliente (melhor experiência mobile) */}
+      <Sheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <SheetContent 
           side="bottom" 
-          className="h-auto max-h-[90%] rounded-t-xl border-t border-border p-0"
+          className="h-[95%] sm:h-[90%] rounded-t-xl border-t border-border p-0"
         >
           <div className="flex flex-col h-full">
             <SheetHeader className="sticky top-0 z-20 bg-background pb-2 pt-0 px-6 shadow-sm">
@@ -1080,22 +1079,13 @@ export default function Clients() {
               </div>
               <SheetTitle className="text-xl font-semibold">Novo Cliente</SheetTitle>
               <SheetDescription className="text-sm">
-                Preencha as informações básicas para adicionar um novo cliente
+                Preencha as informações do cliente
               </SheetDescription>
             </SheetHeader>
             
-            <div className="overflow-y-auto flex-1 pb-6 px-6 py-4">
-              <NewClientForm 
-                onSuccess={() => {
-                  setIsNewClientDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-                }}
-                onCancel={() => setIsNewClientDialogOpen(false)}
-              />
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+            <div className="overflow-y-auto flex-1 pb-24">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-4" id="client-form">
                   <div className="flex justify-center mb-6">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
