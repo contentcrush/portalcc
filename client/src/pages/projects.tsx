@@ -217,6 +217,10 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         return { ...project, client };
       })
     : [];
+    
+  // Log dos projetos combinados para diagnóstico final
+  console.log("Projetos com dados de cliente para exibição:", projectsWithClient);
+  console.log("Número total de projetos a serem exibidos:", projectsWithClient.length);
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
