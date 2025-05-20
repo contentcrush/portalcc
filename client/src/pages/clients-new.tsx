@@ -1067,11 +1067,11 @@ export default function Clients() {
         </ClientListPreloader>
       )}
       
-      {/* Sheet para novo cliente (melhor experiência mobile) */}
+      {/* Sheet para novo cliente (formulário simplificado) */}
       <Sheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <SheetContent 
           side="bottom" 
-          className="h-[95%] sm:h-[90%] rounded-t-xl border-t border-border p-0"
+          className="h-auto max-h-[90%] rounded-t-xl border-t border-border p-0"
         >
           <div className="flex flex-col h-full">
             <SheetHeader className="sticky top-0 z-20 bg-background pb-2 pt-0 px-6 shadow-sm">
@@ -1080,13 +1080,19 @@ export default function Clients() {
               </div>
               <SheetTitle className="text-xl font-semibold">Novo Cliente</SheetTitle>
               <SheetDescription className="text-sm">
-                Preencha as informações do cliente
+                Preencha as informações básicas para adicionar um novo cliente
               </SheetDescription>
             </SheetHeader>
             
-            <div className="overflow-y-auto flex-1 pb-24">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-4" id="client-form">
+            <div className="overflow-y-auto flex-1 pb-24 px-6 py-4">
+              <NewClientForm 
+                onSuccess={() => {
+                  // Fechar o modal e atualizar a lista de clientes
+                  setIsNewClientDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+                }}
+                onCancel={() => setIsNewClientDialogOpen(false)}
+              />
                   <div className="flex justify-center mb-6">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
