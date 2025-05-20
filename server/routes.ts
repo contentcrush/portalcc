@@ -898,12 +898,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", authenticateJWT, async (_req, res) => {
+  app.get("/api/projects", authenticateJWT, async (req, res) => {
     try {
       console.time('projects-api');
       
+      // Verificar o ambiente para diagnóstico
+      const isDeployed = req.hostname.includes('.replit.app');
+      console.log(`Ambiente da requisição: ${isDeployed ? 'Deployed' : 'Sandbox'}, Hostname: ${req.hostname}`);
+      
       // Vamos usar o método de storage para garantir consistência
       const projectsList = await storage.getProjects();
+      
+      // Verificar se os projetos foram obtidos corretamente
+      console.log(`Projetos obtidos (${projectsList.length}): IDs = ${projectsList.map(p => p.id).join(', ')}`);
       
       console.timeEnd('projects-api');
       res.json(projectsList);
