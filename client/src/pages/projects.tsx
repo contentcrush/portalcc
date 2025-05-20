@@ -61,11 +61,7 @@ import { getProgressBarColor, showSuccessToast } from "@/lib/utils";
 
 export default function Projects({ params }: { params?: { id?: string } }) {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [clientFilter, setClientFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [view, setView] = useState<"grid" | "list">("grid");
+  // Removemos os estados de filtro que agora são gerenciados pelo componente ProjectsPagination
   // Inicializa o projeto selecionado a partir do ID na URL, se disponível
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     params?.id ? parseInt(params.id) : null
@@ -80,12 +76,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects
-  const { data: projects, isLoading } = useQuery({
-    queryKey: ['/api/projects']
-  });
-
-  // Fetch clients for dropdown and project details
+  // Agora estamos usando o componente ProjectsPagination que busca 
+  // e gerencia os projetos com paginação otimizada, então não precisamos
+  // buscar todos os projetos de uma vez
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
   });
@@ -140,42 +133,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // Apply filters
-  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
-    // Search term filter
-    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    
-    // Status filter
-    if (statusFilter !== "all" && project.status !== statusFilter) {
-      return false;
-    }
-    
-    // Client filter
-    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
-      return false;
-    }
-    
-    // Date filter (simplified for now)
-    if (dateFilter === "recent" && project.creation_date) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return new Date(project.creation_date) > thirtyDaysAgo;
-    }
-    
-    return true;
-  }) : [];
-
-  // Combine project with client data
-  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
-    ? filteredProjects.map((project: any) => {
-        const client = clients && clients.length > 0 
-          ? clients.find((c: any) => c.id === project.client_id) 
-          : null;
-        return { ...project, client };
-      })
-    : [];
+  // A lógica de filtragem foi movida para o componente ProjectsPagination
+  // que agora lida com a paginação e filtragem dos projetos direto na API
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -238,81 +197,7 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       </div>
       
-      {/* Filter and search */}
-      <div className="flex flex-wrap items-center justify-between bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0">
-        <div className="w-full md:w-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar projetos"
-              className="pl-10 w-full md:w-80"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {clients && clients.length > 0 ? clients.map((client: any) => (
-                <SelectItem key={client.id} value={client.id.toString()}>
-                  {client.name}
-                </SelectItem>
-              )) : null}
-            </SelectContent>
-          </Select>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {PROJECT_STATUS_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Data" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="recent">Mais recentes</SelectItem>
-              <SelectItem value="older">Mais antigos</SelectItem>
-              <SelectItem value="upcoming">Prazo próximo</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <div className="flex bg-white rounded-md border">
-            <Button 
-              variant={view === "list" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setView("list")}
-              className="rounded-r-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant={view === "grid" ? "secondary" : "ghost"} 
-              size="icon"
-              onClick={() => setView("grid")}
-              className="rounded-l-none"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Removido o filtro antigo, que agora faz parte do componente ProjectsPagination */}
       
       {/* Loading state */}
       {isLoading && (

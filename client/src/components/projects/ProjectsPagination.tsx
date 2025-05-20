@@ -22,7 +22,7 @@ import {
 import { Project } from '@shared/schema';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { ProjectCard } from '@/components/ProjectCard';
+import ProjectCard from '@/components/ProjectCard';
 
 type ProjectFilters = {
   clientId?: number;
@@ -344,8 +344,15 @@ export function ProjectsPagination() {
           {data.data.map((project) => (
             <ProjectCard 
               key={project.id} 
-              project={project}
-              onUpdate={invalidateProjects}
+              project={{
+                ...project,
+                client: clients?.find((c: any) => c.id === project.client_id)
+              }}
+              onOpenDetails={() => {
+                // Podemos adicionar um redirecionamento para a página de detalhes
+                window.history.pushState(null, '', `/projects/${project.id}`);
+                window.location.reload();
+              }}
             />
           ))}
         </div>
