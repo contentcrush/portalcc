@@ -1927,15 +1927,13 @@ export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     console.time('getProjects');
     try {
-      // Usar consulta SQL simples diretamente
-      const result = await db.execute(`SELECT * FROM projects`);
+      // Usar o ORM Drizzle em vez de SQL direto
+      // Isso garante que a mesma operação funcione em todos os ambientes
+      const result = await db.select().from(projects);
       console.timeEnd('getProjects');
       
-      if (result && Array.isArray(result.rows)) {
-        return result.rows;
-      } else {
-        return [];
-      }
+      console.log(`Total de projetos recuperados: ${result.length}`);
+      return result;
     } catch (error) {
       console.error("Erro ao buscar projetos:", error);
       console.timeEnd('getProjects');
