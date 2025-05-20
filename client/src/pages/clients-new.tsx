@@ -1068,6 +1068,7 @@ export default function Clients() {
       )}
       
       {/* Sheet para novo cliente (formulário simplificado) */}
+      {/* Formulário simplificado de novo cliente */}
       <Sheet open={isNewClientDialogOpen} onOpenChange={setIsNewClientDialogOpen}>
         <SheetContent 
           side="bottom" 
@@ -1084,15 +1085,18 @@ export default function Clients() {
               </SheetDescription>
             </SheetHeader>
             
-            <div className="overflow-y-auto flex-1 pb-24 px-6 py-4">
+            <div className="overflow-y-auto flex-1 pb-6 px-6 py-4">
               <NewClientForm 
                 onSuccess={() => {
-                  // Fechar o modal e atualizar a lista de clientes
                   setIsNewClientDialogOpen(false);
                   queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
                 }}
                 onCancel={() => setIsNewClientDialogOpen(false)}
               />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
                   <div className="flex justify-center mb-6">
                     <div className="relative">
                       <Avatar className="h-24 w-24">
