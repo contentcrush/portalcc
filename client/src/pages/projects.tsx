@@ -38,7 +38,6 @@ import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
 import ProjectKanban from "@/components/ProjectKanban";
 import ProjectGantt from "@/components/ProjectGantt";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
-import { ProjectsPagination } from "@/components/projects/ProjectsPagination";
 import { 
   Plus, 
   Filter, 
@@ -61,7 +60,11 @@ import { getProgressBarColor, showSuccessToast } from "@/lib/utils";
 
 export default function Projects({ params }: { params?: { id?: string } }) {
   const { toast } = useToast();
-  // Removemos os estados de filtro que agora são gerenciados pelo componente ProjectsPagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [view, setView] = useState<"grid" | "list">("grid");
   // Inicializa o projeto selecionado a partir do ID na URL, se disponível
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     params?.id ? parseInt(params.id) : null
@@ -76,9 +79,12 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Agora estamos usando o componente ProjectsPagination que busca 
-  // e gerencia os projetos com paginação otimizada, então não precisamos
-  // buscar todos os projetos de uma vez
+  // Fetch projects
+  const { data: projects, isLoading } = useQuery({
+    queryKey: ['/api/projects']
+  });
+
+  // Fetch clients for dropdown and project details
   const { data: clients } = useQuery({
     queryKey: ['/api/clients']
   });
@@ -133,8 +139,42 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // A lógica de filtragem foi movida para o componente ProjectsPagination
-  // que agora lida com a paginação e filtragem dos projetos direto na API
+  // Apply filters
+  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
+    // Search term filter
+    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Status filter
+    if (statusFilter !== "all" && project.status !== statusFilter) {
+      return false;
+    }
+    
+    // Client filter
+    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
+      return false;
+    }
+    
+    // Date filter (simplified for now)
+    if (dateFilter === "recent" && project.creation_date) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return new Date(project.creation_date) > thirtyDaysAgo;
+    }
+    
+    return true;
+  }) : [];
+
+  // Combine project with client data
+  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
+    ? filteredProjects.map((project: any) => {
+        const client = clients && clients.length > 0 
+          ? clients.find((c: any) => c.id === project.client_id) 
+          : null;
+        return { ...project, client };
+      })
+    : [];
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -197,15 +237,282 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       </div>
       
-      {/* Removido o filtro antigo, que agora faz parte do componente ProjectsPagination */}
+      {/* Filter and search */}
+      <div className="flex flex-wrap items-center justify-between bg-white p-4 rounded-lg shadow-sm space-y-4 md:space-y-0">
+        <div className="w-full md:w-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar projetos"
+              className="pl-10 w-full md:w-80"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {clients && clients.length > 0 ? clients.map((client: any) => (
+                <SelectItem key={client.id} value={client.id.toString()}>
+                  {client.name}
+                </SelectItem>
+              )) : null}
+            </SelectContent>
+          </Select>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {PROJECT_STATUS_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Data" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="older">Mais antigos</SelectItem>
+              <SelectItem value="upcoming">Prazo próximo</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <div className="flex bg-white rounded-md border">
+            <Button 
+              variant={view === "list" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setView("list")}
+              className="rounded-r-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={view === "grid" ? "secondary" : "ghost"} 
+              size="icon"
+              onClick={() => setView("grid")}
+              className="rounded-l-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
       
-      {/* O estado de carregamento e vazio agora são gerenciados pelo componente ProjectsPagination */}
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )}
+      
+      {/* Empty state */}
+      {projectsWithClient && projectsWithClient.length === 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Filter className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Nenhum projeto encontrado</h3>
+          <p className="text-muted-foreground mb-4">
+            Tente ajustar os filtros ou adicione um novo projeto.
+          </p>
+          <Button onClick={openProjectForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Projeto
+          </Button>
+        </div>
+      )}
       
       {/* Conteúdo da aba Projetos (grid e list) */}
-      {activeTab === "projects" && (
-        <div className="mt-4">
-          <ProjectsPagination />
-        </div>
+      {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
+        <>
+          {/* Project grid */}
+          {view === "grid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projectsWithClient.map(project => (
+                <ProjectCard 
+                  key={project.id} 
+                  project={project}
+                  onOpenDetails={handleOpenProjectDetails}
+                />
+              ))}
+              
+              {/* Add new project card */}
+              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
+                <div className="bg-primary/10 rounded-full p-3 mb-3">
+                  <Plus className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
+                <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
+                <Button onClick={openProjectForm}>Adicionar Projeto</Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Project list view */}
+          {view === "list" && (
+            <div className="space-y-3">
+              {projectsWithClient.map(project => (
+                <div 
+                  key={project.id}
+                  className="bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                  onClick={() => handleOpenProjectDetails(project.id)}
+                >
+                  <div className="flex items-center">
+                    {project.thumbnail ? (
+                      <img 
+                        src={project.thumbnail} 
+                        alt={project.name} 
+                        className="w-12 h-12 object-cover rounded mr-4" 
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mr-4">
+                        <span className="text-gray-500 font-medium">
+                          {project.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h3 className="font-medium hover:text-primary">
+                        {project.name}
+                      </h3>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <span>{project.client?.name || 'Cliente não especificado'}</span>
+                        <span className="mx-2">•</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          project.status === 'em_andamento' ? 'bg-green-100 text-green-800' : 
+                          project.status === 'pre_producao' ? 'bg-blue-100 text-blue-800' : 
+                          project.status === 'em_producao' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {project.status === 'em_andamento' ? 'Em andamento' : 
+                          project.status === 'pre_producao' ? 'Pré-produção' : 
+                          project.status === 'em_producao' ? 'Em produção' : 
+                          project.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <div className="text-right mr-6 hidden md:block">
+                      <div className="font-medium">{new Date(project.endDate).toLocaleDateString('pt-BR')}</div>
+                      <div className="text-sm text-muted-foreground">Prazo</div>
+                    </div>
+                    
+                    <div className="text-right mr-6">
+                      <div className="font-medium">
+                        {new Intl.NumberFormat('pt-BR', { 
+                          style: 'currency', 
+                          currency: 'BRL' 
+                        }).format(project.budget || 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Orçamento</div>
+                    </div>
+                    
+                    <div className="w-24 mr-6 hidden md:block">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Progresso</span>
+                        <span>{project.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div 
+                          className={`${getProgressBarColor(project.progress)} h-1.5 rounded-full`}
+                          style={{ width: `${project.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDuplicateProject(project.id);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> 
+                            Duplicar Projeto
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project.id);
+                            }}
+                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir Projeto
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Previne o evento de propagar para o parent
+                          handleOpenProjectDetails(project.id);
+                        }}
+                      >
+                        Detalhes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Pagination */}
+          <div className="mt-8 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando 1-{projectsWithClient.length} de {projectsWithClient.length} projetos
+            </p>
+            <div className="flex items-center">
+              <Button variant="outline" size="icon" className="rounded-r-none">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="default" size="icon" className="rounded-none w-8">
+                1
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-none w-8">
+                2
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-l-none">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </>
       )}
       
       {/* Project details sidebar */}
@@ -216,17 +523,13 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         />
       )}
       
-      {/* Componentes de visualização Kanban e Gantt */}
-      {activeTab === "kanban" && (
-        <div className="mt-4">
-          <ProjectKanban />
-        </div>
+      {/* Componentes de visualização Kanban e Gantt exibidos quando as abas apropriadas estão ativas */}
+      {activeTab === "kanban" && projectsWithClient && projectsWithClient.length > 0 && (
+        <ProjectKanban projects={projectsWithClient} />
       )}
       
-      {activeTab === "gantt" && (
-        <div className="mt-4">
-          <ProjectGantt />
-        </div>
+      {activeTab === "gantt" && projectsWithClient && projectsWithClient.length > 0 && (
+        <ProjectGantt projects={projectsWithClient} />
       )}
       
       {/* AlertDialog separado para confirmação de exclusão */}
@@ -235,7 +538,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.
+              {projectToDelete && projectsWithClient ? (
+                <>
+                  Tem certeza que deseja excluir o projeto "{projectsWithClient.find(p => p.id === projectToDelete)?.name}"? 
+                  Esta ação não pode ser desfeita.
+                </>
+              ) : (
+                'Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.'
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

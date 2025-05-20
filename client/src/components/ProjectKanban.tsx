@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Calendar, DollarSign, Loader2 } from 'lucide-react';
+import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { ClientAvatar } from './ClientAvatar';
 import { getNormalizedProjectStatus, getProgressBarColor, showSuccessToast } from '@/lib/utils';
@@ -38,89 +38,68 @@ const statusColumns: StatusColumn[] = [
 ];
 
 interface ProjectKanbanProps {
-  // Não precisamos mais receber projetos como props
+  projects: any[];
 }
 
-export default function ProjectKanban() {
+export default function ProjectKanban({ projects }: ProjectKanbanProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Buscar todos os projetos (limit=1000 para pegar todos os projetos sem paginação visual)
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/projects', { includeRelations: true, limit: 1000 }],
-  });
-  
-  // Precisamos extrair os projetos do retorno da API paginada
-  const projects = data?.data || [];
-  
-  // Inicializando as colunas vazias
-  const emptyColumns = statusColumns.reduce<ColumnsState>((acc, column) => {
+  // Group projects by status
+  const initialColumns = statusColumns.reduce<ColumnsState>((acc, column) => {
     acc[column.id] = {
       id: column.id,
       title: column.title,
-      items: []
+      items: projects.filter(project => {
+        // Primeiro verifica se o projeto tem um status especial (atrasado, pausado, cancelado)
+        const hasSpecialStatus = ['atrasado', 'pausado', 'cancelado'].includes(project.status);
+        
+        // Para projetos com status especial, precisamos verificar o status subjacente
+        // para exibir o projeto na coluna correta da fase do fluxo de trabalho
+        if (hasSpecialStatus) {
+          // Aqui usamos o status subjacente armazenado em original_status, stage_history, etc.
+          // Se não tiver, assumimos que está em produção (comportamento padrão)
+          const underlyingStatus = project.original_status || project.underlying_status || 'producao';
+          return column.id === underlyingStatus;
+        }
+        
+        // Para projetos com status normal, verificamos o status exato ou mapeamento para status legados
+        return (
+          // Status exato
+          (project.status === column.id) ||
+          
+          // Mapeamento de status legados/antigos para as novas categorias
+          (column.id === 'proposta' && ['novo', 'em_orcamento', 'draft'].includes(project.status)) ||
+          (column.id === 'pre_producao' && ['pre-producao'].includes(project.status)) ||
+          (column.id === 'producao' && ['em_andamento', 'em_producao'].includes(project.status)) ||
+          (column.id === 'pos_revisao' && ['revisao_cliente', 'pos_producao'].includes(project.status))
+        );
+      })
     };
     return acc;
   }, {});
   
-  const [columns, setColumns] = useState<ColumnsState>(emptyColumns);
-  
-  // Efeito para atualizar as colunas quando os projetos forem carregados
-  useEffect(() => {
-    if (!projects.length) return;
-    
-    const updatedColumns = statusColumns.reduce<ColumnsState>((acc, column) => {
-      acc[column.id] = {
-        id: column.id,
-        title: column.title,
-        items: projects.filter(project => {
-          // Primeiro verifica se o projeto tem um status especial (atrasado, pausado, cancelado)
-          const hasSpecialStatus = ['atrasado', 'pausado', 'cancelado'].includes(project.status);
-          
-          // Para projetos com status especial, verificamos o status subjacente
-          if (hasSpecialStatus) {
-            const underlyingStatus = project.original_status || project.underlying_status || 'producao';
-            return column.id === underlyingStatus;
-          }
-          
-          // Para projetos com status normal
-          return (
-            // Status exato
-            (project.status === column.id) ||
-            
-            // Mapeamento de status legados/antigos para as novas categorias
-            (column.id === 'proposta' && ['novo', 'em_orcamento', 'draft'].includes(project.status)) ||
-            (column.id === 'pre_producao' && ['pre-producao'].includes(project.status)) ||
-            (column.id === 'producao' && ['em_andamento', 'em_producao'].includes(project.status)) ||
-            (column.id === 'pos_revisao' && ['revisao_cliente', 'pos_producao'].includes(project.status))
-          );
-        })
-      };
-      return acc;
-    }, {});
-    
-    setColumns(updatedColumns);
-  }, [projects]);
+  const [columns, setColumns] = useState<ColumnsState>(initialColumns);
   
   // Update project status mutation
   const updateProjectStatus = useMutation({
     mutationFn: async ({ projectId, status, completionDate }: { projectId: number, status: string, completionDate?: Date }) => {
-      // Encontrar projeto nos dados disponíveis
+      // Importante: Aqui precisamos preservar todos os campos obrigatórios do projeto
+      // Encontra o projeto que está sendo atualizado pela ID
       const projectToUpdate = projects.find(p => p.id === projectId);
       
       if (!projectToUpdate) {
         throw new Error('Projeto não encontrado');
       }
       
-      // Criamos um objeto com os campos mínimos necessários para a atualização
+      // Criamos um objeto com os campos obrigatórios, mantendo os valores originais
       const updateData: any = {
         name: projectToUpdate.name,
         client_id: projectToUpdate.client_id || null,
         status: status, // Atualizamos apenas o status
-        payment_term: projectToUpdate.payment_term || 30, // Mantém o payment_term existente ou usa 30 como padrão
       };
       
-      // Definir a data de conclusão se o projeto está sendo movido para "concluido"
+      // If project is being moved to "completed", set the completion date
       if (status === 'concluido') {
         updateData.completionDate = completionDate || new Date();
       }
@@ -240,34 +219,6 @@ export default function ProjectKanban() {
 
   // Mantemos apenas as colunas de fluxo de trabalho regular
   const mainColumns = ['proposta', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'concluido'];
-  
-  // Se estiver carregando, mostrar um indicador
-  if (isLoading) {
-    return (
-      <div className="my-8">
-        <h2 className="text-xl font-semibold mb-6">Quadro de Projetos</h2>
-        <div className="flex items-center justify-center h-[500px]">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Carregando projetos...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Se tiver algum erro na API
-  if (error) {
-    return (
-      <div className="my-8">
-        <h2 className="text-xl font-semibold mb-6">Quadro de Projetos</h2>
-        <div className="bg-destructive/10 p-4 rounded-md">
-          <p className="text-destructive font-medium">Erro ao carregar projetos</p>
-          <p className="text-sm text-muted-foreground">{error.message}</p>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className="my-8">
