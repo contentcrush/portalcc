@@ -922,6 +922,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allProjectMembers = await storage.getAllProjectMembers();
       const allProjectStages = await storage.getAllProjectStages();
       
+      // Obter todos os usuários para associar aos membros dos projetos
+      const users = await storage.getUsers();
+      // Remover senhas dos usuários antes de enviá-los para o cliente
+      const usersWithoutPasswords = users.map(({ password, ...userWithoutPassword }) => userWithoutPassword);
+      const usersMap = new Map();
+      usersWithoutPasswords.forEach(user => usersMap.set(user.id, user));
+      
       // Agrupar por project_id para acesso rápido
       const membersByProject = new Map();
       const stagesByProject = new Map();
@@ -930,7 +937,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!membersByProject.has(member.project_id)) {
           membersByProject.set(member.project_id, []);
         }
-        membersByProject.get(member.project_id).push(member);
+        // Adicionar informações do usuário ao membro do projeto
+        const memberWithUser = {
+          ...member,
+          user: usersMap.get(member.user_id) || null
+        };
+        membersByProject.get(member.project_id).push(memberWithUser);
       });
       
       allProjectStages.forEach(stage => {
@@ -944,7 +956,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectsWithData = projects.map(project => {
         const client = clientsMap.get(project.client_id) || {};
         const members = membersByProject.get(project.id) || [];
-        const stages = stagesByProject.get(project.id) || [];
+        
+        // Ordenar estágios por ordem (se disponível)
+        const stages = (stagesByProject.get(project.id) || []).sort((a, b) => 
+          (a.order === undefined ? 0 : a.order) - (b.order === undefined ? 0 : b.order)
+        );
         
         return {
           ...project,

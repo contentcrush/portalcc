@@ -88,15 +88,15 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   });
   
   // Extrair projetos e clientes dos dados unificados
-  const projects = projectsWithData ? projectsWithData.map(p => ({
+  const projects = projectsWithData ? projectsWithData.map((p: any) => ({
     ...p,
     client_id: p.client?.id || p.client_id
   })) : [];
   
   const clients = projectsWithData ? 
     Array.from(new Map(projectsWithData
-      .filter(p => p.client)
-      .map(p => [p.client.id, p.client]))
+      .filter((p: any) => p.client)
+      .map((p: any) => [p.client.id, p.client]))
       .values()
     ) : [];
 
