@@ -1140,17 +1140,6 @@ export default function Clients() {
       </Dialog>
       
       {/* Dialog para novo projeto */}
-          
-          {/* Formulário multi-etapas para novo cliente */}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-4 p-1 h-auto">
-                  <TabsTrigger value="info" className="py-2">
-                    <Building className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Informações básicas</span>
-                    <span className="sm:hidden">Básico</span>
-                  </TabsTrigger>
                   <TabsTrigger value="contact" className="py-2">
                     <User className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Contato e endereço</span>
