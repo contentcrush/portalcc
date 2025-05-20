@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccessToast } from '@/lib/utils';
@@ -15,16 +15,17 @@ import {
   ZoomOut,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from 'lucide-react';
 
 interface ProjectGanttProps {
-  projects: any[];
+  // Não precisamos mais receber projetos como props
 }
 
 // Possible zoom levels
 const ZOOM_LEVELS = [7, 14, 30, 60, 90, 180, 365];
 
-export default function ProjectGantt({ projects }: ProjectGanttProps) {
+export default function ProjectGantt() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 30 days
