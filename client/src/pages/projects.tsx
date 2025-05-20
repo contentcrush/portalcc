@@ -79,14 +79,20 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects
+  // Fetch projects com cache otimizado
   const { data: projects, isLoading } = useQuery({
-    queryKey: ['/api/projects']
+    queryKey: ['/api/projects'],
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos (substitui cacheTime no TanStack Query v5)
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
-  // Fetch clients for dropdown and project details
+  // Fetch clients com cache otimizado
   const { data: clients } = useQuery({
-    queryKey: ['/api/clients']
+    queryKey: ['/api/clients'],
+    staleTime: 10 * 60 * 1000, // 10 minutos - clientes mudam com menos frequência
+    gcTime: 15 * 60 * 1000, // 15 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
   // Mutação para duplicar projeto

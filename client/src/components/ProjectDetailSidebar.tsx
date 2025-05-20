@@ -115,44 +115,56 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     queryKey: [`/api/projects/${projectId}`],
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000 // 10 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
   const { data: client } = useQuery({
     queryKey: [`/api/clients/${project?.client_id}`],
     enabled: !!project?.client_id,
-    staleTime: 10 * 60 * 1000, // 10 minutos - clientes mudam com menos frequência
-    cacheTime: 15 * 60 * 1000 // 15 minutos
+    staleTime: 30 * 60 * 1000, // 30 minutos - clientes raramente mudam
+    gcTime: 60 * 60 * 1000, // 60 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
-  // Carrega membros do projeto e usuários simultaneamente
+  // Carrega membros do projeto somente quando necessário e com cache otimizado
   const { data: projectMembers } = useQuery({
     queryKey: [`/api/projects/${projectId}/members`],
     enabled: !!projectId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000 // 10 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 20 * 60 * 1000, // 20 minutos
+    refetchOnWindowFocus: false, // Evita refetches desnecessários
+    // Limite a revalidação para quando o drawer/sidebar estiver aberto
+    refetchInterval: false
   });
 
-  // Carregar todos os usuários uma única vez e reutilizar
+  // Carregar todos os usuários uma única vez e reutilizar por mais tempo
   const { data: users } = useQuery({
     queryKey: ['/api/users'],
-    staleTime: 15 * 60 * 1000, // 15 minutos - usuários não mudam com frequência
-    cacheTime: 30 * 60 * 1000 // 30 minutos
+    staleTime: 60 * 60 * 1000, // 60 minutos - usuários raramente mudam
+    gcTime: 120 * 60 * 1000, // 120 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
   const { data: stages } = useQuery({
     queryKey: [`/api/projects/${projectId}/stages`],
     enabled: !!projectId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    cacheTime: 10 * 60 * 1000 // 10 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 20 * 60 * 1000, // 20 minutos
+    refetchOnWindowFocus: false, // Evita refetches desnecessários
+    // Limite a revalidação para quando o drawer/sidebar estiver aberto
+    refetchInterval: false
   });
   
-  // Carregar anexos do projeto
+  // Carregar anexos do projeto com carregamento otimizado
   const { data: attachments, isLoading: isLoadingAttachments } = useQuery({
     queryKey: [`/api/projects/${projectId}/attachments`],
     enabled: !!projectId,
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    cacheTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false, // Evita refetches desnecessários
+    // Carregar anexos somente sob demanda quando o usuário estiver visualizando a sidebar
+    refetchInterval: false
   });
 
   // Mutation to update a project stage

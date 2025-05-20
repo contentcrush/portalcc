@@ -62,19 +62,31 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
   const { toast } = useToast();
   const { openProjectForm, setProjectToEdit } = useProjectForm();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // Otimização: Carregar dados de membros com cache mais longo
   const { data: projectMembers } = useQuery({
     queryKey: [`/api/projects/${project.id}/members`],
     enabled: !!project.id,
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 20 * 60 * 1000, // 20 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
+  // Otimização: Carregar estágios com cache mais longo
   const { data: projectStages } = useQuery({
     queryKey: [`/api/projects/${project.id}/stages`],
     enabled: !!project.id,
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 20 * 60 * 1000, // 20 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
+  // Otimização: Usuários mudam raramente, podemos armazenar em cache por mais tempo
   const { data: users } = useQuery({
     queryKey: ['/api/users'],
     enabled: !!projectMembers,
+    staleTime: 60 * 60 * 1000, // 60 minutos - usuários raramente mudam
+    gcTime: 120 * 60 * 1000, // 120 minutos
+    refetchOnWindowFocus: false // Evita refetches desnecessários
   });
 
   // Mutação para duplicar projeto
