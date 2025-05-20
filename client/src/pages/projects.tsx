@@ -38,6 +38,7 @@ import ProjectDetailSidebar from "@/components/ProjectDetailSidebar";
 import ProjectKanban from "@/components/ProjectKanban";
 import ProjectGantt from "@/components/ProjectGantt";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
+import { ProjectsPagination } from "@/components/projects/ProjectsPagination";
 import { 
   Plus, 
   Filter, 
@@ -338,30 +339,11 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       )}
       
       {/* Conteúdo da aba Projetos (grid e list) */}
-      {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
-        <>
-          {/* Project grid */}
-          {view === "grid" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projectsWithClient.map(project => (
-                <ProjectCard 
-                  key={project.id} 
-                  project={project}
-                  onOpenDetails={handleOpenProjectDetails}
-                />
-              ))}
-              
-              {/* Add new project card */}
-              <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-6 hover:border-primary/40 transition-colors h-full">
-                <div className="bg-primary/10 rounded-full p-3 mb-3">
-                  <Plus className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-medium text-gray-900 mb-1">Novo Projeto</h3>
-                <p className="text-sm text-gray-500 text-center mb-4">Crie um novo projeto de vídeo para sua produtora</p>
-                <Button onClick={openProjectForm}>Adicionar Projeto</Button>
-              </div>
-            </div>
-          )}
+      {activeTab === "projects" && (
+        <div className="mt-4">
+          <ProjectsPagination />
+        </div>
+      )}
           
           {/* Project list view */}
           {view === "list" && (
