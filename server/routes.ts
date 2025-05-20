@@ -900,9 +900,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects - Adicionando autenticação e permissões
   app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
+      console.time('projects-api');
       const projects = await storage.getProjects();
+      console.timeEnd('projects-api');
       res.json(projects);
     } catch (error) {
+      console.error("Erro ao buscar projetos:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
