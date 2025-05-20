@@ -902,20 +902,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.time('projects-api');
       
-      // Verificar o ambiente para diagnóstico
+      // Diagnóstico detalhado do ambiente
       const isDeployed = req.hostname.includes('.replit.app');
-      console.log(`Ambiente da requisição: ${isDeployed ? 'Deployed' : 'Sandbox'}, Hostname: ${req.hostname}`);
+      const userAgent = req.headers['user-agent'] || 'Desconhecido';
+      console.log(`=== DIAGNÓSTICO DE AMBIENTE [${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] ===`);
+      console.log(`- Hostname: ${req.hostname}`);
+      console.log(`- Origin: ${req.headers.origin || 'Não especificado'}`);
+      console.log(`- User-Agent: ${userAgent.slice(0, 50)}...`);
+      console.log(`- User ID: ${req.user?.id || 'Não autenticado'}`);
+      console.log(`- Database URL: ${process.env.DATABASE_URL?.split('@')[1].split('/')[0] || 'Não disponível'}`);
       
       // Vamos usar o método de storage para garantir consistência
       const projectsList = await storage.getProjects();
       
-      // Verificar se os projetos foram obtidos corretamente
-      console.log(`Projetos obtidos (${projectsList.length}): IDs = ${projectsList.map(p => p.id).join(', ')}`);
+      // Verificação detalhada dos projetos
+      if (Array.isArray(projectsList)) {
+        console.log(`=== DIAGNÓSTICO DE PROJETOS [${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] ===`);
+        console.log(`- Total de projetos: ${projectsList.length}`);
+        console.log(`- IDs: ${projectsList.map(p => p.id).join(', ')}`);
+        if (projectsList.length > 0) {
+          console.log(`- Primeiro projeto: ${JSON.stringify(projectsList[0]).slice(0, 100)}...`);
+        } else {
+          console.log(`- AVISO: Nenhum projeto encontrado no banco de dados!`);
+        }
+      } else {
+        console.log(`=== ERRO DE FORMATO [${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] ===`);
+        console.log(`- Resultado não é um array: ${typeof projectsList}`);
+      }
       
       console.timeEnd('projects-api');
       res.json(projectsList);
     } catch (error) {
-      console.error("Erro ao buscar projetos:", error);
+      console.error(`=== ERRO NA API DE PROJETOS [${req.hostname.includes('.replit.app') ? 'DEPLOYED' : 'SANDBOX'}] ===`);
+      console.error(error);
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });

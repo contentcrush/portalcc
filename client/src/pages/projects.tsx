@@ -79,14 +79,37 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects com debug adicional
+  // Fetch projects com debug detalhado
   const { data: projects, isLoading, isError, error } = useQuery({
     queryKey: ['/api/projects'],
-    retry: 2, // Adicionar retentativas para melhorar a confiabilidade
-    staleTime: 30000, // Reduzir staleTime para garantir dados mais frescos
-    refetchOnWindowFocus: true, // Recarregar ao focar a janela
-    gcTime: 5 * 60 * 1000, // 5 minutos de cache
+    retry: 3, // Aumentar para 3 retentativas
+    staleTime: 5000, // Reduzir para 5 segundos para teste
+    refetchOnWindowFocus: true,
+    gcTime: 5 * 60 * 1000,
   });
+  
+  // Diagnóstico depois de receber os dados 
+  useEffect(() => {
+    if (projects) {
+      const isDeployed = window.location.hostname.includes('.replit.app');
+      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Dados de projetos recebidos`);
+      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Host: ${window.location.hostname}`);
+      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Quantidade: ${Array.isArray(projects) ? projects.length : 'não é array'}`);
+      if (Array.isArray(projects) && projects.length > 0) {
+        console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Primeiro projeto:`, projects[0]);
+      } else {
+        console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Nenhum projeto recebido ou formato inválido:`, projects);
+      }
+    }
+  }, [projects]);
+  
+  // Diagnóstico em caso de erro
+  useEffect(() => {
+    if (isError && error) {
+      const isDeployed = window.location.hostname.includes('.replit.app');
+      console.error(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Erro ao buscar projetos:`, error);
+    }
+  }, [isError, error]);
 
   // Fetch clients for dropdown and project details
   const { data: clients } = useQuery({
