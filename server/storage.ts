@@ -1927,8 +1927,7 @@ export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     console.time('getProjects');
     try {
-      // Usar o ORM Drizzle em vez de SQL direto
-      // Isso garante que a mesma operação funcione em todos os ambientes
+      // Usar o ORM Drizzle para melhor compatibilidade
       const result = await db.select().from(projects);
       console.timeEnd('getProjects');
       
@@ -1937,6 +1936,70 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Erro ao buscar projetos:", error);
       console.timeEnd('getProjects');
+      return [];
+    }
+  }
+  
+  // Método otimizado que pode ser implementado futuramente para buscar 
+  // projetos com dados relacionados em uma única consulta
+  async getProjectsWithDetails(): Promise<any[]> {
+    console.time('getProjectsWithDetails');
+    try {
+      // Usar o ORM Drizzle para buscar projetos
+      const projectsList = await db.select().from(projects);
+      
+      // Pré-carregar clientes para evitar múltiplas consultas
+      const clientsList = await db.select().from(clients);
+      const clientsMap = new Map();
+      clientsList.forEach(client => clientsMap.set(client.id, client));
+      
+      // Pré-carregar membros de projetos
+      const allProjectMembers = await db.select()
+        .from(projectMembers)
+        .where(inArray(projectMembers.project_id, projectsList.map(p => p.id)));
+      
+      // Agrupar membros por projeto
+      const projectMembersMap = new Map();
+      allProjectMembers.forEach(member => {
+        if (!projectMembersMap.has(member.project_id)) {
+          projectMembersMap.set(member.project_id, []);
+        }
+        projectMembersMap.get(member.project_id).push(member);
+      });
+      
+      // Pré-carregar estágios de projetos
+      const allProjectStages = await db.select()
+        .from(projectStages)
+        .where(inArray(projectStages.project_id, projectsList.map(p => p.id)));
+      
+      // Agrupar estágios por projeto
+      const projectStagesMap = new Map();
+      allProjectStages.forEach(stage => {
+        if (!projectStagesMap.has(stage.project_id)) {
+          projectStagesMap.set(stage.project_id, []);
+        }
+        projectStagesMap.get(stage.project_id).push(stage);
+      });
+      
+      // Construir resultado com todos os dados
+      const result = projectsList.map(project => {
+        const client = clientsMap.get(project.client_id);
+        const members = projectMembersMap.get(project.id) || [];
+        const stages = projectStagesMap.get(project.id) || [];
+        
+        return {
+          ...project,
+          client,
+          members,
+          stages
+        };
+      });
+      
+      console.timeEnd('getProjectsWithDetails');
+      return result;
+    } catch (error) {
+      console.error("Erro ao buscar projetos com detalhes:", error);
+      console.timeEnd('getProjectsWithDetails');
       return [];
     }
   }
