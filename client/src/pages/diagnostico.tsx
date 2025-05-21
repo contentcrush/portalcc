@@ -222,7 +222,7 @@ export default function DiagnosticoPage() {
                       <p>{testResults.datesInfo.creationDateParsed || 'Não disponível'}</p>
                     </div>
                     <div>
-                      <strong>É considerada recente (< 30 dias):</strong>
+                      <strong>É considerada recente (menos de 30 dias):</strong>
                       <p className="font-bold">{testResults.datesInfo.isRecent ? 'Sim' : 'Não'}</p>
                     </div>
                     <div>

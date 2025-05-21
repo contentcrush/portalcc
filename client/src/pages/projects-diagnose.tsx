@@ -218,7 +218,7 @@ export default function ProjectsDiagnose() {
                           <p className="text-xl font-bold">{diagnostico.detalheDatas.isValid ? 'Sim ✓' : 'Não ✗'}</p>
                         </div>
                         <div className="bg-muted p-4 rounded-lg">
-                          <h3 className="font-medium mb-2">É recente (< 30 dias)?</h3>
+                          <h3 className="font-medium mb-2">É recente (menos de 30 dias)?</h3>
                           <p className="text-xl font-bold">{diagnostico.detalheDatas.isRecent ? 'Sim ✓' : 'Não ✗'}</p>
                         </div>
                         <div className="bg-muted p-4 rounded-lg">
