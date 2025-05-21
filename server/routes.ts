@@ -897,38 +897,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
-  // Projects - Adicionando autenticação e permissões com paginação e otimização
-  app.get("/api/projects", authenticateJWT, async (req, res) => {
+  // Projects - Adicionando autenticação e permissões
+  app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
-      // Parâmetros de paginação e filtros
-      const page = req.query.page ? parseInt(req.query.page as string) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
-      const status = req.query.status as string | undefined;
-      const searchTerm = req.query.search as string | undefined;
-      const includeRelations = req.query.includeRelations === 'true';
-      
-      console.log(`[Sistema] Buscando projetos com paginação: página ${page}, limite ${limit}${clientId ? `, cliente ${clientId}` : ''}${status ? `, status ${status}` : ''}${searchTerm ? `, busca "${searchTerm}"` : ''}`);
-      
-      // Obter projetos paginados
-      const result = await storage.getProjectsPaginated({
-        page,
-        limit,
-        clientId,
-        status,
-        searchTerm,
-        includeRelations
-      });
-      
-      // Enviar resposta com cabeçalhos de paginação
-      res.setHeader('X-Total-Count', result.total.toString());
-      res.setHeader('X-Total-Pages', result.totalPages.toString());
-      res.setHeader('X-Current-Page', result.page.toString());
-      
-      res.json(result.data);
+      const projects = await storage.getProjects();
+      res.json(projects);
     } catch (error) {
-      console.error("Erro ao buscar projetos:", error);
-      res.status(500).json({ message: "Falha ao buscar projetos", error: String(error) });
+      res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
 
