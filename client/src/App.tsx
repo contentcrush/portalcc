@@ -18,6 +18,7 @@ import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Files from "@/pages/files";
 import FormExample from "@/pages/form-example";
+import Diagnostico from "@/pages/diagnostico";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
@@ -55,6 +56,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/files" component={Files} />
       <ProtectedRoute path="/form-example" component={FormExample} />
+      <ProtectedRoute path="/diagnostico" component={Diagnostico} />
       <Route component={NotFound} />
     </Switch>
   );
