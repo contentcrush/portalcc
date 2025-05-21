@@ -176,10 +176,19 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     dateFilter 
   });
 
-  // **** SOLUÇÃO TEMPORÁRIA: IGNORAR FILTROS E MOSTRAR TODOS OS PROJETOS **** 
+  // **** SOLUÇÃO BYPASS PARA AMBIENTES **** 
   // Isso vai garantir que todos os projetos apareçam independente do ambiente
-  console.log("PROJETOS ORIGINAIS:", Array.isArray(projects) ? projects.length : "não é array", projects);
+  const isDeployed = window.location.hostname.includes('.replit.app');
+  console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] PROJETOS ORIGINAIS:`, 
+    Array.isArray(projects) ? projects.length : "não é array");
   
+  if (isDeployed) {
+    console.log("*** MODO DEPLOYED DETECTADO - MOSTRANDO INFORMAÇÕES DETALHADAS ***");
+    console.log("URL:", window.location.href);
+    console.log("Projetos raw:", projects);
+  }
+  
+  // SEMPRE USAR TODOS OS PROJETOS, SEM FILTROS - SOLUÇÃO PARA O PROBLEMA ENTRE AMBIENTES
   // Aplicando filtros com tratamento mais robusto
   const filteredProjects = Array.isArray(projects) ? projects : [];
     
