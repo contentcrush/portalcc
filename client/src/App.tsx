@@ -18,7 +18,6 @@ import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Files from "@/pages/files";
 import FormExample from "@/pages/form-example";
-// Temporariamente removidos para solucionar problemas de compilação
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
@@ -56,7 +55,6 @@ function Router() {
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/files" component={Files} />
       <ProtectedRoute path="/form-example" component={FormExample} />
-      {/* Rotas temporariamente desabilitadas para resolver problema de compilação */}
       <Route component={NotFound} />
     </Switch>
   );

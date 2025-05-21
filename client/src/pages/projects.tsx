@@ -79,37 +79,14 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
-  // Fetch projects com debug detalhado
+  // Fetch projects com debug adicional
   const { data: projects, isLoading, isError, error } = useQuery({
     queryKey: ['/api/projects'],
-    retry: 3, // Aumentar para 3 retentativas
-    staleTime: 5000, // Reduzir para 5 segundos para teste
-    refetchOnWindowFocus: true,
-    gcTime: 5 * 60 * 1000,
+    retry: 2, // Adicionar retentativas para melhorar a confiabilidade
+    staleTime: 30000, // Reduzir staleTime para garantir dados mais frescos
+    refetchOnWindowFocus: true, // Recarregar ao focar a janela
+    gcTime: 5 * 60 * 1000, // 5 minutos de cache
   });
-  
-  // Diagnóstico depois de receber os dados 
-  useEffect(() => {
-    if (projects) {
-      const isDeployed = window.location.hostname.includes('.replit.app');
-      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Dados de projetos recebidos`);
-      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Host: ${window.location.hostname}`);
-      console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Quantidade: ${Array.isArray(projects) ? projects.length : 'não é array'}`);
-      if (Array.isArray(projects) && projects.length > 0) {
-        console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Primeiro projeto:`, projects[0]);
-      } else {
-        console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Nenhum projeto recebido ou formato inválido:`, projects);
-      }
-    }
-  }, [projects]);
-  
-  // Diagnóstico em caso de erro
-  useEffect(() => {
-    if (isError && error) {
-      const isDeployed = window.location.hostname.includes('.replit.app');
-      console.error(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Erro ao buscar projetos:`, error);
-    }
-  }, [isError, error]);
 
   // Fetch clients for dropdown and project details
   const { data: clients } = useQuery({
@@ -176,21 +153,55 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     dateFilter 
   });
 
-  // **** SOLUÇÃO BYPASS PARA AMBIENTES **** 
-  // Isso vai garantir que todos os projetos apareçam independente do ambiente
-  const isDeployed = window.location.hostname.includes('.replit.app');
-  console.log(`[AMBIENTE ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] PROJETOS ORIGINAIS:`, 
-    Array.isArray(projects) ? projects.length : "não é array");
-  
-  if (isDeployed) {
-    console.log("*** MODO DEPLOYED DETECTADO - MOSTRANDO INFORMAÇÕES DETALHADAS ***");
-    console.log("URL:", window.location.href);
-    console.log("Projetos raw:", projects);
-  }
-  
-  // SEMPRE USAR TODOS OS PROJETOS, SEM FILTROS - SOLUÇÃO PARA O PROBLEMA ENTRE AMBIENTES
   // Aplicando filtros com tratamento mais robusto
-  const filteredProjects = Array.isArray(projects) ? projects : [];
+  const filteredProjects = Array.isArray(projects) && projects.length > 0 
+    ? projects.filter((project: any) => {
+        // Verificar se o projeto é válido
+        if (!project || typeof project !== 'object') {
+          console.warn("Projeto inválido encontrado na filtragem:", project);
+          return false;
+        }
+        
+        // Search term filter (com verificações de segurança)
+        if (searchTerm && project.name && typeof project.name === 'string') {
+          if (!project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+          }
+        } else if (searchTerm) {
+          // Se temos um termo de busca mas o projeto não tem nome válido, não inclua
+          return false;
+        }
+        
+        // Status filter (com verificações de segurança)
+        if (statusFilter !== "all") {
+          if (!project.status || project.status !== statusFilter) {
+            return false;
+          }
+        }
+        
+        // Client filter (com verificações de segurança)
+        if (clientFilter !== "all") {
+          const clientIdNum = parseInt(clientFilter);
+          if (isNaN(clientIdNum) || project.client_id !== clientIdNum) {
+            return false;
+          }
+        }
+        
+        // Date filter (com verificações de segurança)
+        if (dateFilter === "recent" && project.creation_date) {
+          try {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return new Date(project.creation_date) > thirtyDaysAgo;
+          } catch (e) {
+            console.warn("Erro ao processar data:", e);
+            return true; // Em caso de erro, incluímos o projeto
+          }
+        }
+        
+        return true;
+      }) 
+    : [];
     
   // Log dos projetos filtrados para debug
   console.log("Projetos após filtragem:", filteredProjects);
