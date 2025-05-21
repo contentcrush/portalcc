@@ -1054,7 +1054,6 @@ export default function Financial() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>FATURA</TableHead>
                       <TableHead>CLIENTE</TableHead>
                       <TableHead>PROJETO</TableHead>
                       <TableHead>EMISSÃO</TableHead>
@@ -1078,7 +1077,6 @@ export default function Financial() {
                             doc.paid && "bg-green-50/50 hover:bg-green-50/70" // Destacar linhas de itens pagos
                           )}
                         >
-                          <TableCell className="font-medium">{doc.document_number || `-${doc.id}`}</TableCell>
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
