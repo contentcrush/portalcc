@@ -20,6 +20,7 @@ import Files from "@/pages/files";
 import FormExample from "@/pages/form-example";
 import Diagnostico from "@/pages/diagnostico";
 import ProjectsRaw from "@/pages/projects-raw";
+import ProjectsDiagnose from "@/pages/projects-diagnose";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
@@ -59,6 +60,7 @@ function Router() {
       <ProtectedRoute path="/form-example" component={FormExample} />
       <ProtectedRoute path="/diagnostico" component={Diagnostico} />
       <ProtectedRoute path="/projects-raw" component={ProjectsRaw} />
+      <ProtectedRoute path="/projects-diagnose" component={ProjectsDiagnose} />
       <Route component={NotFound} />
     </Switch>
   );

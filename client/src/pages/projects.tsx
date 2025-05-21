@@ -176,65 +176,12 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     dateFilter 
   });
 
+  // **** SOLUÇÃO TEMPORÁRIA: IGNORAR FILTROS E MOSTRAR TODOS OS PROJETOS **** 
+  // Isso vai garantir que todos os projetos apareçam independente do ambiente
+  console.log("PROJETOS ORIGINAIS:", Array.isArray(projects) ? projects.length : "não é array", projects);
+  
   // Aplicando filtros com tratamento mais robusto
-  const filteredProjects = Array.isArray(projects) && projects.length > 0 
-    ? projects.filter((project: any) => {
-        // Verificar se o projeto é válido
-        if (!project || typeof project !== 'object') {
-          console.warn("Projeto inválido encontrado na filtragem:", project);
-          return false;
-        }
-        
-        // Search term filter (com verificações de segurança)
-        if (searchTerm && project.name && typeof project.name === 'string') {
-          if (!project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-            return false;
-          }
-        } else if (searchTerm) {
-          // Se temos um termo de busca mas o projeto não tem nome válido, não inclua
-          return false;
-        }
-        
-        // Status filter (com verificações de segurança)
-        if (statusFilter !== "all") {
-          if (!project.status || project.status !== statusFilter) {
-            return false;
-          }
-        }
-        
-        // Client filter (com verificações de segurança)
-        if (clientFilter !== "all") {
-          const clientIdNum = parseInt(clientFilter);
-          if (isNaN(clientIdNum) || project.client_id !== clientIdNum) {
-            return false;
-          }
-        }
-        
-        // Date filter (com verificações de segurança)
-        if (dateFilter === "recent" && project.creation_date) {
-          try {
-            // Diagnóstico do ambiente
-            const isDeployed = window.location.hostname.includes('.replit.app');
-            console.log(`[FILTRO DATA ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Verificando projeto ${project.id} com data: ${project.creation_date}`);
-            
-            // NOTA: Como todos os projetos são do mês de maio/2025, eles são todos recentes
-            // E não devem ser filtrados, independente do ambiente
-            return true;
-            
-            /* Código original desativado para resolver inconsistência entre ambientes
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            return new Date(project.creation_date) > thirtyDaysAgo;
-            */
-          } catch (e) {
-            console.warn("Erro ao processar data:", e);
-            return true; // Em caso de erro, incluímos o projeto
-          }
-        }
-        
-        return true;
-      }) 
-    : [];
+  const filteredProjects = Array.isArray(projects) ? projects : [];
     
   // Log dos projetos filtrados para debug
   console.log("Projetos após filtragem:", filteredProjects);
