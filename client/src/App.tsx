@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import DashboardNovo from "@/pages/dashboard-novo";
 import Projects from "@/pages/projects";
+import ProjectsDebug from "@/pages/projects-debug";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients-new";
 import ClientDetail from "@/pages/client-detail";
@@ -44,6 +45,7 @@ function Router() {
       <ProtectedRoute path="/dashboard-antigo" component={Dashboard} />
       <ProtectedRoute path="/projects" component={Projects} />
       <ProtectedRoute path="/projects/:id" component={Projects} />
+      <ProtectedRoute path="/projects-debug" component={ProjectsDebug} />
       <ProtectedRoute path="/tasks" component={Tasks} />
       <ProtectedRoute path="/tasks/:id" component={Tasks} />
       <ProtectedRoute path="/clients" component={Clients} />
