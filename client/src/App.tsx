@@ -17,14 +17,12 @@ import UserProfile from "@/pages/user-profile";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Files from "@/pages/files";
-import FormExample from "@/pages/form-example";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AccessibilityProvider } from "@/hooks/use-accessibility";
 import { PreferencesProvider } from "@/hooks/use-preferences";
 import { DateFormatterProvider } from "@/hooks/use-date-formatter";
 import { ProjectFormProvider } from "@/contexts/ProjectFormContext";
 import { SocketProvider } from "@/contexts/SocketContext";
-import { FormPersistenceProvider } from "@/contexts/FormPersistenceContext";
 import Layout from "@/components/Layout";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
@@ -54,7 +52,6 @@ function Router() {
       <ProtectedRoute path="/team/user/:id" component={UserProfile} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/files" component={Files} />
-      <ProtectedRoute path="/form-example" component={FormExample} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -67,20 +64,18 @@ function App() {
         <PreferencesProvider>
           <AccessibilityProvider>
             <DateFormatterProvider>
-              <FormPersistenceProvider>
-                <ProjectFormProvider>
-                  <SocketProvider>
-                    <TooltipProvider>
-                      <Layout>
-                        <Router />
-                      </Layout>
-                      {/* Renderizar o diálogo de formulário de projeto globalmente */}
-                      <ProjectFormDialog />
-                      <Toaster />
-                    </TooltipProvider>
-                  </SocketProvider>
-                </ProjectFormProvider>
-              </FormPersistenceProvider>
+              <ProjectFormProvider>
+                <SocketProvider>
+                  <TooltipProvider>
+                    <Layout>
+                      <Router />
+                    </Layout>
+                    {/* Renderizar o diálogo de formulário de projeto globalmente */}
+                    <ProjectFormDialog />
+                    <Toaster />
+                  </TooltipProvider>
+                </SocketProvider>
+              </ProjectFormProvider>
             </DateFormatterProvider>
           </AccessibilityProvider>
         </PreferencesProvider>
