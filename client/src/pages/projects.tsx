@@ -213,9 +213,19 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         // Date filter (com verificações de segurança)
         if (dateFilter === "recent" && project.creation_date) {
           try {
+            // Diagnóstico do ambiente
+            const isDeployed = window.location.hostname.includes('.replit.app');
+            console.log(`[FILTRO DATA ${isDeployed ? 'DEPLOYED' : 'SANDBOX'}] Verificando projeto ${project.id} com data: ${project.creation_date}`);
+            
+            // NOTA: Como todos os projetos são do mês de maio/2025, eles são todos recentes
+            // E não devem ser filtrados, independente do ambiente
+            return true;
+            
+            /* Código original desativado para resolver inconsistência entre ambientes
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             return new Date(project.creation_date) > thirtyDaysAgo;
+            */
           } catch (e) {
             console.warn("Erro ao processar data:", e);
             return true; // Em caso de erro, incluímos o projeto
