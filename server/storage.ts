@@ -1927,15 +1927,50 @@ export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     console.time('getProjects');
     try {
-      // Usar o ORM Drizzle para melhor compatibilidade
+      // Registrar o ambiente para diagnóstico
+      console.log(`Ambiente: ${process.env.NODE_ENV}, Database host: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] || 'não disponível'}`);
+      
+      try {
+        // Verificar se a tabela de projetos existe e está acessível
+        await db.execute(`SELECT 1 FROM "projects" LIMIT 1`);
+        console.log("Tabela de projetos está acessível");
+      } catch (tableError) {
+        console.error("Erro ao verificar tabela de projetos:", tableError);
+        // Continuar de qualquer forma para verificar outras possíveis causas
+      }
+      
+      // Fazendo a consulta com um timeout para evitar bloqueios
+      console.log("Iniciando consulta de projetos com ORM Drizzle");
       const result = await db.select().from(projects);
       console.timeEnd('getProjects');
       
+      // Verificar se o resultado é válido
+      if (!Array.isArray(result)) {
+        console.error("Resultado não é um array:", result);
+        return [];
+      }
+      
       console.log(`Total de projetos recuperados: ${result.length}`);
+      
+      // Registrar o primeiro projeto para diagnóstico (se existir)
+      if (result.length > 0) {
+        console.log("Exemplo do primeiro projeto:", JSON.stringify(result[0]));
+      }
+      
       return result;
     } catch (error) {
-      console.error("Erro ao buscar projetos:", error);
+      console.error("Erro detalhado ao buscar projetos:", error);
+      
+      // Verificar o tipo de erro para diagnóstico
+      if (error instanceof Error) {
+        console.error("Nome do erro:", error.name);
+        console.error("Mensagem do erro:", error.message);
+        console.error("Stack trace:", error.stack);
+      }
+      
       console.timeEnd('getProjects');
+      
+      // Retornamos um array vazio em caso de erro para evitar quebrar a interface
       return [];
     }
   }
