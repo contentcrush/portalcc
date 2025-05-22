@@ -100,12 +100,16 @@ export const clients = pgTable("clients", {
   segments: text("segments"), // Adicionando campo para segmentos/tags
 });
 
+// Enum para status especiais de projeto
+export const specialStatusEnum = pgEnum('special_status', ['delayed', 'paused', 'canceled', 'none']);
+
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   client_id: integer("client_id").notNull(),
   status: text("status").notNull().default("draft"),
+  special_status: specialStatusEnum("special_status").default('none'),
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
@@ -283,6 +287,16 @@ export const financialDocuments = pgTable("financial_documents", {
   invoice_file_name: text("invoice_file_name"), // Nome original do arquivo
   invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"), // Data do upload
   invoice_file_uploaded_by: integer("invoice_file_uploaded_by"), // Usuário que fez o upload
+});
+
+export const projectStatusHistory = pgTable("project_status_history", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id").notNull(),
+  previous_status: specialStatusEnum("previous_status").notNull(),
+  new_status: specialStatusEnum("new_status").notNull(),
+  changed_by: integer("changed_by").notNull(),
+  change_date: timestamp("change_date").defaultNow(),
+  reason: text("reason"),
 });
 
 export const expenses = pgTable("expenses", {
@@ -679,7 +693,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   attachments: many(projectAttachments, { relationName: "project_attachments" }),
   financialDocuments: many(financialDocuments, { relationName: "project_financial_documents" }),
   expenses: many(expenses, { relationName: "project_expenses" }),
-  events: many(events, { relationName: "project_events" })
+  events: many(events, { relationName: "project_events" }),
+  statusHistory: many(projectStatusHistory, { relationName: "project_status_history" })
 }));
 
 export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
