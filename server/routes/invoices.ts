@@ -218,4 +218,132 @@ router.delete('/expenses/:id/invoice', async (req, res) => {
   }
 });
 
+// Rota para baixar nota fiscal de documento financeiro
+router.get('/financial-documents/:id/invoice/download', async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    
+    // Verificar se o documento financeiro existe
+    const document = await storage.getFinancialDocument(documentId);
+    if (!document) {
+      return res.status(404).json({ message: 'Documento financeiro não encontrado' });
+    }
+    
+    // Verificar se existe uma nota fiscal anexada
+    if (!document.invoice_file || !document.invoice_file_name) {
+      return res.status(400).json({ message: 'Este documento não possui nota fiscal anexada' });
+    }
+    
+    // Verificar várias possibilidades de caminho do arquivo
+    let filePath = document.invoice_file;
+    
+    // Garantir que estamos trabalhando com caminho relativo sem barras iniciais
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
+    }
+    
+    // Verificar caminho absoluto baseado no path armazenado
+    const absolutePath = path.join(process.cwd(), filePath);
+    console.log('Tentando acessar arquivo em:', absolutePath);
+    
+    if (fs.existsSync(absolutePath)) {
+      return res.download(absolutePath, document.invoice_file_name);
+    }
+    
+    // Tentar caminho alternativo baseado na estrutura de upload
+    const fileName = path.basename(filePath);
+    const altPath = path.join(process.cwd(), 'uploads', 'financial', String(documentId), fileName);
+    console.log('Tentando caminho alternativo:', altPath);
+    
+    if (fs.existsSync(altPath)) {
+      return res.download(altPath, document.invoice_file_name);
+    }
+    
+    // Última tentativa - buscar diretamente na pasta de uploads raiz
+    const rootUploadPath = path.join(process.cwd(), 'uploads', fileName);
+    console.log('Tentando caminho root upload:', rootUploadPath);
+    
+    if (fs.existsSync(rootUploadPath)) {
+      return res.download(rootUploadPath, document.invoice_file_name);
+    }
+    
+    // Se chegou aqui, não encontrou o arquivo
+    return res.status(404).json({ 
+      message: 'Arquivo não encontrado no servidor', 
+      checked_paths: [absolutePath, altPath, rootUploadPath],
+      file_url: document.invoice_file
+    });
+  } catch (error) {
+    console.error('Erro ao baixar nota fiscal:', error);
+    res.status(500).json({ 
+      message: 'Erro ao baixar nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
+// Rota para baixar nota fiscal de despesa
+router.get('/expenses/:id/invoice/download', async (req, res) => {
+  try {
+    const expenseId = parseInt(req.params.id);
+    
+    // Verificar se a despesa existe
+    const expense = await storage.getExpense(expenseId);
+    if (!expense) {
+      return res.status(404).json({ message: 'Despesa não encontrada' });
+    }
+    
+    // Verificar se existe uma nota fiscal anexada
+    if (!expense.invoice_file || !expense.invoice_file_name) {
+      return res.status(400).json({ message: 'Esta despesa não possui nota fiscal anexada' });
+    }
+    
+    // Verificar várias possibilidades de caminho do arquivo
+    let filePath = expense.invoice_file;
+    
+    // Garantir que estamos trabalhando com caminho relativo sem barras iniciais
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
+    }
+    
+    // Verificar caminho absoluto baseado no path armazenado
+    const absolutePath = path.join(process.cwd(), filePath);
+    console.log('Tentando acessar arquivo em:', absolutePath);
+    
+    if (fs.existsSync(absolutePath)) {
+      return res.download(absolutePath, expense.invoice_file_name);
+    }
+    
+    // Tentar caminho alternativo baseado na estrutura de upload
+    const fileName = path.basename(filePath);
+    const altPath = path.join(process.cwd(), 'uploads', 'financial', String(expenseId), fileName);
+    console.log('Tentando caminho alternativo:', altPath);
+    
+    if (fs.existsSync(altPath)) {
+      return res.download(altPath, expense.invoice_file_name);
+    }
+    
+    // Última tentativa - buscar diretamente na pasta de uploads raiz
+    const rootUploadPath = path.join(process.cwd(), 'uploads', fileName);
+    console.log('Tentando caminho root upload:', rootUploadPath);
+    
+    if (fs.existsSync(rootUploadPath)) {
+      return res.download(rootUploadPath, expense.invoice_file_name);
+    }
+    
+    // Se chegou aqui, não encontrou o arquivo
+    return res.status(404).json({ 
+      message: 'Arquivo não encontrado no servidor', 
+      checked_paths: [absolutePath, altPath, rootUploadPath],
+      file_url: expense.invoice_file
+    });
+  } catch (error) {
+    console.error('Erro ao baixar nota fiscal:', error);
+    res.status(500).json({ 
+      message: 'Erro ao baixar nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
 export default router;

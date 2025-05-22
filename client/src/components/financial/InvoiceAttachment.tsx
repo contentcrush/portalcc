@@ -207,7 +207,13 @@ export const InvoiceAttachment = ({
   const getDownloadLink = () => {
     if (!invoiceFile) return '#';
     
-    return `/${invoiceFile}`;
+    // Verifica se o invoiceFile já começa com '/' ou não
+    if (invoiceFile.startsWith('/')) {
+      return invoiceFile;
+    }
+    
+    // Construir a URL completa para o download do arquivo
+    return `/api/${type === "document" ? "financial-documents" : "expenses"}/${recordId}/invoice/download`;
   };
 
   // Renderização de acordo com o estado (com ou sem nota fiscal)
