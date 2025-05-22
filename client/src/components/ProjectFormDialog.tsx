@@ -184,6 +184,8 @@ export function ProjectFormDialog() {
         startDate: standardizedDates.startDate ? standardizedDates.startDate.toISOString() : null,
         endDate: standardizedDates.endDate ? standardizedDates.endDate.toISOString() : null,
         issue_date: standardizedDates.issueDate ? standardizedDates.issueDate.toISOString() : null,
+        // Garantir que o status especial seja sempre enviado
+        special_status: data.special_status || "none",
         // Os outros campos permanecem inalterados
         budget: data.budget || null
       };
@@ -238,6 +240,8 @@ export function ProjectFormDialog() {
         startDate: standardizedDates.startDate ? standardizedDates.startDate.toISOString() : null,
         endDate: standardizedDates.endDate ? standardizedDates.endDate.toISOString() : null,
         issue_date: standardizedDates.issueDate ? standardizedDates.issueDate.toISOString() : null,
+        // Garantir que o status especial seja sempre enviado
+        special_status: data.special_status || "none",
         // A data de vencimento é calculada automaticamente no backend com base em issue_date e payment_term
         budget: data.budget || null
       };

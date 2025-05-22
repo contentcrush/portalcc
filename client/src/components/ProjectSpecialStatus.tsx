@@ -10,6 +10,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -67,6 +77,7 @@ const statusConfig = {
 
 export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = true }: ProjectSpecialStatusProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'delayed' | 'paused' | 'canceled' | 'none'>(currentStatus);
   const [reason, setReason] = useState('');
   const { toast } = useToast();
@@ -102,6 +113,7 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
       setIsOpen(false);
+      setIsAlertOpen(false);
       setReason('');
     },
     onError: (error) => {
@@ -114,6 +126,10 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
     }
   });
 
+  const handleStatusChange = (value: 'delayed' | 'paused' | 'canceled' | 'none') => {
+    setSelectedStatus(value);
+  };
+
   const handleSubmit = () => {
     if (selectedStatus === currentStatus) {
       toast({
@@ -124,6 +140,16 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
       return;
     }
     
+    // Se o status selecionado for "cancelado", mostrar confirmação
+    if (selectedStatus === 'canceled') {
+      setIsAlertOpen(true);
+    } else {
+      // Para outros status, enviar diretamente
+      updateStatusMutation.mutate({ status: selectedStatus, reason });
+    }
+  };
+  
+  const confirmStatusChange = () => {
     updateStatusMutation.mutate({ status: selectedStatus, reason });
   };
 
@@ -153,6 +179,7 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
         )}
       </div>
 
+      {/* Diálogo principal para alterar status */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -167,7 +194,7 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
               <Label htmlFor="status">Status Especial</Label>
               <Select 
                 value={selectedStatus} 
-                onValueChange={(value: 'delayed' | 'paused' | 'canceled' | 'none') => setSelectedStatus(value)}
+                onValueChange={handleStatusChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um status" />
@@ -263,6 +290,40 @@ export function ProjectSpecialStatus({ projectId, currentStatus, isEditable = tr
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmação para cancelamento */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar cancelamento do projeto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a marcar este projeto como <span className="font-medium text-red-600">Cancelado</span>. 
+              Esta ação impedirá o avanço do projeto para outras etapas e pode ter impacto nos processos relacionados.
+              
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm font-medium text-red-800 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Consequências do cancelamento:
+                </p>
+                <ul className="text-sm text-red-700 mt-1 space-y-1 pl-6 list-disc">
+                  <li>O projeto não poderá avançar para outras etapas</li>
+                  <li>Eventos e tarefas relacionados podem ser afetados</li>
+                  <li>Documentos financeiros permanecerão no status atual</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+            >
+              Sim, cancelar projeto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
