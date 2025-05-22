@@ -1,5 +1,9 @@
 import { eq, and, inArray, or, count, asc, desc } from "drizzle-orm";
 import { db } from "./db";
+import NodeCache from "node-cache";
+
+// Inicializa o cache com tempo de expiração padrão de 30 segundos
+const cache = new NodeCache({ stdTTL: 30 });
 import {
   users, clients, projects, projectMembers, projectStages, tasks,
   taskComments, taskAttachments, clientInteractions, financialDocuments,
@@ -1925,7 +1929,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjects(): Promise<Project[]> {
-    return await db.select().from(projects);
+    // Criamos um cache para armazenar resultados por 30 segundos
+    const cacheKey = 'all_projects';
+    const cachedResult = cache.get(cacheKey);
+    
+    if (cachedResult) {
+      console.log('[Performance] Usando cache para listagem de projetos');
+      return cachedResult;
+    }
+    
+    console.log('[Performance] Carregando projetos do banco de dados');
+    
+    // Selecionamos apenas os campos essenciais para a listagem
+    const result = await db.select({
+      id: projects.id,
+      name: projects.name,
+      client_id: projects.client_id,
+      status: projects.status,
+      special_status: projects.special_status,
+      budget: projects.budget,
+      startDate: projects.startDate,
+      endDate: projects.endDate,
+      progress: projects.progress,
+      thumbnail: projects.thumbnail
+    }).from(projects)
+      .orderBy(desc(projects.creation_date || projects.id));
+    
+    // Armazenamos o resultado em cache por 30 segundos
+    cache.set(cacheKey, result, 30);
+    
+    return result;
   }
 
   async getProjectsByClient(clientId: number): Promise<Project[]> {
