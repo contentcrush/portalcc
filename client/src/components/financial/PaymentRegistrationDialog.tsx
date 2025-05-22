@@ -2,9 +2,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Check } from "lucide-react";
+import { Check, Calendar as CalendarIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency, showSuccessToast } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import {
   Dialog,
@@ -26,6 +28,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import {
+  Calendar
+} from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 // Tipos para os registros financeiros
 interface FinancialDocument {
@@ -55,9 +66,10 @@ interface Expense {
 
 type FinancialRecord = FinancialDocument | Expense;
 
-// Schemas para validação - apenas observações
+// Schemas para validação
 const paymentSchema = z.object({
   notes: z.string().optional(),
+  payment_date: z.date().optional().nullable(),
 });
 
 interface PaymentRegistrationDialogProps {
@@ -81,6 +93,7 @@ export function PaymentRegistrationDialog({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       notes: "",
+      payment_date: new Date(), // Data atual como padrão
     },
   });
 
@@ -171,6 +184,46 @@ export function PaymentRegistrationDialog({
         <div className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+              {/* Data Efetuada */}
+              <FormField
+                control={form.control}
+                name="payment_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data Efetuada</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               {/* Observações */}
               <FormField
                 control={form.control}
