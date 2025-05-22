@@ -36,13 +36,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -50,6 +52,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -129,6 +139,24 @@ interface FinancialKPI {
   variant?: "green" | "red" | "blue" | "amber" | "default";
 }
 
+// Função para exportar dados financeiros
+function exportFinancialData(type: string = 'all', exportPeriod: string = 'year', format: string = 'csv') {
+  // Em uma implementação real, isso enviaria uma requisição para o servidor
+  // para gerar o arquivo apropriado e iniciar o download
+  
+  console.log(`Exportando dados financeiros: tipo=${type}, período=${exportPeriod}, formato=${format}`);
+  
+  // Simulação do download (em produção, aqui haveria uma chamada real à API)
+  setTimeout(() => {
+    const fileName = `financeiro_${exportPeriod}_${new Date().toISOString().split('T')[0]}.${format}`;
+    
+    // Em um caso real, aqui seria iniciado o download do arquivo gerado pelo backend
+    console.log(`Download iniciado: ${fileName}`);
+  }, 1500);
+  
+  return true;
+}
+
 export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
   const [period, setPeriod] = useState<string>("year");
@@ -140,9 +168,23 @@ export default function Financial() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Estados para exportação e calendário
+  const [exportType, setExportType] = useState<string>("all");
+  const [exportFormat, setExportFormat] = useState<string>("csv");
+  const [showCalendar, setShowCalendar] = useState<boolean>(false);
+  
   // Estados para controlar os diálogos de detalhes e pagamento
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  
+  // Função para mostrar toast de sucesso
+  const showSuccessToast = ({ title, description }: { title: string, description: string }) => {
+    toast({
+      title,
+      description,
+      variant: "success",
+    });
+  };
   
   // Calcular o intervalo de datas com base no período selecionado
   const dateFilterRange = useMemo(() => {
@@ -753,9 +795,83 @@ export default function Financial() {
             </Popover>
           )}
           
-          <Button variant="outline" size="icon">
-            <Download className="h-4 w-4" />
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Download className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Exportar Dados Financeiros</DialogTitle>
+                <DialogDescription>
+                  Selecione as opções de exportação para seus dados financeiros.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="export-type" className="text-right">
+                    Tipo
+                  </Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione o tipo de dados" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os registros</SelectItem>
+                      <SelectItem value="income">Receitas</SelectItem>
+                      <SelectItem value="expense">Despesas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="export-period" className="text-right">
+                    Período
+                  </Label>
+                  <Select defaultValue={period}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">Este Mês</SelectItem>
+                      <SelectItem value="quarter">Este Trimestre</SelectItem>
+                      <SelectItem value="year">Este Ano</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
+                      <SelectItem value="all">Todos os Períodos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="export-format" className="text-right">
+                    Formato
+                  </Label>
+                  <Select defaultValue="csv">
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione o formato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="csv">CSV</SelectItem>
+                      <SelectItem value="excel">Excel</SelectItem>
+                      <SelectItem value="pdf">PDF</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  onClick={() => {
+                    exportFinancialData();
+                    showSuccessToast({
+                      title: "Exportação iniciada",
+                      description: "Seus dados estão sendo processados para download"
+                    });
+                  }}
+                >
+                  Exportar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
           <NewFinancialRecordDialog initialTab={selectedTab === "payables" ? "expense" : "income"} />
         </div>
