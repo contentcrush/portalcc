@@ -36,6 +36,10 @@ interface FinancialDocument {
   description: string | null;
   paid: boolean;
   status: string;
+  invoice_file?: string | null;
+  invoice_file_name?: string | null;
+  invoice_file_uploaded_at?: string | null;
+  invoice_file_uploaded_by?: number | null;
 }
 
 interface Expense {
@@ -47,6 +51,10 @@ interface Expense {
   description: string;
   paid_by: number | null;
   approved: boolean;
+  invoice_file?: string | null;
+  invoice_file_name?: string | null;
+  invoice_file_uploaded_at?: string | null;
+  invoice_file_uploaded_by?: number | null;
 }
 
 type FinancialRecord = FinancialDocument | Expense;
@@ -100,6 +108,9 @@ export function FinancialRecordActions({
     }
     return false;
   };
+  
+  // Verifica se o registro tem uma nota fiscal anexada
+  const hasInvoiceAttached = !!record.invoice_file;
 
   // Mutação para excluir registro
   const deleteMutation = useMutation({
@@ -227,7 +238,11 @@ export function FinancialRecordActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button variant="ghost" className="h-8 w-8 p-0 relative">
+            {hasInvoiceAttached && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-white" 
+                    title="Nota fiscal anexada"></span>
+            )}
             <span className="sr-only">Abrir menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -237,6 +252,13 @@ export function FinancialRecordActions({
             <Eye className="mr-2 h-4 w-4" />
             <span>Ver Detalhes</span>
           </DropdownMenuItem>
+          
+          {hasInvoiceAttached && (
+            <DropdownMenuItem onClick={() => onViewDetails(record)}>
+              <FileText className="mr-2 h-4 w-4 text-green-600" />
+              <span>Ver Nota Fiscal</span>
+            </DropdownMenuItem>
+          )}
           
           {canRegisterPayment() && onRegisterPayment && (
             <DropdownMenuItem onClick={() => onRegisterPayment(record)}>
