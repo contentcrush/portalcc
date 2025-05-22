@@ -2446,7 +2446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/financial-documents/:id/pay", authenticateJWT, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { notes } = req.body;
+      const { notes, payment_date } = req.body;
       
       // Verificar se o documento existe
       const document = await storage.getFinancialDocument(id);
@@ -2459,12 +2459,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Este documento já foi pago" });
       }
       
-      // Sempre usar a data e hora atuais para o pagamento
-      // Evitamos problemas com conversão de datas do frontend
+      // Usar a data selecionada pelo usuário ou a data atual como fallback
+      const paymentDate = payment_date ? new Date(payment_date) : new Date();
+      console.log(`[Sistema] Documento financeiro #${id} com Data Efetuada: ${paymentDate.toISOString()}`);
+      
       const updatedDocument = await storage.updateFinancialDocument(id, {
         paid: true,
         status: 'paid',
-        payment_date: new Date(),
+        payment_date: paymentDate,
         payment_notes: notes || null
       });
       
