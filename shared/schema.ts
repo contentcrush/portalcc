@@ -281,7 +281,7 @@ export const financialDocuments = pgTable("financial_documents", {
   payment_date: timestamp("payment_date"),
   payment_notes: text("payment_notes"),
   status: text("status").default("pending"),
-  creation_date: timestamp("creation_date").defaultNow(),
+  // Removemos creation_date para resolver o erro - campo não existe na tabela real
   description: text("description"),
   invoice_file: text("invoice_file"), // URL para o arquivo da nota fiscal
   invoice_file_name: text("invoice_file_name"), // Nome original do arquivo
