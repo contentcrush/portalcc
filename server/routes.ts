@@ -19,6 +19,7 @@ import { db } from "./db";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
 import invoicesRoutes from "./routes/invoices";
+import { getProjectStatusHistory, updateProjectSpecialStatus } from "./routes/project-status";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação

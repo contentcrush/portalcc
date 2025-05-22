@@ -652,6 +652,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   expenses: many(expenses),
   events: many(events),
   refreshTokens: many(refreshTokens),
+  statusChanges: many(projectStatusHistory),
   preferences: one(userPreferences, {
     fields: [users.id],
     references: [userPreferences.user_id]
