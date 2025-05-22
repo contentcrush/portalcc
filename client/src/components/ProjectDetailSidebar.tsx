@@ -17,7 +17,8 @@ import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
 import { ProjectCommentSection } from "./comments";
 import ProjectAttachments from "./ProjectAttachments";
-import { ProjectStageStatus, ProjectSpecialStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
+import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
+import { ProjectSpecialStatus } from "./ProjectSpecialStatus";
 import { 
   Dialog,
   DialogContent,
@@ -820,6 +821,15 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             <div className="text-sm font-medium text-gray-600">Status:</div>
             <StatusBadge 
               project={project}
+            />
+          </div>
+          
+          {/* Status Especial do Projeto */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-600">Status Especial:</div>
+            <ProjectSpecialStatus 
+              projectId={projectId}
+              currentStatus={project?.special_status || 'none'}
             />
           </div>
           
