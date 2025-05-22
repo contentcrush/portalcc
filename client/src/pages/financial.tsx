@@ -1231,8 +1231,8 @@ export default function Financial() {
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
-                            {/* Formatação da data de emissão com dia/mês/ano - usando a data de vencimento como base */}
-                            {doc.due_date ? format(subDays(new Date(doc.due_date), 30), 'dd/MM/yyyy') : '-'}
+                            {/* Formatação da data de emissão com dia/mês/ano */}
+                            {doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (
