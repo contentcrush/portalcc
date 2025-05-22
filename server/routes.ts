@@ -897,7 +897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       client_id: clientId,
       document_type: "invoice",
       amount: budget,
-      creation_date: creationDate,
+      // creation_date removido pois não existe esta coluna na tabela
       due_date: dueDate,
       status: "pending",
       description: `Fatura referente ao projeto: ${projectName} (Prazo: ${paymentTerm} dias)`
