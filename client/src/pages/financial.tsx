@@ -1232,7 +1232,7 @@ export default function Financial() {
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
                             {/* Formatação da data de emissão com dia/mês/ano */}
-                            {doc.creation_date ? format(parseISO(doc.creation_date), 'dd/MM/yyyy') : '-'}
+                            {doc.creation_date ? format(new Date(doc.creation_date), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (
