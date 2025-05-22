@@ -1,0 +1,221 @@
+import { Router } from 'express';
+import { storage } from '../storage';
+import { upload, processImage, moveFile } from '../upload';
+import path from 'path';
+import fs from 'fs';
+import { authenticateJWT, requirePermission } from '../auth';
+
+const router = Router();
+
+// Middleware to check authentication for all routes
+router.use(authenticateJWT);
+
+// Rota para upload de nota fiscal para documento financeiro
+router.post('/financial-documents/:id/invoice', upload.single('invoice'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+    }
+
+    const documentId = parseInt(req.params.id);
+    const filePath = req.file.path;
+    const mimeType = req.file.mimetype;
+    const fileName = req.file.originalname;
+    const fileSize = req.file.size;
+    
+    // Verificar se o documento financeiro existe
+    const document = await storage.getFinancialDocument(documentId);
+    if (!document) {
+      // Remover arquivo temporário
+      fs.unlinkSync(filePath);
+      return res.status(404).json({ message: 'Documento financeiro não encontrado' });
+    }
+    
+    // Processar imagem ou mover arquivo para diretório apropriado
+    const isImage = mimeType.startsWith('image/');
+    let fileUrl;
+    
+    if (isImage) {
+      // Processar e mover imagem
+      fileUrl = await processImage(filePath, 'financial', documentId);
+    } else {
+      // Mover outros tipos de arquivo
+      fileUrl = moveFile(filePath, 'financial', documentId);
+    }
+    
+    // Garantir que o caminho começa sem barra para consistência
+    if (fileUrl.startsWith('/')) {
+      fileUrl = fileUrl.substring(1);
+    }
+    
+    // Atualizar o documento financeiro no banco de dados
+    const updatedDocument = await storage.updateFinancialDocument(documentId, {
+      invoice_file: fileUrl,
+      invoice_file_name: fileName,
+      invoice_file_uploaded_at: new Date(),
+      invoice_file_uploaded_by: req.user?.id || null
+    });
+
+    res.status(201).json(updatedDocument);
+  } catch (error) {
+    console.error('Erro ao fazer upload da nota fiscal:', error);
+    res.status(500).json({ 
+      message: 'Erro ao processar upload da nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
+// Rota para excluir nota fiscal de um documento financeiro
+router.delete('/financial-documents/:id/invoice', async (req, res) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    
+    // Verificar se o documento financeiro existe
+    const document = await storage.getFinancialDocument(documentId);
+    if (!document) {
+      return res.status(404).json({ message: 'Documento financeiro não encontrado' });
+    }
+    
+    // Verificar se existe uma nota fiscal anexada
+    if (!document.invoice_file) {
+      return res.status(400).json({ message: 'Este documento não possui nota fiscal anexada' });
+    }
+    
+    // Tentar remover o arquivo físico se ele existir
+    try {
+      const filePath = path.join(process.cwd(), document.invoice_file);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fileError) {
+      console.error(`Erro ao excluir arquivo físico para o documento ${documentId}:`, fileError);
+      // Continuar com a exclusão do registro mesmo se o arquivo não puder ser excluído
+    }
+    
+    // Atualizar o documento para remover a referência ao arquivo
+    const updatedDocument = await storage.updateFinancialDocument(documentId, {
+      invoice_file: null,
+      invoice_file_name: null,
+      invoice_file_uploaded_at: null,
+      invoice_file_uploaded_by: null
+    });
+
+    res.json({
+      success: true,
+      message: 'Nota fiscal removida com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao remover nota fiscal:', error);
+    res.status(500).json({ 
+      message: 'Erro ao remover nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
+// Rota para upload de nota fiscal para despesa
+router.post('/expenses/:id/invoice', upload.single('invoice'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+    }
+
+    const expenseId = parseInt(req.params.id);
+    const filePath = req.file.path;
+    const mimeType = req.file.mimetype;
+    const fileName = req.file.originalname;
+    const fileSize = req.file.size;
+    
+    // Verificar se a despesa existe
+    const expense = await storage.getExpense(expenseId);
+    if (!expense) {
+      // Remover arquivo temporário
+      fs.unlinkSync(filePath);
+      return res.status(404).json({ message: 'Despesa não encontrada' });
+    }
+    
+    // Processar imagem ou mover arquivo para diretório apropriado
+    const isImage = mimeType.startsWith('image/');
+    let fileUrl;
+    
+    if (isImage) {
+      // Processar e mover imagem
+      fileUrl = await processImage(filePath, 'financial', expenseId);
+    } else {
+      // Mover outros tipos de arquivo
+      fileUrl = moveFile(filePath, 'financial', expenseId);
+    }
+    
+    // Garantir que o caminho começa sem barra para consistência
+    if (fileUrl.startsWith('/')) {
+      fileUrl = fileUrl.substring(1);
+    }
+    
+    // Atualizar a despesa no banco de dados
+    const updatedExpense = await storage.updateExpense(expenseId, {
+      invoice_file: fileUrl,
+      invoice_file_name: fileName,
+      invoice_file_uploaded_at: new Date(),
+      invoice_file_uploaded_by: req.user?.id || null
+    });
+
+    res.status(201).json(updatedExpense);
+  } catch (error) {
+    console.error('Erro ao fazer upload da nota fiscal para despesa:', error);
+    res.status(500).json({ 
+      message: 'Erro ao processar upload da nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
+// Rota para excluir nota fiscal de uma despesa
+router.delete('/expenses/:id/invoice', async (req, res) => {
+  try {
+    const expenseId = parseInt(req.params.id);
+    
+    // Verificar se a despesa existe
+    const expense = await storage.getExpense(expenseId);
+    if (!expense) {
+      return res.status(404).json({ message: 'Despesa não encontrada' });
+    }
+    
+    // Verificar se existe uma nota fiscal anexada
+    if (!expense.invoice_file) {
+      return res.status(400).json({ message: 'Esta despesa não possui nota fiscal anexada' });
+    }
+    
+    // Tentar remover o arquivo físico se ele existir
+    try {
+      const filePath = path.join(process.cwd(), expense.invoice_file);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fileError) {
+      console.error(`Erro ao excluir arquivo físico para a despesa ${expenseId}:`, fileError);
+      // Continuar com a exclusão do registro mesmo se o arquivo não puder ser excluído
+    }
+    
+    // Atualizar a despesa para remover a referência ao arquivo
+    const updatedExpense = await storage.updateExpense(expenseId, {
+      invoice_file: null,
+      invoice_file_name: null,
+      invoice_file_uploaded_at: null,
+      invoice_file_uploaded_by: null
+    });
+
+    res.json({
+      success: true,
+      message: 'Nota fiscal removida com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao remover nota fiscal da despesa:', error);
+    res.status(500).json({ 
+      message: 'Erro ao remover nota fiscal', 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+  }
+});
+
+export default router;
