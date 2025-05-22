@@ -253,10 +253,15 @@ export function FinancialRecordActions({
             <span>Ver Detalhes</span>
           </DropdownMenuItem>
           
-          {hasInvoiceAttached && (
+          {hasInvoiceAttached ? (
             <DropdownMenuItem onClick={() => onViewDetails(record)}>
               <FileText className="mr-2 h-4 w-4 text-green-600" />
               <span>Ver Nota Fiscal</span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => onViewDetails(record)}>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Anexar Nota Fiscal</span>
             </DropdownMenuItem>
           )}
           

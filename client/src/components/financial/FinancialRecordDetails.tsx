@@ -293,7 +293,7 @@ export function FinancialRecordDetails({
           <TabsContent value="invoice" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium">Nota Fiscal / Comprovante</h3>
-              <Badge variant={record.invoice_file ? "success" : "outline"}>
+              <Badge variant={record.invoice_file ? "default" : "outline"} className={record.invoice_file ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}>
                 {record.invoice_file ? "Anexado" : "Pendente"}
               </Badge>
             </div>
@@ -305,11 +305,12 @@ export function FinancialRecordDetails({
             </p>
             
             <InvoiceAttachment 
-              documentId={record.id}
-              documentType={type === "document" ? "financial_document" : "expense"}
+              type={type}
+              recordId={record.id}
               invoiceFile={record.invoice_file}
               invoiceFileName={record.invoice_file_name}
-              onUpdated={handleInvoiceUpdated}
+              invoiceUploadedAt={record.invoice_file_uploaded_at}
+              onInvoiceUpdated={handleInvoiceUpdated}
             />
           </TabsContent>
         </Tabs>
