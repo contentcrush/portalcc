@@ -1,341 +1,318 @@
-import React, { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Paperclip, FileText, Upload, X, Eye, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { apiRequest } from '@/lib/queryClient';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { showSuccessToast } from '@/lib/utils';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  Upload, 
+  File, 
+  FileText, 
+  Trash2, 
+  Download,
+  AlertCircle 
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { showSuccessToast } from "@/lib/utils";
 
 interface InvoiceAttachmentProps {
-  documentId: number;
-  documentType: 'financial_document' | 'expense';
-  invoiceFile?: string | null;
-  invoiceFileName?: string | null;
-  onUpdated?: () => void;
+  type: "document" | "expense";
+  recordId: number;
+  invoiceFile: string | null;
+  invoiceFileName: string | null;
+  invoiceUploadedAt: string | null;
+  onInvoiceUpdated: () => void;
 }
 
-export function InvoiceAttachment({ 
-  documentId, 
-  documentType, 
-  invoiceFile, 
+export const InvoiceAttachment = ({
+  type,
+  recordId,
+  invoiceFile,
   invoiceFileName,
-  onUpdated 
-}: InvoiceAttachmentProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  invoiceUploadedAt,
+  onInvoiceUpdated
+}: InvoiceAttachmentProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
-  const hasInvoice = !!invoiceFile;
+  // URL base para uploads e ações
+  const apiBaseUrl = type === "document" 
+    ? `/api/financial-documents/${recordId}/invoice` 
+    : `/api/expenses/${recordId}/invoice`;
 
-  // Obter a extensão do arquivo
-  const getFileExtension = (filename?: string | null) => {
-    if (!filename) return null;
-    return filename.split('.').pop()?.toLowerCase();
-  };
-
-  // Verificar se é um arquivo de imagem
-  const isImageFile = (filename?: string | null) => {
-    const ext = getFileExtension(filename);
-    return ext && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-  };
-
-  // Verificar se é um arquivo PDF
-  const isPdfFile = (filename?: string | null) => {
-    const ext = getFileExtension(filename);
-    return ext === 'pdf';
-  };
-
-  // Mutação para upload de nota fiscal
+  // Mutation para fazer upload de nota fiscal
   const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const endpoint = documentType === 'financial_document' 
-        ? `/api/financial-documents/${documentId}/invoice` 
-        : `/api/expenses/${documentId}/invoice`;
+    mutationFn: async (file: File) => {
+      setUploading(true);
+      setUploadProgress(10);
       
-      // Usar fetch diretamente para upload de arquivo pois precisa de um FormData
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
+      const formData = new FormData();
+      formData.append('invoice', file);
+      
+      // Simulação de progresso para melhor UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 500);
+      
+      try {
+        const response = await fetch(apiBaseUrl, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+        
+        clearInterval(progressInterval);
+        
+        if (!response.ok) {
+          // Verificar se a resposta é JSON antes de tentar parsear
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Erro ao fazer upload da nota fiscal');
+          } else {
+            const textError = await response.text();
+            console.error("Erro de resposta não-JSON:", textError);
+            throw new Error("Erro no servidor ao processar arquivo. Tente novamente.");
+          }
+        }
+        
+        setUploadProgress(100);
+        return await response.json();
+      } catch (error) {
+        setUploadProgress(0);
+        throw error;
+      } finally {
+        setUploading(false);
+      }
+    },
+    onSuccess: () => {
+      showSuccessToast({
+        title: "Nota fiscal anexada com sucesso",
+        description: "O arquivo foi vinculado ao registro financeiro"
+      });
+      
+      // Invalidar queries para atualizar os dados
+      if (type === "document") {
+        queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      }
+      
+      // Notificar o componente pai
+      onInvoiceUpdated();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao anexar nota fiscal",
+        description: error.message || "Não foi possível fazer o upload do arquivo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation para remover nota fiscal
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(apiBaseUrl, {
+        method: 'DELETE',
         credentials: 'include'
       });
-
+      
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || 'Erro ao fazer upload da nota fiscal');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao remover nota fiscal');
       }
-
+      
       return await response.json();
     },
     onSuccess: () => {
       showSuccessToast({
-        title: 'Nota fiscal anexada com sucesso',
-        description: 'O arquivo foi anexado ao registro financeiro.'
+        title: "Nota fiscal removida",
+        description: "O arquivo foi desvinculado do registro"
       });
       
-      // Invalidar consultas para atualizar a UI
-      if (documentType === 'financial_document') {
+      // Invalidar queries para atualizar os dados
+      if (type === "document") {
         queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       }
       
-      // Notificar componente pai se necessário
-      if (onUpdated) {
-        onUpdated();
-      }
+      // Notificar o componente pai
+      onInvoiceUpdated();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erro ao anexar nota fiscal',
-        description: error.message,
-        variant: 'destructive'
+        title: "Erro ao remover nota fiscal",
+        description: error.message || "Não foi possível remover o arquivo",
+        variant: "destructive",
       });
     },
-    onSettled: () => {
-      setIsUploading(false);
-    }
   });
 
-  // Mutação para excluir nota fiscal
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const endpoint = documentType === 'financial_document' 
-        ? `/api/financial-documents/${documentId}/invoice` 
-        : `/api/expenses/${documentId}/invoice`;
-      
-      const response = await apiRequest('DELETE', endpoint);
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || 'Erro ao remover a nota fiscal');
-      }
-
-      return true;
-    },
-    onSuccess: () => {
-      showSuccessToast({
-        title: 'Nota fiscal removida com sucesso',
-        description: 'O arquivo foi desvinculado do registro financeiro.'
-      });
-      
-      // Invalidar consultas para atualizar a UI
-      if (documentType === 'financial_document') {
-        queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-      }
-      
-      // Notificar componente pai se necessário
-      if (onUpdated) {
-        onUpdated();
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao remover nota fiscal',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Handler para seleção de arquivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Verificar o tamanho do arquivo (máximo 10MB)
+  // Handler para upload de arquivo
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Verifica tamanho do arquivo (máximo 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: 'Arquivo muito grande',
-        description: 'O tamanho máximo permitido é 10MB.',
-        variant: 'destructive'
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo permitido é 10MB",
+        variant: "destructive",
       });
       return;
     }
-
-    // Criar FormData e adicionar o arquivo
-    const formData = new FormData();
-    formData.append('invoice', file);
     
-    // Iniciar upload
-    setIsUploading(true);
-    uploadMutation.mutate(formData);
-  };
-
-  // Handler para iniciar upload
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Handler para download da nota fiscal
-  const handleDownload = () => {
-    if (!invoiceFile) return;
+    // Verifica tipos de arquivo permitidos
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Tipo de arquivo não suportado",
+        description: "Formatos aceitos: PDF, JPG, JPEG e PNG",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Criar um link temporário para download
-    const link = document.createElement('a');
-    link.href = invoiceFile;
-    link.download = invoiceFileName || 'nota-fiscal.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    uploadMutation.mutate(file);
   };
 
-  // Renderizar conteúdo com base no status
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Label className="text-sm font-medium">Nota Fiscal / Comprovante</Label>
-        
-        {hasInvoice && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Paperclip className="h-4 w-4 mr-1" />
-                Opções
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsPreviewOpen(true)}>
-                <Eye className="h-4 w-4 mr-2" />
-                Visualizar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setDeleteDialogOpen(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Remover
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
+  // Função para gerar o link para download
+  const getDownloadLink = () => {
+    if (!invoiceFile) return '#';
+    
+    return `/${invoiceFile}`;
+  };
 
-      {isUploading ? (
-        <Skeleton className="h-24 w-full" />
-      ) : hasInvoice ? (
-        <Card className="overflow-hidden">
-          <CardContent className="p-3">
-            <div className="flex items-center">
-              <div className="bg-primary/10 p-2 rounded mr-3">
-                <FileText className="h-6 w-6 text-primary" />
+  // Renderização de acordo com o estado (com ou sem nota fiscal)
+  if (invoiceFile && invoiceFileName) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-10 w-10 text-primary" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold">{invoiceFileName}</h4>
+                  {invoiceUploadedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Anexado em {format(new Date(invoiceUploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" title={invoiceFileName || 'Nota Fiscal'}>
-                  {invoiceFileName || 'Nota Fiscal'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Clique em Opções para visualizar ou baixar
-                </p>
+              <div className="flex space-x-2">
+                <a href={getDownloadLink()} target="_blank" rel="noopener noreferrer" download>
+                  <Button variant="ghost" size="sm">
+                    <Download className="h-4 w-4 mr-1" />
+                    Baixar
+                  </Button>
+                </a>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                  Remover
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
-          <div className="bg-primary/10 p-3 rounded-full mb-3">
-            <Upload className="h-6 w-6 text-primary" />
-          </div>
-          <p className="mb-1 text-sm font-medium">Nenhuma nota fiscal anexada</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            Anexe o arquivo da nota fiscal para este registro financeiro
-          </p>
-          <Button onClick={handleUploadClick} size="sm" className="mt-2">
-            Anexar Nota Fiscal
-          </Button>
+
+        {/* Diálogo de confirmação para exclusão */}
+        <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remover nota fiscal?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja remover esta nota fiscal? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  deleteMutation.mutate();
+                }}
+              >
+                Remover
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
+
+  // Interface para upload quando não há nota fiscal
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg border-muted-foreground/20 text-center">
+        <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+        <h3 className="text-lg font-medium mb-1">
+          {type === "document" ? "Anexar Nota Fiscal" : "Anexar Recibo/NF"}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Arraste e solte um arquivo ou clique para selecionar
+        </p>
+        
+        <div className="relative">
           <input
             type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
+            id="invoice-upload"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileUpload}
+            disabled={uploading}
           />
+          <Button 
+            className="w-full" 
+            disabled={uploading}
+          >
+            {uploading ? `Enviando (${uploadProgress}%)` : "Selecionar arquivo"}
+          </Button>
         </div>
-      )}
-
-      {/* Diálogo de confirmação para exclusão */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover nota fiscal?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá remover o arquivo de nota fiscal anexado a este registro.
-              Você poderá fazer upload de outro arquivo posteriormente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? 'Removendo...' : 'Remover'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modal para visualização do arquivo */}
-      <AlertDialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <AlertDialogContent className="max-w-3xl h-[80vh] flex flex-col">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {invoiceFileName || 'Nota Fiscal'}
-            </AlertDialogTitle>
-          </AlertDialogHeader>
-          
-          <div className="flex-1 overflow-auto bg-muted/30 rounded-md">
-            {invoiceFile && (
-              isImageFile(invoiceFileName) ? (
-                <img 
-                  src={invoiceFile} 
-                  alt="Nota Fiscal" 
-                  className="max-w-full h-auto mx-auto"
-                  style={{ maxHeight: 'calc(80vh - 180px)' }}
-                />
-              ) : isPdfFile(invoiceFileName) ? (
-                <iframe 
-                  src={`${invoiceFile}#toolbar=0&navpanes=0`} 
-                  className="w-full h-full border-0"
-                  title="Visualização de PDF"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center p-4">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p>Este tipo de arquivo não pode ser visualizado diretamente.</p>
-                    <Button onClick={handleDownload} size="sm" className="mt-4">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              )
-            )}
+        
+        {uploading && (
+          <div className="w-full mt-4 bg-muted h-2 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300 ease-in-out"
+              style={{ width: `${uploadProgress}%` }}
+            />
           </div>
-          
-          <AlertDialogFooter className="mt-4">
-            <Button onClick={handleDownload} variant="outline" className="mr-auto">
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-            <AlertDialogCancel>Fechar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        )}
+        
+        <p className="text-xs text-muted-foreground mt-4">
+          Formatos suportados: PDF, JPG, JPEG, PNG (máx. 10MB)
+        </p>
+      </div>
     </div>
   );
-}
+};
