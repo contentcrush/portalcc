@@ -2551,7 +2551,27 @@ export class DatabaseStorage implements IStorage {
   
   // Financial Documents
   async getFinancialDocument(id: number): Promise<FinancialDocument | undefined> {
-    const [document] = await db.select().from(financialDocuments).where(eq(financialDocuments.id, id));
+    const [document] = await db.select({
+      id: financialDocuments.id,
+      project_id: financialDocuments.project_id,
+      client_id: financialDocuments.client_id,
+      document_type: financialDocuments.document_type,
+      document_number: financialDocuments.document_number,
+      amount: financialDocuments.amount,
+      due_date: financialDocuments.due_date,
+      paid: financialDocuments.paid,
+      payment_date: financialDocuments.payment_date,
+      payment_notes: financialDocuments.payment_notes,
+      status: financialDocuments.status,
+      description: financialDocuments.description,
+      invoice_file: financialDocuments.invoice_file,
+      invoice_file_name: financialDocuments.invoice_file_name,
+      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+    })
+    .from(financialDocuments)
+    .where(eq(financialDocuments.id, id));
+    
     return document || undefined;
   }
   
@@ -2561,11 +2581,48 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFinancialDocuments(): Promise<FinancialDocument[]> {
-    return await db.select().from(financialDocuments);
+    return await db.select({
+      id: financialDocuments.id,
+      project_id: financialDocuments.project_id,
+      client_id: financialDocuments.client_id,
+      document_type: financialDocuments.document_type,
+      document_number: financialDocuments.document_number,
+      amount: financialDocuments.amount,
+      due_date: financialDocuments.due_date,
+      paid: financialDocuments.paid,
+      payment_date: financialDocuments.payment_date,
+      payment_notes: financialDocuments.payment_notes,
+      status: financialDocuments.status,
+      description: financialDocuments.description,
+      invoice_file: financialDocuments.invoice_file,
+      invoice_file_name: financialDocuments.invoice_file_name,
+      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+    })
+    .from(financialDocuments);
   }
 
   async getFinancialDocumentsByClient(clientId: number): Promise<FinancialDocument[]> {
-    return await db.select().from(financialDocuments).where(eq(financialDocuments.client_id, clientId));
+    return await db.select({
+      id: financialDocuments.id,
+      project_id: financialDocuments.project_id,
+      client_id: financialDocuments.client_id,
+      document_type: financialDocuments.document_type,
+      document_number: financialDocuments.document_number,
+      amount: financialDocuments.amount,
+      due_date: financialDocuments.due_date,
+      paid: financialDocuments.paid,
+      payment_date: financialDocuments.payment_date,
+      payment_notes: financialDocuments.payment_notes,
+      status: financialDocuments.status,
+      description: financialDocuments.description,
+      invoice_file: financialDocuments.invoice_file,
+      invoice_file_name: financialDocuments.invoice_file_name,
+      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+    })
+    .from(financialDocuments)
+    .where(eq(financialDocuments.client_id, clientId));
   }
 
   async getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]> {
@@ -2614,9 +2671,10 @@ export class DatabaseStorage implements IStorage {
           console.log(`[Sistema] Documento financeiro usando Data de Emissão do projeto: ${formattedIssueDate.toLocaleDateString('pt-BR')}`);
           
           // Usar a data de emissão do projeto como data de emissão oficial do documento financeiro
+          // Removemos a referência à creation_date que não existe na tabela
           const documentData = {
-            ...insertDocument,
-            creation_date: formattedIssueDate
+            ...insertDocument
+            // Não incluímos campos extras que não existem na tabela
           };
           
           const [document] = await db.insert(financialDocuments).values(documentData).returning();
@@ -2645,8 +2703,8 @@ export class DatabaseStorage implements IStorage {
     console.log(`[Sistema] Criando documento financeiro com Data de Emissão = hoje: ${formattedToday.toLocaleDateString('pt-BR')}`);
     
     const [document] = await db.insert(financialDocuments).values({
-      ...insertDocument,
-      creation_date: formattedToday
+      ...insertDocument
+      // Removendo a referência à coluna creation_date que não existe na tabela
     }).returning();
     
     return document;
