@@ -546,8 +546,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       if (isProjectSpecialStatus(project.status) && isProjectStage(status)) {
         const { specialStatus } = getNormalizedProjectStatus(project);
         
-        // Se o projeto tiver um status especial, confirmar se o usuário quer remover o status especial
-        if (specialStatus && !window.confirm(`Este projeto está marcado como "${specialStatus}". Deseja remover esse status e atualizar para "${status}"?`)) {
+        // Se o projeto tiver um status especial, mostrar diálogo de confirmação personalizado
+        if (specialStatus) {
+          setConfirmStatusChange({
+            open: true,
+            message: `Este projeto está marcado como "${specialStatus}". Deseja remover esse status e atualizar para "${status}"?`,
+            status: status
+          });
           return;
         }
       }
@@ -555,17 +560,23 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       // Confirmação para status especiais
       if (['cancelado', 'pausado'].includes(status)) {
         const statusLabel = status === 'cancelado' ? 'cancelar' : 'pausar';
-        if (!window.confirm(`Tem certeza que deseja ${statusLabel} este projeto?`)) {
-          return;
-        }
+        setConfirmStatusChange({
+          open: true,
+          message: `Tem certeza que deseja ${statusLabel} este projeto?`,
+          status: status
+        });
+        return;
       }
       
       // Verificar se estamos saindo do status "proposta_aceita" para outro status
-      // Nesse caso, precisamos remover os documentos financeiros antes de atualizar UI
-      if (project.status === 'proposta_aceita' && status !== 'proposta_aceita') {
-        console.log("Status alterado de 'proposta_aceita' para outro. Removendo documentos financeiros...");
-        // Remove documentos financeiros primeiro
-        removeFinancialDocumentMutation.mutate(projectId);
+      if (project.status === 'proposta_aceita' && !["proposta_aceita", "concluido", "cancelado"].includes(status)) {
+        // Mostrar diálogo de confirmação personalizado
+        setConfirmStatusChange({
+          open: true,
+          message: "Ao mudar este status, o registro financeiro associado será removido. Tem certeza?",
+          status: status
+        });
+        return;
       }
       
       // Atualização otimista da interface
@@ -583,10 +594,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     }
   };
   
+  // Estado para o diálogo de confirmação de duplicação
+  const [confirmDuplication, setConfirmDuplication] = useState(false);
+
   const handleDuplicateProject = () => {
-    if (window.confirm("Deseja duplicar este projeto? Uma cópia será criada com todos os membros da equipe e etapas.")) {
-      duplicateProjectMutation.mutate();
-    }
+    setConfirmDuplication(true);
+  };
+  
+  const confirmDuplicateProject = () => {
+    duplicateProjectMutation.mutate();
+    setConfirmDuplication(false);
   };
   
   const handleDeleteProject = () => {
@@ -1289,6 +1306,68 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Diálogo de confirmação para alteração de status do projeto */}
+        <AlertDialog open={confirmStatusChange.open} onOpenChange={(open) => 
+          setConfirmStatusChange(prev => ({...prev, open}))
+        }>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar alteração de status</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmStatusChange.message}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  // Verifica se estamos saindo do status "proposta_aceita" para outro status
+                  if (project.status === 'proposta_aceita' && confirmStatusChange.status !== 'proposta_aceita') {
+                    console.log("Status alterado de 'proposta_aceita' para outro. Removendo documentos financeiros...");
+                    // Remove documentos financeiros primeiro
+                    removeFinancialDocumentMutation.mutate(projectId);
+                  }
+                  
+                  // Atualização otimista da interface
+                  const updatedProject = {
+                    ...project,
+                    status: confirmStatusChange.status
+                  };
+                  
+                  // Atualiza o cache imediatamente para uma resposta instantânea da UI
+                  queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
+                  
+                  // Em seguida, dispara a mutation para atualizar o servidor
+                  updateProjectStatusMutation.mutate(confirmStatusChange.status);
+                  
+                  // Fecha o diálogo
+                  setConfirmStatusChange({open: false, message: '', status: ''});
+                }}
+              >
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Diálogo de confirmação para duplicação do projeto */}
+        <AlertDialog open={confirmDuplication} onOpenChange={setConfirmDuplication}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Duplicar projeto</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja duplicar este projeto? Uma cópia será criada com todos os membros da equipe e etapas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDuplicateProject}>
+                Duplicar
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

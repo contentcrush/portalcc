@@ -60,7 +60,7 @@ import {
   PopoverTrigger
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { PROJECT_STATUS_OPTIONS, TEAM_ROLE_OPTIONS } from "@/lib/constants";
+import { PROJECT_STATUS_OPTIONS, PROJECT_SPECIAL_STATUS_OPTIONS, TEAM_ROLE_OPTIONS } from "@/lib/constants";
 
 // Estender o schema para adicionar validações específicas do formulário
 const projectFormSchema = insertProjectSchema.extend({
@@ -443,36 +443,75 @@ export function ProjectFormDialog() {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PROJECT_STATUS_OPTIONS.map(option => (
-                              <SelectItem 
-                                key={option.value} 
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status do Projeto</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {PROJECT_STATUS_OPTIONS.map(option => (
+                                <SelectItem 
+                                  key={option.value} 
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Status regular que indica a etapa atual do projeto
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="special_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status Especial</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange}
+                            value={field.value || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione status especial" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {PROJECT_SPECIAL_STATUS_OPTIONS.map(option => (
+                                <SelectItem 
+                                  key={option.value} 
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Status opcional que indica condições especiais do projeto
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
 
                 </TabsContent>
