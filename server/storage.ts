@@ -2569,7 +2569,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]> {
-    return await db.select().from(financialDocuments).where(eq(financialDocuments.project_id, projectId));
+    // Selecionamos campos explicitamente para evitar problemas com colunas que possam estar ausentes no banco
+    return await db.select({
+      id: financialDocuments.id,
+      project_id: financialDocuments.project_id,
+      client_id: financialDocuments.client_id,
+      document_type: financialDocuments.document_type,
+      document_number: financialDocuments.document_number,
+      amount: financialDocuments.amount,
+      due_date: financialDocuments.due_date,
+      paid: financialDocuments.paid,
+      payment_date: financialDocuments.payment_date,
+      payment_notes: financialDocuments.payment_notes,
+      status: financialDocuments.status,
+      description: financialDocuments.description,
+      invoice_file: financialDocuments.invoice_file,
+      invoice_file_name: financialDocuments.invoice_file_name,
+      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+    })
+    .from(financialDocuments)
+    .where(eq(financialDocuments.project_id, projectId));
   }
 
   async createFinancialDocument(insertDocument: InsertFinancialDocument): Promise<FinancialDocument> {
