@@ -298,6 +298,10 @@ export const expenses = pgTable("expenses", {
   receipt: text("receipt"),
   approved: boolean("approved").default(false),
   creation_date: timestamp("creation_date").defaultNow(),
+  invoice_file: text("invoice_file"), // URL para o arquivo da nota fiscal
+  invoice_file_name: text("invoice_file_name"), // Nome original do arquivo
+  invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"), // Data do upload
+  invoice_file_uploaded_by: integer("invoice_file_uploaded_by"), // Usuário que fez o upload
 });
 
 export const events = pgTable("events", {
