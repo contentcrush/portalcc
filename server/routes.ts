@@ -18,6 +18,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
+import invoicesRoutes from "./routes/invoices";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -25,6 +26,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register attachments routes
   app.use('/api/attachments', attachmentsRoutes);
+  
+  // Register invoices routes
+  app.use('/api', invoicesRoutes);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {

@@ -60,12 +60,11 @@ export function InvoiceAttachment({
         ? `/api/financial-documents/${documentId}/invoice` 
         : `/api/expenses/${documentId}/invoice`;
       
-      const response = await apiRequest('POST', endpoint, undefined, {
-        customConfig: { 
-          body: formData,
-          // Não definir Content-Type para que o navegador configure com o boundary correto
-          headers: {} 
-        }
+      // Usar fetch diretamente para upload de arquivo pois precisa de um FormData
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
       });
 
       if (!response.ok) {
