@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { db } from "../db";
 import { projects, projectStatusHistory, specialStatusEnum } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
-import { isAdmin, isEditorOrAbove } from "../middlewares/auth";
 
 // Função para obter o histórico de status especial de um projeto
 export async function getProjectStatusHistory(req: Request, res: Response) {
@@ -34,8 +33,8 @@ export async function getProjectStatusHistory(req: Request, res: Response) {
 // Função para atualizar o status especial de um projeto
 export async function updateProjectSpecialStatus(req: Request, res: Response) {
   try {
-    // Verificar permissões (editor ou admin)
-    if (!isEditorOrAbove(req)) {
+    // Verificar permissões (auth é feito na rota principal)
+    if (req.user!.role !== 'admin' && req.user!.role !== 'manager' && req.user!.role !== 'editor') {
       return res.status(403).json({ message: "Permissão negada" });
     }
 
@@ -67,7 +66,7 @@ export async function updateProjectSpecialStatus(req: Request, res: Response) {
       previous_status: previousStatus,
       new_status: status,
       changed_by: req.user!.id,
-      reason: reason || null
+      reason: reason || ""
     });
     
     // Atualizar status do projeto

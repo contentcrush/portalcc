@@ -30,6 +30,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register invoices routes
   app.use('/api', invoicesRoutes);
+  
+  // Rotas para status especial de projetos
+  app.get("/api/projects/:id/status-history", authenticateJWT, getProjectStatusHistory);
+  app.patch("/api/projects/:id/special-status", authenticateJWT, updateProjectSpecialStatus);
 
   // Helper function to validate request body
   function validateBody<T extends z.ZodSchema>(schema: T) {
