@@ -797,6 +797,90 @@ export default function Financial() {
           
           <Dialog>
             <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="ml-2">
+                <Calendar className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Calendário Financeiro</DialogTitle>
+                <DialogDescription>
+                  Visualização de datas de vencimento e pagamentos no calendário.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="mt-4 border rounded-md p-4">
+                <Calendar
+                  mode="single"
+                  selected={new Date()}
+                  className="rounded-md border mx-auto"
+                  disabled={(date) => date < new Date('1900-01-01')}
+                />
+                
+                <div className="mt-4 space-y-2">
+                  <h3 className="font-medium text-lg">Eventos do período:</h3>
+                  
+                  {financialDocuments && financialDocuments.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center mb-1">
+                        <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                        <span className="text-sm font-medium">A vencer</span>
+                      </div>
+                      
+                      {financialDocuments
+                        .filter((doc: any) => !doc.paid && isDateInRange(doc.due_date))
+                        .map((doc: any) => (
+                          <div key={doc.id} className="p-2 border border-gray-200 rounded bg-red-50">
+                            <div className="font-medium">{doc.description}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Vencimento: {format(new Date(doc.due_date), 'dd/MM/yyyy')}
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {formatCurrency(doc.amount)}
+                            </div>
+                          </div>
+                        ))}
+                      
+                      <div className="flex items-center mb-1 mt-4">
+                        <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span className="text-sm font-medium">Pagos no período</span>
+                      </div>
+                      
+                      {financialDocuments
+                        .filter((doc: any) => doc.paid && doc.payment_date && isDateInRange(doc.payment_date))
+                        .map((doc: any) => (
+                          <div key={doc.id} className="p-2 border border-gray-200 rounded bg-green-50">
+                            <div className="font-medium">{doc.description}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Pago em: {format(new Date(doc.payment_date), 'dd/MM/yyyy')}
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {formatCurrency(doc.amount)}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">Nenhum evento financeiro para este período.</p>
+                  )}
+                </div>
+              </div>
+              
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => {
+                  showSuccessToast({
+                    title: "Visualização de calendário",
+                    description: "Em breve: integração completa com o calendário do sistema"
+                  });
+                }}>
+                  Ver Calendário Completo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog>
+            <DialogTrigger asChild>
               <Button variant="outline" size="icon">
                 <Download className="h-4 w-4" />
               </Button>
@@ -813,7 +897,7 @@ export default function Financial() {
                   <Label htmlFor="export-type" className="text-right">
                     Tipo
                   </Label>
-                  <Select defaultValue="all">
+                  <Select defaultValue={exportType} onValueChange={setExportType}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Selecione o tipo de dados" />
                     </SelectTrigger>
@@ -828,7 +912,7 @@ export default function Financial() {
                   <Label htmlFor="export-period" className="text-right">
                     Período
                   </Label>
-                  <Select defaultValue={period}>
+                  <Select defaultValue={period} onValueChange={(value) => setPeriod(value)}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Selecione o período" />
                     </SelectTrigger>
@@ -845,7 +929,7 @@ export default function Financial() {
                   <Label htmlFor="export-format" className="text-right">
                     Formato
                   </Label>
-                  <Select defaultValue="csv">
+                  <Select defaultValue={exportFormat} onValueChange={setExportFormat}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Selecione o formato" />
                     </SelectTrigger>
@@ -860,10 +944,10 @@ export default function Financial() {
               <DialogFooter>
                 <Button 
                   onClick={() => {
-                    exportFinancialData();
+                    exportFinancialData(exportType, period, exportFormat);
                     showSuccessToast({
                       title: "Exportação iniciada",
-                      description: "Seus dados estão sendo processados para download"
+                      description: `Seus dados financeiros estão sendo exportados em formato ${exportFormat.toUpperCase()}`
                     });
                   }}
                 >
