@@ -314,7 +314,7 @@ export function setupAuth(app: Express) {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000 // 15 minutos
+        maxAge: 4 * 60 * 60 * 1000 // 4 horas
       });
       
       res.cookie('refreshToken', refreshToken, {
@@ -390,7 +390,7 @@ export function setupAuth(app: Express) {
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000 // 15 minutos
+        maxAge: 4 * 60 * 60 * 1000 // 4 horas
       });
       
       res.cookie('refreshToken', refreshToken, {
