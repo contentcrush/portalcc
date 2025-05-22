@@ -2689,27 +2689,48 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]> {
-    // Selecionamos campos explicitamente para evitar problemas com colunas que possam estar ausentes no banco
-    return await db.select({
-      id: financialDocuments.id,
-      project_id: financialDocuments.project_id,
-      client_id: financialDocuments.client_id,
-      document_type: financialDocuments.document_type,
-      document_number: financialDocuments.document_number,
-      amount: financialDocuments.amount,
-      due_date: financialDocuments.due_date,
-      paid: financialDocuments.paid,
-      payment_date: financialDocuments.payment_date,
-      payment_notes: financialDocuments.payment_notes,
-      status: financialDocuments.status,
-      description: financialDocuments.description,
-      invoice_file: financialDocuments.invoice_file,
-      invoice_file_name: financialDocuments.invoice_file_name,
-      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
-    })
-    .from(financialDocuments)
-    .where(eq(financialDocuments.project_id, projectId));
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        // Selecionamos campos explicitamente para evitar problemas com colunas que possam estar ausentes no banco
+        return await db.select({
+          id: financialDocuments.id,
+          project_id: financialDocuments.project_id,
+          client_id: financialDocuments.client_id,
+          document_type: financialDocuments.document_type,
+          document_number: financialDocuments.document_number,
+          amount: financialDocuments.amount,
+          due_date: financialDocuments.due_date,
+          paid: financialDocuments.paid,
+          payment_date: financialDocuments.payment_date,
+          payment_notes: financialDocuments.payment_notes,
+          status: financialDocuments.status,
+          description: financialDocuments.description,
+          invoice_file: financialDocuments.invoice_file,
+          invoice_file_name: financialDocuments.invoice_file_name,
+          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+        })
+        .from(financialDocuments)
+        .where(eq(financialDocuments.project_id, projectId));
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching financial documents for project id=${projectId} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning empty array as fallback");
+          return [];
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return [];
   }
 
   async createFinancialDocument(insertDocument: InsertFinancialDocument): Promise<FinancialDocument> {
@@ -2788,34 +2809,161 @@ export class DatabaseStorage implements IStorage {
   
   // Expenses
   async getExpense(id: number): Promise<Expense | undefined> {
-    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
-    return expense || undefined;
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+        return expense || undefined;
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching expense id=${id} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning undefined as fallback");
+          return undefined;
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return undefined;
   }
 
   async getExpenses(): Promise<Expense[]> {
-    return await db.select().from(expenses);
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        return await db.select().from(expenses);
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching expenses (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning empty array as fallback");
+          return [];
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return [];
   }
 
   async getExpensesByProject(projectId: number): Promise<Expense[]> {
-    return await db.select().from(expenses).where(eq(expenses.project_id, projectId));
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        return await db.select().from(expenses).where(eq(expenses.project_id, projectId));
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching expenses for project id=${projectId} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning empty array as fallback");
+          return [];
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return [];
   }
 
   async createExpense(insertExpense: InsertExpense): Promise<Expense> {
-    const [expense] = await db.insert(expenses).values(insertExpense).returning();
-    return expense;
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        const [expense] = await db.insert(expenses).values(insertExpense).returning();
+        return expense;
+      } catch (error) {
+        retries++;
+        console.error(`Error creating expense (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, throwing error");
+          throw new Error(`Falha ao criar despesa após ${maxRetries} tentativas: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    // Este código nunca será alcançado devido ao throw acima, mas é necessário para satisfazer o TypeScript
+    throw new Error("Falha ao criar despesa");
   }
 
   async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
-    const [updated] = await db.update(expenses)
-      .set(expense)
-      .where(eq(expenses.id, id))
-      .returning();
-    return updated;
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        const [updated] = await db.update(expenses)
+          .set(expense)
+          .where(eq(expenses.id, id))
+          .returning();
+        return updated;
+      } catch (error) {
+        retries++;
+        console.error(`Error updating expense id=${id} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning undefined as fallback");
+          return undefined;
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return undefined;
   }
 
   async deleteExpense(id: number): Promise<boolean> {
-    const result = await db.delete(expenses).where(eq(expenses.id, id));
-    return true;
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        const result = await db.delete(expenses).where(eq(expenses.id, id));
+        return true;
+      } catch (error) {
+        retries++;
+        console.error(`Error deleting expense id=${id} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning false as fallback");
+          return false;
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return false;
   }
   
   // Events
