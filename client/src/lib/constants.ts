@@ -44,6 +44,7 @@ export const SIDEBAR_ITEMS = [
   }
 ];
 
+// Status regulares de progresso do projeto
 export const PROJECT_STATUS_OPTIONS = [
   { value: "proposta", label: "Proposta" },
   { value: "pre_producao", label: "Pré-produção" },
@@ -51,10 +52,14 @@ export const PROJECT_STATUS_OPTIONS = [
   { value: "pos_revisao", label: "Pós / Revisão" },
   { value: "entregue", label: "Entregue / Aprovado" },
   { value: "concluido", label: "Concluído (Pago)" },
-  // Status complementares
-  { value: "atrasado", label: "Atrasado" },
-  { value: "pausado", label: "Pausado" },
-  { value: "cancelado", label: "Cancelado" }
+];
+
+// Status especiais (são gerenciados separadamente)
+export const PROJECT_SPECIAL_STATUS_OPTIONS = [
+  { value: "none", label: "Nenhum" },
+  { value: "delayed", label: "Atrasado" },
+  { value: "paused", label: "Pausado" },
+  { value: "canceled", label: "Cancelado" }
 ];
 
 export const TASK_STATUS_OPTIONS = [

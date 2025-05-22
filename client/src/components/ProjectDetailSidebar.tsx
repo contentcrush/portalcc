@@ -66,13 +66,18 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState<number | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmStatusChange, setConfirmStatusChange] = useState<{open: boolean, message: string, status: string}>({
+    open: false,
+    message: '',
+    status: ''
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Adiciona um event listener para detectar cliques fora da barra lateral
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       // Se qualquer diálogo estiver aberto, não fechar a barra lateral
-      if (showAddMemberDialog || confirmDialogOpen) {
+      if (showAddMemberDialog || confirmDialogOpen || confirmStatusChange.open) {
         return;
       }
       
@@ -99,7 +104,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose, showAddMemberDialog, confirmDialogOpen]);
+  }, [onClose, showAddMemberDialog, confirmDialogOpen, confirmStatusChange]);
   
   // Funções para navegação
   const handleManageTasks = () => {
