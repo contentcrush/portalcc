@@ -179,6 +179,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
   });
 
   const toggleStageCompletion = (stageId: number, completed: boolean) => {
+    // Verificar se o projeto está cancelado
+    if (project?.special_status === 'canceled') {
+      toast({
+        title: "Ação bloqueada",
+        description: "Este projeto está cancelado. Não é possível alterar suas etapas.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     updateStageMutation.mutate({
       stageId,
       data: { completed: !completed }
@@ -386,6 +396,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
     mutationFn: async (status: string) => {
       if (!project) {
         throw new Error('Projeto não encontrado');
+      }
+      
+      // Verificar se o projeto está cancelado e impedir avanços
+      if (project.special_status === 'canceled' && status !== project.status) {
+        throw new Error('Este projeto está cancelado. Não é possível alterar seu status.');
       }
       
       // Precisamos incluir os campos obrigatórios do projeto junto com o novo status
@@ -931,6 +946,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           {/* Mutation para atualizar o status do projeto */}
           {project ? (
             <div className="space-y-4">
+              {/* Aviso quando o projeto está cancelado */}
+              {project?.special_status === 'canceled' && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4 flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <p className="text-sm text-red-700">
+                    Este projeto está <strong>cancelado</strong>. Não é possível alterar suas etapas.
+                  </p>
+                </div>
+              )}
+              
               {/* Etapas de fluxo padrão */}
               <div 
                 className={`flex items-start cursor-pointer group ${
