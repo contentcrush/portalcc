@@ -60,10 +60,11 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
         // Para cada documento financeiro, atualizar as datas
         for (const doc of financialDocs) {
           // Só atualiza documentos não pagos ou faturados recentemente (nos últimos 30 dias)
-          if (!doc.paid || (doc.creation_date && new Date(doc.creation_date) > subDays(new Date(), 30))) {
+          // Removemos a verificação de creation_date pois essa coluna não existe no banco
+          if (!doc.paid) {
             await db.update(financialDocuments)
               .set({
-                creation_date: formattedIssueDate,
+                // Removida referência a creation_date
                 due_date: dueDate,
                 description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
               })
