@@ -46,6 +46,11 @@ import { Progress } from "@/components/ui/progress";
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -1097,6 +1102,16 @@ export default function Financial() {
                                     Vencida
                                   </Badge>
                                 )}
+                                {doc.invoice_file && (
+                                  <Tooltip delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                      <FileText className="ml-2 h-4 w-4 text-green-600" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Nota fiscal anexada</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </div>
                             ) : '-'}
                           </TableCell>
@@ -1408,6 +1423,16 @@ export default function Financial() {
                                   <Badge variant="success" className="ml-2 text-xs">
                                     Hoje
                                   </Badge>
+                                )}
+                                {exp.invoice_file && (
+                                  <Tooltip delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                      <FileText className="ml-2 h-4 w-4 text-green-600" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Nota fiscal anexada</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                               </div>
                             ) : '-'}
