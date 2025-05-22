@@ -2551,28 +2551,49 @@ export class DatabaseStorage implements IStorage {
   
   // Financial Documents
   async getFinancialDocument(id: number): Promise<FinancialDocument | undefined> {
-    const [document] = await db.select({
-      id: financialDocuments.id,
-      project_id: financialDocuments.project_id,
-      client_id: financialDocuments.client_id,
-      document_type: financialDocuments.document_type,
-      document_number: financialDocuments.document_number,
-      amount: financialDocuments.amount,
-      due_date: financialDocuments.due_date,
-      paid: financialDocuments.paid,
-      payment_date: financialDocuments.payment_date,
-      payment_notes: financialDocuments.payment_notes,
-      status: financialDocuments.status,
-      description: financialDocuments.description,
-      invoice_file: financialDocuments.invoice_file,
-      invoice_file_name: financialDocuments.invoice_file_name,
-      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
-    })
-    .from(financialDocuments)
-    .where(eq(financialDocuments.id, id));
+    const maxRetries = 3;
+    let retries = 0;
     
-    return document || undefined;
+    while (retries < maxRetries) {
+      try {
+        const [document] = await db.select({
+          id: financialDocuments.id,
+          project_id: financialDocuments.project_id,
+          client_id: financialDocuments.client_id,
+          document_type: financialDocuments.document_type,
+          document_number: financialDocuments.document_number,
+          amount: financialDocuments.amount,
+          due_date: financialDocuments.due_date,
+          paid: financialDocuments.paid,
+          payment_date: financialDocuments.payment_date,
+          payment_notes: financialDocuments.payment_notes,
+          status: financialDocuments.status,
+          description: financialDocuments.description,
+          invoice_file: financialDocuments.invoice_file,
+          invoice_file_name: financialDocuments.invoice_file_name,
+          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+        })
+        .from(financialDocuments)
+        .where(eq(financialDocuments.id, id));
+        
+        return document || undefined;
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching financial document id=${id} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning undefined as fallback");
+          return undefined;
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return undefined;
   }
   
   // Alias para getFinancialDocument para compatibilidade com a interface
@@ -2581,48 +2602,90 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFinancialDocuments(): Promise<FinancialDocument[]> {
-    return await db.select({
-      id: financialDocuments.id,
-      project_id: financialDocuments.project_id,
-      client_id: financialDocuments.client_id,
-      document_type: financialDocuments.document_type,
-      document_number: financialDocuments.document_number,
-      amount: financialDocuments.amount,
-      due_date: financialDocuments.due_date,
-      paid: financialDocuments.paid,
-      payment_date: financialDocuments.payment_date,
-      payment_notes: financialDocuments.payment_notes,
-      status: financialDocuments.status,
-      description: financialDocuments.description,
-      invoice_file: financialDocuments.invoice_file,
-      invoice_file_name: financialDocuments.invoice_file_name,
-      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
-    })
-    .from(financialDocuments);
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        return await db.select({
+          id: financialDocuments.id,
+          project_id: financialDocuments.project_id,
+          client_id: financialDocuments.client_id,
+          document_type: financialDocuments.document_type,
+          document_number: financialDocuments.document_number,
+          amount: financialDocuments.amount,
+          due_date: financialDocuments.due_date,
+          paid: financialDocuments.paid,
+          payment_date: financialDocuments.payment_date,
+          payment_notes: financialDocuments.payment_notes,
+          status: financialDocuments.status,
+          description: financialDocuments.description,
+          invoice_file: financialDocuments.invoice_file,
+          invoice_file_name: financialDocuments.invoice_file_name,
+          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+        })
+        .from(financialDocuments);
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching financial documents (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning empty array as fallback");
+          return [];
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return [];
   }
 
   async getFinancialDocumentsByClient(clientId: number): Promise<FinancialDocument[]> {
-    return await db.select({
-      id: financialDocuments.id,
-      project_id: financialDocuments.project_id,
-      client_id: financialDocuments.client_id,
-      document_type: financialDocuments.document_type,
-      document_number: financialDocuments.document_number,
-      amount: financialDocuments.amount,
-      due_date: financialDocuments.due_date,
-      paid: financialDocuments.paid,
-      payment_date: financialDocuments.payment_date,
-      payment_notes: financialDocuments.payment_notes,
-      status: financialDocuments.status,
-      description: financialDocuments.description,
-      invoice_file: financialDocuments.invoice_file,
-      invoice_file_name: financialDocuments.invoice_file_name,
-      invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-      invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
-    })
-    .from(financialDocuments)
-    .where(eq(financialDocuments.client_id, clientId));
+    const maxRetries = 3;
+    let retries = 0;
+    
+    while (retries < maxRetries) {
+      try {
+        return await db.select({
+          id: financialDocuments.id,
+          project_id: financialDocuments.project_id,
+          client_id: financialDocuments.client_id,
+          document_type: financialDocuments.document_type,
+          document_number: financialDocuments.document_number,
+          amount: financialDocuments.amount,
+          due_date: financialDocuments.due_date,
+          paid: financialDocuments.paid,
+          payment_date: financialDocuments.payment_date,
+          payment_notes: financialDocuments.payment_notes,
+          status: financialDocuments.status,
+          description: financialDocuments.description,
+          invoice_file: financialDocuments.invoice_file,
+          invoice_file_name: financialDocuments.invoice_file_name,
+          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
+          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+        })
+        .from(financialDocuments)
+        .where(eq(financialDocuments.client_id, clientId));
+      } catch (error) {
+        retries++;
+        console.error(`Error fetching financial documents for client id=${clientId} (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error("Max retries reached, returning empty array as fallback");
+          return [];
+        }
+        
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, retries), 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return [];
   }
 
   async getFinancialDocumentsByProject(projectId: number): Promise<FinancialDocument[]> {
