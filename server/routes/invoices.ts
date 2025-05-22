@@ -247,7 +247,21 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
     console.log('Tentando acessar arquivo em:', absolutePath);
     
     if (fs.existsSync(absolutePath)) {
-      return res.download(absolutePath, document.invoice_file_name);
+      // Definir o tipo de conteúdo correto baseado na extensão do arquivo
+      const ext = path.extname(document.invoice_file_name).toLowerCase();
+      let contentType = 'application/octet-stream'; // Padrão para qualquer tipo de arquivo
+      
+      if (ext === '.pdf') {
+        contentType = 'application/pdf';
+      } else if (['.jpg', '.jpeg'].includes(ext)) {
+        contentType = 'image/jpeg';
+      } else if (ext === '.png') {
+        contentType = 'image/png';
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+      return fs.createReadStream(absolutePath).pipe(res);
     }
     
     // Tentar caminho alternativo baseado na estrutura de upload
@@ -256,7 +270,21 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
     console.log('Tentando caminho alternativo:', altPath);
     
     if (fs.existsSync(altPath)) {
-      return res.download(altPath, document.invoice_file_name);
+      // Definir o tipo de conteúdo correto baseado na extensão do arquivo
+      const ext = path.extname(document.invoice_file_name).toLowerCase();
+      let contentType = 'application/octet-stream'; // Padrão para qualquer tipo de arquivo
+      
+      if (ext === '.pdf') {
+        contentType = 'application/pdf';
+      } else if (['.jpg', '.jpeg'].includes(ext)) {
+        contentType = 'image/jpeg';
+      } else if (ext === '.png') {
+        contentType = 'image/png';
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+      return fs.createReadStream(altPath).pipe(res);
     }
     
     // Última tentativa - buscar diretamente na pasta de uploads raiz
@@ -264,7 +292,21 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
     console.log('Tentando caminho root upload:', rootUploadPath);
     
     if (fs.existsSync(rootUploadPath)) {
-      return res.download(rootUploadPath, document.invoice_file_name);
+      // Definir o tipo de conteúdo correto baseado na extensão do arquivo
+      const ext = path.extname(document.invoice_file_name).toLowerCase();
+      let contentType = 'application/octet-stream'; // Padrão para qualquer tipo de arquivo
+      
+      if (ext === '.pdf') {
+        contentType = 'application/pdf';
+      } else if (['.jpg', '.jpeg'].includes(ext)) {
+        contentType = 'image/jpeg';
+      } else if (ext === '.png') {
+        contentType = 'image/png';
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+      return fs.createReadStream(rootUploadPath).pipe(res);
     }
     
     // Se chegou aqui, não encontrou o arquivo
