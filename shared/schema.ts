@@ -479,6 +479,24 @@ const financialDocumentBaseSchema = createInsertSchema(financialDocuments).omit(
 
 // Schema personalizado com transformações para datas usando Luxon
 export const insertFinancialDocumentSchema = financialDocumentBaseSchema.extend({
+  issue_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
+    if (val === null || val === undefined) return null;
+    
+    if (typeof val === 'string') {
+      // Converte a string para um objeto Date
+      const date = parseISO(val);
+      
+      // Padroniza a hora para meio-dia (12:00) UTC
+      date.setUTCHours(12, 0, 0, 0);
+      return date;
+    }
+    
+    // Se já for um objeto Date, padroniza para meio-dia UTC
+    const date = new Date(val);
+    date.setUTCHours(12, 0, 0, 0);
+    return date;
+  }).nullable().optional(),
+  
   due_date: z.union([z.string(), z.date(), z.null()]).transform(val => {
     if (val === null || val === undefined) return null;
     
