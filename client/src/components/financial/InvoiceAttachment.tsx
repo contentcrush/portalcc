@@ -223,7 +223,15 @@ export const InvoiceAttachment = ({
                   <h4 className="text-sm font-semibold">{invoiceFileName}</h4>
                   {invoiceUploadedAt && (
                     <p className="text-xs text-muted-foreground">
-                      Anexado em {format(new Date(invoiceUploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      Anexado em {
+                        (() => {
+                          try {
+                            return format(new Date(invoiceUploadedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+                          } catch (e) {
+                            return "data não disponível";
+                          }
+                        })()
+                      }
                     </p>
                   )}
                 </div>

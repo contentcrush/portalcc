@@ -222,13 +222,17 @@ export function FinancialRecordDetails({
                   <div>
                     <h3 className="text-sm font-medium">Data de Emissão</h3>
                     <p className="text-base">
-                      {format(new Date((record as FinancialDocument).creation_date), "dd/MM/yyyy", { locale: ptBR })}
+                      {(record as FinancialDocument).creation_date 
+                        ? format(new Date((record as FinancialDocument).creation_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Não definida"}
                     </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium">Data de Vencimento</h3>
                     <p className="text-base">
-                      {format(new Date((record as FinancialDocument).due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      {(record as FinancialDocument).due_date 
+                        ? format(new Date((record as FinancialDocument).due_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Não definida"}
                     </p>
                   </div>
                 </div>
