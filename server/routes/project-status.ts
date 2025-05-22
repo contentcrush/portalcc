@@ -108,23 +108,53 @@ export async function checkDelayedProjects() {
     let updatedCount = 0;
     
     for (const project of activeProjects) {
-      // Se o projeto tem data de término e passou da data
-      if (project.endDate && project.endDate < today && project.special_status === 'none') {
-        // Marcar como atrasado automaticamente
-        await db.update(projects)
-          .set({ special_status: 'delayed' })
-          .where(eq(projects.id, project.id));
-          
-        // Registrar no histórico
-        await db.insert(projectStatusHistory).values({
-          project_id: project.id,
-          previous_status: 'none',
-          new_status: 'delayed',
-          changed_by: 1, // Usuário do sistema (admin)
-          reason: "Marcado automaticamente como atrasado por exceder a data de término"
-        });
+      // Se o projeto não estiver já com status especial (exceto none) e tiver data de término
+      if (project.special_status === 'none' || project.special_status === null) {
         
-        updatedCount++;
+        // Verificar critérios de atraso:
+        // 1. Se passou da data de término
+        const isOverdue = project.endDate && project.endDate < today;
+        
+        // 2. Se está com progresso inferior a 70% e falta menos de 20% do tempo total
+        let isProgressDelayed = false;
+        if (project.startDate && project.endDate && project.progress !== null) {
+          const totalDuration = project.endDate.getTime() - project.startDate.getTime();
+          const elapsedDuration = today.getTime() - project.startDate.getTime();
+          const percentTimeElapsed = (elapsedDuration / totalDuration) * 100;
+          
+          // Se já passou mais de 80% do tempo e o progresso está abaixo de 70%
+          if (percentTimeElapsed > 80 && project.progress < 70) {
+            isProgressDelayed = true;
+          }
+        }
+        
+        // Se qualquer critério de atraso for atendido
+        if (isOverdue || isProgressDelayed) {
+          // Determinar a razão do atraso
+          let reason = "";
+          if (isOverdue) {
+            reason = "Marcado automaticamente como atrasado por exceder a data de término";
+          } else if (isProgressDelayed) {
+            reason = "Marcado automaticamente como atrasado por progresso insuficiente perto da data de término";
+          }
+          
+          // Marcar como atrasado automaticamente
+          await db.update(projects)
+            .set({ special_status: 'delayed' })
+            .where(eq(projects.id, project.id));
+            
+          // Registrar no histórico
+          await db.insert(projectStatusHistory).values({
+            project_id: project.id,
+            previous_status: project.special_status || 'none',
+            new_status: 'delayed',
+            changed_by: 1, // Usuário do sistema (admin)
+            reason
+          });
+          
+          console.log(`[Automação] Projeto #${project.id} "${project.name}" marcado como atrasado: ${reason}`);
+          updatedCount++;
+        }
       }
     }
     

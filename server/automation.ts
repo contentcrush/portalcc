@@ -5,6 +5,7 @@ import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, add
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
+import { checkDelayedProjects } from './routes/project-status';
 
 /**
  * Sincroniza todas as datas importantes do projeto com documentos financeiros e eventos relacionados
@@ -1182,8 +1183,18 @@ export async function runAutomations() {
   // Verifica projetos com datas atualizadas primeiro (para remover status de atrasado)
   const updatedDatesResult = await checkProjectsWithUpdatedDates();
   
-  // Verifica projetos atrasados
+  // Verifica projetos atrasados (tarefas)
   const overdueResult = await checkOverdueProjects();
+  
+  // Verifica projetos com status especial "atrasado" (baseado em datas de término)
+  const today = new Date();
+  console.log(`[Automação] Verificando projetos atrasados em ${format(today, 'yyyy-MM-dd')}`);
+  const delayedProjectsCount = await checkDelayedProjects();
+  if (delayedProjectsCount > 0) {
+    console.log(`[Automação] ${delayedProjectsCount} projetos marcados como atrasados`);
+  } else {
+    console.log('[Automação] Nenhum projeto atrasado encontrado');
+  }
   
   // Agenda a próxima verificação baseada em datas de entrega
   scheduleNextDeadlineCheck();
