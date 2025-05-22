@@ -1,9 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { initWebSocket, onWebSocketMessage } from "@/lib/socket";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccessToast } from "@/lib/utils";
-import { format, addDays, isBefore, parseISO } from "date-fns";
+import { 
+  format, 
+  addDays, 
+  subDays,
+  subMonths, 
+  subQuarters,
+  startOfMonth, 
+  endOfMonth, 
+  startOfQuarter, 
+  endOfQuarter, 
+  startOfYear, 
+  endOfYear, 
+  isBefore, 
+  isAfter, 
+  isSameMonth,
+  isSameYear,
+  parseISO 
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Card,
@@ -114,14 +131,102 @@ interface FinancialKPI {
 
 export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
-  const [period, setPeriod] = useState<string>("month");
+  const [period, setPeriod] = useState<string>("year");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  const [customDateRange, setCustomDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ from: undefined, to: undefined });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   // Estados para controlar os diálogos de detalhes e pagamento
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  
+  // Calcular o intervalo de datas com base no período selecionado
+  const dateFilterRange = useMemo(() => {
+    const today = new Date();
+    let startDate: Date;
+    let endDate: Date = endOfDay(today);
+    
+    switch (period) {
+      case 'month':
+        startDate = startOfMonth(today);
+        endDate = endOfMonth(today);
+        break;
+      case 'quarter':
+        startDate = startOfQuarter(today);
+        endDate = endOfQuarter(today);
+        break;
+      case 'year':
+        startDate = startOfYear(today);
+        endDate = endOfYear(today);
+        break;
+      case 'custom':
+        // Se tivermos uma data de início e fim personalizadas, usamos elas
+        if (customDateRange.from && customDateRange.to) {
+          startDate = startOfDay(customDateRange.from);
+          endDate = endOfDay(customDateRange.to);
+        } else {
+          // Caso contrário, usamos o mês atual como padrão
+          startDate = startOfMonth(today);
+          endDate = endOfMonth(today);
+        }
+        break;
+      default:
+        startDate = startOfMonth(today);
+        endDate = endOfMonth(today);
+    }
+    
+    return { startDate, endDate };
+  }, [period, customDateRange]);
+  
+  // Função auxiliar para obter o início do dia (00:00:00)
+  function startOfDay(date: Date): Date {
+    const newDate = new Date(date);
+    newDate.setHours(0, 0, 0, 0);
+    return newDate;
+  }
+  
+  // Função auxiliar para obter o fim do dia (23:59:59)
+  function endOfDay(date: Date): Date {
+    const newDate = new Date(date);
+    newDate.setHours(23, 59, 59, 999);
+    return newDate;
+  }
+  
+  // Função para verificar se uma data está dentro do intervalo de filtro
+  function isDateInRange(date: Date | string | null | undefined): boolean {
+    if (!date) return false;
+    
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return (
+      isAfter(dateObj, subDays(dateFilterRange.startDate, 1)) && 
+      isBefore(dateObj, addDays(dateFilterRange.endDate, 1))
+    );
+  }
+  
+  // Função para formatar o período selecionado para exibição
+  const getPeriodLabel = (): string => {
+    const { startDate, endDate } = dateFilterRange;
+    
+    switch (period) {
+      case 'month':
+        return `${format(startDate, 'MMMM yyyy', { locale: ptBR })}`;
+      case 'quarter':
+        return `${format(startDate, 'MMMM', { locale: ptBR })} - ${format(endDate, 'MMMM yyyy', { locale: ptBR })}`;
+      case 'year':
+        return `${format(startDate, 'yyyy')}`;
+      case 'custom':
+        if (customDateRange.from && customDateRange.to) {
+          return `${format(customDateRange.from, 'dd/MM/yyyy')} - ${format(customDateRange.to, 'dd/MM/yyyy')}`;
+        }
+        return 'Período personalizado';
+      default:
+        return 'Período atual';
+    }
+  };
   
   // Efeito para escutar eventos financeiros via WebSocket
   useEffect(() => {
@@ -309,32 +414,29 @@ export default function Financial() {
     .filter((exp: any) => exp.date && isBefore(new Date(exp.date), sevenDaysFromNow))
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Monthly revenue - apenas pagamentos recebidos no mês atual
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  // Receita - documentos pagos no período selecionado
+  const { startDate, endDate } = dateFilterRange;
   
-  // Documentos pagos no mês atual
-  const paidDocumentsThisMonth = financialDocuments?.filter((doc: any) => {
+  // Documentos pagos no período selecionado
+  const paidDocumentsInPeriod = financialDocuments?.filter((doc: any) => {
     if (!doc.paid || !doc.payment_date) return false;
-    const paymentDate = new Date(doc.payment_date);
-    return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
+    return isDateInRange(doc.payment_date);
   }) || [];
   
-  console.log('Documentos pagos neste mês:', paidDocumentsThisMonth.length);
+  console.log(`Documentos pagos no período ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}:`, paidDocumentsInPeriod.length);
   
-  // Valor total dos documentos pagos no mês atual 
-  const monthlyRevenue = paidDocumentsThisMonth
+  // Valor total dos documentos pagos no período selecionado
+  const periodRevenue = paidDocumentsInPeriod
     .reduce((sum: number, doc: any) => {
-      console.log(`Documento #${doc.id} (Receita Mensal): R$${doc.amount}`);
+      console.log(`Documento #${doc.id} (Receita ${getPeriodLabel()}): R$${doc.amount}`);
       return sum + (doc.amount || 0);
     }, 0);
   
-  // Monthly expenses - incluindo todas as despesas do mês atual, mesmo as pendentes
-  const monthlyExpenses = expenses
+  // Despesas no período selecionado - incluindo todas as despesas, mesmo as pendentes
+  const periodExpenses = expenses
     ?.filter((exp: any) => {
-      const expDate = new Date(exp.date);
-      // Não aplicamos filtro de "approved" para mostrar o total de todas as despesas
-      return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+      // Filtrar apenas as despesas dentro do período selecionado
+      return isDateInRange(exp.date);
     })
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
     
@@ -348,9 +450,9 @@ export default function Financial() {
     ?.filter((exp: any) => exp.approved === true)
     .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0;
   
-  // Gross margin
-  const grossMargin = monthlyRevenue > 0 
-    ? ((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100 
+  // Gross margin para o período selecionado
+  const grossMargin = periodRevenue > 0 
+    ? ((periodRevenue - periodExpenses) / periodRevenue) * 100 
     : 0;
   
   // Calcular total de minutos de vídeo (com base nos projetos)
@@ -358,12 +460,12 @@ export default function Financial() {
     ?.filter((p: any) => p.duration)
     .reduce((sum: number, p: any) => sum + (p.duration || 0), 0) || 1; // Usar 1 como mínimo para evitar divisão por zero
   
-  const avgCostPerMinute = monthlyExpenses > 0 ? monthlyExpenses / totalMinutes : 0;
+  const avgCostPerMinute = periodExpenses > 0 ? periodExpenses / totalMinutes : 0;
   
   // Average collection period (calculado dinamicamente)
-  // A fórmula usada é: (Contas a receber / Receita total) * 30 dias
-  const dso = totalReceivables > 0 && monthlyRevenue > 0 
-    ? Math.round((totalReceivables / monthlyRevenue) * 30) 
+  // A fórmula usada é: (Contas a receber / Receita do período) * 30 dias
+  const dso = totalReceivables > 0 && periodRevenue > 0 
+    ? Math.round((totalReceivables / periodRevenue) * 30) 
     : 0;
 
   // Dashboard KPIs
@@ -397,17 +499,17 @@ export default function Financial() {
       variant: "green" // Alterado para verde pois são faturas a receber (positivo para a empresa)
     },
     {
-      title: "Receita Mensal",
-      value: monthlyRevenue,
+      title: "Receita",
+      value: periodRevenue,
       icon: <Banknote className="h-5 w-5" />,
-      description: `${paidDocumentsThisMonth.length} pagamento(s) recebido(s) em ${format(now, 'MMMM', { locale: ptBR })}`,
+      description: `${paidDocumentsInPeriod.length} pagamento(s) - ${getPeriodLabel()}`,
       variant: "green"
     },
     {
-      title: "Despesas Mensais",
-      value: monthlyExpenses,
+      title: "Despesas",
+      value: periodExpenses,
       icon: <Wallet className="h-5 w-5" />,
-      description: "Total despesas do mês",
+      description: `Total despesas - ${getPeriodLabel()}`,
       variant: "red"
     },
     {
@@ -593,21 +695,63 @@ export default function Financial() {
             </SelectContent>
           </Select>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon">
-                <CalendarIcon className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={dateRange}
-                onSelect={setDateRange}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          {period === "custom" ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="min-w-[240px]">
+                  {customDateRange.from && customDateRange.to ? (
+                    `${format(customDateRange.from, 'dd/MM/yyyy')} - ${format(customDateRange.to, 'dd/MM/yyyy')}`
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      Selecionar período
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={{
+                    from: customDateRange.from,
+                    to: customDateRange.to
+                  }}
+                  onSelect={(range) => {
+                    if (range?.from) {
+                      setCustomDateRange({
+                        from: range.from,
+                        to: range.to || range.from
+                      });
+                    }
+                  }}
+                  initialFocus
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-3">
+                  <div className="text-sm font-medium mb-2">
+                    {getPeriodLabel()}
+                  </div>
+                  <Calendar
+                    mode="single"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    initialFocus
+                    disabled
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           
           <Button variant="outline" size="icon">
             <Download className="h-4 w-4" />
