@@ -13,7 +13,7 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'content-crush-
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'content-crush-encryption-key-32chars!';
 
 // Constantes para tokens
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutos
+const ACCESS_TOKEN_EXPIRY = '4h'; // 4 horas
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 dias
 
 // Interface para payload do token JWT
