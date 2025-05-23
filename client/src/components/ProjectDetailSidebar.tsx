@@ -17,6 +17,7 @@ import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
 import { ProjectMilestones } from "./ProjectMilestones";
 import { ProjectTimeline } from "./ProjectTimeline";
+import { useProjectProgress } from "../hooks/useProjectProgress";
 import { ProjectCommentSection } from "./comments";
 import ProjectAttachments from "./ProjectAttachments";
 import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
@@ -1281,16 +1282,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           )}
         </div>
         
+        {/* Nova seção de progresso no estilo timeline */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-4">
             <div className="text-xs font-medium text-gray-500">PROGRESSO</div>
           </div>
-          <ProjectProgress 
-            project={project} 
-            showLabel={true}
-            showStages={true}
-            size="md"
-          />
+          {project && (
+            <TimelineProgressBar project={project} />
+          )}
         </div>
         
         {/* Marcos do Projeto */}
