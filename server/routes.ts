@@ -1000,6 +1000,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!currentProject) {
         return res.status(404).json({ message: "Project not found" });
       }
+
+      // **NOVA VALIDAÇÃO: Sistema Simplificado de Status**
+      // Verificar se há mudança de status e validar transição
+      if (req.body.status && req.body.status !== currentProject.status) {
+        const currentStatus = currentProject.status as ProjectStatus;
+        const newStatus = req.body.status as ProjectStatus;
+        const specialStatus = currentProject.special_status as SpecialStatus;
+        
+        // Validar se a transição é permitida
+        const validation = isValidStatusTransition(currentStatus, newStatus, specialStatus);
+        
+        if (!validation.valid) {
+          return res.status(400).json({ 
+            message: "Transição de status não permitida", 
+            reason: validation.reason 
+          });
+        }
+        
+        console.log(`[Validação] Status de projeto ${id}: ${currentStatus} → ${newStatus} ✅`);
+      }
       
       // Verificar se houve alteração na data de emissão ou prazo de pagamento
       const issueDateChanged = req.body.issue_date !== undefined && 

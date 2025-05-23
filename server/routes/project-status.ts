@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { projects, projectStatusHistory, specialStatusEnum } from "@shared/schema";
+import { projects, projectStatusHistory, specialStatusEnum, type ProjectStatus, type SpecialStatus, isValidSpecialStatusTransition } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 // Função para obter o histórico de status especial de um projeto
@@ -59,6 +59,23 @@ export async function updateProjectSpecialStatus(req: Request, res: Response) {
     if (previousStatus === status) {
       return res.status(200).json({ message: "Status não alterado", project });
     }
+
+    // **NOVA VALIDAÇÃO: Sistema Simplificado**
+    // Verificar se a transição de status especial é válida
+    const currentProjectStatus = project.status as ProjectStatus;
+    const currentSpecialStatus = previousStatus as SpecialStatus;
+    const newSpecialStatus = status as SpecialStatus;
+    
+    const validation = isValidSpecialStatusTransition(currentProjectStatus, currentSpecialStatus, newSpecialStatus);
+    
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        message: "Transição de status especial não permitida", 
+        reason: validation.reason 
+      });
+    }
+    
+    console.log(`[Validação] Status especial de projeto ${projectId}: ${currentSpecialStatus} → ${newSpecialStatus} ✅`);
     
     // Criar registro no histórico
     await db.insert(projectStatusHistory).values({
