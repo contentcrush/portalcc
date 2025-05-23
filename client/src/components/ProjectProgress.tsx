@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { PROJECT_STATUS_CONFIG, calculateProgressFromStatus, type ProjectStatus } from "@shared/schema";
+import { PROJECT_STATUS_CONFIG, calculateIntelligentProgress, PROJECT_MILESTONES, type ProjectStatus } from "@shared/schema";
 
 interface ProjectProgressProps {
   project: any;
@@ -20,12 +20,23 @@ export function ProjectProgress({
   className = "",
   size = 'md'
 }: ProjectProgressProps) {
-  // Usar o novo sistema simplificado para calcular progresso
+  // Usar o novo sistema inteligente para calcular progresso
   const projectStatus = project.status as ProjectStatus;
   const hasBudget = project.budget && project.budget > 0;
+  const hasTeamMembers = project.members && project.members.length > 0;
+  const hasFinancialDocuments = project.financial_documents && project.financial_documents.length > 0;
   
-  // Calcular progresso usando a nova função centralizada
-  const progressValue = project.progress || calculateProgressFromStatus(projectStatus, hasBudget);
+  // Calcular progresso usando o novo sistema inteligente
+  const completedMilestones = project.completed_milestones || [];
+  const intelligentProgress = calculateIntelligentProgress(
+    projectStatus, 
+    completedMilestones, 
+    hasBudget,
+    hasTeamMembers,
+    hasFinancialDocuments
+  );
+  
+  const progressValue = project.progress || intelligentProgress.progress;
   
   // Determinar as classes de estilo com base no valor e status
   const getProgressBarColor = (value: number) => {
@@ -43,8 +54,15 @@ export function ProjectProgress({
   return (
     <div className={cn("w-full", className)}>
       {showLabel && (
-        <div className={cn("flex justify-between mb-1.5", textSizeClass)}>
-          <span>Progresso</span>
+        <div className={cn("flex justify-between items-center mb-1.5", textSizeClass)}>
+          <div className="flex flex-col">
+            <span>Progresso</span>
+            {intelligentProgress.nextMilestone && (
+              <span className="text-xs text-gray-500 mt-0.5">
+                Próximo: {intelligentProgress.nextMilestone}
+              </span>
+            )}
+          </div>
           <span className="font-medium">{progressValue}%</span>
         </div>
       )}

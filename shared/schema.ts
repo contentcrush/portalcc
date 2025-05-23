@@ -1050,18 +1050,103 @@ export function isValidStatusTransition(
   };
 }
 
-// Função para calcular progresso baseado no status
+// Sistema de marcos inteligentes para cada status
+export const PROJECT_MILESTONES = {
+  proposta: [
+    { id: 'briefing_received', label: 'Briefing Recebido', weight: 30 },
+    { id: 'budget_created', label: 'Orçamento Criado', weight: 70 }
+  ],
+  proposta_aceita: [
+    { id: 'contract_signed', label: 'Contrato Assinado', weight: 50 },
+    { id: 'team_assigned', label: 'Equipe Designada', weight: 100 }
+  ],
+  pre_producao: [
+    { id: 'planning_done', label: 'Planejamento Concluído', weight: 40 },
+    { id: 'resources_allocated', label: 'Recursos Alocados', weight: 70 },
+    { id: 'timeline_approved', label: 'Cronograma Aprovado', weight: 100 }
+  ],
+  producao: [
+    { id: 'production_started', label: 'Produção Iniciada', weight: 20 },
+    { id: 'first_draft', label: 'Primeira Versão', weight: 50 },
+    { id: 'client_feedback', label: 'Feedback do Cliente', weight: 80 },
+    { id: 'production_complete', label: 'Produção Finalizada', weight: 100 }
+  ],
+  pos_revisao: [
+    { id: 'revision_complete', label: 'Revisão Concluída', weight: 50 },
+    { id: 'final_approval', label: 'Aprovação Final', weight: 100 }
+  ],
+  entregue: [
+    { id: 'delivery_confirmed', label: 'Entrega Confirmada', weight: 100 }
+  ],
+  concluido: [
+    { id: 'project_archived', label: 'Projeto Arquivado', weight: 100 }
+  ]
+} as const;
+
+// Função inteligente para calcular progresso baseado em status e marcos
+export function calculateIntelligentProgress(
+  status: ProjectStatus,
+  completedMilestones: string[] = [],
+  hasBudget: boolean = false,
+  hasTeamMembers: boolean = false,
+  hasFinancialDocuments: boolean = false
+): { progress: number; nextMilestone?: string; details: any } {
+  const config = PROJECT_STATUS_CONFIG[status];
+  const milestones = PROJECT_MILESTONES[status] || [];
+  
+  // Progresso base do status
+  let baseProgress = config.baseProgress;
+  
+  // Cálculo inteligente baseado em marcos completados
+  let milestoneProgress = 0;
+  if (milestones.length > 0) {
+    const totalWeight = milestones[milestones.length - 1].weight;
+    const completedWeight = milestones
+      .filter(m => completedMilestones.includes(m.id))
+      .reduce((acc, m) => Math.max(acc, m.weight), 0);
+    
+    milestoneProgress = (completedWeight / totalWeight) * 10; // 10% de variação dentro do status
+  }
+  
+  // Ajustes automáticos baseados em indicadores do projeto
+  let autoProgress = 0;
+  
+  if (status === 'proposta' && hasBudget) {
+    autoProgress += 5; // Orçamento criado
+  }
+  
+  if (status === 'proposta_aceita' && hasTeamMembers) {
+    autoProgress += 3; // Equipe designada
+  }
+  
+  if (['proposta_aceita', 'pre_producao', 'producao'].includes(status) && hasFinancialDocuments) {
+    autoProgress += 2; // Documentos financeiros criados
+  }
+  
+  const finalProgress = Math.min(100, baseProgress + milestoneProgress + autoProgress);
+  
+  // Encontrar próximo marco
+  const nextMilestone = milestones.find(m => !completedMilestones.includes(m.id));
+  
+  return {
+    progress: finalProgress,
+    nextMilestone: nextMilestone?.label,
+    details: {
+      baseProgress,
+      milestoneProgress,
+      autoProgress,
+      completedMilestones: completedMilestones.length,
+      totalMilestones: milestones.length
+    }
+  };
+}
+
+// Função legada para compatibilidade
 export function calculateProgressFromStatus(
   status: ProjectStatus,
   hasBudget: boolean = false
 ): number {
-  const config = PROJECT_STATUS_CONFIG[status];
-  
-  if (status === 'proposta') {
-    return hasBudget ? config.progressWithBudget || config.baseProgress : config.baseProgress;
-  }
-  
-  return config.baseProgress;
+  return calculateIntelligentProgress(status, [], hasBudget).progress;
 }
 
 /**
