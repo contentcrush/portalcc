@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
 import { ProjectMilestones } from "./ProjectMilestones";
+import { ProjectTimeline } from "./ProjectTimeline";
 import { ProjectCommentSection } from "./comments";
 import ProjectAttachments from "./ProjectAttachments";
 import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
@@ -970,8 +971,18 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           </div>
         </div>
         
+        {/* Nova Timeline de Etapas */}
         <div className="mb-8">
-          <h4 className="font-medium text-sm mb-4">ETAPAS DO PROJETO</h4>
+          <h4 className="font-medium text-sm mb-4">TIMELINE DO PROJETO</h4>
+          <ProjectTimeline 
+            project={project}
+            onStatusUpdate={handleUpdateProjectStatus}
+          />
+        </div>
+        
+        {/* Seção de etapas antiga (temporariamente mantida) */}
+        <div className="mb-8" style={{ display: 'none' }}>
+          <h4 className="font-medium text-sm mb-4">ETAPAS DO PROJETO (ANTIGA)</h4>
           
           {/* Mutation para atualizar o status do projeto */}
           {project ? (
