@@ -1176,12 +1176,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
       if (req.body.budget && (currentProject.budget !== req.body.budget)) {
-        // Verificar se o projeto está na etapa "Proposta Aceita" ou além
-        const proposalAcceptedStages = ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'atrasado'];
-        
-        if (!proposalAcceptedStages.includes(updatedProject.status)) {
-          console.log(`[Sistema] Projeto ID:${id} ainda não está na etapa "Proposta Aceita". Status atual: ${updatedProject.status}. Fatura não será criada automaticamente.`);
-        } else {
         // Verificar se já existe uma fatura para este projeto
         const existingInvoices = await storage.getFinancialDocumentsByProject(id);
         const pendingInvoice = existingInvoices.find(doc => 
@@ -1216,7 +1210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-        }
       // Verificar se precisamos atualizar o status baseado na data de entrega
       if (updatedProject) {
         if (updatedProject.endDate) {
