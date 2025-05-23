@@ -420,10 +420,18 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       return response.json(); // Retorna os dados atualizados do projeto
     },
     onSuccess: (updatedProject, status) => {
-      // Atualiza o cache do React Query imediatamente com os dados atualizados
+      // Atualiza IMEDIATAMENTE o cache do projeto individual
       queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
       
-      // Invalida as queries para forçar um refetch quando necessário
+      // Atualiza IMEDIATAMENTE o cache da lista de projetos também
+      queryClient.setQueryData(['/api/projects'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((proj: any) => 
+          proj.id === projectId ? updatedProject : proj
+        );
+      });
+      
+      // Força invalidação para garantir que futuras consultas estejam atualizadas
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
