@@ -15,7 +15,6 @@ import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
-import { ProjectMilestones } from "./ProjectMilestones";
 import { ProjectTimeline } from "./ProjectTimeline";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { ProjectCommentSection } from "./comments";
@@ -1292,12 +1291,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           )}
         </div>
         
-        {/* Marcos do Projeto */}
-        <div className="mb-8">
-          <ProjectMilestones 
-            project={project}
-          />
-        </div>
+
         
         {/* Seção de anexos com ProjectAttachments */}
         <div className="mb-8">
