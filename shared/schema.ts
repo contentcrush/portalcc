@@ -1005,7 +1005,7 @@ export const PROJECT_STATUS_CONFIG = {
     description: 'Projeto finalizado e entregue ao cliente',
     baseProgress: 95,
     canCreateFinancialDocuments: true,
-    color: '#059669',
+    color: '#EC4899', // Pink-500 - bem distinto
     nextStatuses: ['concluido'] as ProjectStatus[],
     allowBackward: ['pos_revisao', 'producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
   },
@@ -1014,7 +1014,7 @@ export const PROJECT_STATUS_CONFIG = {
     description: 'Projeto totalmente finalizado e arquivado',
     baseProgress: 100,
     canCreateFinancialDocuments: true,
-    color: '#065F46',
+    color: '#059669', // Emerald-600 - verde mais escuro
     nextStatuses: [] as ProjectStatus[],
     allowBackward: ['entregue', 'pos_revisao', 'producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
   }
