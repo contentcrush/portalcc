@@ -15,6 +15,7 @@ import { ClientAvatar } from "./ClientAvatar";
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
+import { ProjectMilestones } from "./ProjectMilestones";
 import { ProjectCommentSection } from "./comments";
 import ProjectAttachments from "./ProjectAttachments";
 import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
@@ -1278,6 +1279,13 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
             showLabel={true}
             showStages={true}
             size="md"
+          />
+        </div>
+        
+        {/* Marcos do Projeto */}
+        <div className="mb-8">
+          <ProjectMilestones 
+            project={project}
           />
         </div>
         
