@@ -20,21 +20,21 @@ export function useProjectProgress() {
 
     const status = project.status || 'proposta';
     
-    // Definir marcos baseados no status do projeto
-    const milestones = [
-      { key: 'proposta', label: 'Proposta', weight: 10 },
-      { key: 'proposta_aceita', label: 'Proposta Aceita', weight: 20 },
-      { key: 'pre_producao', label: 'Pré-produção', weight: 30 },
-      { key: 'producao', label: 'Produção', weight: 50 },
-      { key: 'pos_revisao', label: 'Pós-revisão', weight: 75 },
-      { key: 'entregue', label: 'Entregue', weight: 90 },
-      { key: 'concluido', label: 'Concluído', weight: 100 }
+    // Timeline oficial do projeto - fonte única de verdade
+    const timelineSteps = [
+      { key: 'proposta', label: 'Proposta', weight: 14.3 }, // 1/7 = ~14.3%
+      { key: 'proposta_aceita', label: 'Proposta Aceita', weight: 28.6 }, // 2/7 = ~28.6%
+      { key: 'pre_producao', label: 'Pré-produção', weight: 42.9 }, // 3/7 = ~42.9%
+      { key: 'producao', label: 'Produção', weight: 57.1 }, // 4/7 = ~57.1%
+      { key: 'pos_revisao', label: 'Pós-revisão', weight: 71.4 }, // 5/7 = ~71.4%
+      { key: 'entregue', label: 'Entregue', weight: 85.7 }, // 6/7 = ~85.7%
+      { key: 'concluido', label: 'Concluído', weight: 100 } // 7/7 = 100%
     ];
 
-    const currentMilestoneIndex = milestones.findIndex(m => m.key === status);
-    const currentMilestone = milestones[currentMilestoneIndex];
+    const currentStepIndex = timelineSteps.findIndex(step => step.key === status);
+    const currentStep = timelineSteps[currentStepIndex];
     
-    if (!currentMilestone) {
+    if (!currentStep) {
       return {
         percentage: 0,
         nextMilestone: 'Proposta',
@@ -43,44 +43,22 @@ export function useProjectProgress() {
       };
     }
 
-    // Calcular progresso baseado no marco atual
-    let baseProgress = currentMilestone.weight;
-    
-    // Verificar marcos específicos dentro da fase atual
-    const hasTeam = project.team_members && project.team_members.length > 0;
-    const hasBudget = project.budget && project.budget > 0;
-    const hasFinancials = project.financial_documents && project.financial_documents.length > 0;
-    
-    // Ajustar progresso baseado em critérios específicos
-    let adjustedProgress = baseProgress;
-    
-    if (status === 'pre_producao') {
-      // Na pré-produção, considerar se tem equipe e orçamento
-      if (hasTeam && hasBudget) {
-        adjustedProgress = Math.min(baseProgress + 10, 45);
-      } else if (hasTeam || hasBudget) {
-        adjustedProgress = Math.min(baseProgress + 5, 40);
-      }
-    } else if (status === 'proposta_aceita') {
-      // Na proposta aceita, considerar se tem documentos financeiros
-      if (hasFinancials) {
-        adjustedProgress = Math.min(baseProgress + 5, 25);
-      }
-    }
+    // Progresso baseado APENAS na posição da timeline
+    const percentage = Math.round(currentStep.weight);
 
-    const completedMilestones = milestones
-      .slice(0, currentMilestoneIndex + 1)
-      .map(m => m.label);
+    const completedMilestones = timelineSteps
+      .slice(0, currentStepIndex + 1)
+      .map(step => step.label);
     
-    const nextMilestone = currentMilestoneIndex < milestones.length - 1 
-      ? milestones[currentMilestoneIndex + 1].label 
+    const nextMilestone = currentStepIndex < timelineSteps.length - 1 
+      ? timelineSteps[currentStepIndex + 1].label 
       : null;
 
     return {
-      percentage: Math.round(adjustedProgress),
+      percentage,
       nextMilestone,
       completedMilestones,
-      currentPhase: currentMilestone.label
+      currentPhase: currentStep.label
     };
   };
 

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { PROJECT_STATUS_CONFIG, calculateIntelligentProgress, PROJECT_MILESTONES, type ProjectStatus } from "@shared/schema";
+import { useProjectProgress } from "../hooks/useProjectProgress";
 
 interface ProjectProgressProps {
   project: any;
@@ -11,7 +11,7 @@ interface ProjectProgressProps {
 
 /**
  * Componente reutilizável para exibir a barra de progresso de um projeto
- * Implementa as regras de negócio específicas para cálculo e exibição visual
+ * Usa a Timeline do Projeto como fonte única de verdade
  */
 export function ProjectProgress({ 
   project, 
@@ -20,23 +20,11 @@ export function ProjectProgress({
   className = "",
   size = 'md'
 }: ProjectProgressProps) {
-  // Usar o novo sistema inteligente para calcular progresso
-  const projectStatus = project.status as ProjectStatus;
-  const hasBudget = project.budget && project.budget > 0;
-  const hasTeamMembers = project.members && project.members.length > 0;
-  const hasFinancialDocuments = project.financial_documents && project.financial_documents.length > 0;
+  // Usar o hook consistente baseado na Timeline do Projeto
+  const { calculateProgress } = useProjectProgress();
+  const progressData = calculateProgress(project);
   
-  // Calcular progresso usando o novo sistema inteligente
-  const completedMilestones = project.completed_milestones || [];
-  const intelligentProgress = calculateIntelligentProgress(
-    projectStatus, 
-    completedMilestones, 
-    hasBudget,
-    hasTeamMembers,
-    hasFinancialDocuments
-  );
-  
-  const progressValue = project.progress || intelligentProgress.progress;
+  const progressValue = progressData.percentage;
   
   // Determinar as classes de estilo com base no valor e status
   const getProgressBarColor = (value: number) => {
@@ -57,9 +45,9 @@ export function ProjectProgress({
         <div className={cn("flex justify-between items-center mb-1.5", textSizeClass)}>
           <div className="flex flex-col">
             <span>Progresso</span>
-            {intelligentProgress.nextMilestone && (
+            {progressData.nextMilestone && (
               <span className="text-xs text-gray-500 mt-0.5">
-                Próximo: {intelligentProgress.nextMilestone}
+                Próximo: {progressData.nextMilestone}
               </span>
             )}
           </div>
