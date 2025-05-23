@@ -32,9 +32,9 @@ export default function StatusBadge({
   // Priorizar status especial se existir e não for "none"
   if (displaySpecialStatus && displaySpecialStatus !== 'none') {
     const specialStatusColors = {
-      delayed: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      paused: "bg-blue-100 text-blue-800 border-blue-200", 
-      canceled: "bg-red-100 text-red-800 border-red-200"
+      delayed: "#F59E0B", // Amber-500
+      paused: "#3B82F6",  // Blue-500
+      canceled: "#EF4444" // Red-500
     };
 
     const specialStatusLabels = {
@@ -43,18 +43,23 @@ export default function StatusBadge({
       canceled: "Cancelado"
     };
 
-    const colorClass = specialStatusColors[displaySpecialStatus as keyof typeof specialStatusColors] || "bg-gray-100 text-gray-800";
+    const backgroundColor = specialStatusColors[displaySpecialStatus as keyof typeof specialStatusColors] || "#6B7280";
     const label = specialStatusLabels[displaySpecialStatus as keyof typeof specialStatusLabels] || displaySpecialStatus;
 
     return (
       <Badge 
-        variant="outline" 
+        variant="secondary"
         className={cn(
-          colorClass,
+          "text-white font-medium shadow-sm",
           small ? "text-xs px-1.5 py-0.5" : "text-sm px-2 py-1",
-          minimal && "border-0 bg-transparent text-current",
+          minimal && "bg-transparent text-current",
           className
         )}
+        style={{ 
+          backgroundColor: minimal ? 'transparent' : backgroundColor,
+          color: minimal ? backgroundColor : 'white',
+          border: `1px solid ${backgroundColor}`
+        }}
       >
         {label}
       </Badge>
@@ -67,17 +72,17 @@ export default function StatusBadge({
     
     return (
       <Badge 
-        variant="outline"
+        variant="secondary"
         className={cn(
-          "border-0",
+          "text-white font-medium shadow-sm",
           small ? "text-xs px-1.5 py-0.5" : "text-sm px-2 py-1",
           minimal && "bg-transparent text-current",
           className
         )}
         style={{ 
-          backgroundColor: minimal ? 'transparent' : `${config.color}20`,
-          color: config.color,
-          borderColor: config.color
+          backgroundColor: minimal ? 'transparent' : config.color,
+          color: minimal ? config.color : 'white',
+          border: `1px solid ${config.color}`
         }}
       >
         {config.label}
