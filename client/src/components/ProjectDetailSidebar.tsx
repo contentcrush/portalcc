@@ -17,7 +17,7 @@ import StatusBadge from "./StatusBadge";
 import { ProjectProgress } from "./ProjectProgress";
 import { ProjectMilestones } from "./ProjectMilestones";
 import { ProjectTimeline } from "./ProjectTimeline";
-import { useProjectProgress } from "../hooks/useProjectProgress";
+import { TimelineProgressBar } from "./TimelineProgressBar";
 import { ProjectCommentSection } from "./comments";
 import ProjectAttachments from "./ProjectAttachments";
 import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
