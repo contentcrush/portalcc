@@ -425,11 +425,16 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       
       // Atualiza IMEDIATAMENTE o cache da lista de projetos também
       queryClient.setQueryData(['/api/projects'], (oldData: any) => {
-        if (!oldData) return oldData;
+        if (!oldData || !Array.isArray(oldData)) return oldData;
         return oldData.map((proj: any) => 
-          proj.id === projectId ? updatedProject : proj
+          proj.id === projectId ? { ...proj, ...updatedProject } : proj
         );
       });
+      
+      // Força uma invalidação e refetch imediato da lista de projetos para garantir sincronização
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      }, 100);
       
       // Força invalidação para garantir que futuras consultas estejam atualizadas
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
