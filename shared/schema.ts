@@ -100,7 +100,17 @@ export const clients = pgTable("clients", {
   segments: text("segments"), // Adicionando campo para segmentos/tags
 });
 
-// Enum para status especiais de projeto
+// Enums para sistema de status de projetos
+export const projectStatusEnum = pgEnum('project_status', [
+  'proposta',
+  'proposta_aceita', 
+  'pre_producao',
+  'producao',
+  'pos_revisao', 
+  'entregue',
+  'concluido'
+]);
+
 export const specialStatusEnum = pgEnum('special_status', ['delayed', 'paused', 'canceled', 'none']);
 
 export const projects = pgTable("projects", {
@@ -108,7 +118,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   client_id: integer("client_id").notNull(),
-  status: text("status").notNull().default("draft"),
+  status: text("status").notNull().default("proposta"),
   special_status: specialStatusEnum("special_status").default('none'),
   budget: doublePrecision("budget"),
   startDate: timestamp("start_date"),
