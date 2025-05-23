@@ -7,7 +7,9 @@ import {
   insertClientInteractionSchema, insertFinancialDocumentSchema, 
   insertExpenseSchema, insertEventSchema, insertUserSchema, insertUserPreferenceSchema,
   insertCommentReactionSchema, insertProjectCommentSchema, insertProjectCommentReactionSchema,
-  insertClientContactSchema, financialDocuments
+  insertClientContactSchema, financialDocuments,
+  PROJECT_STATUS_CONFIG, isValidStatusTransition, calculateProgressFromStatus,
+  type ProjectStatus, type SpecialStatus
 } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePassword, hashPassword } from "./auth";

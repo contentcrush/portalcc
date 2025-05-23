@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { PROJECT_STATUS_CONFIG, calculateProgressFromStatus, type ProjectStatus } from "@shared/schema";
 
 interface ProjectProgressProps {
   project: any;
@@ -19,45 +20,12 @@ export function ProjectProgress({
   className = "",
   size = 'md'
 }: ProjectProgressProps) {
-  // Cálculo de progresso baseado em várias regras de negócio
-  let progressValue = project.progress || 0;
+  // Usar o novo sistema simplificado para calcular progresso
+  const projectStatus = project.status as ProjectStatus;
+  const hasBudget = project.budget && project.budget > 0;
   
-  // Primeiro obtém o status do projeto (normalizado)
-  const stageStatus = project.status;
-  
-  // Calcular progresso baseado no status se não tiver valor explícito
-  if (!project.progress) {
-    // Para status especiais, usamos o status de etapa subjacente
-    switch(stageStatus) {
-      case 'proposta':
-        progressValue = 5;
-        break;
-      case 'proposta_aceita':
-        progressValue = 15;
-        break;
-      case 'pre_producao':
-        progressValue = 30;
-        break;
-      case 'producao':
-      case 'em_producao':
-      case 'em_andamento':
-        progressValue = 50;
-        break;
-      case 'pos_revisao':
-      case 'em_edicao':
-      case 'edicao':
-        progressValue = 75;
-        break;
-      case 'entregue':
-        progressValue = 90;
-        break;
-      case 'concluido':
-        progressValue = 100;
-        break;
-      default:
-        progressValue = 0;
-    }
-  }
+  // Calcular progresso usando a nova função centralizada
+  const progressValue = project.progress || calculateProgressFromStatus(projectStatus, hasBudget);
   
   // Determinar as classes de estilo com base no valor e status
   const getProgressBarColor = (value: number) => {
@@ -66,7 +34,7 @@ export function ProjectProgress({
     return "bg-orange-500";
   };
   
-  const isPaused = project.status === 'pausado';
+  const isPaused = project.special_status === 'paused';
   
   // Classes para o tamanho da barra
   const heightClass = size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2.5';
