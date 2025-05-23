@@ -10,6 +10,7 @@ import { Calendar, DollarSign } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { ClientAvatar } from './ClientAvatar';
 import { getNormalizedProjectStatus, getProgressBarColor, showSuccessToast } from '@/lib/utils';
+import { PROJECT_STATUS_CONFIG, type ProjectStatus } from '@shared/schema';
 
 // Define types for our columns
 type StatusColumn = {
@@ -27,15 +28,11 @@ type ColumnsState = {
   [key: string]: ColumnContent;
 };
 
-// Status columns - apenas etapas regulares do fluxo de projeto
-const statusColumns: StatusColumn[] = [
-  { id: 'proposta', title: 'Proposta' },
-  { id: 'pre_producao', title: 'Pré-produção' },
-  { id: 'producao', title: 'Produção' },
-  { id: 'pos_revisao', title: 'Pós / Revisão' },
-  { id: 'entregue', title: 'Entregue' },
-  { id: 'concluido', title: 'Concluído' }
-];
+// Status columns - usando configuração centralizada do novo sistema
+const statusColumns: StatusColumn[] = Object.entries(PROJECT_STATUS_CONFIG).map(([key, config]) => ({
+  id: key,
+  title: config.label
+}));
 
 interface ProjectKanbanProps {
   projects: any[];

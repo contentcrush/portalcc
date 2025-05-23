@@ -1063,3 +1063,35 @@ export function calculateProgressFromStatus(
   
   return config.baseProgress;
 }
+
+/**
+ * Função para validar transições de status especiais
+ */
+export function isValidSpecialStatusTransition(
+  currentProjectStatus: ProjectStatus,
+  currentSpecialStatus: SpecialStatus,
+  newSpecialStatus: SpecialStatus
+): { valid: boolean; reason?: string } {
+  // Sempre permitir voltar para "none" (remover status especial)
+  if (newSpecialStatus === 'none') {
+    return { valid: true };
+  }
+  
+  // Projetos cancelados não podem mudar status especial (exceto para "none")
+  if (currentSpecialStatus === 'canceled') {
+    return {
+      valid: false,
+      reason: 'Projetos cancelados não podem ter status especial alterado'
+    };
+  }
+  
+  // Permitir qualquer transição para delayed, paused ou canceled
+  if (['delayed', 'paused', 'canceled'].includes(newSpecialStatus)) {
+    return { valid: true };
+  }
+  
+  return {
+    valid: false,
+    reason: `Status especial "${newSpecialStatus}" não é válido`
+  };
+}

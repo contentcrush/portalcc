@@ -9,7 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccessToast } from "@/lib/utils";
-import { insertProjectSchema } from "@shared/schema";
+import { insertProjectSchema, PROJECT_STATUS_CONFIG, type ProjectStatus } from "@shared/schema";
 import { useProjectForm } from "@/contexts/ProjectFormContext";
 import { 
   standardizeToUTC, 
@@ -60,7 +60,7 @@ import {
   PopoverTrigger
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { PROJECT_STATUS_OPTIONS, PROJECT_SPECIAL_STATUS_OPTIONS, TEAM_ROLE_OPTIONS } from "@/lib/constants";
+import { PROJECT_SPECIAL_STATUS_OPTIONS, TEAM_ROLE_OPTIONS } from "@/lib/constants";
 
 // Estender o schema para adicionar validações específicas do formulário
 const projectFormSchema = insertProjectSchema.extend({
@@ -466,12 +466,12 @@ export function ProjectFormDialog() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {PROJECT_STATUS_OPTIONS.map(option => (
+                              {Object.entries(PROJECT_STATUS_CONFIG).map(([key, config]) => (
                                 <SelectItem 
-                                  key={option.value} 
-                                  value={option.value}
+                                  key={key} 
+                                  value={key}
                                 >
-                                  {option.label}
+                                  {config.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
