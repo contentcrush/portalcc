@@ -930,3 +930,136 @@ export const eventsRelations = relations(events, ({ one }) => ({
     onDelete: "cascade"
   })
 }));
+
+
+// ===== SISTEMA DE STATUS SIMPLIFICADO =====
+
+// Constantes para Status de Projetos (fluxo principal)
+export const PROJECT_STATUSES = [
+  'proposta',
+  'proposta_aceita', 
+  'pre_producao',
+  'producao',
+  'pos_revisao', 
+  'entregue',
+  'concluido'
+] as const;
+
+// Constantes para Status Especiais (sobreposições)
+export const SPECIAL_STATUSES = ['delayed', 'paused', 'canceled', 'none'] as const;
+
+// Tipos TypeScript derivados
+export type ProjectStatus = typeof PROJECT_STATUSES[number];
+export type SpecialStatus = typeof SPECIAL_STATUSES[number];
+
+// Configuração de cada status com progressos e validações
+export const PROJECT_STATUS_CONFIG = {
+  proposta: {
+    label: 'Proposta',
+    description: 'Projeto em fase de orçamento e negociação',
+    baseProgress: 5,
+    progressWithBudget: 15,
+    canCreateFinancialDocuments: false,
+    color: '#6B7280',
+    nextStatuses: ['proposta_aceita'] as ProjectStatus[],
+    allowBackward: false
+  },
+  proposta_aceita: {
+    label: 'Proposta Aceita',
+    description: 'Proposta aprovada, iniciando preparação',
+    baseProgress: 25,
+    canCreateFinancialDocuments: true,
+    color: '#10B981',
+    nextStatuses: ['pre_producao'] as ProjectStatus[],
+    allowBackward: ['proposta'] as ProjectStatus[]
+  },
+  pre_producao: {
+    label: 'Pré-Produção',
+    description: 'Planejamento e preparação para execução',
+    baseProgress: 40,
+    canCreateFinancialDocuments: true,
+    color: '#3B82F6',
+    nextStatuses: ['producao'] as ProjectStatus[],
+    allowBackward: ['proposta_aceita', 'proposta'] as ProjectStatus[]
+  },
+  producao: {
+    label: 'Produção',
+    description: 'Execução ativa do projeto',
+    baseProgress: 60,
+    canCreateFinancialDocuments: true,
+    color: '#F59E0B',
+    nextStatuses: ['pos_revisao'] as ProjectStatus[],
+    allowBackward: ['pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
+  },
+  pos_revisao: {
+    label: 'Pós-Revisão',
+    description: 'Finalização e ajustes finais',
+    baseProgress: 80,
+    canCreateFinancialDocuments: true,
+    color: '#8B5CF6',
+    nextStatuses: ['entregue'] as ProjectStatus[],
+    allowBackward: ['producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
+  },
+  entregue: {
+    label: 'Entregue',
+    description: 'Projeto finalizado e entregue ao cliente',
+    baseProgress: 95,
+    canCreateFinancialDocuments: true,
+    color: '#059669',
+    nextStatuses: ['concluido'] as ProjectStatus[],
+    allowBackward: ['pos_revisao', 'producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
+  },
+  concluido: {
+    label: 'Concluído',
+    description: 'Projeto totalmente finalizado e arquivado',
+    baseProgress: 100,
+    canCreateFinancialDocuments: true,
+    color: '#065F46',
+    nextStatuses: [] as ProjectStatus[],
+    allowBackward: ['entregue', 'pos_revisao', 'producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
+  }
+} as const;
+
+// Função para validar transições de status
+export function isValidStatusTransition(
+  currentStatus: ProjectStatus,
+  newStatus: ProjectStatus,
+  specialStatus?: SpecialStatus
+): { valid: boolean; reason?: string } {
+  
+  if (specialStatus === 'canceled') {
+    return { 
+      valid: false, 
+      reason: 'Projetos cancelados não podem ter seu status alterado' 
+    };
+  }
+  
+  const config = PROJECT_STATUS_CONFIG[currentStatus];
+  
+  if (config.nextStatuses.includes(newStatus)) {
+    return { valid: true };
+  }
+  
+  if (config.allowBackward && config.allowBackward.includes(newStatus)) {
+    return { valid: true };
+  }
+  
+  return { 
+    valid: false, 
+    reason: `Não é possível alterar de "${config.label}" para "${PROJECT_STATUS_CONFIG[newStatus].label}"` 
+  };
+}
+
+// Função para calcular progresso baseado no status
+export function calculateProgressFromStatus(
+  status: ProjectStatus,
+  hasBudget: boolean = false
+): number {
+  const config = PROJECT_STATUS_CONFIG[status];
+  
+  if (status === 'proposta') {
+    return hasBudget ? config.progressWithBudget || config.baseProgress : config.baseProgress;
+  }
+  
+  return config.baseProgress;
+}
