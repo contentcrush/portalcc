@@ -962,7 +962,7 @@ export const PROJECT_STATUS_CONFIG = {
     canCreateFinancialDocuments: false,
     color: '#6B7280',
     nextStatuses: ['proposta_aceita'] as ProjectStatus[],
-    allowBackward: false
+    allowBackward: [] as ProjectStatus[]
   },
   proposta_aceita: {
     label: 'Proposta Aceita',

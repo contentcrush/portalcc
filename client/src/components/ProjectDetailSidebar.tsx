@@ -20,6 +20,13 @@ import ProjectAttachments from "./ProjectAttachments";
 import { ProjectStageStatus, isProjectStage, isProjectSpecialStatus } from "@/lib/types";
 import { ProjectSpecialStatus } from "./ProjectSpecialStatus";
 import { 
+  PROJECT_STATUS_CONFIG,
+  isValidStatusTransition,
+  calculateProgressFromStatus,
+  type ProjectStatus,
+  type SpecialStatus 
+} from "@shared/schema";
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
