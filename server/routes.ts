@@ -1174,8 +1174,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Sistema] Equipe do projeto ID:${id} atualizada: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
       }
       
-      // Removida a lógica automática de criação de documentos financeiros 
-      // para evitar conflitos com o controle do frontend
+      // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
+      if (req.body.budget && (currentProject.budget !== req.body.budget)) {
+        // Verificar se o projeto está na etapa "Proposta Aceita" ou além
+        const proposalAcceptedStages = ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'atrasado'];
+        
+        if (!proposalAcceptedStages.includes(updatedProject.status)) {
+          console.log(`[Sistema] Projeto ID:${id} ainda não está na etapa "Proposta Aceita". Status atual: ${updatedProject.status}. Fatura não será criada automaticamente.`);
+        } else {
+        // Verificar se já existe uma fatura para este projeto
+        const existingInvoices = await storage.getFinancialDocumentsByProject(id);
+        const pendingInvoice = existingInvoices.find(doc => 
+          doc.document_type === "invoice" && doc.status === "pending" && !doc.paid
+        );
+        
+        if (pendingInvoice) {
+          // Atualizar a fatura existente
+          await storage.updateFinancialDocument(pendingInvoice.id, {
+            amount: req.body.budget,
+            description: `Fatura atualizada do projeto: ${updatedProject.name}`,
+            // Manter data de vencimento ou definir nova baseada na data de fim do projeto
+            due_date: updatedProject.endDate && new Date(updatedProject.endDate) > new Date() 
+              ? new Date(updatedProject.endDate) 
+              : pendingInvoice.due_date
+          });
+          
+          console.log(`[Sistema] Documento financeiro ID:${pendingInvoice.id} atualizado para o novo valor do projeto ID:${id}`);
+        } else {
+          // Criar nova fatura usando o prazo de pagamento
+          const paymentTerm = updatedProject.payment_term || 30;
+          const financialDocument = await createProjectInvoice(
+            id, 
+            updatedProject.client_id, 
+            updatedProject.name, 
+            updatedProject.budget, 
+            updatedProject.endDate,
+            paymentTerm
+          );
+          
+          console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
+        }
+      }
+      
+        }
       // Verificar se precisamos atualizar o status baseado na data de entrega
       if (updatedProject) {
         if (updatedProject.endDate) {

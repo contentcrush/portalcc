@@ -420,23 +420,10 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       return response.json(); // Retorna os dados atualizados do projeto
     },
     onSuccess: (updatedProject, status) => {
-      // Atualiza IMEDIATAMENTE o cache do projeto individual
+      // Atualiza o cache do React Query imediatamente com os dados atualizados
       queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
       
-      // Atualiza IMEDIATAMENTE o cache da lista de projetos também
-      queryClient.setQueryData(['/api/projects'], (oldData: any) => {
-        if (!oldData || !Array.isArray(oldData)) return oldData;
-        return oldData.map((proj: any) => 
-          proj.id === projectId ? { ...proj, ...updatedProject } : proj
-        );
-      });
-      
-      // Força uma invalidação e refetch imediato da lista de projetos para garantir sincronização
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-      }, 100);
-      
-      // Força invalidação para garantir que futuras consultas estejam atualizadas
+      // Invalida as queries para forçar um refetch quando necessário
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
@@ -446,7 +433,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
           console.log("Status alterado para 'proposta_aceita'. Criando documento financeiro...");
           createFinancialDocumentMutation.mutate(updatedProject);
         } 
-        // Se o status foi alterado PARA um status anterior à "proposta_aceita", remover documentos financeiros
+        // Se o status foi alterado PARA "proposta" ou outro status anterior à "proposta_aceita", remover documentos financeiros
         else if (!['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'atrasado'].includes(status)) {
           console.log(`Status alterado para '${status}' (etapa anterior à proposta aceita). Removendo documentos financeiros...`);
           removeFinancialDocumentMutation.mutate(projectId);
