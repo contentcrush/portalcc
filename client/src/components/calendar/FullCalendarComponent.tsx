@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -8,8 +8,9 @@ import { DateSelectArg, EventClickArg, EventContentArg, EventInput } from '@full
 import { Event } from '@shared/schema';
 // Importação correta do locale ptBR
 import ptBRLocale from '@fullcalendar/core/locales/pt-br';
-import { PlusCircle, Info } from 'lucide-react';
+import { PlusCircle, Info, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { showSuccessToast } from '@/lib/utils';
@@ -53,6 +54,8 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [calendarView, setCalendarView] = useState(currentView);
+  const calendarRef = useRef<FullCalendar>(null);
   
   // Converter eventos do backend para o formato do FullCalendar
   const calendarEvents: EventInput[] = events.map(event => ({
@@ -149,6 +152,89 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
     }
   };
 
+  // Funções de navegação rápida
+  const handleViewChange = (newView: string) => {
+    setCalendarView(newView);
+    if (onViewChange) {
+      onViewChange(newView);
+    }
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.changeView(newView);
+    }
+  };
+
+  const goToToday = () => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.today();
+    }
+  };
+
+  const goToPrevious = () => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.prev();
+    }
+  };
+
+  const goToNext = () => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.next();
+    }
+  };
+
+  // Teclas de atalho
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignorar se estiver digitando em um input/textarea
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (event.key.toLowerCase()) {
+        case 't':
+          event.preventDefault();
+          goToToday();
+          break;
+        case 'arrowleft':
+          if (!event.shiftKey) {
+            event.preventDefault();
+            goToPrevious();
+          }
+          break;
+        case 'arrowright':
+          if (!event.shiftKey) {
+            event.preventDefault();
+            goToNext();
+          }
+          break;
+        case 'z':
+          event.preventDefault();
+          // Alternar entre visualizações (zoom)
+          const currentView = calendarRef.current?.getApi().view.type;
+          if (currentView === 'dayGridMonth') {
+            handleViewChange('timeGridWeek');
+          } else if (currentView === 'timeGridWeek') {
+            handleViewChange('timeGridDay');
+          } else {
+            handleViewChange('dayGridMonth');
+          }
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Obter título da visualização atual
+  const getViewTitle = () => {
+    const api = calendarRef.current?.getApi();
+    return api?.view.title || '';
+  };
+
   // Renderizar conteúdo personalizado para eventos
   const renderEventContent = (eventContent: EventContentArg) => {
     return (
@@ -164,8 +250,9 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
     );
   };
 
-  // Manipular mudança de visualização
-  const handleViewChange = (viewInfo: any) => {
+  // Callback para quando a visualização muda no FullCalendar
+  const handleViewDidMount = (viewInfo: any) => {
+    setCalendarView(viewInfo.view.type);
     if (onViewChange) {
       onViewChange(viewInfo.view.type);
     }
@@ -221,13 +308,77 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
           </TooltipProvider>
         </div>
 
+        {/* Barra de ferramentas customizada */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4 p-4 bg-card rounded-lg border">
+          {/* Navegação */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToPrevious}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToNext}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToToday}
+              className="ml-2"
+            >
+              Hoje
+            </Button>
+          </div>
+
+          {/* Título do mês/período atual */}
+          <div className="flex-1 text-center">
+            <h2 className="text-lg font-semibold">{getViewTitle()}</h2>
+          </div>
+
+          {/* Botões de visualização */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleViewChange('dayGridMonth')}
+            >
+              Mês
+            </Button>
+            <Button
+              variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleViewChange('timeGridWeek')}
+            >
+              Semana
+            </Button>
+            <Button
+              variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleViewChange('timeGridDay')}
+            >
+              Dia
+            </Button>
+            <Button
+              variant={calendarView === 'listWeek' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleViewChange('listWeek')}
+            >
+              Lista
+            </Button>
+          </div>
+        </div>
+
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-          }}
+          headerToolbar={false}
           initialView={currentView}
           editable={true}
           selectable={true}
@@ -248,7 +399,8 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
           select={handleDateSelect}
           eventClick={handleEventClick}
           eventContent={renderEventContent}
-          viewDidMount={handleViewChange}
+          viewDidMount={handleViewDidMount}
+          ref={calendarRef}
           nowIndicator={true}
           businessHours={{
             daysOfWeek: [1, 2, 3, 4, 5],  // Segunda a sexta
@@ -256,6 +408,28 @@ const FullCalendarComponent: React.FC<FullCalendarComponentProps> = ({
             endTime: '18:00',
           }}
         />
+
+        {/* Legenda de atalhos */}
+        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs">T</Badge>
+              <span>Ir para hoje</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs">←/→</Badge>
+              <span>Navegar</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs">Z</Badge>
+              <span>Alternar visualização</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="h-3 w-3" />
+              <span>Clique em uma data para criar evento</span>
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* Componente de diálogo para criar/editar eventos */}
