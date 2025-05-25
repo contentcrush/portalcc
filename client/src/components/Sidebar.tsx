@@ -106,6 +106,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     }
   };
 
+  const { user, logoutMutation } = useAuth();
+
   // Buscar tarefas pendentes para próximas tarefas
   const { data: tasks } = useQuery({
     queryKey: ["/api/tasks"],
@@ -137,8 +139,6 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       })
       .slice(0, 5); // Limitar a 5 tarefas
   }, [tasks]);
-
-  const { user, logoutMutation } = useAuth();
 
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
