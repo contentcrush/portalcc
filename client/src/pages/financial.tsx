@@ -651,8 +651,11 @@ export default function Financial() {
     value: clientDistributionMap[clientName]
   })).sort((a, b) => b.value - a.value).slice(0, 5); // Apenas os 5 maiores clientes
 
-  // Project margin data
-  const projectMarginData = projects?.map((project: any) => {
+  // Project margin data - incluindo projetos em andamento e concluídos
+  const projectMarginData = projects?.filter((project: any) => {
+    // Incluir apenas projetos ativos (em andamento ou concluídos)
+    return project.status !== 'canceled' && project.status !== 'delayed' && project.status !== 'paused';
+  }).map((project: any) => {
     const client = clients?.find((c: any) => c.id === project.client_id);
     
     const projectRevenue = financialDocuments
@@ -673,9 +676,10 @@ export default function Financial() {
       client: client?.name || "Cliente",
       revenue: projectRevenue,
       expenses: projectExpenses,
-      margin: projectMargin
+      margin: projectMargin,
+      status: project.status
     };
-  }).sort((a: any, b: any) => b.margin - a.margin).slice(0, 5) || [];
+  }).sort((a: any, b: any) => b.margin - a.margin) || []; // Removido o .slice(0, 5) para mostrar todos
 
   // Não usamos mais dados de exemplo - apenas dados reais do banco de dados
 
