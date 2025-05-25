@@ -3170,10 +3170,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/calendar/sync", authenticateJWT, requireRole(['admin', 'manager']), async (req, res) => {
     try {
       console.log('[API] Iniciando sincronização manual do calendário');
-      const { syncFinancialEvents } = await import('./automation');
+      const { syncFinancialEvents, syncProductionEvents } = await import('./automation');
       
       // Sincronizar eventos financeiros
       const financialResult = await syncFinancialEvents();
+      
+      // Sincronizar eventos de produção e alertas inteligentes
+      const productionResult = await syncProductionEvents();
       
       // Usar módulo de utilitários para limpar eventos
       const { 

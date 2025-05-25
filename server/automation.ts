@@ -1,11 +1,201 @@
 import { db } from './db';
-import { projects, clients, tasks, events, financialDocuments, expenses } from '@shared/schema';
-import { eq, and, lt, inArray, gte, or, isNull, lte, sql } from 'drizzle-orm';
+import { projects, clients, tasks, events, financialDocuments, expenses, projectStages } from '@shared/schema';
+import { eq, and, lt, inArray, gte, or, isNull, lte, sql, not, like } from 'drizzle-orm';
 import { format, addDays, isAfter, isBefore, parseISO, subMonths, addMonths, addHours, 
          startOfDay, endOfDay, isSameDay, isToday, addYears, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { storage } from './storage';
 import { checkDelayedProjects } from './routes/project-status';
+
+/**
+ * Cria eventos de produção para deadlines de entrega e alertas inteligentes
+ * @returns Resultado da sincronização
+ */
+export async function syncProductionEvents(): Promise<{ success: boolean, message: string, count: number }> {
+  try {
+    console.log('[Automação] Sincronizando eventos de produção e alertas inteligentes...');
+    
+    // Buscar projetos ativos que não estão concluídos
+    const activeProjects = await db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          not(eq(projects.status, 'concluido')),
+          not(eq(projects.special_status, 'canceled'))
+        )
+      );
+    
+    let eventsCreated = 0;
+    const now = new Date();
+    const alertThreshold = 7; // dias para alertas de deadline
+    const budgetThreshold = 0.9; // 90% do orçamento para alertas
+    
+    for (const project of activeProjects) {
+      // EVENTOS DE DEADLINE DE ENTREGA
+      if (project.endDate) {
+        const endDate = new Date(project.endDate);
+        const daysUntilDeadline = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Criar evento de deadline principal
+        const existingDeadlineEvent = await db.select()
+          .from(events)
+          .where(
+            and(
+              eq(events.project_id, project.id),
+              eq(events.type, 'deadline_entrega')
+            )
+          );
+        
+        if (existingDeadlineEvent.length === 0) {
+          await db.insert(events).values({
+            title: `🎯 Deadline: ${project.name}`,
+            description: `Prazo final de entrega do projeto`,
+            user_id: 1,
+            project_id: project.id,
+            client_id: project.client_id,
+            type: 'deadline_entrega',
+            start_date: endDate,
+            end_date: endDate,
+            all_day: true,
+            color: '#dc2626', // Vermelho para deadlines
+          });
+          eventsCreated++;
+          console.log(`[Automação] Evento de deadline criado para projeto: ${project.name}`);
+        }
+        
+        // ALERTA INTELIGENTE: Projeto próximo ao deadline
+        if (daysUntilDeadline <= alertThreshold && daysUntilDeadline > 0) {
+          const existingAlert = await db.select()
+            .from(events)
+            .where(
+              and(
+                eq(events.project_id, project.id),
+                eq(events.type, 'alerta_deadline')
+              )
+            );
+          
+          if (existingAlert.length === 0) {
+            const urgencyLevel = daysUntilDeadline <= 3 ? '🚨 URGENTE' : '⚠️ ATENÇÃO';
+            await db.insert(events).values({
+              title: `${urgencyLevel}: ${project.name}`,
+              description: `Projeto com deadline em ${daysUntilDeadline} dias`,
+              user_id: 1,
+              project_id: project.id,
+              client_id: project.client_id,
+              type: 'alerta_deadline',
+              start_date: now,
+              end_date: now,
+              all_day: true,
+              color: daysUntilDeadline <= 3 ? '#b91c1c' : '#f59e0b', // Vermelho escuro ou amarelo
+            });
+            eventsCreated++;
+            console.log(`[Automação] Alerta de deadline criado para projeto: ${project.name} (${daysUntilDeadline} dias)`);
+          }
+        }
+      }
+      
+      // ALERTA INTELIGENTE: Orçamento próximo do limite
+      if (project.budget && project.budget > 0) {
+        // Calcular gastos do projeto (despesas + documentos financeiros)
+        const projectExpenses = await db
+          .select()
+          .from(expenses)
+          .where(eq(expenses.project_id, project.id));
+        
+        const totalExpenses = projectExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+        const budgetUsagePercentage = totalExpenses / project.budget;
+        
+        if (budgetUsagePercentage >= budgetThreshold) {
+          const existingBudgetAlert = await db.select()
+            .from(events)
+            .where(
+              and(
+                eq(events.project_id, project.id),
+                eq(events.type, 'alerta_orcamento')
+              )
+            );
+          
+          if (existingBudgetAlert.length === 0) {
+            const percentage = Math.round(budgetUsagePercentage * 100);
+            const alertLevel = percentage >= 100 ? '🚨 CRÍTICO' : '⚠️ ATENÇÃO';
+            
+            await db.insert(events).values({
+              title: `${alertLevel}: Orçamento ${project.name}`,
+              description: `Projeto utilizou ${percentage}% do orçamento (R$ ${totalExpenses.toLocaleString('pt-BR')} de R$ ${project.budget.toLocaleString('pt-BR')})`,
+              user_id: 1,
+              project_id: project.id,
+              client_id: project.client_id,
+              type: 'alerta_orcamento',
+              start_date: now,
+              end_date: now,
+              all_day: true,
+              color: percentage >= 100 ? '#b91c1c' : '#f59e0b',
+            });
+            eventsCreated++;
+            console.log(`[Automação] Alerta de orçamento criado para projeto: ${project.name} (${percentage}%)`);
+          }
+        }
+      }
+      
+      // EVENTOS DE ETAPAS DE PRODUÇÃO
+      const projectStages = await db
+        .select()
+        .from(projectStages)
+        .where(eq(projectStages.project_id, project.id))
+        .orderBy(projectStages.order);
+      
+      for (const stage of projectStages) {
+        if (!stage.completed) {
+          const existingStageEvent = await db.select()
+            .from(events)
+            .where(
+              and(
+                eq(events.project_id, project.id),
+                eq(events.type, 'etapa_producao'),
+                like(events.title, `%${stage.name}%`)
+              )
+            );
+          
+          if (existingStageEvent.length === 0) {
+            // Calcular data estimada baseada no progresso atual
+            const estimatedDate = project.endDate ? 
+              new Date(project.endDate.getTime() - (projectStages.length - stage.order) * 7 * 24 * 60 * 60 * 1000) : 
+              new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            
+            await db.insert(events).values({
+              title: `📋 ${stage.name} - ${project.name}`,
+              description: `Etapa de produção: ${stage.description || 'Sem descrição'}`,
+              user_id: 1,
+              project_id: project.id,
+              client_id: project.client_id,
+              type: 'etapa_producao',
+              start_date: estimatedDate,
+              end_date: estimatedDate,
+              all_day: true,
+              color: '#2563eb', // Azul para etapas de produção
+            });
+            eventsCreated++;
+            console.log(`[Automação] Evento de etapa criado: ${stage.name} - ${project.name}`);
+          }
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      message: `${eventsCreated} eventos de produção e alertas inteligentes criados`,
+      count: eventsCreated
+    };
+  } catch (error) {
+    console.error('[Automação] Erro ao sincronizar eventos de produção:', error);
+    return {
+      success: false,
+      message: `Erro ao sincronizar eventos de produção: ${error.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
+}
 
 /**
  * Sincroniza todas as datas importantes do projeto com documentos financeiros e eventos relacionados
