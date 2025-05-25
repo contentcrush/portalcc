@@ -135,7 +135,10 @@ export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
   const [period, setPeriod] = useState<string>("year");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Para ordenação por valor
+  const [sortConfig, setSortConfig] = useState<{
+    field: 'amount' | 'document_number' | 'issue_date' | 'due_date' | 'client_name';
+    direction: 'asc' | 'desc';
+  }>({ field: 'amount', direction: 'asc' });
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -306,27 +309,62 @@ export default function Financial() {
     queryKey: ['/api/clients']
   });
 
+  // Função auxiliar para ordenação
+  const handleSort = (field: typeof sortConfig.field) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
   // Prepare financial data
   // Agora incluímos todas as faturas, não apenas as não pagas
-  // Ordenadas por valor conforme seleção do usuário
+  // Ordenadas conforme seleção do usuário
   const receivablesData = useMemo(() => {
-    console.log('Ordenando faturas por:', sortOrder);
     const filtered = financialDocuments?.filter((doc: any) => 
       doc.document_type === 'invoice'
     ) || [];
     
     const sorted = filtered.sort((a: any, b: any) => {
-      console.log(`Comparando: ${a.amount} vs ${b.amount}, ordem: ${sortOrder}`);
-      if (sortOrder === 'desc') {
-        return (b.amount || 0) - (a.amount || 0); // Maior para menor
+      let aValue, bValue;
+      
+      switch (sortConfig.field) {
+        case 'amount':
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
+          break;
+        case 'document_number':
+          aValue = a.document_number || a.id;
+          bValue = b.document_number || b.id;
+          break;
+        case 'issue_date':
+          aValue = a.issue_date ? new Date(a.issue_date).getTime() : 0;
+          bValue = b.issue_date ? new Date(b.issue_date).getTime() : 0;
+          break;
+        case 'due_date':
+          aValue = a.due_date ? new Date(a.due_date).getTime() : 0;
+          bValue = b.due_date ? new Date(b.due_date).getTime() : 0;
+          break;
+        case 'client_name':
+          const clientA = clients?.find((c: any) => c.id === a.client_id);
+          const clientB = clients?.find((c: any) => c.id === b.client_id);
+          aValue = clientA?.name || '';
+          bValue = clientB?.name || '';
+          break;
+        default:
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
+      }
+      
+      if (sortConfig.direction === 'desc') {
+        return typeof aValue === 'string' ? bValue.localeCompare(aValue) : bValue - aValue;
       } else {
-        return (a.amount || 0) - (b.amount || 0); // Menor para maior
+        return typeof aValue === 'string' ? aValue.localeCompare(bValue) : aValue - bValue;
       }
     });
     
-    console.log('Faturas ordenadas:', sorted.map(d => ({ id: d.id, amount: d.amount })));
     return sorted;
-  }, [financialDocuments, sortOrder]);
+  }, [financialDocuments, sortConfig, clients]);
   
   // Incluímos todas as despesas, não apenas as não aprovadas
   const payablesData = expenses || [];
@@ -1222,11 +1260,75 @@ export default function Financial() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>FATURA</TableHead>
-                      <TableHead>CLIENTE</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-2">
+                          FATURA
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleSort('document_number')}
+                          >
+                            {sortConfig.field === 'document_number' && sortConfig.direction === 'asc' ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-2">
+                          CLIENTE
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleSort('client_name')}
+                          >
+                            {sortConfig.field === 'client_name' && sortConfig.direction === 'asc' ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
                       <TableHead>PROJETO</TableHead>
-                      <TableHead>EMISSÃO</TableHead>
-                      <TableHead>VENCIMENTO</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-2">
+                          EMISSÃO
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleSort('issue_date')}
+                          >
+                            {sortConfig.field === 'issue_date' && sortConfig.direction === 'asc' ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-2">
+                          VENCIMENTO
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleSort('due_date')}
+                          >
+                            {sortConfig.field === 'due_date' && sortConfig.direction === 'asc' ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
                       <TableHead className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           VALOR
@@ -1234,9 +1336,9 @@ export default function Financial() {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
-                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                            onClick={() => handleSort('amount')}
                           >
-                            {sortOrder === 'asc' ? (
+                            {sortConfig.field === 'amount' && sortConfig.direction === 'asc' ? (
                               <ChevronUp className="h-4 w-4" />
                             ) : (
                               <ChevronDown className="h-4 w-4" />
