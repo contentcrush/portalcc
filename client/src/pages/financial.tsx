@@ -100,6 +100,7 @@ import {
   Receipt,
   ChevronUp,
   ChevronDown,
+  Edit,
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
@@ -149,6 +150,7 @@ export default function Financial() {
   // Estados para controlar os diálogos de detalhes e pagamento
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   
   // Calcular o intervalo de datas com base no período selecionado
   const dateFilterRange = useMemo(() => {
@@ -1739,12 +1741,22 @@ export default function Financial() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <FinancialRecordActions 
-                              record={exp} 
-                              type="expense"
-                              onViewDetails={(record) => setDetailsRecord({ record, type: "expense" })}
-                              onRegisterPayment={(record) => setPaymentRecord({ record, type: "expense" })}
-                            />
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingExpense(exp)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <FinancialRecordActions 
+                                record={exp} 
+                                type="expense"
+                                onViewDetails={(record) => setDetailsRecord({ record, type: "expense" })}
+                                onRegisterPayment={(record) => setPaymentRecord({ record, type: "expense" })}
+                              />
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -1895,6 +1907,107 @@ export default function Financial() {
           type={paymentRecord.type}
         />
       )}
+
+      {/* Diálogo de Edição de Despesa */}
+      {editingExpense && (
+        <Dialog open={!!editingExpense} onOpenChange={() => setEditingExpense(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Despesa</DialogTitle>
+            </DialogHeader>
+            <ExpenseEditForm 
+              expense={editingExpense}
+              onSave={(updatedExpense) => {
+                handleUpdateExpense(updatedExpense);
+                setEditingExpense(null);
+              }}
+              onCancel={() => setEditingExpense(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
+  );
+}
+
+// Componente de formulário de edição de despesa
+function ExpenseEditForm({ expense, onSave, onCancel }: {
+  expense: any;
+  onSave: (expense: any) => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    description: expense.description || '',
+    amount: expense.amount || 0,
+    category: expense.category || 'other',
+    date: expense.date ? format(new Date(expense.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      ...expense,
+      ...formData,
+      amount: parseFloat(formData.amount.toString())
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Descrição</label>
+        <Input
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Valor</label>
+        <Input
+          type="number"
+          step="0.01"
+          value={formData.amount}
+          onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Categoria</label>
+        <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="personnel">Pessoal</SelectItem>
+            <SelectItem value="marketing">Marketing</SelectItem>
+            <SelectItem value="operations">Operações</SelectItem>
+            <SelectItem value="technology">Tecnologia</SelectItem>
+            <SelectItem value="other">Outros</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Data</label>
+        <Input
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit">
+          Salvar
+        </Button>
+      </div>
+    </form>
   );
 }
