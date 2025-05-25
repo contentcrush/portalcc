@@ -233,6 +233,14 @@ export default function CalendarPage() {
         </div>
         
         <div className="flex items-center space-x-2">
+          {/* Alternar visualização */}
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'calendar' | 'agenda')} className="mr-4">
+            <TabsList>
+              <TabsTrigger value="calendar">Calendário</TabsTrigger>
+              <TabsTrigger value="agenda">Agenda Integrada</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <Button 
             variant="outline" 
             size="sm" 
@@ -262,19 +270,28 @@ export default function CalendarPage() {
       
       {/* Content */}
       <div className="space-y-6">
-        {/* Main Calendar */}
+        {/* Main Calendar ou Agenda Integrada */}
         <div>
-          <Card>
-            <CardContent className="p-6">
-              <FullCalendarComponent
-                events={filteredEvents}
-                isLoading={isLoading}
-                error={error instanceof Error ? error : null}
-                currentView={calendarView}
-                onViewChange={setCalendarView}
-              />
-            </CardContent>
-          </Card>
+          {viewMode === 'calendar' ? (
+            <Card>
+              <CardContent className="p-6">
+                <FullCalendarComponent
+                  events={filteredEvents}
+                  isLoading={isLoading}
+                  error={error instanceof Error ? error : null}
+                  currentView={calendarView}
+                  onViewChange={setCalendarView}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <WeeklyAgenda
+              events={filteredEvents}
+              isLoading={isLoading}
+              currentDate={agendaDate}
+              onDateChange={setAgendaDate}
+            />
+          )}
         </div>
         
         {/* Próximos Eventos - Movido para baixo do calendário */}
