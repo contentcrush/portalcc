@@ -202,10 +202,29 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* DEBUG: Mensagem de Boas-vindas */}
-      <div style={{ backgroundColor: 'red', color: 'white', padding: '10px' }}>
+      <div style={{ backgroundColor: 'red', color: 'white', padding: '20px', fontSize: '18px' }}>
         DEBUG: WelcomeMessage deve aparecer aqui
       </div>
-      <SimpleWelcome />
+      
+      {/* Mensagem de Boas-vindas Inline */}
+      <div style={{ 
+        backgroundColor: '#3B82F6', 
+        color: 'white', 
+        padding: '24px', 
+        borderRadius: '12px',
+        margin: '20px 0',
+        border: '3px solid #1D4ED8'
+      }}>
+        <h2 style={{ margin: '0 0 12px 0', fontSize: '28px', fontWeight: 'bold' }}>
+          🌟 Boa tarde, Zé!
+        </h2>
+        <p style={{ margin: '0', fontSize: '18px', lineHeight: '1.5' }}>
+          Bem-vindo ao seu painel personalizado! Aqui você pode acompanhar todos os seus projetos e tarefas.
+        </p>
+        <div style={{ marginTop: '16px', fontSize: '16px', opacity: '0.9' }}>
+          Hoje você tem <strong>4 tarefas pendentes</strong> e <strong>9 projetos ativos</strong>.
+        </div>
+      </div>
       
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
         <div>
