@@ -107,6 +107,7 @@ import { NewFinancialRecordDialog } from "@/components/financial/NewFinancialRec
 import { FinancialRecordActions } from "@/components/financial/FinancialRecordActions";
 import { FinancialRecordDetails } from "@/components/financial/FinancialRecordDetails";
 import { PaymentRegistrationDialog } from "@/components/financial/PaymentRegistrationDialog";
+import { EditExpenseDialog } from "@/components/financial/EditExpenseDialog";
 
 // Definição de tipos
 interface Transaction {
@@ -149,6 +150,7 @@ export default function Financial() {
   // Estados para controlar os diálogos de detalhes e pagamento
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
+  const [editExpense, setEditExpense] = useState<any | null>(null);
   
   // Calcular o intervalo de datas com base no período selecionado
   const dateFilterRange = useMemo(() => {

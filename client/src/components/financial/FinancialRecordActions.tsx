@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download, RotateCcw } from "lucide-react";
+import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download, RotateCcw, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -64,6 +64,7 @@ interface FinancialRecordActionsProps {
   type: "document" | "expense";
   onViewDetails: (record: FinancialRecord) => void;
   onRegisterPayment?: (record: FinancialRecord) => void;
+  onEditExpense?: (expense: Expense) => void;
 }
 
 export function FinancialRecordActions({
