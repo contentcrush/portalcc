@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useLocation } from "wouter";
-import { cn, getNormalizedProjectStatus } from "@/lib/utils";
-import { SIDEBAR_ITEMS } from "@/lib/constants";
+import { cn, getNormalizedProjectStatus, formatDateWithTime } from "@/lib/utils";
+import { SIDEBAR_ITEMS, PRIORITY_COLOR_CLASSES } from "@/lib/constants";
 import { useQuery } from "@tanstack/react-query";
-import { LucideIcon, LucideProps, LogOut } from "lucide-react";
+import { LucideIcon, LucideProps, LogOut, Clock, AlertCircle, Check } from "lucide-react";
 import * as LucideIcons from "lucide-react";
+import { format, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ProjectProgress } from "@/components/ProjectProgress";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ClientAvatar } from "@/components/ClientAvatar";
@@ -18,6 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import PriorityBadge from "@/components/PriorityBadge";
 
 // Get icons from Lucide dynamically
 const DynamicIcon = ({ name }: { name: string }) => {
