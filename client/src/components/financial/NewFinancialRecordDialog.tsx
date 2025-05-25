@@ -94,6 +94,8 @@ const expenseCategories = [
   { id: "travel", name: "Viagens" },
   { id: "office", name: "Escritório" },
   { id: "utilities", name: "Utilidades" },
+  { id: "scenography", name: "Cenografia" },
+  { id: "food", name: "Alimentos" },
   { id: "other", name: "Outros" },
 ];
 
@@ -312,9 +314,19 @@ export function NewFinancialRecordDialog({
           onValueChange={(value) => updateDefaultValues(value as "income" | "expense")}
           className="mt-2"
         >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="income">Receita</TabsTrigger>
-            <TabsTrigger value="expense">Despesa</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-gray-100/80 rounded-lg">
+            <TabsTrigger 
+              value="income" 
+              className="text-sm font-medium h-10 px-4 rounded-md data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-semibold hover:bg-green-100 hover:text-green-700 transition-all duration-200"
+            >
+              💰 Receita
+            </TabsTrigger>
+            <TabsTrigger 
+              value="expense" 
+              className="text-sm font-medium h-10 px-4 rounded-md data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-semibold hover:bg-red-100 hover:text-red-700 transition-all duration-200"
+            >
+              💸 Despesa
+            </TabsTrigger>
           </TabsList>
           
           <Form {...form}>
