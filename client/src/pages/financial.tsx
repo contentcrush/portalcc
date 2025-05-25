@@ -309,15 +309,24 @@ export default function Financial() {
   // Prepare financial data
   // Agora incluímos todas as faturas, não apenas as não pagas
   // Ordenadas por valor conforme seleção do usuário
-  const receivablesData = financialDocuments?.filter((doc: any) => 
-    doc.document_type === 'invoice'
-  ).sort((a: any, b: any) => {
-    if (sortOrder === 'desc') {
-      return (b.amount || 0) - (a.amount || 0); // Maior para menor
-    } else {
-      return (a.amount || 0) - (b.amount || 0); // Menor para maior
-    }
-  }) || [];
+  const receivablesData = useMemo(() => {
+    console.log('Ordenando faturas por:', sortOrder);
+    const filtered = financialDocuments?.filter((doc: any) => 
+      doc.document_type === 'invoice'
+    ) || [];
+    
+    const sorted = filtered.sort((a: any, b: any) => {
+      console.log(`Comparando: ${a.amount} vs ${b.amount}, ordem: ${sortOrder}`);
+      if (sortOrder === 'desc') {
+        return (b.amount || 0) - (a.amount || 0); // Maior para menor
+      } else {
+        return (a.amount || 0) - (b.amount || 0); // Menor para maior
+      }
+    });
+    
+    console.log('Faturas ordenadas:', sorted.map(d => ({ id: d.id, amount: d.amount })));
+    return sorted;
+  }, [financialDocuments, sortOrder]);
   
   // Incluímos todas as despesas, não apenas as não aprovadas
   const payablesData = expenses || [];
