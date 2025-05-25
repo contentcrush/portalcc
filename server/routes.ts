@@ -2713,10 +2713,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      // Debug: log what we receive in the route
+      console.log("PATCH /api/expenses/:id - req.body recebido:", JSON.stringify(req.body, null, 2));
+      
       // Pré-processamento de data antes da atualização
       if (req.body && req.body.date && typeof req.body.date === 'string') {
         req.body.date = new Date(req.body.date);
+        console.log("PATCH /api/expenses/:id - data convertida:", req.body.date);
       }
+      
+      console.log("PATCH /api/expenses/:id - req.body processado:", JSON.stringify(req.body, null, 2));
       
       // Obter a despesa antes da atualização para verificar alterações no status de pagamento
       const oldExpense = await storage.getExpense(id);
