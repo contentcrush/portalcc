@@ -2948,10 +2948,16 @@ export class DatabaseStorage implements IStorage {
     const maxRetries = 3;
     let retries = 0;
     
+    // Converter string de data para objeto Date se necessário
+    const processedExpense = { ...expense };
+    if (processedExpense.date && typeof processedExpense.date === 'string') {
+      processedExpense.date = new Date(processedExpense.date);
+    }
+    
     while (retries < maxRetries) {
       try {
         const [updated] = await db.update(expenses)
-          .set(expense)
+          .set(processedExpense)
           .where(eq(expenses.id, id))
           .returning();
         return updated;
