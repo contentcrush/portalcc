@@ -109,12 +109,27 @@ export function EditExpenseDialog({
   // Mutation para atualizar despesa
   const updateExpenseMutation = useMutation({
     mutationFn: async (data: EditExpenseFormData) => {
-      const response = await apiRequest("PUT", `/api/expenses/${expense.id}`, data);
+      const response = await fetch(`/api/expenses/${expense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Erro ao atualizar despesa");
+        const text = await response.text();
+        try {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || "Erro ao atualizar despesa");
+        } catch {
+          throw new Error(`Erro ${response.status}: ${text || "Erro ao atualizar despesa"}`);
+        }
       }
-      return await response.json();
+      
+      const result = await response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -135,11 +150,11 @@ export function EditExpenseDialog({
   });
 
   const onSubmit = (data: EditExpenseFormData) => {
-    // Converter valores "none" para null antes de enviar
+    // Converter valores "none" para undefined antes de enviar
     const processedData = {
       ...data,
-      project_id: data.project_id === "none" ? null : parseInt(data.project_id || "0") || null,
-      paid_by: data.paid_by === "none" ? null : parseInt(data.paid_by || "0") || null,
+      project_id: data.project_id === "none" ? undefined : parseInt(data.project_id || "0") || undefined,
+      paid_by: data.paid_by === "none" ? undefined : parseInt(data.paid_by || "0") || undefined,
     };
     updateExpenseMutation.mutate(processedData);
   };
