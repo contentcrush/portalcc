@@ -1,326 +1,505 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Event } from '@shared/schema';
-import FullCalendarComponent from '@/components/calendar/FullCalendarComponent';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { format, addDays, startOfWeek, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, Tag, Info, MapPin, RefreshCw } from 'lucide-react';
-import { initWebSocket, onWebSocketMessage } from '@/lib/socket';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Calendar as CalendarIcon,
+  Clock,
+  DollarSign,
+  CheckCircle2,
+  AlertCircle,
+  Target,
+  Filter,
+  TrendingUp,
+  TrendingDown
+} from 'lucide-react';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { showSuccessToast } from '@/lib/utils';
+import PriorityBadge from '@/components/PriorityBadge';
+
+// Tipos de eventos com cores
+const EVENT_TYPES = {
+  task: { 
+    label: 'Tarefas', 
+    color: 'bg-red-500', 
+    lightColor: 'bg-red-100 text-red-800 border-red-200',
+    icon: CheckCircle2 
+  },
+  event: { 
+    label: 'Eventos', 
+    color: 'bg-blue-500', 
+    lightColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    icon: CalendarIcon 
+  },
+  financial: { 
+    label: 'Financeiro', 
+    color: 'bg-green-500', 
+    lightColor: 'bg-green-100 text-green-800 border-green-200',
+    icon: DollarSign 
+  },
+  meeting: { 
+    label: 'Reuniões', 
+    color: 'bg-purple-500', 
+    lightColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    icon: Clock 
+  },
+  deadline: { 
+    label: 'Prazos', 
+    color: 'bg-amber-500', 
+    lightColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    icon: Target 
+  }
+};
+
+// Horários para a vista semanal
+const TIME_SLOTS = Array.from({ length: 12 }, (_, i) => {
+  const hour = i + 8; // De 8h às 19h
+  return `${hour.toString().padStart(2, '0')}:00`;
+});
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  type: keyof typeof EVENT_TYPES;
+  description?: string;
+  amount?: number;
+}
 
 export default function CalendarPage() {
-  const [calendarView, setCalendarView] = useState('dayGridMonth');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const { toast } = useToast();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  
-  // Buscar eventos
-  const { data: events, isLoading, error } = useQuery<Event[]>({
-    queryKey: ['/api/events'],
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    retry: 1,
-    refetchOnWindowFocus: true
-  });
-  
-  // Mutation para sincronizar calendário
-  const syncCalendarMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/calendar/sync');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidar a query de eventos para recarregar os dados
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-      
-      showSuccessToast({
-        title: 'Calendário sincronizado',
-        description: data.message
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Erro ao sincronizar',
-        description: error.message || 'Ocorreu um erro ao sincronizar o calendário',
-        variant: 'destructive',
-      });
-    }
+
+  // Buscar dados da API
+  const { data: events = [] } = useQuery<any[]>({
+    queryKey: ['/api/events']
   });
 
-  // Efeito para escutar eventos de calendário via WebSocket
-  useEffect(() => {
-    console.log('Configurando listeners WebSocket na página de calendário...');
-    
-    // Inicializar WebSocket se ainda não estiver conectado
-    initWebSocket().catch(error => {
-      console.error('Erro ao inicializar WebSocket na página de calendário:', error);
-    });
-    
-    // Registrar listeners para os vários formatos possíveis de eventos de calendário
-    const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
-      console.log('Recebida notificação de atualização do calendário (formato novo):', data);
-      
-      // Atualizar dados do calendário
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-      
-      // Notificar o usuário (optional)
-      showSuccessToast({
-        title: 'Calendário atualizado',
-        description: data.message || 'O calendário foi atualizado automaticamente'
-      });
-    });
-    
-    // Suporte para formato antigo (calendar_update)
-    const unregisterCalendarOldHandler = onWebSocketMessage('calendar_update', (data) => {
-      console.log('Recebida notificação de atualização do calendário (formato antigo):', data);
-      
-      // Atualizar dados do calendário
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    });
-    
-    // Registrar listener para eventos financeiros (despesas e documentos)
-    const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
-      console.log('Recebida notificação de atualização financeira (formato novo):', data);
-      
-      // Atualizar dados do calendário quando houver mudanças financeiras
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-      
-      // Só exibir toast se a notificação explicitamente mencionar o calendário
-      if (data.affects_calendar || data.updateCalendar || data.calendar) {
-        toast({
-          title: 'Calendário atualizado',
-          description: 'Eventos financeiros foram atualizados no calendário',
-          variant: 'default',
-        });
-      }
-    });
-    
-    // Suporte para formato antigo (financial_update)
-    const unregisterFinancialOldHandler = onWebSocketMessage('financial_update', (data) => {
-      console.log('Recebida notificação de atualização financeira (formato antigo):', data);
-      
-      // Atualizar dados do calendário quando houver mudanças financeiras
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    });
-    
-    // Também registrar para o tipo genérico 'financial' e 'calendar' para maior compatibilidade
-    const unregisterFinancialGenericHandler = onWebSocketMessage('financial', (data) => {
-      console.log('Recebida notificação genérica financeira:', data);
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    });
-    
-    const unregisterCalendarGenericHandler = onWebSocketMessage('calendar', (data) => {
-      console.log('Recebida notificação genérica de calendário:', data);
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    });
-    
-    // Limpar listeners quando o componente for desmontado
-    return () => {
-      console.log('Removendo listeners WebSocket da página de calendário');
-      unregisterCalendarUpdateHandler();
-      unregisterCalendarOldHandler();
-      unregisterFinancialUpdateHandler();
-      unregisterFinancialOldHandler();
-      unregisterFinancialGenericHandler();
-      unregisterCalendarGenericHandler();
-    };
-  }, [queryClient, toast]);
+  const { data: tasks = [] } = useQuery<any[]>({
+    queryKey: ['/api/tasks']
+  });
 
-  // Filtragem de eventos com base no filtro selecionado
-  const filteredEvents = React.useMemo(() => {
-    if (!events) return [];
+  const { data: financialDocuments = [] } = useQuery<any[]>({
+    queryKey: ['/api/financial-documents']
+  });
+
+  const { data: expenses = [] } = useQuery<any[]>({
+    queryKey: ['/api/expenses']
+  });
+
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ['/api/projects']
+  });
+
+  // Processar dados para eventos do calendário
+  const calendarEvents: CalendarEvent[] = [
+    // Tarefas
+    ...tasks
+      .filter((task: any) => task.due_date)
+      .map((task: any) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        start: new Date(task.due_date),
+        end: new Date(task.due_date),
+        type: 'task' as const,
+        description: task.description
+      })),
     
-    if (selectedFilter === 'all') {
-      return events;
-    } else if (selectedFilter === 'meetings') {
-      return events.filter(event => event.type === 'reuniao');
-    } else if (selectedFilter === 'deadlines') {
-      return events.filter(event => event.type === 'prazo');
-    } else if (selectedFilter === 'tasks') {
-      return events.filter(event => event.type === 'gravacao' || event.type === 'edicao');
-    } else if (selectedFilter === 'appointments') {
-      return events.filter(event => event.type === 'externo');
-    } else if (selectedFilter === 'reminders') {
-      return events.filter(event => event.type === 'financeiro' || event.type === 'entrega' || event.type === 'despesa');
-    }
+    // Eventos
+    ...events.map((event: any) => ({
+      id: `event-${event.id}`,
+      title: event.title,
+      start: new Date(event.start),
+      end: new Date(event.end || event.start),
+      type: 'event' as const,
+      description: event.description
+    })),
     
-    return events;
-  }, [events, selectedFilter]);
-  
-  // Dados para o widget de próximos eventos
-  const upcomingEvents = React.useMemo(() => {
-    if (!events) return [];
+    // Documentos financeiros
+    ...financialDocuments
+      .filter((doc: any) => doc.due_date && !doc.paid)
+      .map((doc: any) => ({
+        id: `financial-${doc.id}`,
+        title: `Fatura #${doc.invoice_number || doc.id}`,
+        start: new Date(doc.due_date),
+        end: new Date(doc.due_date),
+        type: 'financial' as const,
+        amount: doc.amount,
+        description: `Valor: ${formatCurrency(doc.amount)}`
+      })),
     
-    const now = new Date();
-    return events
-      .filter(event => new Date(event.start_date) >= now)
-      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 5);
-  }, [events]);
-  
-  // Removido contador de eventos por tipo
-  
-  // Renderizar badge de tipo de evento
-  const renderTypeBadge = (type: string) => {
-    const typeColors: Record<string, string> = {
-      reuniao: 'bg-blue-100 text-blue-800',
-      prazo: 'bg-red-100 text-red-800',
-      gravacao: 'bg-green-100 text-green-800',
-      edicao: 'bg-emerald-100 text-emerald-800',
-      entrega: 'bg-violet-100 text-violet-800',
-      externo: 'bg-purple-100 text-purple-800',
-      financeiro: 'bg-amber-100 text-amber-800',
-      projeto: 'bg-indigo-100 text-indigo-800',
-      planejamento: 'bg-sky-100 text-sky-800',
-      capacitacao: 'bg-teal-100 text-teal-800',
-      other: 'bg-gray-100 text-gray-800',
-    };
-    
-    const typeLabels: Record<string, string> = {
-      reuniao: 'Reunião',
-      prazo: 'Prazo',
-      gravacao: 'Gravação',
-      edicao: 'Edição',
-      entrega: 'Entrega',
-      externo: 'Evento Externo',
-      financeiro: 'Financeiro',
-      projeto: 'Projeto',
-      planejamento: 'Planejamento',
-      capacitacao: 'Capacitação',
-      other: 'Outro',
-    };
-    
-    return (
-      <Badge 
-        className={`${typeColors[type] || typeColors.other} hover:${typeColors[type] || typeColors.other}`}
-        variant="outline"
-      >
-        {typeLabels[type] || 'Outro'}
-      </Badge>
-    );
+    // Despesas
+    ...expenses
+      .filter((expense: any) => !expense.paid)
+      .map((expense: any) => ({
+        id: `expense-${expense.id}`,
+        title: expense.description,
+        start: new Date(expense.date),
+        end: new Date(expense.date),
+        type: 'financial' as const,
+        amount: expense.amount,
+        description: `Despesa: ${formatCurrency(expense.amount)}`
+      }))
+  ];
+
+  // Obter início da semana
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Navegação
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
   };
 
+  // Filtrar eventos para a semana atual
+  const weekEvents = calendarEvents.filter(event => {
+    const eventDate = event.start;
+    return weekDays.some(day => isSameDay(eventDate, day));
+  });
+
+  // Tarefas pendentes
+  const pendingTasks = tasks
+    .filter((task: any) => !task.completed)
+    .slice(0, 5);
+
+  // Transações financeiras recentes
+  const recentTransactions = [
+    ...financialDocuments
+      .filter((doc: any) => doc.paid)
+      .map((doc: any) => ({
+        id: doc.id,
+        type: 'receita',
+        description: `Fatura #${doc.invoice_number || doc.id}`,
+        amount: doc.amount,
+        date: doc.paid_date || doc.due_date
+      })),
+    ...expenses
+      .filter((expense: any) => expense.paid)
+      .map((expense: any) => ({
+        id: expense.id,
+        type: 'despesa',
+        description: expense.description,
+        amount: -expense.amount,
+        date: expense.date
+      }))
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  // Prazos de projetos
+  const projectDeadlines = projects
+    .filter((project: any) => project.delivery_date)
+    .map((project: any) => {
+      const deliveryDate = new Date(project.delivery_date);
+      const now = new Date();
+      const daysRemaining = Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return {
+        ...project,
+        daysRemaining,
+        progress: project.progress || 0
+      };
+    })
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)
+    .slice(0, 4);
+
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Calendário</h1>
-          <p className="text-muted-foreground">Organize seus eventos, reuniões e prazos</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Agenda Integrada</h1>
+          <p className="text-sm text-gray-600">Visualize tarefas, eventos e informações financeiras</p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => syncCalendarMutation.mutate()}
-            disabled={syncCalendarMutation.isPending}
-            className="mr-2"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncCalendarMutation.isPending ? 'animate-spin' : ''}`} />
-            {syncCalendarMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}
+        <div className="flex items-center gap-4">
+          {/* Filtros de visualização */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            {(['day', 'week', 'month'] as const).map((viewType) => (
+              <Button
+                key={viewType}
+                variant={view === viewType ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setView(viewType)}
+                className={cn(
+                  "px-3 py-1.5 text-sm",
+                  view === viewType && "bg-white shadow-sm"
+                )}
+              >
+                {viewType === 'day' ? 'Dia' : viewType === 'week' ? 'Semana' : 'Mês'}
+              </Button>
+            ))}
+          </div>
+
+          {/* Seletor de data */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+            </Button>
+          </div>
+
+          {/* Botão adicionar */}
+          <Button size="sm" className="bg-pink-500 hover:bg-pink-600">
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar
           </Button>
-        
-          <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Filtrar por tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os eventos</SelectItem>
-              <SelectItem value="meetings">Reuniões</SelectItem>
-              <SelectItem value="deadlines">Prazos</SelectItem>
-              <SelectItem value="tasks">Tarefas</SelectItem>
-              <SelectItem value="appointments">Compromissos</SelectItem>
-              <SelectItem value="reminders">Lembretes</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
-      
-      {/* Content */}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Upcoming Events */}
+        {/* Calendário Principal */}
+        <div className="lg:col-span-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Próximos Eventos</CardTitle>
-              <CardDescription>Eventos agendados em breve</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingEvents.length > 0 ? (
-                  upcomingEvents.map((event) => (
-                    <div key={event.id} className="border-b pb-3 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium text-sm">{event.title}</h4>
-                        {renderTypeBadge(event.type)}
-                      </div>
-                      <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-3 w-3 mr-1" />
-                          <span>
-                            {format(new Date(event.start_date), 'dd MMM yyyy', { locale: ptBR })}
-                          </span>
-                        </div>
-                        {!event.all_day && (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>
-                              {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
-                            </span>
-                          </div>
-                        )}
-                        {event.location && (
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    Nenhum evento próximo encontrado
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h3 className="font-medium">
+                    {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => navigateWeek('prev')}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => navigateWeek('next')}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
+                </div>
+                
+                {/* Legenda */}
+                <div className="flex items-center gap-4 text-xs">
+                  {Object.entries(EVENT_TYPES).map(([key, type]) => (
+                    <div key={key} className="flex items-center gap-1">
+                      <div className={cn("w-2 h-2 rounded-full", type.color)} />
+                      <span className="text-gray-600">{type.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            </CardHeader>
+            
+            <CardContent className="p-0">
+              {view === 'week' && (
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Header dos dias */}
+                  <div className="grid grid-cols-8 border-b bg-gray-50">
+                    <div className="p-3 text-xs font-medium text-gray-500"></div>
+                    {weekDays.map((day, index) => (
+                      <div key={index} className="p-3 text-center border-l">
+                        <div className="text-xs font-medium text-gray-500 uppercase">
+                          {format(day, 'EEE', { locale: ptBR })}
+                        </div>
+                        <div className={cn(
+                          "text-lg font-semibold mt-1",
+                          isSameDay(day, new Date()) ? "text-pink-600" : "text-gray-900"
+                        )}>
+                          {format(day, 'd')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grade de horários */}
+                  <div className="max-h-96 overflow-y-auto">
+                    {TIME_SLOTS.map((time, timeIndex) => (
+                      <div key={time} className="grid grid-cols-8 border-b min-h-[60px]">
+                        <div className="p-3 text-xs text-gray-500 bg-gray-50 border-r">
+                          {time}
+                        </div>
+                        {weekDays.map((day, dayIndex) => {
+                          const dayEvents = weekEvents.filter(event => 
+                            isSameDay(event.start, day) &&
+                            format(event.start, 'HH:mm') === time
+                          );
+                          
+                          return (
+                            <div key={dayIndex} className="border-l p-1 relative">
+                              {dayEvents.map((event) => {
+                                const eventType = EVENT_TYPES[event.type];
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className={cn(
+                                      "text-xs p-2 rounded mb-1 cursor-pointer",
+                                      eventType.lightColor
+                                    )}
+                                    title={event.description}
+                                  >
+                                    <div className="font-medium truncate">{event.title}</div>
+                                    {event.amount && (
+                                      <div className="text-xs opacity-75">
+                                        {formatCurrency(event.amount)}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
-        
-        {/* Main Calendar */}
-        <div className="lg:col-span-3">
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Tarefas Pendentes */}
           <Card>
-            <CardContent className="p-6">
-              <FullCalendarComponent
-                events={filteredEvents}
-                isLoading={isLoading}
-                error={error instanceof Error ? error : null}
-                currentView={calendarView}
-                onViewChange={setCalendarView}
-              />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">Tarefas Pendentes</CardTitle>
+                <Button variant="ghost" size="sm">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingTasks.map((task: any) => (
+                <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-medium text-sm text-gray-900 truncate flex-1">
+                      {task.title}
+                    </h4>
+                    <PriorityBadge priority={task.priority} size="sm" />
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {task.due_date && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(task.due_date), 'dd/MM', { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {pendingTasks.length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  Nenhuma tarefa pendente
+                </div>
+              )}
+              
+              <Button variant="ghost" size="sm" className="w-full text-xs">
+                Ver todas as tarefas
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Transações Financeiras */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Transações Financeiras</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-xs text-gray-600 mb-3">
+                <strong>Receitas</strong>
+              </div>
+              
+              {recentTransactions
+                .filter(t => t.type === 'receita')
+                .slice(0, 3)
+                .map((transaction: any) => (
+                <div key={`receita-${transaction.id}`} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-3 w-3 text-green-500" />
+                    <span className="text-xs font-medium">{transaction.description}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-green-600">
+                    + {formatCurrency(transaction.amount)}
+                  </span>
+                </div>
+              ))}
+              
+              <div className="text-xs text-gray-600 mb-3 mt-4">
+                <strong>Despesas</strong>
+              </div>
+              
+              {recentTransactions
+                .filter(t => t.type === 'despesa')
+                .slice(0, 2)
+                .map((transaction: any) => (
+                <div key={`despesa-${transaction.id}`} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-3 w-3 text-red-500" />
+                    <span className="text-xs font-medium">{transaction.description}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-red-600">
+                    {formatCurrency(transaction.amount)}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Prazos de Projetos */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Prazos de Projetos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {projectDeadlines.map((project: any) => (
+                <div key={project.id} className="space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium text-sm text-gray-900 truncate flex-1">
+                      {project.name}
+                    </h4>
+                    <Badge 
+                      variant={project.daysRemaining <= 7 ? "destructive" : "secondary"}
+                      className="text-xs"
+                    >
+                      {project.daysRemaining}d
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>Entrega: {format(new Date(project.delivery_date), 'dd/MM/yyyy')}</span>
+                      <span>Progresso: {project.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={cn(
+                          "h-2 rounded-full transition-all",
+                          project.progress >= 75 ? "bg-green-500" :
+                          project.progress >= 50 ? "bg-yellow-500" : "bg-red-500"
+                        )}
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {project.daysRemaining <= 7 ? `${project.daysRemaining} dias restantes` : 
+                       project.daysRemaining <= 30 ? `${Math.floor(project.daysRemaining / 7)} semanas restantes` :
+                       `${Math.floor(project.daysRemaining / 30)} meses restantes`}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {projectDeadlines.length === 0 && (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  Nenhum prazo próximo
+                </div>
+              )}
+              
+              <Button variant="ghost" size="sm" className="w-full text-xs">
+                Ver todos os prazos
+              </Button>
             </CardContent>
           </Card>
         </div>
