@@ -17,6 +17,7 @@ import { getInitials, generateAvatarColor, cn, formatDate, formatCurrency, showS
 import { ClientAvatar } from "@/components/ClientAvatar";
 import { ClientListPreloader } from "@/components/client-list-preloader";
 import { preloadImage } from "@/lib/image-cache";
+import NewClientForm from "@/components/NewClientForm";
 import {
   Select,
   SelectContent,
