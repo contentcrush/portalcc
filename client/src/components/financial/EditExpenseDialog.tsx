@@ -135,7 +135,13 @@ export function EditExpenseDialog({
   });
 
   const onSubmit = (data: EditExpenseFormData) => {
-    updateExpenseMutation.mutate(data);
+    // Converter valores "none" para null antes de enviar
+    const processedData = {
+      ...data,
+      project_id: data.project_id === "none" ? null : parseInt(data.project_id || "0") || null,
+      paid_by: data.paid_by === "none" ? null : parseInt(data.paid_by || "0") || null,
+    };
+    updateExpenseMutation.mutate(processedData);
   };
 
   // Categorias disponíveis
@@ -252,7 +258,7 @@ export function EditExpenseDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Nenhum projeto</SelectItem>
+                        <SelectItem value="none">Nenhum projeto</SelectItem>
                         {projects?.map((project: any) => (
                           <SelectItem key={project.id} value={project.id.toString()}>
                             {project.name}
@@ -324,7 +330,7 @@ export function EditExpenseDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Nenhum responsável</SelectItem>
+                      <SelectItem value="none">Nenhum responsável</SelectItem>
                       {users?.map((user: any) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.name}
