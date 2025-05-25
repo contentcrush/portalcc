@@ -550,13 +550,7 @@ export default function Financial() {
       description: "Próximos 30 dias",
       variant: cashFlowNext30Days >= 0 ? "blue" : "red"
     },
-    {
-      title: "Alertas",
-      value: dueAlerts,
-      icon: <AlertCircle className="h-5 w-5" />,
-      description: "Faturas vencendo em 7 dias",
-      variant: "green" // Alterado para verde pois são faturas a receber (positivo para a empresa)
-    },
+
     {
       title: "Receita",
       value: periodRevenue,
@@ -578,13 +572,7 @@ export default function Financial() {
       description: "Lucro antes de despesas fixas",
       variant: grossMargin >= 30 ? "green" : grossMargin >= 15 ? "amber" : "red"
     },
-    {
-      title: "Custo/Minuto",
-      value: avgCostPerMinute,
-      icon: <Clock className="h-5 w-5" />,
-      description: "Custo médio por minuto de vídeo",
-      variant: "blue"
-    }
+
   ];
 
   // Chart data for dashboard - calculado a partir de dados reais
