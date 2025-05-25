@@ -1983,11 +1983,15 @@ function ExpenseEditForm({ expense, onSave, onCancel }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Garantir que a data seja válida
+    const dateObj = new Date(formData.date + 'T12:00:00.000Z'); // Adicionar horário UTC para evitar problemas de timezone
+    
     onSave({
       ...expense,
       ...formData,
       amount: parseFloat(formData.amount.toString()),
-      date: new Date(formData.date).toISOString()
+      date: dateObj.toISOString()
     });
   };
 
