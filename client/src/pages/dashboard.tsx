@@ -201,7 +201,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Mensagem de Boas-vindas Personalizada */}
+      {/* DEBUG: Mensagem de Boas-vindas */}
+      <div style={{ backgroundColor: 'red', color: 'white', padding: '10px' }}>
+        DEBUG: WelcomeMessage deve aparecer aqui
+      </div>
       <WelcomeMessage />
       
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">

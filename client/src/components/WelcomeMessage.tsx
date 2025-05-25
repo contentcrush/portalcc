@@ -12,7 +12,12 @@ interface WelcomeMessageProps {
 export default function WelcomeMessage({ className }: WelcomeMessageProps) {
   const { user } = useAuth();
 
-  if (!user) return null;
+  console.log('WelcomeMessage - User:', user);
+
+  if (!user) {
+    console.log('WelcomeMessage - No user, returning null');
+    return null;
+  }
 
   // Determinar saudação baseada na hora
   const hour = new Date().getHours();
