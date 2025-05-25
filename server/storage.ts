@@ -2948,11 +2948,20 @@ export class DatabaseStorage implements IStorage {
     const maxRetries = 3;
     let retries = 0;
     
+    // Debug: log what we're receiving
+    console.log("updateExpense - dados recebidos:", JSON.stringify(expense, null, 2));
+    
     // Converter string de data para objeto Date se necessário
     const processedExpense = { ...expense };
-    if (processedExpense.date && typeof processedExpense.date === 'string') {
-      processedExpense.date = new Date(processedExpense.date);
+    if (processedExpense.date) {
+      console.log("updateExpense - processando data:", processedExpense.date, typeof processedExpense.date);
+      if (typeof processedExpense.date === 'string') {
+        processedExpense.date = new Date(processedExpense.date);
+        console.log("updateExpense - data convertida:", processedExpense.date);
+      }
     }
+    
+    console.log("updateExpense - dados processados:", JSON.stringify(processedExpense, null, 2));
     
     while (retries < maxRetries) {
       try {
