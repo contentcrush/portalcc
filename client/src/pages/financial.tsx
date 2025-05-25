@@ -51,6 +51,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -151,6 +157,38 @@ export default function Financial() {
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  
+  // Função para atualizar uma despesa
+  const handleUpdateExpense = async (updatedExpense: any) => {
+    try {
+      const response = await fetch(`/api/expenses/${updatedExpense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedExpense),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar despesa');
+      }
+
+      // Atualizar cache do React Query
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      
+      toast({
+        title: "Sucesso",
+        description: "Despesa atualizada com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar despesa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar despesa. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Calcular o intervalo de datas com base no período selecionado
   const dateFilterRange = useMemo(() => {
