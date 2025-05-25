@@ -1986,7 +1986,8 @@ function ExpenseEditForm({ expense, onSave, onCancel }: {
     onSave({
       ...expense,
       ...formData,
-      amount: parseFloat(formData.amount.toString())
+      amount: parseFloat(formData.amount.toString()),
+      date: new Date(formData.date).toISOString()
     });
   };
 
