@@ -13,10 +13,15 @@ export default function WelcomeMessage({ className }: WelcomeMessageProps) {
   const { user } = useAuth();
 
   console.log('WelcomeMessage - User:', user);
-
+  
+  // Sempre renderizar algo para debug
   if (!user) {
-    console.log('WelcomeMessage - No user, returning null');
-    return null;
+    console.log('WelcomeMessage - No user, showing fallback');
+    return (
+      <div style={{ backgroundColor: 'orange', color: 'white', padding: '10px', margin: '10px 0' }}>
+        DEBUG: Usuário não encontrado - componente WelcomeMessage está funcionando mas sem dados do usuário
+      </div>
+    );
   }
 
   // Determinar saudação baseada na hora

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import WelcomeMessage from "@/components/WelcomeMessage";
+import SimpleWelcome from "@/components/SimpleWelcome";
 import { 
   AreaChart, 
   BarChart, 
@@ -205,7 +205,7 @@ export default function Dashboard() {
       <div style={{ backgroundColor: 'red', color: 'white', padding: '10px' }}>
         DEBUG: WelcomeMessage deve aparecer aqui
       </div>
-      <WelcomeMessage />
+      <SimpleWelcome />
       
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
         <div>
