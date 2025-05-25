@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
-import DashboardNovo from "@/pages/dashboard-novo";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import Clients from "@/pages/clients-new";
@@ -37,9 +36,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={DashboardNovo} />
-      <ProtectedRoute path="/dashboard" component={DashboardNovo} />
-      <ProtectedRoute path="/dashboard-antigo" component={Dashboard} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/projects" component={Projects} />
       <ProtectedRoute path="/projects/:id" component={Projects} />
       <ProtectedRoute path="/tasks" component={Tasks} />
