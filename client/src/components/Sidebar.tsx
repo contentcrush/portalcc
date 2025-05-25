@@ -7,9 +7,7 @@ import { LucideIcon, LucideProps, LogOut, Clock, AlertCircle, Check } from "luci
 import * as LucideIcons from "lucide-react";
 import { format, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ProjectProgress } from "@/components/ProjectProgress";
 import { UserAvatar } from "@/components/UserAvatar";
-import { ClientAvatar } from "@/components/ClientAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import logoImage from "@/assets/CNTN_CRUSH_no_bg.png";
 import {
@@ -70,32 +68,7 @@ interface SidebarProps {
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
 
-  // Define um tipo mais completo de Projeto para suportar o componente de progresso
-  interface Project {
-    id: number;
-    name: string;
-    status: string;
-    progress?: number;
-    updated_at?: string;
-    created_at?: string;
-    client_id?: number;
-  }
 
-  // Busca projetos para a seção de projetos recentes
-  const { data: projects } = useQuery<any, Error, Project[]>({
-    queryKey: ['/api/projects'],
-    select: (data) => {
-      // Ordena os projetos do mais recente para o mais antigo
-      // Prioriza o campo updated_at, mas usa created_at se não existir
-      return data
-        .sort((a: Project, b: Project) => {
-          const dateA = a.updated_at ? new Date(a.updated_at) : a.created_at ? new Date(a.created_at) : new Date(0);
-          const dateB = b.updated_at ? new Date(b.updated_at) : b.created_at ? new Date(b.created_at) : new Date(0);
-          return dateB.getTime() - dateA.getTime();
-        })
-        .slice(0, 3); // Mostra apenas os 3 projetos mais recentes
-    }
-  });
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -182,54 +155,6 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           ))}
         </div>
         
-        <div className="mt-8 px-3">
-          <p className="px-3 text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-            PROJETOS RECENTES
-          </p>
-          <div className="space-y-3">
-            {projects?.map((project) => (
-              <div key={project.id} className="flex flex-col">
-                <a
-                  href={`/projects/${project.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigate(`/projects/${project.id}`);
-                  }}
-                  className="flex items-center px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
-                >
-                  <ClientAvatar 
-                    client_id={project.client_id} 
-                    size="xs" 
-                    className="mr-2" 
-                  />
-                  <span className="truncate">{project.name}</span>
-                </a>
-                
-                {/* Barra de progresso */}
-                <div className="px-3 pb-1">
-                  <ProjectProgress 
-                    project={project as any} 
-                    size="sm" 
-                    className="mt-1" 
-                  />
-                </div>
-              </div>
-            ))}
-            
-            {!projects && (
-              <div className="px-3 py-2 text-gray-500 text-sm">
-                Carregando projetos...
-              </div>
-            )}
-            
-            {projects?.length === 0 && (
-              <div className="px-3 py-2 text-gray-500 text-sm">
-                Nenhum projeto recente.
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Seção PRÓXIMAS TAREFAS */}
         <div className="mt-8 px-3">
           <p className="px-3 text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
