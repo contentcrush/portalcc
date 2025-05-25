@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import WelcomeMessage from "@/components/WelcomeMessage";
 import { 
   AreaChart, 
   BarChart, 
@@ -200,6 +201,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Mensagem de Boas-vindas Personalizada */}
+      <WelcomeMessage />
+      
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
