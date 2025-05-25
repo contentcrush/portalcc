@@ -2722,10 +2722,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Processar e validar os dados antes da atualização
       const updateData = { ...req.body };
       
-      // Converter a data se for string
-      if (updateData.date && typeof updateData.date === 'string') {
-        updateData.date = new Date(updateData.date);
-      }
+      console.log("Dados recebidos do frontend:", JSON.stringify(req.body, null, 2));
+      
+      // Converter todas as datas que podem estar como string
+      const dateFields = ['date', 'created_at', 'updated_at', 'payment_date'];
+      dateFields.forEach(field => {
+        if (updateData[field]) {
+          if (typeof updateData[field] === 'string') {
+            console.log(`Convertendo campo ${field} de string para Date:`, updateData[field]);
+            updateData[field] = new Date(updateData[field]);
+          } else if (updateData[field] instanceof Date) {
+            console.log(`Campo ${field} já é um objeto Date:`, updateData[field]);
+          } else {
+            console.log(`Campo ${field} tem tipo não esperado:`, typeof updateData[field], updateData[field]);
+          }
+        }
+      });
       
       // Garantir que valores undefined sejam tratados corretamente
       if (updateData.project_id === undefined) {
@@ -2735,7 +2747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.paid_by = null;
       }
       
-      console.log("Dados processados para atualização:", updateData);
+      console.log("Dados processados para atualização:", JSON.stringify(updateData, null, 2));
       
       // Atualizar a despesa
       const updatedExpense = await storage.updateExpense(id, updateData);
