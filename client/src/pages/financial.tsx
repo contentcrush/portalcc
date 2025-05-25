@@ -659,7 +659,7 @@ export default function Financial() {
     const client = clients?.find((c: any) => c.id === project.client_id);
     
     const projectRevenue = financialDocuments
-      ?.filter((doc: any) => doc.project_id === project.id && doc.paid)
+      ?.filter((doc: any) => doc.project_id === project.id && doc.document_type === 'invoice')
       .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0) || 0;
       
     const projectExpenses = expenses
