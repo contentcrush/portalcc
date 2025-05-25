@@ -133,6 +133,7 @@ export default function Financial() {
   const [selectedTab, setSelectedTab] = useState<string>("dashboard");
   const [period, setPeriod] = useState<string>("year");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Para ordenação por valor
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -305,14 +306,15 @@ export default function Financial() {
 
   // Prepare financial data
   // Agora incluímos todas as faturas, não apenas as não pagas
-  // Ordenadas por número da fatura (document_number)
+  // Ordenadas por valor conforme seleção do usuário
   const receivablesData = financialDocuments?.filter((doc: any) => 
     doc.document_type === 'invoice'
   ).sort((a: any, b: any) => {
-    // Ordenar por document_number se existir, senão por ID
-    const numA = a.document_number ? parseInt(a.document_number) || a.id : a.id;
-    const numB = b.document_number ? parseInt(b.document_number) || b.id : b.id;
-    return numA - numB;
+    if (sortOrder === 'desc') {
+      return (b.amount || 0) - (a.amount || 0); // Maior para menor
+    } else {
+      return (a.amount || 0) - (b.amount || 0); // Menor para maior
+    }
   }) || [];
   
   // Incluímos todas as despesas, não apenas as não aprovadas
