@@ -2948,25 +2948,10 @@ export class DatabaseStorage implements IStorage {
     const maxRetries = 3;
     let retries = 0;
     
-    // Converter todas as strings de data para objetos Date
-    const processedExpense = { ...expense };
-    
-    // Lista de campos de timestamp na tabela expenses
-    const timestampFields = ['date', 'creation_date', 'invoice_file_uploaded_at'];
-    
-    timestampFields.forEach(field => {
-      if (processedExpense[field as keyof typeof processedExpense]) {
-        const value = processedExpense[field as keyof typeof processedExpense];
-        if (typeof value === 'string') {
-          (processedExpense as any)[field] = new Date(value);
-        }
-      }
-    });
-    
     while (retries < maxRetries) {
       try {
         const [updated] = await db.update(expenses)
-          .set(processedExpense)
+          .set(expense)
           .where(eq(expenses.id, id))
           .returning();
         return updated;
