@@ -1746,6 +1746,7 @@ export default function Financial() {
                               type="expense"
                               onViewDetails={(record) => setDetailsRecord({ record, type: "expense" })}
                               onRegisterPayment={(record) => setPaymentRecord({ record, type: "expense" })}
+                              onEditExpense={(expense) => setEditExpense(expense)}
                             />
                           </TableCell>
                         </TableRow>
@@ -1895,6 +1896,15 @@ export default function Financial() {
           onOpenChange={(open) => !open && setPaymentRecord(null)}
           record={paymentRecord.record}
           type={paymentRecord.type}
+        />
+      )}
+
+      {/* Diálogo de edição de despesa */}
+      {editExpense && (
+        <EditExpenseDialog
+          expense={editExpense}
+          open={!!editExpense}
+          onOpenChange={(open) => !open && setEditExpense(null)}
         />
       )}
     </div>

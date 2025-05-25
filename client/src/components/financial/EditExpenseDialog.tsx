@@ -109,13 +109,12 @@ export function EditExpenseDialog({
   // Mutation para atualizar despesa
   const updateExpenseMutation = useMutation({
     mutationFn: async (data: EditExpenseFormData) => {
-      return apiRequest(`/api/expenses/${expense.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PUT", `/api/expenses/${expense.id}`, data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Erro ao atualizar despesa");
+      }
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });

@@ -72,6 +72,7 @@ export function FinancialRecordActions({
   type,
   onViewDetails,
   onRegisterPayment,
+  onEditExpense,
 }: FinancialRecordActionsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
@@ -253,6 +254,13 @@ export function FinancialRecordActions({
             <Eye className="mr-2 h-4 w-4" />
             <span>Ver Detalhes</span>
           </DropdownMenuItem>
+          
+          {type === "expense" && onEditExpense && (
+            <DropdownMenuItem onClick={() => onEditExpense(record as Expense)}>
+              <Edit className="mr-2 h-4 w-4" />
+              <span>Editar</span>
+            </DropdownMenuItem>
+          )}
           
           {hasInvoiceAttached ? (
             <DropdownMenuItem onClick={() => onViewDetails(record)}>
