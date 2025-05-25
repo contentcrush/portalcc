@@ -155,6 +155,8 @@ export function EditExpenseDialog({
       ...data,
       project_id: data.project_id === "none" ? undefined : parseInt(data.project_id || "0") || undefined,
       paid_by: data.paid_by === "none" ? undefined : parseInt(data.paid_by || "0") || undefined,
+      // Garantir que a data está no formato correto
+      date: data.date instanceof Date ? data.date : new Date(data.date),
     };
     updateExpenseMutation.mutate(processedData);
   };
