@@ -527,52 +527,50 @@ export default function Financial() {
     ? Math.round((totalReceivables / periodRevenue) * 30) 
     : 0;
 
-  // Dashboard KPIs
+  // Dashboard KPIs reorganizados em grid 3x2
   const kpis: FinancialKPI[] = [
     {
       title: "A Receber",
       value: totalReceivables,
       icon: <CreditCard className="h-5 w-5" />,
       description: "Total de faturas a receber",
-      variant: "green"
+      variant: "blue"
     },
     {
       title: "A Pagar",
       value: totalPayables,
-      icon: <Wallet className="h-5 w-5" />,
+      icon: <Receipt className="h-5 w-5" />,
       description: "Total de despesas pendentes",
-      variant: "amber"
+      variant: "red"
     },
     {
       title: "Fluxo de Caixa",
       value: cashFlowNext30Days,
       icon: <TrendingUp className="h-5 w-5" />,
       description: "Próximos 30 dias",
-      variant: cashFlowNext30Days >= 0 ? "blue" : "red"
+      variant: cashFlowNext30Days >= 0 ? "green" : "red"
     },
-
     {
       title: "Receita",
       value: periodRevenue,
-      icon: <Banknote className="h-5 w-5" />,
+      icon: <DollarSign className="h-5 w-5" />,
       description: `${paidDocumentsInPeriod.length} pagamento(s) - ${getPeriodLabel()}`,
       variant: "green"
     },
     {
       title: "Despesas",
       value: periodExpenses,
-      icon: <Wallet className="h-5 w-5" />,
+      icon: <FileText className="h-5 w-5" />,
       description: `Total despesas - ${getPeriodLabel()}`,
       variant: "red"
     },
     {
       title: "Margem Bruta",
       value: `${grossMargin.toFixed(1)}%`,
-      icon: <LineChart className="h-5 w-5" />,
+      icon: <BarChart className="h-5 w-5" />,
       description: "Lucro antes de despesas fixas",
-      variant: grossMargin >= 30 ? "green" : grossMargin >= 15 ? "amber" : "red"
-    },
-
+      variant: grossMargin >= 30 ? "green" : grossMargin >= 15 ? "blue" : "red"
+    }
   ];
 
   // Chart data for dashboard - calculado a partir de dados reais
@@ -832,8 +830,8 @@ export default function Financial() {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6 space-y-8">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* KPI Cards - Layout 3x2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {kpis.map((kpi, index) => (
               <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
