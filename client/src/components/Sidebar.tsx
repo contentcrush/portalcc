@@ -106,6 +106,38 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     }
   };
 
+  // Buscar tarefas pendentes para próximas tarefas
+  const { data: tasks } = useQuery({
+    queryKey: ["/api/tasks"],
+    enabled: !!user,
+  });
+
+  // Filtrar tarefas pendentes e ordenar por prioridade/data
+  const upcomingTasks = useMemo(() => {
+    if (!tasks) return [];
+    
+    return tasks
+      .filter((task: any) => task.status !== 'completed' && task.status !== 'cancelled')
+      .sort((a: any, b: any) => {
+        // Primeiro por prioridade
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+        
+        if (aPriority !== bPriority) {
+          return bPriority - aPriority;
+        }
+        
+        // Depois por data de vencimento
+        if (a.due_date && b.due_date) {
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        }
+        
+        return 0;
+      })
+      .slice(0, 5); // Limitar a 5 tarefas
+  }, [tasks]);
+
   const { user, logoutMutation } = useAuth();
 
   const handleLogout = (e: React.MouseEvent) => {
@@ -193,6 +225,62 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
             {projects?.length === 0 && (
               <div className="px-3 py-2 text-gray-500 text-sm">
                 Nenhum projeto recente.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Seção PRÓXIMAS TAREFAS */}
+        <div className="mt-8 px-3">
+          <p className="px-3 text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+            PRÓXIMAS TAREFAS
+          </p>
+          <div className="space-y-3">
+            {upcomingTasks?.map((task: any) => (
+              <div key={task.id} className="px-3 py-2 text-sm bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer transition-colors" 
+                   onClick={() => onNavigate(`/tasks/${task.id}`)}>
+                <div className="flex items-start justify-between mb-1">
+                  <h4 className="font-medium text-gray-900 truncate flex-1 mr-2">
+                    {task.title}
+                  </h4>
+                  <PriorityBadge priority={task.priority} size="sm" />
+                </div>
+                
+                <div className="flex items-center text-xs text-gray-600 mb-1">
+                  <LucideIcons.Briefcase className="h-3 w-3 mr-1" />
+                  <span className="truncate">
+                    {task.project?.name || 'Sem projeto'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center">
+                    <LucideIcons.User className="h-3 w-3 mr-1" />
+                    <span>{task.assigned_user?.name || 'Não atribuído'}</span>
+                  </div>
+                  
+                  {task.due_date && (
+                    <div className={cn(
+                      "flex items-center",
+                      isBefore(new Date(task.due_date), new Date()) ? "text-red-600" : "text-gray-500"
+                    )}>
+                      <Clock className="h-3 w-3 mr-1" />
+                      <span>{format(new Date(task.due_date), "dd/MM", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {!tasks && (
+              <div className="px-3 py-2 text-gray-500 text-sm">
+                Carregando tarefas...
+              </div>
+            )}
+            
+            {upcomingTasks?.length === 0 && tasks && (
+              <div className="px-3 py-2 text-gray-500 text-sm">
+                Nenhuma tarefa pendente.
               </div>
             )}
           </div>

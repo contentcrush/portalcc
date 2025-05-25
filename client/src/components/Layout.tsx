@@ -2,7 +2,6 @@ import { useState, ReactNode } from "react";
 import { useLocation } from "wouter";
 import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
-import QuickActions from "./QuickActions";
 import { ChatWidget } from "./ChatWidget";
 import { Button } from "@/components/ui/button";
 import { Bell, Menu, UserCircle, Plus, List, User, LogOut, Settings } from "lucide-react";
@@ -109,20 +108,12 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Content container with quick actions sidebar */}
+        {/* Content container */}
         <div className="flex flex-1 overflow-hidden">
           {/* Main content area */}
           <div className="flex-1 overflow-y-auto px-4 py-6">
             {children}
           </div>
-
-          {/* Quick actions sidebar - hidden on mobile */}
-          {!isMobile && (
-            <div className="w-64 border-l border-gray-200 overflow-y-auto bg-white">
-              {/* Usando nosso novo componente QuickActions */}
-              <QuickActions />
-            </div>
-          )}
         </div>
       </main>
       
