@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Event } from '@shared/schema';
 import FullCalendarComponent from '@/components/calendar/FullCalendarComponent';
+import WeeklyAgenda from '@/components/calendar/WeeklyAgenda';
 import {
   Card,
   CardContent,
@@ -31,6 +32,8 @@ import { showSuccessToast } from '@/lib/utils';
 export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState('dayGridMonth');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'calendar' | 'agenda'>('calendar');
+  const [agendaDate, setAgendaDate] = useState(new Date());
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
