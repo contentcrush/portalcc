@@ -258,60 +258,9 @@ export default function CalendarPage() {
       </div>
       
       {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Próximos Eventos</CardTitle>
-              <CardDescription>Eventos agendados em breve</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingEvents.length > 0 ? (
-                  upcomingEvents.map((event) => (
-                    <div key={event.id} className="border-b pb-3 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium text-sm">{event.title}</h4>
-                        {renderTypeBadge(event.type)}
-                      </div>
-                      <div className="mt-1 space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-3 w-3 mr-1" />
-                          <span>
-                            {format(new Date(event.start_date), 'dd MMM yyyy', { locale: ptBR })}
-                          </span>
-                        </div>
-                        {!event.all_day && (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>
-                              {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
-                            </span>
-                          </div>
-                        )}
-                        {event.location && (
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    Nenhum evento próximo encontrado
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
+      <div className="space-y-6">
         {/* Main Calendar */}
-        <div className="lg:col-span-3">
+        <div>
           <Card>
             <CardContent className="p-6">
               <FullCalendarComponent
@@ -324,6 +273,54 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Próximos Eventos - Movido para baixo do calendário */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Próximos Eventos</CardTitle>
+            <CardDescription>Eventos agendados em breve</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {upcomingEvents.length > 0 ? (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-sm line-clamp-2">{event.title}</h4>
+                      {renderTypeBadge(event.type)}
+                    </div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center">
+                        <CalendarIcon className="h-3 w-3 mr-1" />
+                        <span>
+                          {format(new Date(event.start_date), 'dd MMM yyyy', { locale: ptBR })}
+                        </span>
+                      </div>
+                      {!event.all_day && (
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>
+                            {format(new Date(event.start_date), 'HH:mm')} - {format(new Date(event.end_date), 'HH:mm')}
+                          </span>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-8 text-muted-foreground text-sm">
+                  Nenhum evento próximo encontrado
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
