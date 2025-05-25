@@ -2719,8 +2719,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Expense not found" });
       }
       
+      // Processar e validar os dados antes da atualização
+      const updateData = { ...req.body };
+      
+      // Converter a data se for string
+      if (updateData.date && typeof updateData.date === 'string') {
+        updateData.date = new Date(updateData.date);
+      }
+      
+      // Garantir que valores undefined sejam tratados corretamente
+      if (updateData.project_id === undefined) {
+        updateData.project_id = null;
+      }
+      if (updateData.paid_by === undefined) {
+        updateData.paid_by = null;
+      }
+      
+      console.log("Dados processados para atualização:", updateData);
+      
       // Atualizar a despesa
-      const updatedExpense = await storage.updateExpense(id, req.body);
+      const updatedExpense = await storage.updateExpense(id, updateData);
       
       if (!updatedExpense) {
         return res.status(404).json({ message: "Failed to update expense" });
