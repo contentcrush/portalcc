@@ -958,43 +958,39 @@ export default function Financial() {
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-medium">Margem por Projeto</CardTitle>
-                <CardDescription>Top 5 projetos por margem de lucro</CardDescription>
+                <CardDescription>Todos os projetos ativos por margem de lucro</CardDescription>
               </CardHeader>
               <CardContent className="px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="pl-6">PROJETO</TableHead>
-                      <TableHead>CLIENTE</TableHead>
-                      <TableHead className="text-right">RECEITA</TableHead>
-                      <TableHead className="text-right pr-6">MARGEM</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(projectMarginData.length > 0 ? projectMarginData : [
-                      { id: 1, name: "Campanha de Verão", client: "Cervejaria Therezópolis", revenue: 24500, margin: 55 },
-                      { id: 2, name: "Lançamento SUV C3", client: "Citroen", revenue: 38900, margin: 42 },
-                      { id: 3, name: "InCarne 2025", client: "Seara Alimentos", revenue: 31200, margin: 38 },
-                      { id: 4, name: "Promoção Inverno", client: "Margarinas Delícia", revenue: 18600, margin: 35 },
-                      { id: 5, name: "Institucional 2025", client: "Banco Azul", revenue: 42300, margin: 30 }
-                    ]).map((project, index) => (
-                      <TableRow key={project.id} className="group hover:bg-muted/50">
-                        <TableCell className="font-medium pl-6">{project.name}</TableCell>
-                        <TableCell>{project.client}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(project.revenue)}</TableCell>
-                        <TableCell className="text-right pr-6">
-                          <span className={`font-medium ${
-                            project.margin > 40 ? 'text-green-600' : 
-                            project.margin > 20 ? 'text-amber-600' : 
-                            'text-red-600'
-                          }`}>
-                            {typeof project.margin === 'number' ? project.margin.toFixed(1) : project.margin}%
-                          </span>
-                        </TableCell>
+                <ScrollArea className="h-[300px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-6">PROJETO</TableHead>
+                        <TableHead>CLIENTE</TableHead>
+                        <TableHead className="text-right">RECEITA</TableHead>
+                        <TableHead className="text-right pr-6">MARGEM</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {projectMarginData.map((project, index) => (
+                        <TableRow key={project.id} className="group hover:bg-muted/50">
+                          <TableCell className="font-medium pl-6">{project.name}</TableCell>
+                          <TableCell>{project.client}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(project.revenue)}</TableCell>
+                          <TableCell className="text-right pr-6">
+                            <span className={`font-medium ${
+                              project.margin > 40 ? 'text-green-600' : 
+                              project.margin > 20 ? 'text-amber-600' : 
+                              'text-red-600'
+                            }`}>
+                              {typeof project.margin === 'number' ? project.margin.toFixed(1) : project.margin}%
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </CardContent>
             </Card>
             
