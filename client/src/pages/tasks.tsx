@@ -292,7 +292,10 @@ export default function Tasks() {
       return apiRequest('PATCH', `/api/tasks/${id}`, data);
     },
     onSuccess: () => {
+      // Invalidar todas as queries relacionadas a tarefas para atualizar tanto a página quanto a sidebar
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'], exact: false });
+      
       showSuccessToast({ 
         title: "Tarefa atualizada", 
         description: "Tarefa atualizada com sucesso" 
