@@ -98,6 +98,8 @@ import {
   BarChart,
   CheckCircle,
   Receipt,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { cn, formatCurrency, calculatePercentChange } from "@/lib/utils";
 import FinancialChart from "@/components/FinancialChart";
@@ -1216,7 +1218,23 @@ export default function Financial() {
                       <TableHead>PROJETO</TableHead>
                       <TableHead>EMISSÃO</TableHead>
                       <TableHead>VENCIMENTO</TableHead>
-                      <TableHead className="text-right">VALOR</TableHead>
+                      <TableHead className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          VALOR
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                          >
+                            {sortOrder === 'asc' ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableHead>
                       <TableHead>STATUS</TableHead>
                       <TableHead className="text-right">AÇÕES</TableHead>
                     </TableRow>
