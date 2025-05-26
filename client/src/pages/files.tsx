@@ -17,9 +17,14 @@ import {
 import { cn } from "@/lib/utils";
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Desabilitamos completamente o worker para evitar problemas de compatibilidade
-// Em vez disso, vamos oferecer uma melhor mensagem e um botão para abrir em nova aba
-const isPdfViewerEnabled = false;
+// Configurar o worker do PDF para a nova versão
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
+// Habilitar o visualizador de PDF com a nova configuração
+const isPdfViewerEnabled = true;
 import FileManager from "@/components/FileManager";
 import AdvancedFileUpload from "@/components/AdvancedFileUpload";
 import { Badge } from "@/components/ui/badge";
