@@ -18,20 +18,27 @@ export default function SearchBar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
 
-  const { data: projects } = useQuery({
+  const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['/api/projects'],
     enabled: open
   });
 
-  const { data: tasks } = useQuery({
+  const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ['/api/tasks'],
     enabled: open
   });
 
-  const { data: clients } = useQuery({
+  const { data: clients, isLoading: clientsLoading } = useQuery({
     queryKey: ['/api/clients'],
     enabled: open
   });
+
+  // Debug logs
+  useEffect(() => {
+    if (open) {
+      console.log('SearchBar opened - Data:', { projects, tasks, clients });
+    }
+  }, [open, projects, tasks, clients]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -51,17 +58,23 @@ export default function SearchBar() {
   };
 
   // Filter results based on search query
-  const filteredProjects = projects?.filter(project => 
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProjects = Array.isArray(projects) 
+    ? projects.filter((project: any) => 
+        project.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
   
-  const filteredTasks = tasks?.filter(task => 
-    task.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTasks = Array.isArray(tasks) 
+    ? tasks.filter((task: any) => 
+        task.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
   
-  const filteredClients = clients?.filter(client => 
-    client.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClients = Array.isArray(clients) 
+    ? clients.filter((client: any) => 
+        client.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      ) 
+    : [];
 
   return (
     <>
@@ -87,78 +100,84 @@ export default function SearchBar() {
         <CommandList>
           <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
           
-          <CommandGroup heading="Projetos">
-            {filteredProjects?.slice(0, 5).map((project) => (
-              <CommandItem 
-                key={`project-${project.id}`}
-                value={`/projects/${project.id}`}
-                onSelect={handleSelect}
-              >
-                <ProjectorIcon className="mr-2 h-4 w-4" />
-                <span>{project.name}</span>
-              </CommandItem>
-            ))}
-            {filteredProjects?.length > 5 && (
-              <CommandItem
-                value="/projects"
-                onSelect={handleSelect}
-              >
-                <span className="text-muted-foreground text-sm">
-                  Ver todos os projetos...
-                </span>
-              </CommandItem>
-            )}
-          </CommandGroup>
+          {filteredProjects.length > 0 && (
+            <CommandGroup heading="Projetos">
+              {filteredProjects.slice(0, 5).map((project: any) => (
+                <CommandItem 
+                  key={`project-${project.id}`}
+                  value={`/projects?id=${project.id}`}
+                  onSelect={handleSelect}
+                >
+                  <ProjectorIcon className="mr-2 h-4 w-4" />
+                  <span>{project.name}</span>
+                </CommandItem>
+              ))}
+              {filteredProjects.length > 5 && (
+                <CommandItem
+                  value="/projects"
+                  onSelect={handleSelect}
+                >
+                  <span className="text-muted-foreground text-sm">
+                    Ver todos os projetos...
+                  </span>
+                </CommandItem>
+              )}
+            </CommandGroup>
+          )}
           
           <CommandSeparator />
           
-          <CommandGroup heading="Tarefas">
-            {filteredTasks?.slice(0, 5).map((task) => (
-              <CommandItem 
-                key={`task-${task.id}`}
-                value={`/tasks?id=${task.id}`}
-                onSelect={handleSelect}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                <span>{task.title}</span>
-              </CommandItem>
-            ))}
-            {filteredTasks?.length > 5 && (
-              <CommandItem
-                value="/tasks"
-                onSelect={handleSelect}
-              >
-                <span className="text-muted-foreground text-sm">
-                  Ver todas as tarefas...
-                </span>
-              </CommandItem>
-            )}
-          </CommandGroup>
+          {filteredTasks.length > 0 && (
+            <CommandGroup heading="Tarefas">
+              {filteredTasks.slice(0, 5).map((task: any) => (
+                <CommandItem 
+                  key={`task-${task.id}`}
+                  value={`/tasks?search=${encodeURIComponent(task.title)}`}
+                  onSelect={handleSelect}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <span>{task.title}</span>
+                </CommandItem>
+              ))}
+              {filteredTasks.length > 5 && (
+                <CommandItem
+                  value="/tasks"
+                  onSelect={handleSelect}
+                >
+                  <span className="text-muted-foreground text-sm">
+                    Ver todas as tarefas...
+                  </span>
+                </CommandItem>
+              )}
+            </CommandGroup>
+          )}
           
           <CommandSeparator />
           
-          <CommandGroup heading="Clientes">
-            {filteredClients?.slice(0, 5).map((client) => (
-              <CommandItem 
-                key={`client-${client.id}`}
-                value={`/clients/${client.id}`}
-                onSelect={handleSelect}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                <span>{client.name}</span>
-              </CommandItem>
-            ))}
-            {filteredClients?.length > 5 && (
-              <CommandItem
-                value="/clients"
-                onSelect={handleSelect}
-              >
-                <span className="text-muted-foreground text-sm">
-                  Ver todos os clientes...
-                </span>
-              </CommandItem>
-            )}
-          </CommandGroup>
+          {filteredClients.length > 0 && (
+            <CommandGroup heading="Clientes">
+              {filteredClients.slice(0, 5).map((client: any) => (
+                <CommandItem 
+                  key={`client-${client.id}`}
+                  value={`/clients?search=${encodeURIComponent(client.name)}`}
+                  onSelect={handleSelect}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>{client.name}</span>
+                </CommandItem>
+              ))}
+              {filteredClients.length > 5 && (
+                <CommandItem
+                  value="/clients"
+                  onSelect={handleSelect}
+                >
+                  <span className="text-muted-foreground text-sm">
+                    Ver todos os clientes...
+                  </span>
+                </CommandItem>
+              )}
+            </CommandGroup>
+          )}
           
           <CommandSeparator />
           
