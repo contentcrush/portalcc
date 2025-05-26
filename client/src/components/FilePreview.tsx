@@ -10,12 +10,8 @@ import { formatFileSize } from "@/lib/utils";
 
 // React PDF para visualização de PDFs
 import { Document, Page, pdfjs } from 'react-pdf';
-
-// Configurar o worker do PDF para a nova versão
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Configurar o worker do PDF corretamente
+pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.js`;
 
 // Interface para o arquivo a ser visualizado
 interface FileData {
