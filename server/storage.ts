@@ -1930,23 +1930,10 @@ export class DatabaseStorage implements IStorage {
 
   async getProjects(): Promise<Project[]> {
     try {
-      // Temporariamente desativando cache para debug
       console.log('[Performance] Carregando projetos do banco de dados (sem cache)');
       
-      // Selecionamos apenas os campos essenciais para a listagem
-      const result = await db.select({
-        id: projects.id,
-        name: projects.name,
-        client_id: projects.client_id,
-        status: projects.status,
-        special_status: projects.special_status,
-        budget: projects.budget,
-        startDate: projects.start_date,
-        endDate: projects.end_date,
-        progress: projects.progress,
-        thumbnail: projects.thumbnail,
-        creation_date: projects.creation_date
-      }).from(projects)
+      // Query simplificada - selecionar todos os campos sem especificar alias
+      const result = await db.select().from(projects)
         .orderBy(desc(projects.creation_date));
       
       console.log(`[Debug] Projetos carregados com sucesso: ${result.length} projetos`);
