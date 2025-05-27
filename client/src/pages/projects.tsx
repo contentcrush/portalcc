@@ -80,8 +80,11 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
   // Fetch projects
-  const { data: projects, isLoading } = useQuery({
-    queryKey: ['/api/projects']
+  const { data: projects, isLoading, error } = useQuery({
+    queryKey: ['/api/projects'],
+    retry: 3,
+    staleTime: 0, // Força recarregamento
+    cacheTime: 0  // Desativa cache temporariamente
   });
 
   // Fetch clients for dropdown and project details
@@ -139,32 +142,60 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // Apply filters
-  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
-    // Search term filter
-    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+  // Apply filters with error handling
+  const filteredProjects = React.useMemo(() => {
+    try {
+      console.log('Aplicando filtros. Projetos disponíveis:', projects?.length || 0);
+      
+      if (!projects || !Array.isArray(projects) || projects.length === 0) {
+        console.warn('Nenhum projeto disponível para filtrar');
+        return [];
+      }
+
+      const filtered = projects.filter((project: any) => {
+        try {
+          // Verificar se o projeto tem dados básicos
+          if (!project || !project.name) {
+            console.warn('Projeto inválido encontrado:', project);
+            return false;
+          }
+
+          // Search term filter
+          if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+          }
+          
+          // Status filter
+          if (statusFilter !== "all" && project.status !== statusFilter) {
+            return false;
+          }
+          
+          // Client filter
+          if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
+            return false;
+          }
+          
+          // Date filter (simplified for now)
+          if (dateFilter === "recent" && project.creation_date) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return new Date(project.creation_date) > thirtyDaysAgo;
+          }
+          
+          return true;
+        } catch (filterError) {
+          console.error('Erro ao filtrar projeto:', project?.id, filterError);
+          return false;
+        }
+      });
+
+      console.log('Filtros aplicados. Projetos resultantes:', filtered.length);
+      return filtered;
+    } catch (error) {
+      console.error('Erro crítico ao aplicar filtros:', error);
+      return [];
     }
-    
-    // Status filter
-    if (statusFilter !== "all" && project.status !== statusFilter) {
-      return false;
-    }
-    
-    // Client filter
-    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
-      return false;
-    }
-    
-    // Date filter (simplified for now)
-    if (dateFilter === "recent" && project.creation_date) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return new Date(project.creation_date) > thirtyDaysAgo;
-    }
-    
-    return true;
-  }) : [];
+  }, [projects, searchTerm, statusFilter, clientFilter, dateFilter]);
 
   // Combine project with client data
   const projectsWithClient = filteredProjects && filteredProjects.length > 0 
