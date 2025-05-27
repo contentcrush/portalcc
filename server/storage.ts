@@ -1941,8 +1941,8 @@ export class DatabaseStorage implements IStorage {
         status: projects.status,
         special_status: projects.special_status,
         budget: projects.budget,
-        start_date: projects.startDate,
-        end_date: projects.endDate,
+        startDate: projects.start_date,
+        endDate: projects.end_date,
         progress: projects.progress,
         thumbnail: projects.thumbnail,
         creation_date: projects.creation_date
