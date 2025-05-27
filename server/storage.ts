@@ -1932,12 +1932,18 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Performance] Carregando projetos do banco de dados (sem cache)');
       
-      // Query simplificada - selecionar todos os campos sem especificar alias
-      const result = await db.select().from(projects)
-        .orderBy(desc(projects.creation_date));
+      // Query usando SQL direto para evitar problemas de schema
+      const result = await db.execute(sql`
+        SELECT 
+          id, name, client_id, status, special_status, budget, 
+          start_date as "startDate", end_date as "endDate", 
+          progress, thumbnail, creation_date
+        FROM projects 
+        ORDER BY creation_date DESC
+      `);
       
-      console.log(`[Debug] Projetos carregados com sucesso: ${result.length} projetos`);
-      return result;
+      console.log(`[Debug] Projetos carregados com sucesso: ${result.rows.length} projetos`);
+      return result.rows as Project[];
     } catch (error) {
       console.error('[ERRO CRÍTICO] Falha ao carregar projetos:', error);
       console.error('[ERRO CRÍTICO] Stack trace:', error instanceof Error ? error.stack : 'Sem stack trace');
