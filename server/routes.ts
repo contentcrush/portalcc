@@ -18,6 +18,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { logger, loggerMiddleware } from "./logger";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
 import invoicesRoutes from "./routes/invoices";
@@ -909,18 +910,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", authenticateJWT, async (_req, res) => {
+  app.get("/api/projects", authenticateJWT, async (req, res) => {
+    const startTime = Date.now();
+    const userId = req.user?.id;
+    
     try {
-      console.log('[API] Iniciando busca de projetos...');
+      logger.info('API', 'Iniciando busca de projetos', { userId, endpoint: '/api/projects' });
+      
+      // Log detalhado do processo
+      logger.debug('DATABASE', 'Executando storage.getProjects()');
       const projects = await storage.getProjects();
-      console.log(`[API] Projetos carregados: ${projects.length} projetos`);
+      
+      const duration = Date.now() - startTime;
+      logger.performance('GET /api/projects', duration, { 
+        projectCount: projects.length, 
+        userId 
+      });
+      
+      logger.info('API', `Projetos carregados com sucesso: ${projects.length} projetos`, {
+        userId,
+        projectCount: projects.length,
+        duration
+      });
+      
       res.json(projects);
     } catch (error) {
-      console.error('[API ERRO] Falha ao buscar projetos:', error);
-      console.error('[API ERRO] Stack:', error instanceof Error ? error.stack : 'Sem stack');
+      const duration = Date.now() - startTime;
+      
+      logger.error('API', 'Falha crítica ao buscar projetos', error as Error, {
+        userId,
+        endpoint: '/api/projects',
+        duration,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      });
+      
+      // Log detalhado do erro para debugging
+      if (error instanceof Error) {
+        logger.critical('DATABASE', 'Erro na operação getProjects', error, {
+          stack: error.stack,
+          userId
+        });
+      }
+      
       res.status(500).json({ 
         message: "Failed to fetch projects", 
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
       });
     }
   });
