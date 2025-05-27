@@ -911,10 +911,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects - Adicionando autenticação e permissões
   app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
+      console.log('[API] Iniciando busca de projetos...');
       const projects = await storage.getProjects();
+      console.log(`[API] Projetos carregados: ${projects.length} projetos`);
       res.json(projects);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch projects" });
+      console.error('[API ERRO] Falha ao buscar projetos:', error);
+      console.error('[API ERRO] Stack:', error instanceof Error ? error.stack : 'Sem stack');
+      res.status(500).json({ 
+        message: "Failed to fetch projects", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

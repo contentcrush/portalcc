@@ -1929,36 +1929,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjects(): Promise<Project[]> {
-    // Criamos um cache para armazenar resultados por 30 segundos
-    const cacheKey = 'all_projects';
-    const cachedResult = cache.get(cacheKey);
-    
-    if (cachedResult) {
-      console.log('[Performance] Usando cache para listagem de projetos');
-      return cachedResult;
+    try {
+      // Temporariamente desativando cache para debug
+      console.log('[Performance] Carregando projetos do banco de dados (sem cache)');
+      
+      // Selecionamos apenas os campos essenciais para a listagem
+      const result = await db.select({
+        id: projects.id,
+        name: projects.name,
+        client_id: projects.client_id,
+        status: projects.status,
+        special_status: projects.special_status,
+        budget: projects.budget,
+        start_date: projects.startDate,
+        end_date: projects.endDate,
+        progress: projects.progress,
+        thumbnail: projects.thumbnail,
+        creation_date: projects.creation_date
+      }).from(projects)
+        .orderBy(desc(projects.creation_date));
+      
+      console.log(`[Debug] Projetos carregados com sucesso: ${result.length} projetos`);
+      return result;
+    } catch (error) {
+      console.error('[ERRO CRÍTICO] Falha ao carregar projetos:', error);
+      console.error('[ERRO CRÍTICO] Stack trace:', error instanceof Error ? error.stack : 'Sem stack trace');
+      
+      // Tentativa de recuperação: retornar lista vazia ao invés de falhar
+      console.log('[Recuperação] Retornando lista vazia de projetos');
+      return [];
     }
-    
-    console.log('[Performance] Carregando projetos do banco de dados');
-    
-    // Selecionamos apenas os campos essenciais para a listagem
-    const result = await db.select({
-      id: projects.id,
-      name: projects.name,
-      client_id: projects.client_id,
-      status: projects.status,
-      special_status: projects.special_status,
-      budget: projects.budget,
-      startDate: projects.startDate,
-      endDate: projects.endDate,
-      progress: projects.progress,
-      thumbnail: projects.thumbnail
-    }).from(projects)
-      .orderBy(desc(projects.creation_date || projects.id));
-    
-    // Armazenamos o resultado em cache por 30 segundos
-    cache.set(cacheKey, result, 30);
-    
-    return result;
   }
 
   async getProjectsByClient(clientId: number): Promise<Project[]> {
