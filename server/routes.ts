@@ -16,7 +16,7 @@ import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePass
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { logger, loggerMiddleware } from "./logger";
 import { parseISO } from "date-fns";
@@ -915,81 +915,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.user?.id;
     
     try {
-      logger.info('API', 'Iniciando busca de projetos', { 
-        userId, 
-        endpoint: '/api/projects',
-        environment: process.env.NODE_ENV || 'development',
-        databaseUrl: process.env.DATABASE_URL ? 'SET' : 'MISSING'
-      });
+      console.log('[DIAGNÓSTICO] Iniciando busca de projetos...');
       
-      // Verificação de saúde do banco de dados
-      logger.debug('DATABASE', 'Verificando conexão com banco de dados');
-      try {
-        await db.execute(sql`SELECT 1 as health_check`);
-        logger.info('DATABASE', 'Conexão com banco verificada com sucesso');
-      } catch (dbError) {
-        logger.critical('DATABASE', 'Falha na conexão com banco de dados', dbError as Error);
-        throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
-      }
+      // Teste simples do banco primeiro
+      console.log('[DIAGNÓSTICO] Testando conexão básica do banco...');
+      await db.execute(sql`SELECT 1 as test`);
+      console.log('[DIAGNÓSTICO] ✅ Conexão com banco funcionando');
       
-      // Log detalhado do processo
-      logger.debug('DATABASE', 'Executando storage.getProjects()');
+      // Teste da função getProjects específica
+      console.log('[DIAGNÓSTICO] Executando storage.getProjects()...');
       const projects = await storage.getProjects();
+      console.log(`[DIAGNÓSTICO] ✅ storage.getProjects() retornou ${projects.length} projetos`);
+      
+      // Log dos primeiros caracteres para debugging
+      if (projects.length > 0) {
+        console.log('[DIAGNÓSTICO] Primeiro projeto:', JSON.stringify(projects[0]).substring(0, 200) + '...');
+      }
       
       const duration = Date.now() - startTime;
-      
-      // Log de performance crítica se muito lento
-      if (duration > 10000) {
-        logger.critical('PERFORMANCE', `OPERAÇÃO EXTREMAMENTE LENTA: ${duration}ms`, undefined, {
-          operation: 'getProjects',
-          duration,
-          userId,
-          environment: process.env.NODE_ENV
-        });
-      } else {
-        logger.performance('GET /api/projects', duration, { 
-          projectCount: projects.length, 
-          userId 
-        });
-      }
-      
-      logger.info('API', `Projetos carregados com sucesso: ${projects.length} projetos`, {
-        userId,
-        projectCount: projects.length,
-        duration,
-        environment: process.env.NODE_ENV
-      });
+      console.log(`[DIAGNÓSTICO] ✅ Busca concluída em ${duration}ms`);
       
       res.json(projects);
     } catch (error) {
       const duration = Date.now() - startTime;
-      
-      logger.critical('API', 'FALHA CRÍTICA ao buscar projetos', error as Error, {
-        userId,
-        endpoint: '/api/projects',
-        duration,
-        environment: process.env.NODE_ENV || 'unknown',
-        databaseUrl: process.env.DATABASE_URL ? 'SET' : 'MISSING',
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
-      // Diagnóstico adicional para ambiente deployed
-      if (process.env.NODE_ENV === 'production') {
-        logger.critical('DEPLOY', 'Erro específico do ambiente deployed', error as Error, {
-          timestamp: new Date().toISOString(),
-          userId,
-          duration
-        });
-      }
+      console.error('[DIAGNÓSTICO] ❌ ERRO na busca de projetos:', error);
+      console.error('[DIAGNÓSTICO] Stack trace:', error instanceof Error ? error.stack : 'Sem stack');
+      console.error('[DIAGNÓSTICO] Tipo do erro:', typeof error);
+      console.error('[DIAGNÓSTICO] Nome do erro:', error instanceof Error ? error.constructor.name : 'Desconhecido');
       
       res.status(500).json({ 
         message: "Failed to fetch projects", 
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'unknown',
-        requestId: Math.random().toString(36).substring(7)
+        duration,
+        type: typeof error,
+        debug: true
       });
     }
   });
