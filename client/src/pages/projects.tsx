@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -143,7 +143,7 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   });
 
   // Apply filters with error handling
-  const filteredProjects = React.useMemo(() => {
+  const filteredProjects = useMemo(() => {
     try {
       console.log('Aplicando filtros. Projetos disponíveis:', projects?.length || 0);
       
