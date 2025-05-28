@@ -18,27 +18,20 @@ export default function SearchBar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
 
-  const { data: projects, isLoading: projectsLoading } = useQuery({
+  const { data: projects } = useQuery({
     queryKey: ['/api/projects'],
     enabled: open
   });
 
-  const { data: tasks, isLoading: tasksLoading } = useQuery({
+  const { data: tasks } = useQuery({
     queryKey: ['/api/tasks'],
     enabled: open
   });
 
-  const { data: clients, isLoading: clientsLoading } = useQuery({
+  const { data: clients } = useQuery({
     queryKey: ['/api/clients'],
     enabled: open
   });
-
-  // Debug logs
-  useEffect(() => {
-    if (open) {
-      console.log('SearchBar opened - Data:', { projects, tasks, clients });
-    }
-  }, [open, projects, tasks, clients]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -57,22 +50,22 @@ export default function SearchBar() {
     navigate(value);
   };
 
-  // Filter results based on search query
-  const filteredProjects = Array.isArray(projects) 
+  // Filter results based on search query - with safety checks
+  const filteredProjects = (projects && Array.isArray(projects)) 
     ? projects.filter((project: any) => 
-        project.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        project?.name?.toLowerCase()?.includes(searchQuery.toLowerCase())
       ) 
     : [];
   
-  const filteredTasks = Array.isArray(tasks) 
+  const filteredTasks = (tasks && Array.isArray(tasks)) 
     ? tasks.filter((task: any) => 
-        task.title?.toLowerCase().includes(searchQuery.toLowerCase())
+        task?.title?.toLowerCase()?.includes(searchQuery.toLowerCase())
       ) 
     : [];
   
-  const filteredClients = Array.isArray(clients) 
+  const filteredClients = (clients && Array.isArray(clients)) 
     ? clients.filter((client: any) => 
-        client.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        client?.name?.toLowerCase()?.includes(searchQuery.toLowerCase())
       ) 
     : [];
 
