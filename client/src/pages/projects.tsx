@@ -198,14 +198,22 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   }, [projects, searchTerm, statusFilter, clientFilter, dateFilter]);
 
   // Combine project with client data
-  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
-    ? filteredProjects.map((project: any) => {
-        const client = clients && clients.length > 0 
-          ? clients.find((c: any) => c.id === project.client_id) 
-          : null;
-        return { ...project, client };
-      })
-    : [];
+  const projectsWithClient = useMemo(() => {
+    if (!filteredProjects || filteredProjects.length === 0) {
+      console.log('ProjectsWithClient: Nenhum projeto filtrado disponível');
+      return [];
+    }
+    
+    const result = filteredProjects.map((project: any) => {
+      const client = clients && clients.length > 0 
+        ? clients.find((c: any) => c.id === project.client_id) 
+        : null;
+      return { ...project, client };
+    });
+    
+    console.log('ProjectsWithClient: Projetos com dados de cliente:', result.length);
+    return result;
+  }, [filteredProjects, clients]);
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
