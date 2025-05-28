@@ -94,10 +94,14 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
       // E também verifica se o alvo não é um elemento de diálogo ou modal
       const target = event.target as HTMLElement;
       const isDialogElement = target.closest('[role="dialog"]') || 
+                              target.closest('[data-radix-alert-dialog-content]') ||
+                              target.closest('[data-radix-dialog-content]') ||
                               target.closest('.alert-dialog') || 
-                              target.closest('.dialog');
+                              target.closest('.dialog') ||
+                              target.closest('[role="alertdialog"]');
       
       if (isDialogElement) {
+        console.log("Clique detectado em elemento de diálogo, não fechando sidebar");
         return; // Não fechar se clicou em qualquer elemento de diálogo
       }
       
