@@ -577,8 +577,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         return;
       }
       
-      // Verificar se estamos saindo do status "proposta_aceita" para outro status
-      if (project.status === 'proposta_aceita' && !["proposta_aceita", "concluido", "cancelado"].includes(status)) {
+      // Verificar se estamos saindo do status "proposta_aceita" para outro status (exceto proposta, concluido, cancelado)
+      if (project.status === 'proposta_aceita' && !["proposta_aceita", "proposta", "concluido", "cancelado"].includes(status)) {
         // Mostrar diálogo de confirmação personalizado
         setConfirmStatusChange({
           open: true,
