@@ -909,6 +909,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
+  // Rota temporária SEM auth para testar deployed
+  app.get("/api/projects-no-auth", async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      console.log(`[TESTE NO-AUTH] Projetos encontrados: ${projects.length}`);
+      res.json(projects);
+    } catch (error) {
+      console.error('[TESTE NO-AUTH] Erro:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Projects - Adicionando autenticação e permissões
   app.get("/api/projects", auth, async (req, res) => {
     const startTime = Date.now();
