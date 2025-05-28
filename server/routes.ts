@@ -922,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", auth, async (req, res) => {
+  app.get("/api/projects", authenticateJWT, async (req, res) => {
     const startTime = Date.now();
     const userId = req.user?.id;
     
