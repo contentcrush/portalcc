@@ -25,6 +25,18 @@ import invoicesRoutes from "./routes/invoices";
 import { getProjectStatusHistory, updateProjectSpecialStatus } from "./routes/project-status";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rota temporária SEM auth para testar deployed - DEVE vir ANTES do setupAuth
+  app.get("/api/projects-no-auth", async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      console.log(`[TESTE NO-AUTH] Projetos encontrados: ${projects.length}`);
+      res.json(projects);
+    } catch (error) {
+      console.error('[TESTE NO-AUTH] Erro:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Configurar autenticação
   setupAuth(app);
   
@@ -53,18 +65,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     };
   }
-
-  // Rota temporária SEM auth para testar deployed
-  app.get("/api/projects-no-auth", async (req, res) => {
-    try {
-      const projects = await storage.getProjects();
-      console.log(`[TESTE NO-AUTH] Projetos encontrados: ${projects.length}`);
-      res.json(projects);
-    } catch (error) {
-      console.error('[TESTE NO-AUTH] Erro:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   // Users - requer autenticação e permissões adequadas
   app.get("/api/users", authenticateJWT, requireRole(['admin', 'manager']), async (_req, res) => {
