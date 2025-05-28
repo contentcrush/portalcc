@@ -352,6 +352,13 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       </div>
       
+      {/* Debug info */}
+      <div className="bg-yellow-100 p-2 text-xs rounded mb-4">
+        Loading: {isLoading ? 'SIM' : 'NÃO'} | 
+        Projetos: {projectsWithClient?.length || 0} | 
+        Tab: {activeTab}
+      </div>
+      
       {/* Loading state */}
       {isLoading && (
         <div className="flex justify-center items-center h-64">
@@ -359,8 +366,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       )}
       
-      {/* Empty state */}
-      {projectsWithClient && projectsWithClient.length === 0 && (
+      {/* Empty state - só mostra se NÃO está carregando E tem 0 projetos */}
+      {!isLoading && projectsWithClient && projectsWithClient.length === 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Filter className="h-6 w-6 text-primary" />
@@ -376,8 +383,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       )}
       
-      {/* Conteúdo da aba Projetos (grid e list) */}
-      {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
+      {/* Conteúdo da aba Projetos (grid e list) - simplificado */}
+      {!isLoading && projectsWithClient && projectsWithClient.length > 0 && (
         <>
           {/* Project grid */}
           {view === "grid" && (
