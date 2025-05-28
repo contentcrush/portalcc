@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -80,11 +80,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const { openProjectForm, isFormOpen, closeProjectForm } = useProjectForm();
 
   // Fetch projects
-  const { data: projects, isLoading, error } = useQuery({
-    queryKey: ['/api/projects'],
-    retry: 3,
-    staleTime: 0, // Força recarregamento
-    cacheTime: 0  // Desativa cache temporariamente
+  const { data: projects, isLoading } = useQuery({
+    queryKey: ['/api/projects']
   });
 
   // Fetch clients for dropdown and project details
@@ -142,78 +139,42 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // Apply filters with error handling
-  const filteredProjects = useMemo(() => {
-    try {
-      console.log('Aplicando filtros. Projetos disponíveis:', projects?.length || 0);
-      
-      if (!projects || !Array.isArray(projects) || projects.length === 0) {
-        console.warn('Nenhum projeto disponível para filtrar');
-        return [];
-      }
-
-      const filtered = projects.filter((project: any) => {
-        try {
-          // Verificar se o projeto tem dados básicos
-          if (!project || !project.name) {
-            console.warn('Projeto inválido encontrado:', project);
-            return false;
-          }
-
-          // Search term filter
-          if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-            return false;
-          }
-          
-          // Status filter
-          if (statusFilter !== "all" && project.status !== statusFilter) {
-            return false;
-          }
-          
-          // Client filter
-          if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
-            return false;
-          }
-          
-          // Date filter (simplified for now)
-          if (dateFilter === "recent" && project.creation_date) {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            return new Date(project.creation_date) > thirtyDaysAgo;
-          }
-          
-          return true;
-        } catch (filterError) {
-          console.error('Erro ao filtrar projeto:', project?.id, filterError);
-          return false;
-        }
-      });
-
-      console.log('Filtros aplicados. Projetos resultantes:', filtered.length);
-      return filtered;
-    } catch (error) {
-      console.error('Erro crítico ao aplicar filtros:', error);
-      return [];
+  // Apply filters
+  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
+    // Search term filter
+    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
     }
-  }, [projects, searchTerm, statusFilter, clientFilter, dateFilter]);
+    
+    // Status filter
+    if (statusFilter !== "all" && project.status !== statusFilter) {
+      return false;
+    }
+    
+    // Client filter
+    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
+      return false;
+    }
+    
+    // Date filter (simplified for now)
+    if (dateFilter === "recent" && project.creation_date) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return new Date(project.creation_date) > thirtyDaysAgo;
+    }
+    
+    return true;
+  }) : [];
 
   // Combine project with client data
-  const projectsWithClient = useMemo(() => {
-    if (!filteredProjects || filteredProjects.length === 0) {
-      console.log('ProjectsWithClient: Nenhum projeto filtrado disponível');
-      return [];
-    }
-    
-    const result = filteredProjects.map((project: any) => {
-      const client = clients && clients.length > 0 
-        ? clients.find((c: any) => c.id === project.client_id) 
-        : null;
-      return { ...project, client };
-    });
-    
-    console.log('ProjectsWithClient: Projetos com dados de cliente:', result.length);
-    return result;
-  }, [filteredProjects, clients]);
+  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
+    ? filteredProjects.map((project: any) => {
+        const client = clients && clients.length > 0 
+          ? clients.find((c: any) => c.id === project.client_id) 
+          : null;
+        return { ...project, client };
+      })
+    : [];
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -352,13 +313,6 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       </div>
       
-      {/* Debug info */}
-      <div className="bg-yellow-100 p-2 text-xs rounded mb-4">
-        Loading: {isLoading ? 'SIM' : 'NÃO'} | 
-        Projetos: {projectsWithClient?.length || 0} | 
-        Tab: {activeTab}
-      </div>
-      
       {/* Loading state */}
       {isLoading && (
         <div className="flex justify-center items-center h-64">
@@ -366,8 +320,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       )}
       
-      {/* Empty state - só mostra se NÃO está carregando E tem 0 projetos */}
-      {!isLoading && projectsWithClient && projectsWithClient.length === 0 && (
+      {/* Empty state */}
+      {projectsWithClient && projectsWithClient.length === 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-8 text-center">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Filter className="h-6 w-6 text-primary" />
@@ -383,8 +337,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
         </div>
       )}
       
-      {/* Conteúdo da aba Projetos (grid e list) - simplificado */}
-      {!isLoading && projectsWithClient && projectsWithClient.length > 0 && (
+      {/* Conteúdo da aba Projetos (grid e list) */}
+      {activeTab === "projects" && projectsWithClient && projectsWithClient.length > 0 && (
         <>
           {/* Project grid */}
           {view === "grid" && (

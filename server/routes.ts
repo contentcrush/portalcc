@@ -16,27 +16,14 @@ import { setupAuth, authenticateJWT, requireRole, requirePermission, comparePass
 import { runAutomations, checkOverdueProjects, checkProjectsWithUpdatedDates } from "./automation";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocket, WebSocketServer } from "ws";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { logger, loggerMiddleware } from "./logger";
 import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
 import invoicesRoutes from "./routes/invoices";
 import { getProjectStatusHistory, updateProjectSpecialStatus } from "./routes/project-status";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Rota temporária SEM auth para testar deployed - DEVE vir ANTES do setupAuth
-  app.get("/api/projects-no-auth", async (req, res) => {
-    try {
-      const projects = await storage.getProjects();
-      console.log(`[TESTE NO-AUTH] Projetos encontrados: ${projects.length}`);
-      res.json(projects);
-    } catch (error) {
-      console.error('[TESTE NO-AUTH] Erro:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Configurar autenticação
   setupAuth(app);
   
@@ -921,50 +908,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
-
-
   // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", authenticateJWT, async (req, res) => {
-    const startTime = Date.now();
-    const userId = req.user?.id;
-    
+  app.get("/api/projects", authenticateJWT, async (_req, res) => {
     try {
-      console.log('[DIAGNÓSTICO] Iniciando busca de projetos...');
-      
-      // Teste simples do banco primeiro
-      console.log('[DIAGNÓSTICO] Testando conexão básica do banco...');
-      await db.execute(sql`SELECT 1 as test`);
-      console.log('[DIAGNÓSTICO] ✅ Conexão com banco funcionando');
-      
-      // Teste da função getProjects específica
-      console.log('[DIAGNÓSTICO] Executando storage.getProjects()...');
       const projects = await storage.getProjects();
-      console.log(`[DIAGNÓSTICO] ✅ storage.getProjects() retornou ${projects.length} projetos`);
-      
-      // Log dos primeiros caracteres para debugging
-      if (projects.length > 0) {
-        console.log('[DIAGNÓSTICO] Primeiro projeto:', JSON.stringify(projects[0]).substring(0, 200) + '...');
-      }
-      
-      const duration = Date.now() - startTime;
-      console.log(`[DIAGNÓSTICO] ✅ Busca concluída em ${duration}ms`);
-      
       res.json(projects);
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error('[DIAGNÓSTICO] ❌ ERRO na busca de projetos:', error);
-      console.error('[DIAGNÓSTICO] Stack trace:', error instanceof Error ? error.stack : 'Sem stack');
-      console.error('[DIAGNÓSTICO] Tipo do erro:', typeof error);
-      console.error('[DIAGNÓSTICO] Nome do erro:', error instanceof Error ? error.constructor.name : 'Desconhecido');
-      
-      res.status(500).json({ 
-        message: "Failed to fetch projects", 
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-        duration,
-        type: typeof error,
-        debug: true
-      });
+      res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
 
@@ -4021,67 +3971,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Executar automações ao iniciar o servidor
-  // Rota de diagnóstico específica para debug do deployed
-  app.get("/api/debug/environment", authenticateJWT, async (_req, res) => {
-    const startTime = Date.now();
-    const diagnosis = {
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: {
-        connected: false,
-        latency: 0,
-        error: null,
-        connectionString: process.env.DATABASE_URL ? 'SET' : 'MISSING'
-      },
-      system: {
-        memory: process.memoryUsage(),
-        uptime: process.uptime(),
-        platform: process.platform,
-        nodeVersion: process.version
-      },
-      projectsTest: {
-        success: false,
-        count: 0,
-        duration: 0,
-        error: null
-      }
-    };
-
-    try {
-      // Testar conexão com banco
-      logger.info('DEBUG', 'Iniciando diagnóstico do ambiente');
-      
-      const dbStart = Date.now();
-      await db.execute(sql`SELECT 1 as test`);
-      diagnosis.database.connected = true;
-      diagnosis.database.latency = Date.now() - dbStart;
-      
-      // Testar busca de projetos
-      const projectsStart = Date.now();
-      const projects = await storage.getProjects();
-      diagnosis.projectsTest.success = true;
-      diagnosis.projectsTest.count = projects.length;
-      diagnosis.projectsTest.duration = Date.now() - projectsStart;
-      
-      logger.info('DEBUG', 'Diagnóstico concluído com sucesso', {
-        environment: diagnosis.environment,
-        dbLatency: diagnosis.database.latency,
-        projectCount: diagnosis.projectsTest.count,
-        totalDuration: Date.now() - startTime
-      });
-      
-    } catch (error) {
-      diagnosis.projectsTest.error = error instanceof Error ? error.message : String(error);
-      
-      logger.error('DEBUG', 'Falha no diagnóstico', error as Error, {
-        environment: diagnosis.environment,
-        duration: Date.now() - startTime
-      });
-    }
-
-    res.json(diagnosis);
-  });
-
   console.log("🤖 Iniciando automações do sistema...");
   runAutomations()
     .then(result => {

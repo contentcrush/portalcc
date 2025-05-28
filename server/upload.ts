@@ -103,14 +103,14 @@ export async function processImage(filePath: string, category: string, id: strin
         
       // Remover o arquivo temporário
       fs.unlinkSync(filePath);
+      
+      return destPath;
     } else {
       // Para arquivos que não são imagens, apenas mover
       fs.copyFileSync(filePath, destPath);
       fs.unlinkSync(filePath);
+      return destPath;
     }
-    
-    // CRUCIAL: Retornar sempre caminho relativo para compatibilidade
-    return `uploads/${category}/${id}/${fileName}`;
   } catch (error) {
     console.error('Erro ao processar imagem:', error);
     throw error;
