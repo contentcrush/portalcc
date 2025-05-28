@@ -1449,9 +1449,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Sistema] Equipe do projeto ID:${id} atualizada via PUT: ${membersToAdd.length} adicionados, ${membersToRemove.length} removidos`);
       }
       
-      // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
-      if (req.body.budget && (currentProject.budget !== req.body.budget)) {
-        // Verificar se o projeto está na etapa "Proposta Aceita" ou além
+      // CORREÇÃO: Segunda instância também desabilitada para evitar duplicação
+      // As faturas devem ser criadas APENAS pelo frontend quando status = 'proposta_aceita'
+      if (false && req.body.budget && (currentProject.budget !== req.body.budget)) {
+        // DESABILITADO: Esta é a segunda instância da mesma lógica problemática
         const proposalAcceptedStages = ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'atrasado'];
         
         if (!proposalAcceptedStages.includes(updatedProject.status)) {
