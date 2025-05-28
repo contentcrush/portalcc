@@ -1275,9 +1275,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Se o orçamento foi alterado, atualizar ou criar fatura correspondente
-      // CORREÇÃO: Desabilita criação automática de faturas no backend
-      // As faturas devem ser criadas APENAS pelo frontend quando status = 'proposta_aceita'
-      if (false && req.body.budget && (currentProject.budget !== req.body.budget)) {
+      if (req.body.budget && (currentProject.budget !== req.body.budget)) {
+        // Verificar se o projeto está na etapa "Proposta Aceita" ou além
+        const proposalAcceptedStages = ['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'atrasado'];
         
         if (!proposalAcceptedStages.includes(updatedProject.status)) {
           console.log(`[Sistema] Projeto ID:${id} ainda não está na etapa "Proposta Aceita". Status atual: ${updatedProject.status}. Fatura não será criada automaticamente.`);
