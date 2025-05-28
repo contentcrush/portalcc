@@ -1345,9 +1345,11 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  // Verifica se estamos saindo do status "proposta_aceita" para outro status
-                  if (project.status === 'proposta_aceita' && confirmStatusChange.status !== 'proposta_aceita') {
-                    console.log("Status alterado de 'proposta_aceita' para outro. Removendo documentos financeiros...");
+                  console.log(`Confirmando mudança de status de '${project.status}' para '${confirmStatusChange.status}'`);
+                  
+                  // Verifica se estamos saindo do status "proposta_aceita" para status anterior (como "proposta")
+                  if (project.status === 'proposta_aceita' && !['proposta_aceita', 'pre_producao', 'producao', 'pos_revisao', 'entregue', 'finalizado', 'concluido'].includes(confirmStatusChange.status)) {
+                    console.log("Status alterado de 'proposta_aceita' para status anterior. Removendo documentos financeiros...");
                     // Remove documentos financeiros primeiro
                     removeFinancialDocumentMutation.mutate(projectId);
                   }
@@ -1357,6 +1359,8 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
                     ...project,
                     status: confirmStatusChange.status
                   };
+                  
+                  console.log("Atualizando projeto:", updatedProject);
                   
                   // Atualiza o cache imediatamente para uma resposta instantânea da UI
                   queryClient.setQueryData([`/api/projects/${projectId}`], updatedProject);
