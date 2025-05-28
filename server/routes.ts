@@ -908,13 +908,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return financialDocument;
   }
 
-  // Projects - Adicionando autenticação e permissões
-  app.get("/api/projects", authenticateJWT, async (_req, res) => {
+  // Projects - Adicionando autenticação e permissões com logs profissionais
+  app.get("/api/projects", authenticateJWT, async (req, res) => {
+    const startTime = Date.now();
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const userInfo = req.user ? `user:${req.user.id}(${req.user.role})` : 'anonymous';
+    
+    console.log(`[${requestId}] [Projects API] Iniciando busca de projetos - ${userInfo}`);
+    
     try {
+      // Buscar projetos com validação
       const projects = await storage.getProjects();
-      res.json(projects);
+      console.log(`[${requestId}] [Projects API] Projetos carregados do storage: ${projects.length} items`);
+      
+      // Validação robusta dos dados
+      const validatedProjects = projects.map((project, index) => {
+        try {
+          // Validar campos obrigatórios
+          if (!project.id || !project.name) {
+            console.warn(`[${requestId}] [Projects API] Projeto inválido no índice ${index}: ID ou nome ausente`, {
+              id: project.id,
+              name: project.name,
+              status: project.status
+            });
+            return null;
+          }
+          
+          // Validar e limpar campo thumbnail
+          let validatedThumbnail = project.thumbnail;
+          if (project.thumbnail) {
+            try {
+              // Verificar se o caminho da imagem é válido
+              const fs = require('fs');
+              const path = require('path');
+              
+              let imagePath = project.thumbnail;
+              if (imagePath.startsWith('/')) {
+                imagePath = imagePath.substring(1);
+              }
+              
+              const fullPath = path.join(process.cwd(), imagePath);
+              if (!fs.existsSync(fullPath)) {
+                console.warn(`[${requestId}] [Projects API] Imagem não encontrada para projeto ${project.id}: ${fullPath}`);
+                validatedThumbnail = null;
+              }
+            } catch (imgError) {
+              console.warn(`[${requestId}] [Projects API] Erro ao validar imagem do projeto ${project.id}:`, imgError);
+              validatedThumbnail = null;
+            }
+          }
+          
+          return {
+            ...project,
+            thumbnail: validatedThumbnail,
+            // Garantir que campos numéricos sejam válidos
+            budget: typeof project.budget === 'number' ? project.budget : null,
+            progress: typeof project.progress === 'number' ? Math.max(0, Math.min(100, project.progress || 0)) : 0,
+            // Garantir que datas sejam válidas
+            startDate: project.startDate || null,
+            endDate: project.endDate || null
+          };
+        } catch (projectError) {
+          console.error(`[${requestId}] [Projects API] Erro ao validar projeto ${project.id}:`, projectError);
+          return null;
+        }
+      }).filter(Boolean); // Remove projetos inválidos
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`[${requestId}] [Projects API] Sucesso - ${validatedProjects.length}/${projects.length} projetos válidos retornados em ${processingTime}ms`);
+      
+      res.json(validatedProjects);
+      
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch projects" });
+      const processingTime = Date.now() - startTime;
+      console.error(`[${requestId}] [Projects API] Erro crítico após ${processingTime}ms:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        user: userInfo
+      });
+      
+      // Fallback seguro - retornar array vazio em caso de erro crítico
+      res.status(500).json({ 
+        message: "Erro interno do servidor ao buscar projetos",
+        requestId,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

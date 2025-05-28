@@ -1929,36 +1929,94 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjects(): Promise<Project[]> {
-    // Criamos um cache para armazenar resultados por 30 segundos
+    const startTime = Date.now();
     const cacheKey = 'all_projects';
-    const cachedResult = cache.get(cacheKey);
+    const requestId = `cache_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
-    if (cachedResult) {
-      console.log('[Performance] Usando cache para listagem de projetos');
-      return cachedResult;
+    console.log(`[${requestId}] [Storage] Iniciando getProjects()`);
+    
+    try {
+      // Verificar cache com validação
+      const cachedResult = cache.get(cacheKey);
+      if (cachedResult && Array.isArray(cachedResult)) {
+        // Validar integridade dos dados em cache
+        const isValidCache = cachedResult.every(item => 
+          item && typeof item === 'object' && 
+          typeof item.id === 'number' && 
+          typeof item.name === 'string'
+        );
+        
+        if (isValidCache) {
+          console.log(`[${requestId}] [Storage] Cache válido encontrado - ${cachedResult.length} projetos em ${Date.now() - startTime}ms`);
+          return cachedResult;
+        } else {
+          console.warn(`[${requestId}] [Storage] Cache corrompido detectado, limpando cache`);
+          cache.del(cacheKey);
+        }
+      }
+      
+      console.log(`[${requestId}] [Storage] Carregando projetos do banco de dados`);
+      
+      // Buscar dados do banco com tratamento robusto de erros
+      const result = await db.select({
+        id: projects.id,
+        name: projects.name,
+        client_id: projects.client_id,
+        status: projects.status,
+        special_status: projects.special_status,
+        budget: projects.budget,
+        startDate: projects.startDate,
+        endDate: projects.endDate,
+        progress: projects.progress,
+        thumbnail: projects.thumbnail
+      }).from(projects)
+        .orderBy(desc(projects.creation_date || projects.id));
+      
+      // Validar dados antes de cachear
+      const validatedResult = result.filter(project => {
+        const isValid = project && 
+          typeof project.id === 'number' && 
+          typeof project.name === 'string' && 
+          project.name.trim().length > 0;
+        
+        if (!isValid) {
+          console.warn(`[${requestId}] [Storage] Projeto inválido filtrado:`, project);
+        }
+        
+        return isValid;
+      });
+      
+      const dbTime = Date.now() - startTime;
+      console.log(`[${requestId}] [Storage] Banco consultado com sucesso - ${validatedResult.length}/${result.length} projetos válidos em ${dbTime}ms`);
+      
+      // Armazenar em cache apenas se os dados são válidos
+      if (validatedResult.length > 0) {
+        cache.set(cacheKey, validatedResult, 30);
+        console.log(`[${requestId}] [Storage] Dados armazenados em cache por 30s`);
+      } else {
+        console.warn(`[${requestId}] [Storage] Nenhum projeto válido encontrado, não cacheando`);
+      }
+      
+      return validatedResult;
+      
+    } catch (error) {
+      const errorTime = Date.now() - startTime;
+      console.error(`[${requestId}] [Storage] Erro crítico no getProjects após ${errorTime}ms:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Tentar retornar cache mesmo que expirado como fallback
+      const fallbackCache = cache.get(cacheKey);
+      if (fallbackCache && Array.isArray(fallbackCache)) {
+        console.log(`[${requestId}] [Storage] Usando cache expirado como fallback - ${fallbackCache.length} projetos`);
+        return fallbackCache;
+      }
+      
+      // Último recurso - retornar array vazio
+      console.error(`[${requestId}] [Storage] Nenhum fallback disponível, retornando array vazio`);
+      return [];
     }
-    
-    console.log('[Performance] Carregando projetos do banco de dados');
-    
-    // Selecionamos apenas os campos essenciais para a listagem
-    const result = await db.select({
-      id: projects.id,
-      name: projects.name,
-      client_id: projects.client_id,
-      status: projects.status,
-      special_status: projects.special_status,
-      budget: projects.budget,
-      startDate: projects.startDate,
-      endDate: projects.endDate,
-      progress: projects.progress,
-      thumbnail: projects.thumbnail
-    }).from(projects)
-      .orderBy(desc(projects.creation_date || projects.id));
-    
-    // Armazenamos o resultado em cache por 30 segundos
-    cache.set(cacheKey, result, 30);
-    
-    return result;
   }
 
   async getProjectsByClient(clientId: number): Promise<Project[]> {
