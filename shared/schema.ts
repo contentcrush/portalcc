@@ -279,6 +279,15 @@ export const clientInteractions = pgTable("client_interactions", {
   date: timestamp("date").defaultNow(),
 });
 
+// Enum para status de documentos financeiros
+export const financialStatusEnum = pgEnum('financial_status', [
+  'pending',     // Pendente de aprovação
+  'approved',    // Aprovado para pagamento/recebimento
+  'paid',        // Pago/Recebido
+  'cancelled',   // Cancelado
+  'archived'     // Arquivado (dados antigos)
+]);
+
 export const financialDocuments = pgTable("financial_documents", {
   id: serial("id").primaryKey(),
   project_id: integer("project_id"),
@@ -287,16 +296,53 @@ export const financialDocuments = pgTable("financial_documents", {
   document_number: text("document_number"),
   amount: doublePrecision("amount").notNull(),
   due_date: timestamp("due_date"),
+  issue_date: timestamp("issue_date"), // Data de emissão
   paid: boolean("paid").default(false),
   payment_date: timestamp("payment_date"),
   payment_notes: text("payment_notes"),
-  status: text("status").default("pending"),
-  // Removemos creation_date para resolver o erro - campo não existe na tabela real
+  status: financialStatusEnum("status").default("pending"),
   description: text("description"),
-  invoice_file: text("invoice_file"), // URL para o arquivo da nota fiscal
-  invoice_file_name: text("invoice_file_name"), // Nome original do arquivo
-  invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"), // Data do upload
-  invoice_file_uploaded_by: integer("invoice_file_uploaded_by"), // Usuário que fez o upload
+  invoice_file: text("invoice_file"),
+  invoice_file_name: text("invoice_file_name"),
+  invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"),
+  invoice_file_uploaded_by: integer("invoice_file_uploaded_by"),
+  
+  // Campos de auditoria
+  created_at: timestamp("created_at").defaultNow(),
+  created_by: integer("created_by").notNull(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  updated_by: integer("updated_by"),
+  
+  // Campos de controle
+  version: integer("version").default(1), // Versionamento para controle de concorrência
+  archived: boolean("archived").default(false), // Para marcar documentos antigos
+  archived_at: timestamp("archived_at"),
+  archived_by: integer("archived_by"),
+  archive_reason: text("archive_reason"),
+});
+
+// Tabela de auditoria para todas as operações financeiras
+export const financialAuditLog = pgTable("financial_audit_log", {
+  id: serial("id").primaryKey(),
+  document_id: integer("document_id").notNull(),
+  action: text("action").notNull(), // create, update, approve, pay, cancel, archive
+  user_id: integer("user_id").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  
+  // Dados antes da mudança (JSON)
+  old_values: json("old_values"),
+  
+  // Dados depois da mudança (JSON)
+  new_values: json("new_values"),
+  
+  // Informações adicionais
+  reason: text("reason"), // Motivo da mudança
+  ip_address: text("ip_address"), // IP do usuário
+  user_agent: text("user_agent"), // Browser/App usado
+  
+  // Campos de segurança
+  checksum: text("checksum"), // Hash dos dados para verificar integridade
+  session_id: text("session_id"), // ID da sessão
 });
 
 export const projectStatusHistory = pgTable("project_status_history", {
@@ -645,6 +691,7 @@ export type ProjectAttachment = typeof projectAttachments.$inferSelect;
 export type ClientContact = typeof clientContacts.$inferSelect;
 export type ClientInteraction = typeof clientInteractions.$inferSelect;
 export type FinancialDocument = typeof financialDocuments.$inferSelect;
+export type FinancialAuditLog = typeof financialAuditLog.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Event = typeof events.$inferSelect;
 
@@ -668,6 +715,13 @@ export type InsertClientInteraction = z.infer<typeof insertClientInteractionSche
 export type InsertFinancialDocument = z.infer<typeof insertFinancialDocumentSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+// Schemas para auditoria financeira
+export const insertFinancialAuditLogSchema = createInsertSchema(financialAuditLog).omit({ 
+  id: true, 
+  timestamp: true 
+});
+export type InsertFinancialAuditLog = z.infer<typeof insertFinancialAuditLogSchema>;
 
 // Definição de relações
 export const usersRelations = relations(users, ({ many, one }) => ({
