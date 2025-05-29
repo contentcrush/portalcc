@@ -190,11 +190,11 @@ export function FinancialAuditDialog({ documentId, open, onOpenChange }: Financi
                       )}
                       
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>IP: {log.ip_address}</span>
-                        <span>Sessão: {log.session_id?.substring(0, 8)}...</span>
+                        <span>IP: {log.ip_address || 'N/A'}</span>
+                        <span>Sessão: {log.session_id ? `${log.session_id.substring(0, 8)}...` : 'N/A'}</span>
                         <div className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
-                          <span>Hash: {log.checksum.substring(0, 8)}...</span>
+                          <span>Hash: {log.checksum ? `${log.checksum.substring(0, 8)}...` : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
