@@ -466,20 +466,15 @@ export async function checkOverdueProjects() {
     
     console.log(`[Automação] Encontrados ${overdueProjects.length} projetos atrasados`);
     
-    // Atualiza o status dos projetos atrasados para 'atrasado'
+    // Atualiza o special_status dos projetos atrasados para 'delayed' (mantendo o workflow status)
     const updatePromises = overdueProjects.map(async (project) => {
-      console.log(`[Automação] Atualizando projeto ${project.id} - ${project.name} para status 'atrasado'`);
+      console.log(`[Automação] Marcando projeto ${project.id} - ${project.name} como atrasado (special_status)`);
       
-      // Usa a implementação de updateProjectStatus para garantir consistência
-      if (storage && typeof storage.updateProjectStatus === 'function') {
-        return storage.updateProjectStatus(project.id, 'atrasado');
-      } else {
-        // Fallback caso storage não esteja disponível
-        return db
-          .update(projects)
-          .set({ status: 'atrasado' })
-          .where(eq(projects.id, project.id));
-      }
+      // Atualiza apenas o special_status, mantendo o workflow status intacto
+      return db
+        .update(projects)
+        .set({ special_status: 'delayed' })
+        .where(eq(projects.id, project.id));
     });
     
     await Promise.all(updatePromises);
@@ -605,13 +600,13 @@ export async function checkProjectsWithUpdatedDates() {
     const formattedDate = format(today, 'yyyy-MM-dd');
     console.log(`[Automação] Verificando projetos com datas atualizadas em ${formattedDate}`);
     
-    // Busca projetos marcados como atrasados mas com data de entrega no futuro
+    // Busca projetos marcados como atrasados (special_status: delayed) mas com data de entrega no futuro
     const updatedProjects = await db
       .select()
       .from(projects)
       .where(
         and(
-          eq(projects.status, 'atrasado'),
+          eq(projects.special_status, 'delayed'),
           gte(projects.endDate, new Date(formattedDate))
         )
       );
@@ -623,21 +618,15 @@ export async function checkProjectsWithUpdatedDates() {
     
     console.log(`[Automação] Encontrados ${updatedProjects.length} projetos com datas atualizadas`);
     
-    // Atualiza o status dos projetos atrasados para 'producao' (estado padrão)
+    // Remove o special_status 'delayed' dos projetos que tiveram a data atualizada
     const updatePromises = updatedProjects.map(async (project) => {
-      console.log(`[Automação] Atualizando projeto ${project.id} - ${project.name} para status 'producao' (data futura)`);
+      console.log(`[Automação] Removendo status 'atrasado' do projeto ${project.id} - ${project.name} (data futura)`);
       
-      // Atualiza o status do projeto diretamente no banco de dados, mas também
-      // chama a implementação de updateProjectStatus para garantir consistência
-      if (storage && typeof storage.updateProjectStatus === 'function') {
-        return storage.updateProjectStatus(project.id, 'producao');
-      } else {
-        // Fallback caso storage não esteja disponível
-        return db
-          .update(projects)
-          .set({ status: 'producao' })
-          .where(eq(projects.id, project.id));
-      }
+      // Remove apenas o special_status, mantendo o workflow status intacto
+      return db
+        .update(projects)
+        .set({ special_status: 'none' })
+        .where(eq(projects.id, project.id));
     });
     
     await Promise.all(updatePromises);
