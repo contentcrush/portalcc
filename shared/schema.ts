@@ -1089,8 +1089,24 @@ export function isValidStatusTransition(
   }
   
   const config = PROJECT_STATUS_CONFIG[currentStatus];
+  const newConfig = PROJECT_STATUS_CONFIG[newStatus];
   
-  if (config.nextStatuses.includes(newStatus)) {
+  // Se não encontrar a configuração do status atual, permitir a transição
+  if (!config) {
+    console.warn(`Status configuration not found for: ${currentStatus}`);
+    return { valid: true };
+  }
+  
+  // Se não encontrar a configuração do novo status, negar a transição
+  if (!newConfig) {
+    console.warn(`Status configuration not found for: ${newStatus}`);
+    return { 
+      valid: false, 
+      reason: `Status "${newStatus}" não está configurado no sistema` 
+    };
+  }
+  
+  if (config.nextStatuses && config.nextStatuses.includes(newStatus)) {
     return { valid: true };
   }
   
@@ -1100,7 +1116,7 @@ export function isValidStatusTransition(
   
   return { 
     valid: false, 
-    reason: `Não é possível alterar de "${config.label}" para "${PROJECT_STATUS_CONFIG[newStatus].label}"` 
+    reason: `Não é possível alterar de "${config.label}" para "${newConfig.label}"` 
   };
 }
 
