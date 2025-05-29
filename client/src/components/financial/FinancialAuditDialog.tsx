@@ -201,8 +201,19 @@ export function FinancialAuditDialog({ documentId, open, onOpenChange }: Financi
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-muted-foreground">
-                  Nenhum registro de auditoria encontrado
+                <div className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                      <Shield className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-base mb-2">Documento Pré-Auditoria</h3>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        Este documento foi criado antes da implementação do sistema de auditoria. 
+                        Todas as alterações futuras serão registradas automaticamente.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </ScrollArea>
