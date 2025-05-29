@@ -2509,7 +2509,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/financial-documents/:id", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedDocument = await storage.updateFinancialDocument(id, req.body);
+      
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
+      // Extrair informações da sessão para auditoria
+      const sessionInfo = {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: req.sessionID
+      };
+      
+      const updatedDocument = await FinancialAuditService.updateDocument(
+        id,
+        req.body,
+        req.user!.id,
+        req.body.reason || 'Atualização manual via interface',
+        sessionInfo
+      );
       
       if (!updatedDocument) {
         return res.status(404).json({ message: "Financial document not found" });
@@ -2563,6 +2580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { notes, payment_date } = req.body;
       
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
       // Verificar se o documento existe
       const document = await storage.getFinancialDocument(id);
       if (!document) {
@@ -2578,12 +2598,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentDate = payment_date ? new Date(payment_date) : new Date();
       console.log(`[Sistema] Documento financeiro #${id} com Data Efetuada: ${paymentDate.toISOString()}`);
       
-      const updatedDocument = await storage.updateFinancialDocument(id, {
-        paid: true,
-        status: 'paid',
-        payment_date: paymentDate,
-        payment_notes: notes || null
-      });
+      // Extrair informações da sessão para auditoria
+      const sessionInfo = {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: req.sessionID
+      };
+      
+      const updatedDocument = await FinancialAuditService.markAsPaid(
+        id,
+        req.user!.id,
+        {
+          payment_date: paymentDate,
+          payment_notes: notes || null
+        },
+        sessionInfo
+      );
       
       // Importação aqui para evitar problemas de importação circular
       const { removeFinancialDocumentEvents } = await import('./utils/calendarSync');
