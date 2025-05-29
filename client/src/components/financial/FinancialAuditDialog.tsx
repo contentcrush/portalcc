@@ -69,22 +69,27 @@ export function FinancialAuditDialog({ documentId, open, onOpenChange }: Financi
   };
 
   const formatChanges = (oldValues: any, newValues: any) => {
-    if (!oldValues || !newValues) return null;
+    if (!oldValues || !newValues) return 'Dados de alteração não disponíveis';
 
-    const changes: string[] = [];
-    
-    // Comparar campos importantes
-    const fieldsToCheck = ['amount', 'status', 'paid', 'due_date', 'description'];
-    
-    fieldsToCheck.forEach(field => {
-      if (oldValues[field] !== newValues[field]) {
-        const oldVal = oldValues[field] ?? 'N/A';
-        const newVal = newValues[field] ?? 'N/A';
-        changes.push(`${field}: ${oldVal} → ${newVal}`);
-      }
-    });
+    try {
+      const changes: string[] = [];
+      
+      // Comparar campos importantes
+      const fieldsToCheck = ['amount', 'status', 'paid', 'due_date', 'description'];
+      
+      fieldsToCheck.forEach(field => {
+        if (oldValues[field] !== newValues[field]) {
+          const oldVal = oldValues[field] ?? 'N/A';
+          const newVal = newValues[field] ?? 'N/A';
+          changes.push(`${field}: ${oldVal} → ${newVal}`);
+        }
+      });
 
-    return changes.length > 0 ? changes.join(', ') : 'Nenhuma alteração detectada';
+      return changes.length > 0 ? changes.join(', ') : 'Nenhuma alteração detectada';
+    } catch (error) {
+      console.error('Erro ao formatar alterações:', error);
+      return 'Erro ao processar alterações';
+    }
   };
 
   return (
@@ -159,7 +164,7 @@ export function FinancialAuditDialog({ documentId, open, onOpenChange }: Financi
                         <div className="flex items-center gap-2">
                           {getActionBadge(log.action)}
                           <span className="text-sm text-muted-foreground">
-                            {format(new Date(log.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            {log.timestamp ? format(new Date(log.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
