@@ -2755,6 +2755,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para buscar histórico de auditoria de um documento financeiro
+  app.get("/api/financial-documents/:id/audit-history", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
+      const auditHistory = await FinancialAuditService.getDocumentAuditHistory(id);
+      
+      res.json(auditHistory);
+    } catch (error) {
+      console.error("Erro ao buscar histórico de auditoria:", error);
+      res.status(500).json({ message: "Failed to fetch audit history" });
+    }
+  });
+
+  // Rota para verificar integridade dos logs de auditoria
+  app.get("/api/financial-documents/:id/verify-integrity", authenticateJWT, requireRole('admin'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
+      const isIntegrityOk = await FinancialAuditService.verifyAuditIntegrity(id);
+      
+      res.json({ 
+        document_id: id,
+        integrity_verified: isIntegrityOk,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Erro ao verificar integridade:", error);
+      res.status(500).json({ message: "Failed to verify integrity" });
+    }
+  });
+
+  // Rota para aprovar um documento financeiro (apenas admins)
+  app.post("/api/financial-documents/:id/approve", authenticateJWT, requireRole('admin'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ message: "Motivo da aprovação é obrigatório" });
+      }
+      
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
+      // Extrair informações da sessão para auditoria
+      const sessionInfo = {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: req.sessionID
+      };
+      
+      const approvedDocument = await FinancialAuditService.approveDocument(
+        id,
+        req.user!.id,
+        reason,
+        sessionInfo
+      );
+      
+      // Notificar sobre aprovação
+      io.emit('financial_updated', { 
+        type: 'financial_approved',
+        action: 'approve', 
+        document: approvedDocument,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi aprovado por um administrador'
+      });
+      
+      res.json({ 
+        message: "Documento aprovado com sucesso", 
+        document: approvedDocument 
+      });
+    } catch (error) {
+      console.error("Erro ao aprovar documento:", error);
+      res.status(500).json({ message: "Failed to approve document" });
+    }
+  });
+
+  // Rota para arquivar um documento financeiro
+  app.post("/api/financial-documents/:id/archive", authenticateJWT, requirePermission('manage_financials'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ message: "Motivo do arquivamento é obrigatório" });
+      }
+      
+      // Importar o serviço de auditoria financeira
+      const { FinancialAuditService } = await import('./services/financial-audit');
+      
+      // Extrair informações da sessão para auditoria
+      const sessionInfo = {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: req.sessionID
+      };
+      
+      const archivedDocument = await FinancialAuditService.archiveDocument(
+        id,
+        req.user!.id,
+        reason,
+        sessionInfo
+      );
+      
+      // Notificar sobre arquivamento
+      io.emit('financial_updated', { 
+        type: 'financial_archived',
+        action: 'archive', 
+        document: archivedDocument,
+        timestamp: new Date().toISOString(),
+        message: 'Um documento financeiro foi arquivado'
+      });
+      
+      res.json({ 
+        message: "Documento arquivado com sucesso", 
+        document: archivedDocument 
+      });
+    } catch (error) {
+      console.error("Erro ao arquivar documento:", error);
+      res.status(500).json({ message: "Failed to archive document" });
+    }
+  });
+
   // Expenses - Adicionando autenticação e permissões
   app.get("/api/expenses", authenticateJWT, async (_req, res) => {
     try {

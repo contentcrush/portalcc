@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download, RotateCcw, Edit } from "lucide-react";
+import { MoreHorizontal, Eye, FileCheck, FileText, Trash2, Download, RotateCcw, Edit, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -76,6 +76,7 @@ export function FinancialRecordActions({
 }: FinancialRecordActionsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: "", detail: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
