@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { FinancialAuditDialog } from "./FinancialAuditDialog";
 import { showSuccessToast } from "@/lib/utils";
 
 // Tipos para os registros financeiros
@@ -294,6 +295,13 @@ export function FinancialRecordActions({
             <span>Exportar PDF</span>
           </DropdownMenuItem>
           
+          {type === "document" && (
+            <DropdownMenuItem onClick={() => setAuditDialogOpen(true)}>
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Auditoria</span>
+            </DropdownMenuItem>
+          )}
+          
           <DropdownMenuSeparator />
           
           <DropdownMenuItem 
@@ -354,6 +362,15 @@ export function FinancialRecordActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Diálogo de Auditoria Financeira */}
+      {type === "document" && (
+        <FinancialAuditDialog
+          documentId={record.id}
+          open={auditDialogOpen}
+          onOpenChange={setAuditDialogOpen}
+        />
+      )}
     </>
   );
 }
