@@ -22,8 +22,6 @@ import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
 import invoicesRoutes from "./routes/invoices";
 import { getProjectStatusHistory, updateProjectSpecialStatus } from "./routes/project-status";
-import fs from "fs";
-import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -940,28 +938,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let validatedThumbnail = project.thumbnail;
           if (project.thumbnail) {
             try {
-              // Verificar se é um data URL (base64) ou um caminho de arquivo
-              if (project.thumbnail.startsWith('data:image/')) {
-                // É um data URL base64, validar que está bem formado
-                const commaIndex = project.thumbnail.indexOf(',');
-                if (commaIndex > -1 && commaIndex < 100) { // Header razoável
-                  validatedThumbnail = project.thumbnail;
-                } else {
-                  console.warn(`[${requestId}] [Projects API] Data URL malformado para projeto ${project.id}`);
-                  validatedThumbnail = null;
-                }
-              } else {
-                // É um caminho de arquivo, verificar se existe
-                let imagePath = project.thumbnail;
-                if (imagePath.startsWith('/')) {
-                  imagePath = imagePath.substring(1);
-                }
-                
-                const fullPath = path.join(process.cwd(), imagePath);
-                if (!fs.existsSync(fullPath)) {
-                  console.warn(`[${requestId}] [Projects API] Imagem não encontrada para projeto ${project.id}: ${fullPath}`);
-                  validatedThumbnail = null;
-                }
+              // Verificar se o caminho da imagem é válido
+              const fs = require('fs');
+              const path = require('path');
+              
+              let imagePath = project.thumbnail;
+              if (imagePath.startsWith('/')) {
+                imagePath = imagePath.substring(1);
+              }
+              
+              const fullPath = path.join(process.cwd(), imagePath);
+              if (!fs.existsSync(fullPath)) {
+                console.warn(`[${requestId}] [Projects API] Imagem não encontrada para projeto ${project.id}: ${fullPath}`);
+                validatedThumbnail = null;
               }
             } catch (imgError) {
               console.warn(`[${requestId}] [Projects API] Erro ao validar imagem do projeto ${project.id}:`, imgError);
