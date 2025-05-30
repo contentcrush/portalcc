@@ -22,6 +22,8 @@ import { parseISO } from "date-fns";
 import attachmentsRoutes from "./routes/attachments";
 import invoicesRoutes from "./routes/invoices";
 import { getProjectStatusHistory, updateProjectSpecialStatus } from "./routes/project-status";
+import fs from "fs";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configurar autenticação
@@ -939,8 +941,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (project.thumbnail) {
             try {
               // Verificar se o caminho da imagem é válido
-              const fs = require('fs');
-              const path = require('path');
               
               let imagePath = project.thumbnail;
               if (imagePath.startsWith('/')) {
