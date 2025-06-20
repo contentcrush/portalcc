@@ -1015,7 +1015,7 @@ export const PROJECT_STATUS_CONFIG = {
     progressWithBudget: 15,
     canCreateFinancialDocuments: false,
     color: '#6B7280',
-    nextStatuses: ['proposta_aceita'] as ProjectStatus[],
+    nextStatuses: ['proposta_aceita', 'pre_producao', 'producao'] as ProjectStatus[],
     allowBackward: [] as ProjectStatus[]
   },
   proposta_aceita: {
@@ -1024,7 +1024,7 @@ export const PROJECT_STATUS_CONFIG = {
     baseProgress: 25,
     canCreateFinancialDocuments: true,
     color: '#10B981',
-    nextStatuses: ['pre_producao'] as ProjectStatus[],
+    nextStatuses: ['pre_producao', 'producao', 'pos_revisao'] as ProjectStatus[],
     allowBackward: ['proposta'] as ProjectStatus[]
   },
   pre_producao: {
@@ -1033,7 +1033,7 @@ export const PROJECT_STATUS_CONFIG = {
     baseProgress: 40,
     canCreateFinancialDocuments: true,
     color: '#3B82F6',
-    nextStatuses: ['producao'] as ProjectStatus[],
+    nextStatuses: ['producao', 'pos_revisao', 'entregue'] as ProjectStatus[],
     allowBackward: ['proposta_aceita', 'proposta'] as ProjectStatus[]
   },
   producao: {
@@ -1042,7 +1042,7 @@ export const PROJECT_STATUS_CONFIG = {
     baseProgress: 60,
     canCreateFinancialDocuments: true,
     color: '#F59E0B',
-    nextStatuses: ['pos_revisao'] as ProjectStatus[],
+    nextStatuses: ['pos_revisao', 'entregue', 'concluido'] as ProjectStatus[],
     allowBackward: ['pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
   },
   pos_revisao: {
@@ -1051,7 +1051,7 @@ export const PROJECT_STATUS_CONFIG = {
     baseProgress: 80,
     canCreateFinancialDocuments: true,
     color: '#8B5CF6',
-    nextStatuses: ['entregue'] as ProjectStatus[],
+    nextStatuses: ['entregue', 'concluido'] as ProjectStatus[],
     allowBackward: ['producao', 'pre_producao', 'proposta_aceita', 'proposta'] as ProjectStatus[]
   },
   entregue: {
@@ -1074,18 +1074,24 @@ export const PROJECT_STATUS_CONFIG = {
   }
 } as const;
 
-// Função para validar transições de status
+// Função para validar transições de status - versão simplificada e mais flexível
 export function isValidStatusTransition(
   currentStatus: ProjectStatus,
   newStatus: ProjectStatus,
   specialStatus?: SpecialStatus
 ): { valid: boolean; reason?: string } {
   
+  // Verificar se projeto está cancelado
   if (specialStatus === 'canceled') {
     return { 
       valid: false, 
       reason: 'Projetos cancelados não podem ter seu status alterado' 
     };
+  }
+  
+  // Se é o mesmo status, sempre permitir
+  if (currentStatus === newStatus) {
+    return { valid: true };
   }
   
   const config = PROJECT_STATUS_CONFIG[currentStatus];
@@ -1106,11 +1112,25 @@ export function isValidStatusTransition(
     };
   }
   
+  // Permitir transições para frente (nextStatuses)
   if (config.nextStatuses && config.nextStatuses.includes(newStatus)) {
     return { valid: true };
   }
   
+  // Permitir transições para trás (allowBackward)
   if (config.allowBackward && config.allowBackward.includes(newStatus)) {
+    return { valid: true };
+  }
+  
+  // Regra especial: permitir pular para "entregue" ou "concluido" de qualquer status
+  // (para casos onde o projeto é finalizado rapidamente)
+  if (newStatus === 'entregue' || newStatus === 'concluido') {
+    return { valid: true };
+  }
+  
+  // Regra especial: permitir voltar para "proposta" de qualquer status
+  // (para casos de replanejamento ou mudanças de escopo)
+  if (newStatus === 'proposta') {
     return { valid: true };
   }
   
