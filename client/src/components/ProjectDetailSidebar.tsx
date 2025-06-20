@@ -337,7 +337,7 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         client_id: projectData.client_id,
         document_type: 'invoice',
         amount: projectData.budget || 0,
-        creation_date: issueDateFormatted,
+        issue_date: issueDateFormatted,
         due_date: dueDateFormatted,
         status: 'pending',
         description: `Fatura referente ao projeto: ${projectData.name} (Prazo: ${projectData.payment_term || 30} dias)`

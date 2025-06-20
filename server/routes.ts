@@ -1329,7 +1329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedProject.name, 
             updatedProject.budget, 
             updatedProject.endDate,
-            paymentTerm
+            paymentTerm,
+            req.user?.id || 1
           );
           
           console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
@@ -1505,7 +1506,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedProject.name, 
             updatedProject.budget, 
             updatedProject.endDate,
-            paymentTerm
+            paymentTerm,
+            req.user?.id || 1
           );
           
           console.log(`[Sistema] Novo documento financeiro ID:${financialDocument.id} gerado para o projeto atualizado ID:${id}`);
@@ -2684,10 +2686,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Reverter o pagamento
       const updatedDocument = await storage.updateFinancialDocument(id, {
-        paid: false,
         status: 'pending',
-        payment_date: null,
-        payment_notes: null
+        payment_date: null
       });
       
       // Importação aqui para evitar problemas de importação circular
