@@ -921,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projects = await storage.getProjects();
       console.log(`[${requestId}] [Projects API] Projetos carregados do storage: ${projects.length} items`);
       
-      // Validação robusta dos dados
+      // Validação robusta dos dados - versão simplificada e síncrona
       const validatedProjects = projects.map((project, index) => {
         try {
           // Validar campos obrigatórios
@@ -934,28 +934,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
           
-          // Validar e limpar campo thumbnail
+          // Validar e limpar campo thumbnail - versão robusta sem validação de arquivo
           let validatedThumbnail = project.thumbnail;
-          if (project.thumbnail) {
-            try {
-              // Verificar se o caminho da imagem é válido
-              const fs = require('fs');
-              const path = require('path');
-              
-              let imagePath = project.thumbnail;
-              if (imagePath.startsWith('/')) {
-                imagePath = imagePath.substring(1);
-              }
-              
-              const fullPath = path.join(process.cwd(), imagePath);
-              if (!fs.existsSync(fullPath)) {
-                console.warn(`[${requestId}] [Projects API] Imagem não encontrada para projeto ${project.id}: ${fullPath}`);
-                validatedThumbnail = null;
-              }
-            } catch (imgError) {
-              console.warn(`[${requestId}] [Projects API] Erro ao validar imagem do projeto ${project.id}:`, imgError);
+          if (project.thumbnail && typeof project.thumbnail === 'string') {
+            // Verificar se é uma URL válida ou caminho válido
+            if (project.thumbnail.startsWith('http') || 
+                project.thumbnail.startsWith('/') || 
+                project.thumbnail.startsWith('uploads/') ||
+                project.thumbnail.includes('.')) {
+              validatedThumbnail = project.thumbnail;
+            } else {
+              // Se não é um formato válido, remover o thumbnail
               validatedThumbnail = null;
             }
+          } else {
+            validatedThumbnail = null;
           }
           
           return {
