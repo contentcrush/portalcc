@@ -187,14 +187,28 @@ export default function Projects({ params }: { params?: { id?: string } }) {
           const hasDateA = a.start_date != null;
           const hasDateB = b.start_date != null;
           
-          if (hasDateA && !hasDateB) return -1; // A tem data, B não tem - A vem primeiro
-          if (!hasDateA && hasDateB) return 1;  // B tem data, A não tem - B vem primeiro
-          if (!hasDateA && !hasDateB) return a.id - b.id; // Ambos sem data - ordenar por ID
+          // Debug detalhado
+          console.log(`🔍 Comparando: ${a.name} (${a.start_date}) vs ${b.name} (${b.start_date})`);
+          
+          if (hasDateA && !hasDateB) {
+            console.log(`  → ${a.name} tem data, ${b.name} não tem - A primeiro`);
+            return -1;
+          }
+          if (!hasDateA && hasDateB) {
+            console.log(`  → ${b.name} tem data, ${a.name} não tem - B primeiro`);
+            return 1;
+          }
+          if (!hasDateA && !hasDateB) {
+            console.log(`  → Ambos sem data - ordenar por ID`);
+            return a.id - b.id;
+          }
           
           // Ambos têm data - ordenar por data (mais recentes primeiro)
           const dateA = new Date(a.start_date).getTime();
           const dateB = new Date(b.start_date).getTime();
-          return dateB - dateA;
+          const result = dateB - dateA;
+          console.log(`  → Ambos com data - ${dateB > dateA ? b.name : a.name} é mais recente (${result})`);
+          return result;
         });
         break;
         
