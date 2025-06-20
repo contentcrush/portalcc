@@ -183,8 +183,17 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       case "recent":
         console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Recentes");
         sorted = sorted.sort((a: any, b: any) => {
-          const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
-          const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+          // Projetos com data têm prioridade sobre projetos sem data
+          const hasDateA = a.start_date != null;
+          const hasDateB = b.start_date != null;
+          
+          if (hasDateA && !hasDateB) return -1; // A tem data, B não tem - A vem primeiro
+          if (!hasDateA && hasDateB) return 1;  // B tem data, A não tem - B vem primeiro
+          if (!hasDateA && !hasDateB) return a.id - b.id; // Ambos sem data - ordenar por ID
+          
+          // Ambos têm data - ordenar por data (mais recentes primeiro)
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
           return dateB - dateA;
         });
         break;
@@ -192,8 +201,17 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       case "older":
         console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Antigos");
         sorted = sorted.sort((a: any, b: any) => {
-          const dateA = a.start_date ? new Date(a.start_date).getTime() : new Date().getTime();
-          const dateB = b.start_date ? new Date(b.start_date).getTime() : new Date().getTime();
+          // Projetos com data têm prioridade sobre projetos sem data
+          const hasDateA = a.start_date != null;
+          const hasDateB = b.start_date != null;
+          
+          if (hasDateA && !hasDateB) return -1; // A tem data, B não tem - A vem primeiro
+          if (!hasDateA && hasDateB) return 1;  // B tem data, A não tem - B vem primeiro
+          if (!hasDateA && !hasDateB) return a.id - b.id; // Ambos sem data - ordenar por ID
+          
+          // Ambos têm data - ordenar por data (mais antigos primeiro)
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
           return dateA - dateB;
         });
         break;
@@ -201,8 +219,17 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       case "upcoming":
         console.log("📅 [ProjectSorting] Aplicando ordenação: Prazo Próximo");
         sorted = sorted.sort((a: any, b: any) => {
-          const endDateA = a.end_date ? new Date(a.end_date).getTime() : new Date('2099-12-31').getTime();
-          const endDateB = b.end_date ? new Date(b.end_date).getTime() : new Date('2099-12-31').getTime();
+          // Projetos com data de fim têm prioridade sobre projetos sem data
+          const hasEndDateA = a.end_date != null;
+          const hasEndDateB = b.end_date != null;
+          
+          if (hasEndDateA && !hasEndDateB) return -1; // A tem prazo, B não tem - A vem primeiro
+          if (!hasEndDateA && hasEndDateB) return 1;  // B tem prazo, A não tem - B vem primeiro
+          if (!hasEndDateA && !hasEndDateB) return a.id - b.id; // Ambos sem prazo - ordenar por ID
+          
+          // Ambos têm prazo - ordenar por proximidade
+          const endDateA = new Date(a.end_date).getTime();
+          const endDateB = new Date(b.end_date).getTime();
           const now = new Date().getTime();
           
           const diffA = Math.abs(endDateA - now);
