@@ -278,22 +278,41 @@ export function ProjectFormDialog() {
 
   // Função para processar upload de imagem
   const handleImageUpload = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          // Neste momento estamos apenas convertendo para base64
-          // Em uma implementação real, você enviaria para o servidor
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error("Falha ao processar a imagem"));
-        }
-      };
-      reader.onerror = () => {
-        reject(new Error("Falha ao ler o arquivo"));
-      };
-      reader.readAsDataURL(file);
-    });
+    const { fileToCompressedBase64, getImageInfo } = await import('@/lib/image-compression');
+    
+    try {
+      console.log(`[ProjectForm] Processando upload: ${file.name} (${Math.round(file.size/1024)}KB)`);
+      
+      const compressedDataUrl = await fileToCompressedBase64(file, {
+        maxWidth: 800,
+        maxHeight: 600,
+        quality: 0.85,
+        maxSizeKB: 500
+      });
+      
+      const imageInfo = getImageInfo(compressedDataUrl);
+      console.log(`[ProjectForm] Compressão concluída: ${imageInfo.sizeKB}KB ${imageInfo.type}`);
+      
+      return compressedDataUrl;
+    } catch (error) {
+      console.error("[ProjectForm] Erro na compressão, usando método fallback:", error);
+      
+      // Fallback para método original se a compressão falhar
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            resolve(event.target.result as string);
+          } else {
+            reject(new Error("Falha ao processar a imagem"));
+          }
+        };
+        reader.onerror = () => {
+          reject(new Error("Falha ao ler o arquivo"));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
   };
 
   // Lidar com a submissão do formulário

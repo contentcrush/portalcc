@@ -2,6 +2,7 @@ import { ChangeEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, UploadIcon, XIcon } from "lucide-react";
+import { compressBase64Image, fileToCompressedBase64, getImageInfo } from "@/lib/image-compression";
 
 interface ImageUploadProps {
   value: string | null;
@@ -40,62 +41,54 @@ export function ImageUpload({ value, onChange, onUpload }: ImageUploadProps) {
         onChange(uploadedUrl);
         setImagePreview(uploadedUrl);
       } else {
-        // Caso contrário, use FileReader para criar uma prévia local
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const dataUrl = event.target?.result as string;
-          console.log("Arquivo lido como data URL, tamanho:", 
-            Math.round(dataUrl.length / 1024), "KB, Tipo:", 
-            dataUrl.substring(0, dataUrl.indexOf(';', 10)));
-          
-          // Garantir que temos uma string limpa sem espaços extras
-          const trimmedDataUrl = dataUrl.trim();
-          
-          // Verificar se a string base64 é válida
-          if (trimmedDataUrl.startsWith('data:image/')) {
-            // Armazenar o data URL original
-            let processedDataUrl = trimmedDataUrl;
-            
-            // Verificar se é um SVG - SVGs precisam de tratamento especial em alguns browsers
-            if (trimmedDataUrl.includes('data:image/svg+xml')) {
-              console.log("SVG detectado, aplicando tratamento especial");
-              try {
-                // Adicionar atributos adicionais ao SVG para garantir renderização
-                const base64Data = trimmedDataUrl.split(',')[1];
-                const decodedSvg = atob(base64Data);
-                
-                // Verificar conteúdo mínimo válido de SVG
-                if (!decodedSvg.includes('<svg') || !decodedSvg.includes('</svg>')) {
-                  throw new Error("SVG malformado");
-                }
-                
-                console.log("SVG validado com sucesso");
-              } catch (error) {
-                console.error("Problema ao processar SVG:", error);
-              }
-            }
-            
-            console.log("Logo processado com sucesso, tamanho final:", 
-              Math.round(processedDataUrl.length / 1024), "KB");
-              
-            // Importante: atualizar estado e chamar onChange com o valor correto
-            setImagePreview(processedDataUrl);
-            onChange(processedDataUrl);
-            
-            console.log("Preview atualizado e função onChange chamada com sucesso");
-          } else {
-            console.error("Formato de imagem inválido:", trimmedDataUrl.substring(0, 50));
-            alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
-          }
-        };
-        reader.onerror = () => {
-          console.error("Erro ao ler o arquivo");
-          alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
-        };
+        // Usar compressão automática para converter o arquivo
+        console.log("Iniciando conversão com compressão automática");
         
-        // Iniciar a leitura do arquivo
-        console.log("Iniciando leitura do arquivo como dataURL");
-        reader.readAsDataURL(file);
+        try {
+          const compressedDataUrl = await fileToCompressedBase64(file, {
+            maxWidth: 800,
+            maxHeight: 600,
+            quality: 0.85,
+            maxSizeKB: 500
+          });
+          
+          const imageInfo = getImageInfo(compressedDataUrl);
+          console.log("Compressão concluída:", {
+            tipo: imageInfo.type,
+            tamanhoFinal: `${imageInfo.sizeKB}KB`,
+            otimizada: imageInfo.isLarge ? 'Sim' : 'Não'
+          });
+          
+          // Importante: atualizar estado e chamar onChange com o valor comprimido
+          setImagePreview(compressedDataUrl);
+          onChange(compressedDataUrl);
+          
+          console.log("Preview e formulário atualizados com imagem otimizada");
+          
+        } catch (compressionError) {
+          console.error("Erro na compressão, tentando método original:", compressionError);
+          
+          // Fallback para o método original se a compressão falhar
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            const trimmedDataUrl = dataUrl.trim();
+            
+            if (trimmedDataUrl.startsWith('data:image/')) {
+              setImagePreview(trimmedDataUrl);
+              onChange(trimmedDataUrl);
+              console.log("Método de fallback aplicado com sucesso");
+            } else {
+              console.error("Formato de imagem inválido");
+              alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
+            }
+          };
+          reader.onerror = () => {
+            console.error("Erro ao ler o arquivo");
+            alert("Ocorreu um erro ao processar a imagem. Por favor, tente novamente.");
+          };
+          reader.readAsDataURL(file);
+        }
       }
     } catch (error) {
       console.error("Erro ao fazer upload da imagem:", error);

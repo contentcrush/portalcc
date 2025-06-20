@@ -943,7 +943,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 project.thumbnail.startsWith('/') || 
                 project.thumbnail.startsWith('uploads/') ||
                 project.thumbnail.includes('.')) {
-              validatedThumbnail = project.thumbnail;
+              
+              // Verificar tamanho da thumbnail para evitar sobrecarga
+              const thumbnailSize = project.thumbnail.length;
+              const maxThumbnailSize = 1024 * 1024; // 1MB limite
+              
+              if (thumbnailSize > maxThumbnailSize) {
+                console.warn(`[${requestId}] [Projects API] Thumbnail muito grande removida do projeto ${project.id}: ${Math.round(thumbnailSize / 1024)}KB > ${Math.round(maxThumbnailSize / 1024)}KB`);
+                validatedThumbnail = null;
+              } else {
+                validatedThumbnail = project.thumbnail;
+              }
             } else {
               // Se não é um formato válido, remover o thumbnail
               validatedThumbnail = null;
