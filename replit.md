@@ -1,0 +1,144 @@
+# replit.md
+
+## Overview
+
+This is a comprehensive project management system built for content production companies, called "Content Crush". It's a full-stack web application that manages projects, tasks, clients, finances, calendar events, and team collaboration. The system uses a modern tech stack with React frontend, Express backend, PostgreSQL database, and real-time features via WebSockets.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and optimized builds
+- **Styling**: Tailwind CSS with shadcn/ui component library
+- **State Management**: TanStack Query (React Query) for server state
+- **Routing**: Wouter for client-side routing
+- **Forms**: React Hook Form with Zod validation
+- **Real-time**: Native WebSockets and Socket.IO for live updates
+- **UI Components**: Radix UI primitives with custom styling
+
+### Backend Architecture
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js
+- **Database ORM**: Drizzle ORM with PostgreSQL
+- **Authentication**: JWT tokens with refresh token rotation
+- **File Upload**: Multer with Sharp for image processing
+- **Real-time**: WebSocket server for live updates
+- **Background Jobs**: Automated project status tracking and calendar sync
+
+### Key Components
+
+1. **Authentication System**
+   - JWT-based authentication with refresh tokens
+   - Role-based access control (admin, manager, editor, viewer)
+   - Session management with automatic token refresh
+   - Secure password hashing with bcrypt
+
+2. **Project Management**
+   - Project lifecycle tracking with status automation
+   - Kanban board and Gantt chart views
+   - Project stages and milestone tracking
+   - Special status handling (delayed, paused, canceled)
+   - Progress calculation based on task completion
+
+3. **Task Management**
+   - Task assignment and tracking
+   - Priority levels and due date management
+   - Real-time collaborative comments
+   - File attachments with image processing
+   - Automated deadline alerts
+
+4. **Client Relationship Management**
+   - Client profiles with contact information
+   - Interaction history tracking
+   - Project association and billing
+   - Document management per client
+
+5. **Financial Management**
+   - Invoice and payment tracking
+   - Expense management with receipt uploads
+   - Financial document audit trail
+   - Budget vs actual reporting
+   - Automated payment reminders
+
+6. **Calendar Integration**
+   - Project deadlines and milestones
+   - Financial due dates
+   - Team scheduling
+   - FullCalendar integration with multiple views
+
+7. **File Management**
+   - Centralized file storage system
+   - Image optimization and processing
+   - Organized by entity type (projects, tasks, clients)
+   - File type validation and security
+
+## Data Flow
+
+1. **Client Request Flow**:
+   - React components make API calls via TanStack Query
+   - Requests include JWT authentication headers
+   - Express routes validate permissions and process requests
+   - Drizzle ORM handles database operations
+   - Results are cached and synchronized across components
+
+2. **Real-time Updates**:
+   - WebSocket connections established on app load
+   - Server broadcasts changes to relevant clients
+   - Frontend invalidates cached queries and updates UI
+   - Optimistic updates for better user experience
+
+3. **File Upload Flow**:
+   - Files uploaded to temporary directory via Multer
+   - Image files processed with Sharp for optimization
+   - Files moved to organized directory structure
+   - Database records created with file metadata
+
+## External Dependencies
+
+### Core Framework Dependencies
+- **Database**: PostgreSQL 16 via Neon serverless
+- **Node.js**: Version 20 with ES modules
+- **Authentication**: JWT with refresh token strategy
+
+### Key Libraries
+- **Frontend**: React, TanStack Query, Wouter, Tailwind CSS, Radix UI
+- **Backend**: Express, Drizzle ORM, Multer, Sharp, bcrypt
+- **Calendar**: FullCalendar with React integration
+- **Charts**: Nivo for data visualization
+- **Date Handling**: date-fns with timezone support
+- **Real-time**: Socket.IO and native WebSockets
+
+### Development Tools
+- **TypeScript**: Full type safety across stack
+- **Vite**: Development server and build tool
+- **ESBuild**: Production backend bundling
+- **Drizzle Kit**: Database migrations and schema management
+
+## Deployment Strategy
+
+### Development Environment
+- **Runtime**: Replit with Node.js 20, Web, and PostgreSQL modules
+- **Hot Reload**: Vite dev server with HMR
+- **Database**: PostgreSQL instance with automatic migrations
+- **File Storage**: Local file system with organized directories
+
+### Production Build
+- **Frontend**: Vite builds to `dist/public` directory
+- **Backend**: ESBuild bundles server to `dist/index.js`
+- **Database**: Drizzle migrations applied automatically
+- **Static Files**: Served by Express in production
+
+### Environment Configuration
+- **Timezone**: UTC for all server operations
+- **Database**: Connection pooling with timeout handling
+- **File Uploads**: 50MB limit with image optimization
+- **Security**: CORS, authentication middleware, input validation
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## Changelog
+
+Changelog:
+- June 20, 2025. Initial setup
