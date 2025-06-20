@@ -1099,6 +1099,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Validação] Status de projeto ${id}: ${currentStatus} → ${newStatus} ✅`);
       }
       
+      // Calcular progresso automaticamente baseado no status
+      if (req.body.status) {
+        const statusProgressMap = {
+          'proposta': 14,
+          'proposta_aceita': 29,
+          'pre_producao': 43,
+          'producao': 57,
+          'pos_revisao': 71,
+          'entregue': 86,
+          'concluido': 100
+        };
+        
+        const calculatedProgress = statusProgressMap[req.body.status];
+        if (calculatedProgress) {
+          req.body.progress = calculatedProgress;
+          console.log(`[Sistema] Progresso calculado automaticamente para status "${req.body.status}": ${calculatedProgress}%`);
+        }
+      }
+      
       // Verificar se houve alteração na data de emissão ou prazo de pagamento
       const issueDateChanged = req.body.issue_date !== undefined && 
         (!currentProject.issue_date || 
