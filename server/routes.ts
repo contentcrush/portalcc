@@ -934,11 +934,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return null;
           }
           
-          // Validar e limpar campo thumbnail - versão robusta sem validação de arquivo
+          // Validar e limpar campo thumbnail - aceitar base64, URLs e caminhos
           let validatedThumbnail = project.thumbnail;
           if (project.thumbnail && typeof project.thumbnail === 'string') {
-            // Verificar se é uma URL válida ou caminho válido
-            if (project.thumbnail.startsWith('http') || 
+            // Verificar se é um formato válido: base64, HTTP/HTTPS URLs, ou caminhos de arquivo
+            if (project.thumbnail.startsWith('data:image/') ||
+                project.thumbnail.startsWith('http') || 
                 project.thumbnail.startsWith('/') || 
                 project.thumbnail.startsWith('uploads/') ||
                 project.thumbnail.includes('.')) {
