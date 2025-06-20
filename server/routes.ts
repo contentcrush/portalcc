@@ -860,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Função auxiliar para criar faturas com prazo de pagamento
-  async function createProjectInvoice(projectId: number, clientId: number, projectName: string, budget: number, endDate: Date | null, paymentTerm: number = 30) {
+  async function createProjectInvoice(projectId: number, clientId: number, projectName: string, budget: number, endDate: Date | null, paymentTerm: number = 30, createdBy: number = 1) {
     // Buscar o projeto para obter a data de emissão, se disponível
     const project = await storage.getProject(projectId);
     
@@ -899,10 +899,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       client_id: clientId,
       document_type: "invoice",
       amount: budget,
-      // creation_date removido pois não existe esta coluna na tabela
       due_date: dueDate,
       status: "pending",
-      description: `Fatura referente ao projeto: ${projectName} (Prazo: ${paymentTerm} dias)`
+      description: `Fatura referente ao projeto: ${projectName} (Prazo: ${paymentTerm} dias)`,
+      created_by: createdBy
     });
     
     return financialDocument;
@@ -2435,6 +2435,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.body && req.body.due_date && typeof req.body.due_date === 'string') {
       req.body.due_date = new Date(req.body.due_date);
     }
+    // Adicionar o created_by automaticamente com o ID do usuário autenticado
+    req.body.created_by = req.user?.id;
     next();
   }, validateBody(insertFinancialDocumentSchema), async (req, res) => {
     try {
