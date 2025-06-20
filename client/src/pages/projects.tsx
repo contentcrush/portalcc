@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -139,42 +139,75 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // Apply filters
-  const filteredProjects = projects && projects.length > 0 ? projects.filter((project: any) => {
-    // Search term filter
-    if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
+  // Apply filters and sorting
+  const filteredAndSortedProjects = useMemo(() => {
+    if (!projects || projects.length === 0) return [];
     
-    // Status filter
-    if (statusFilter !== "all" && project.status !== statusFilter) {
-      return false;
-    }
+    // First, filter the projects
+    let filtered = projects.filter((project: any) => {
+      // Search term filter
+      if (searchTerm && !project.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Status filter
+      if (statusFilter !== "all" && project.status !== statusFilter) {
+        return false;
+      }
+      
+      // Client filter
+      if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
+        return false;
+      }
+      
+      return true;
+    });
     
-    // Client filter
-    if (clientFilter !== "all" && project.client_id !== parseInt(clientFilter)) {
-      return false;
-    }
+    // Then, apply sorting based on dateFilter
+    const sortedProjects = [...filtered].sort((a: any, b: any) => {
+      switch (dateFilter) {
+        case "recent":
+          // Mais recentes primeiro - usar data de início
+          const dateA = a.start_date ? new Date(a.start_date) : new Date(0);
+          const dateB = b.start_date ? new Date(b.start_date) : new Date(0);
+          return dateB.getTime() - dateA.getTime();
+          
+        case "older":
+          // Mais antigos primeiro - usar data de início
+          const oldDateA = a.start_date ? new Date(a.start_date) : new Date();
+          const oldDateB = b.start_date ? new Date(b.start_date) : new Date();
+          return oldDateA.getTime() - oldDateB.getTime();
+          
+        case "upcoming":
+          // Prazo próximo - usar data de conclusão
+          const endDateA = a.end_date ? new Date(a.end_date) : new Date('2099-12-31');
+          const endDateB = b.end_date ? new Date(b.end_date) : new Date('2099-12-31');
+          const now = new Date();
+          
+          // Priorizar projetos com prazos mais próximos (futuros primeiro)
+          const diffA = endDateA.getTime() - now.getTime();
+          const diffB = endDateB.getTime() - now.getTime();
+          
+          // Se ambos são futuros ou ambos são passados, ordenar por proximidade
+          return Math.abs(diffA) - Math.abs(diffB);
+          
+        default:
+          // "all" - manter ordem original (por ID)
+          return a.id - b.id;
+      }
+    });
     
-    // Date filter (simplified for now)
-    if (dateFilter === "recent" && project.creation_date) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return new Date(project.creation_date) > thirtyDaysAgo;
-    }
-    
-    return true;
-  }) : [];
+    // Combine with client data
+    return sortedProjects.map((project: any) => {
+      const client = clients && clients.length > 0 
+        ? clients.find((c: any) => c.id === project.client_id) 
+        : null;
+      return { ...project, client };
+    });
+  }, [projects, clients, searchTerm, statusFilter, clientFilter, dateFilter]);
 
-  // Combine project with client data
-  const projectsWithClient = filteredProjects && filteredProjects.length > 0 
-    ? filteredProjects.map((project: any) => {
-        const client = clients && clients.length > 0 
-          ? clients.find((c: any) => c.id === project.client_id) 
-          : null;
-        return { ...project, client };
-      })
-    : [];
+  // Alias for backward compatibility
+  const projectsWithClient = filteredAndSortedProjects;
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
