@@ -1311,7 +1311,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (pendingInvoice) {
           // Atualizar a fatura existente
           await storage.updateFinancialDocument(pendingInvoice.id, {
-            amount: req.body.budget,
             description: `Fatura atualizada do projeto: ${updatedProject.name}`,
             // Manter data de vencimento ou definir nova baseada na data de fim do projeto
             due_date: updatedProject.endDate && new Date(updatedProject.endDate) > new Date() 
@@ -1488,7 +1487,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (pendingInvoice) {
           // Atualizar a fatura existente
           await storage.updateFinancialDocument(pendingInvoice.id, {
-            amount: req.body.budget,
             description: `Fatura atualizada do projeto: ${updatedProject.name}`,
             // Manter data de vencimento ou definir nova baseada na data de fim do projeto
             due_date: updatedProject.endDate && new Date(updatedProject.endDate) > new Date() 
@@ -2166,7 +2164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user_id: req.user!.id,
         parent_id: parentId,
         creation_date: new Date(),
-        edited: false,
         deleted: false
       });
       
@@ -2279,7 +2276,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user_id: req.user!.id,
         type: req.body.type || 'like'
       });
-      
       // Notificar via WebSocket
       if (io) {
         io.to(`task-${comment.task_id}`).emit('new-reaction', {
@@ -3123,7 +3119,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Notificar sobre a aprovação da despesa
       io.emit('financial_updated', { 
-        type: 'financial_updated',
         action: 'approve_expense', 
         expense: updatedExpense,
         timestamp: new Date().toISOString(),
