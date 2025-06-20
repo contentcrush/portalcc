@@ -139,10 +139,18 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     },
   });
 
-  // Apply filters and sorting
-  const filteredAndSortedProjects = useMemo(() => {
-    if (!projects || projects.length === 0) return [];
+  // Apply filters and sorting with debug logging
+  const projectsWithClient = useMemo(() => {
+    console.log("🔄 [ProjectSorting] Iniciando ordenação:", { 
+      dateFilter, 
+      projectsCount: projects?.length || 0 
+    });
     
+    if (!projects || !Array.isArray(projects)) {
+      console.log("❌ [ProjectSorting] Projetos não disponíveis");
+      return [];
+    }
+
     // First, filter the projects
     let filtered = projects.filter((project: any) => {
       // Search term filter
@@ -162,52 +170,71 @@ export default function Projects({ params }: { params?: { id?: string } }) {
       
       return true;
     });
-    
-    // Then, apply sorting based on dateFilter
-    const sortedProjects = [...filtered].sort((a: any, b: any) => {
-      switch (dateFilter) {
-        case "recent":
-          // Mais recentes primeiro - usar data de início
-          const dateA = a.start_date ? new Date(a.start_date) : new Date(0);
-          const dateB = b.start_date ? new Date(b.start_date) : new Date(0);
-          return dateB.getTime() - dateA.getTime();
-          
-        case "older":
-          // Mais antigos primeiro - usar data de início
-          const oldDateA = a.start_date ? new Date(a.start_date) : new Date();
-          const oldDateB = b.start_date ? new Date(b.start_date) : new Date();
-          return oldDateA.getTime() - oldDateB.getTime();
-          
-        case "upcoming":
-          // Prazo próximo - usar data de conclusão
-          const endDateA = a.end_date ? new Date(a.end_date) : new Date('2099-12-31');
-          const endDateB = b.end_date ? new Date(b.end_date) : new Date('2099-12-31');
-          const now = new Date();
-          
-          // Priorizar projetos com prazos mais próximos (futuros primeiro)
-          const diffA = endDateA.getTime() - now.getTime();
-          const diffB = endDateB.getTime() - now.getTime();
-          
-          // Se ambos são futuros ou ambos são passados, ordenar por proximidade
-          return Math.abs(diffA) - Math.abs(diffB);
-          
-        default:
-          // "all" - manter ordem original (por ID)
-          return a.id - b.id;
-      }
+
+    console.log("🔍 [ProjectSorting] Filtros aplicados:", { 
+      filteredCount: filtered.length,
+      totalCount: projects.length 
     });
+
+    // Then, apply sorting based on dateFilter
+    let sorted = [...filtered];
     
+    switch (dateFilter) {
+      case "recent":
+        console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Recentes");
+        sorted = sorted.sort((a: any, b: any) => {
+          const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+          const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+        
+      case "older":
+        console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Antigos");
+        sorted = sorted.sort((a: any, b: any) => {
+          const dateA = a.start_date ? new Date(a.start_date).getTime() : new Date().getTime();
+          const dateB = b.start_date ? new Date(b.start_date).getTime() : new Date().getTime();
+          return dateA - dateB;
+        });
+        break;
+        
+      case "upcoming":
+        console.log("📅 [ProjectSorting] Aplicando ordenação: Prazo Próximo");
+        sorted = sorted.sort((a: any, b: any) => {
+          const endDateA = a.end_date ? new Date(a.end_date).getTime() : new Date('2099-12-31').getTime();
+          const endDateB = b.end_date ? new Date(b.end_date).getTime() : new Date('2099-12-31').getTime();
+          const now = new Date().getTime();
+          
+          const diffA = Math.abs(endDateA - now);
+          const diffB = Math.abs(endDateB - now);
+          return diffA - diffB;
+        });
+        break;
+        
+      default:
+        console.log("📅 [ProjectSorting] Aplicando ordenação: Padrão (por ID)");
+        sorted = sorted.sort((a: any, b: any) => a.id - b.id);
+        break;
+    }
+
+    // Log the first few projects after sorting
+    console.log("✅ [ProjectSorting] Ordenação concluída. Primeiros 3 projetos:", 
+      sorted.slice(0, 3).map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        start_date: p.start_date, 
+        end_date: p.end_date 
+      }))
+    );
+
     // Combine with client data
-    return sortedProjects.map((project: any) => {
-      const client = clients && clients.length > 0 
+    return sorted.map((project: any) => {
+      const client = clients && Array.isArray(clients) && clients.length > 0 
         ? clients.find((c: any) => c.id === project.client_id) 
         : null;
       return { ...project, client };
     });
   }, [projects, clients, searchTerm, statusFilter, clientFilter, dateFilter]);
-
-  // Alias for backward compatibility
-  const projectsWithClient = filteredAndSortedProjects;
 
   const handleOpenProjectDetails = (projectId: number) => {
     setSelectedProjectId(projectId);
