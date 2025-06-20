@@ -1046,7 +1046,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           project.name, 
           project.budget, 
           project.endDate,
-          paymentTerm
+          paymentTerm,
+          req.user?.id || 1
         );
         
         console.log(`[Sistema] Documento financeiro ID:${financialDocument.id} gerado automaticamente para o projeto ID:${project.id}`);
