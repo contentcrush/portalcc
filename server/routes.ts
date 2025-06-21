@@ -2604,30 +2604,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { notes, payment_date } = req.body;
       
+      console.log(`[PaymentDebug] Iniciando pagamento para documento #${id}`);
+      console.log(`[PaymentDebug] Dados recebidos:`, { notes, payment_date, user: req.user?.id });
+      
       // Importar o serviço de auditoria financeira
       const { FinancialAuditService } = await import('./services/financial-audit');
       
       // Verificar se o documento existe
       const document = await storage.getFinancialDocument(id);
       if (!document) {
+        console.log(`[PaymentDebug] Documento #${id} não encontrado`);
         return res.status(404).json({ message: "Documento financeiro não encontrado" });
       }
       
+      console.log(`[PaymentDebug] Documento encontrado:`, { id: document.id, paid: document.paid, status: document.status });
+      
       // Se já estiver pago, retornar erro
       if (document.paid) {
+        console.log(`[PaymentDebug] Documento #${id} já está pago`);
         return res.status(400).json({ message: "Este documento já foi pago" });
       }
       
       // Usar a data selecionada pelo usuário ou a data atual como fallback
       const paymentDate = payment_date ? new Date(payment_date) : new Date();
-      console.log(`[Sistema] Documento financeiro #${id} com Data Efetuada: ${paymentDate.toISOString()}`);
+      console.log(`[PaymentDebug] Data de pagamento processada: ${paymentDate.toISOString()}`);
       
       // Extrair informações da sessão para auditoria
       const sessionInfo = {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
-        sessionId: req.sessionID
+        sessionId: req.sessionID || 'no-session'
       };
+      
+      console.log(`[PaymentDebug] Chamando FinancialAuditService.markAsPaid`);
       
       const updatedDocument = await FinancialAuditService.markAsPaid(
         id,
@@ -2638,6 +2647,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         sessionInfo
       );
+      
+      console.log(`[PaymentDebug] Documento atualizado com sucesso:`, { id: updatedDocument.id, paid: updatedDocument.paid });
       
       // Importação aqui para evitar problemas de importação circular
       const { removeFinancialDocumentEvents } = await import('./utils/calendarSync');
