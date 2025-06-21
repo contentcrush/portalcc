@@ -70,8 +70,9 @@ export class FinancialAuditService {
         throw new Error('Documento financeiro não encontrado');
       }
 
-      if (currentDocument.archived) {
-        throw new Error('Não é possível modificar documentos arquivados');
+      // Permitir pagamento de documentos arquivados, mas bloquear outras modificações
+      if (currentDocument.archived && !updates.payment_date) {
+        throw new Error('Não é possível modificar documentos arquivados (exceto para registrar pagamento)');
       }
 
       // 2. Verificar se há conflito de versão (otimistic locking)
