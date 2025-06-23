@@ -309,6 +309,56 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
       return fs.createReadStream(rootUploadPath).pipe(res);
     }
     
+    // Busca mais robusta - procurar por arquivos com padrão similar
+    const baseFileName = document.invoice_file_name.replace(/\.[^/.]+$/, ""); // Remove extensão
+    const fileExtension = path.extname(document.invoice_file_name);
+    
+    // Buscar em todos os diretórios financeiros
+    const financialDir = path.join(process.cwd(), 'uploads', 'financial');
+    console.log('Buscando arquivos com padrão similar em:', financialDir);
+    
+    try {
+      const fs = require('fs');
+      const subdirs = fs.readdirSync(financialDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+      
+      for (const subdir of subdirs) {
+        const subdirPath = path.join(financialDir, subdir);
+        const files = fs.readdirSync(subdirPath);
+        
+        // Procurar arquivo que contenha o nome base ou tenha padrão similar
+        const matchingFile = files.find(file => 
+          file.includes(baseFileName) || 
+          file.startsWith(baseFileName.split('_')[0]) ||
+          (document.invoice_file_name && file.includes(document.invoice_file_name.split('.')[0]))
+        );
+        
+        if (matchingFile) {
+          const foundPath = path.join(subdirPath, matchingFile);
+          console.log('Arquivo encontrado em:', foundPath);
+          
+          // Definir o tipo de conteúdo correto
+          const ext = path.extname(matchingFile).toLowerCase();
+          let contentType = 'application/octet-stream';
+          
+          if (ext === '.pdf') {
+            contentType = 'application/pdf';
+          } else if (['.jpg', '.jpeg'].includes(ext)) {
+            contentType = 'image/jpeg';
+          } else if (ext === '.png') {
+            contentType = 'image/png';
+          }
+          
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+          return fs.createReadStream(foundPath).pipe(res);
+        }
+      }
+    } catch (searchError) {
+      console.error('Erro na busca robusta:', searchError);
+    }
+    
     // Se chegou aqui, não encontrou o arquivo
     return res.status(404).json({ 
       message: 'Arquivo não encontrado no servidor', 
