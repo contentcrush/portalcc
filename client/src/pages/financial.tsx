@@ -1150,9 +1150,9 @@ export default function Financial() {
           <FinancialTableHeader
             title="A Receber"
             type="receivables"
-            totalCount={receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null).length}
-            pendingCount={receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null && !doc.paid).length}
-            pendingAmount={receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null && !doc.paid).reduce((sum: number, doc: any) => sum + doc.amount, 0)}
+            totalCount={0}
+            pendingCount={0}
+            pendingAmount={0}
             searchTerm={receivablesSearchTerm}
             onSearchChange={setReceivablesSearchTerm}
             sortConfig={sortConfig}
