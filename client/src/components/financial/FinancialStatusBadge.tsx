@@ -31,6 +31,7 @@ export function FinancialStatusBadge({
   
   // Para recebíveis (A Receber)
   if (type === "receivable") {
+    // Prioridade 1: Se foi pago, sempre mostrar como Pago
     if (paid) {
       return (
         <Badge variant="default" className={`bg-green-100 text-green-800 hover:bg-green-100 ${className}`}>
@@ -40,6 +41,7 @@ export function FinancialStatusBadge({
       );
     }
     
+    // Prioridade 2: Se não foi pago mas está vencido, mostrar como Vencida
     if (isOverdue) {
       return (
         <Badge variant="destructive" className={className}>
@@ -49,23 +51,14 @@ export function FinancialStatusBadge({
       );
     }
     
-    if (status === 'pending') {
-      return (
-        <Badge variant="secondary" className={`bg-amber-100 text-amber-800 hover:bg-amber-100 ${className}`}>
-          <Clock className="h-3 w-3 mr-1" />
-          Pendente
-        </Badge>
-      );
-    }
-    
-    if (status === 'archived') {
-      return (
-        <Badge variant="outline" className={`bg-blue-50 text-blue-700 ${className}`}>
-          <Pause className="h-3 w-3 mr-1" />
-          Arquivada
-        </Badge>
-      );
-    }
+    // Prioridade 3: Se não foi pago e não está vencido, sempre mostrar como Pendente
+    // (Removemos a lógica de "archived" para não pagos)
+    return (
+      <Badge variant="secondary" className={`bg-amber-100 text-amber-800 hover:bg-amber-100 ${className}`}>
+        <Clock className="h-3 w-3 mr-1" />
+        Pendente
+      </Badge>
+    );
   }
   
   // Para pagáveis (A Pagar)
