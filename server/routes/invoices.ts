@@ -90,7 +90,7 @@ router.post('/financial-documents/:id/invoice', upload.single('invoice'), async 
 
     res.status(201).json({
       message: 'Nota fiscal anexada com sucesso',
-      document: updatedDocument
+      document: document
     });
   } catch (error) {
     console.error('Erro ao fazer upload da nota fiscal:', error);
