@@ -48,15 +48,50 @@ router.post('/financial-documents/:id/invoice', upload.single('invoice'), async 
       fileUrl = fileUrl.substring(1);
     }
     
-    // Atualizar o documento financeiro no banco de dados
-    const updatedDocument = await storage.updateFinancialDocument(documentId, {
-      invoice_file: fileUrl,
-      invoice_file_name: fileName,
-      invoice_file_uploaded_at: new Date(),
-      invoice_file_uploaded_by: req.user?.id || null
-    });
+    // Verificar se o arquivo foi realmente salvo antes de atualizar o banco
+    const fullPath = path.join(process.cwd(), fileUrl);
+    if (!fs.existsSync(fullPath)) {
+      console.error(`[Upload Error] Arquivo não foi salvo corretamente: ${fullPath}`);
+      return res.status(500).json({ message: 'Erro interno: arquivo não foi salvo corretamente' });
+    }
+    
+    try {
+      // Atualizar o documento financeiro no banco de dados
+      const updatedDocument = await storage.updateFinancialDocument(documentId, {
+        invoice_file: fileUrl,
+        invoice_file_name: fileName,
+        invoice_file_uploaded_at: new Date(),
+        invoice_file_uploaded_by: req.user?.id || null
+      });
+      
+      if (!updatedDocument) {
+        // Rollback: remover arquivo se atualização do banco falhou
+        try {
+          fs.unlinkSync(fullPath);
+          console.log(`[Rollback] Arquivo removido após falha no banco: ${fullPath}`);
+        } catch (rollbackError) {
+          console.error(`[Rollback Error] Não foi possível remover arquivo: ${rollbackError}`);
+        }
+        return res.status(500).json({ message: 'Erro ao atualizar documento no banco de dados' });
+      }
+      
+      console.log(`[Upload Success] Arquivo ${fileName} anexado ao documento ${documentId}`);
+      
+    } catch (dbError) {
+      // Rollback: remover arquivo se atualização do banco falhou
+      try {
+        fs.unlinkSync(fullPath);
+        console.log(`[Rollback] Arquivo removido após erro no banco: ${fullPath}`);
+      } catch (rollbackError) {
+        console.error(`[Rollback Error] Não foi possível remover arquivo: ${rollbackError}`);
+      }
+      throw dbError;
+    }
 
-    res.status(201).json(updatedDocument);
+    res.status(201).json({
+      message: 'Nota fiscal anexada com sucesso',
+      document: updatedDocument
+    });
   } catch (error) {
     console.error('Erro ao fazer upload da nota fiscal:', error);
     res.status(500).json({ 
