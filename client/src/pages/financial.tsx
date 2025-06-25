@@ -463,8 +463,8 @@ export default function Financial() {
   // Receivables total - considera apenas documentos não pagos
   console.log('Documentos financeiros (receivables):', receivablesData);
   
-  // Filtra apenas documentos não pagos para "A Receber"
-  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
+  // Filtra apenas documentos não pagos E com data de emissão para "A Receber"
+  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && doc.issue_date);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
     console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
@@ -475,15 +475,16 @@ export default function Financial() {
   // Payables total - with safety check
   const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Overdue receivables - with safety check
+  // Overdue receivables - with safety check (apenas documentos com data de emissão)
   const today = new Date();
   const overdueReceivables = (receivablesData || [])
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
+    .filter((doc: any) => doc.issue_date && doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
-  // Cash flow next 7 and 30 days - with safety checks
+  // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
   const receivablesNext7Days = (receivablesData || [])
     .filter((doc: any) => 
+      doc.issue_date && // Deve ter data de emissão
       doc.due_date && 
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
@@ -493,6 +494,7 @@ export default function Financial() {
 
   const receivablesNext30Days = (receivablesData || [])
     .filter((doc: any) => 
+      doc.issue_date && // Deve ter data de emissão
       doc.due_date && 
       isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
@@ -506,9 +508,10 @@ export default function Financial() {
     
   const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
   
-  // Due alerts (next 7 days) - valor total em vez da contagem
+  // Due alerts (next 7 days) - valor total em vez da contagem (apenas documentos com data de emissão)
   const dueFaturas = receivablesData
     .filter((doc: any) => 
+      doc.issue_date && // Deve ter data de emissão
       doc.due_date && 
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !doc.paid // Mostrar apenas faturas pendentes
@@ -1152,9 +1155,9 @@ export default function Financial() {
           <FinancialTableHeader
             title="A Receber"
             type="receivables"
-            totalCount={receivablesData.length}
-            pendingCount={receivablesData.filter((doc: any) => !doc.paid).length}
-            pendingAmount={receivablesData.filter((doc: any) => !doc.paid).reduce((sum: number, doc: any) => sum + doc.amount, 0)}
+            totalCount={receivablesData.filter((doc: any) => doc.issue_date).length}
+            pendingCount={receivablesData.filter((doc: any) => doc.issue_date && !doc.paid).length}
+            pendingAmount={receivablesData.filter((doc: any) => doc.issue_date && !doc.paid).reduce((sum: number, doc: any) => sum + doc.amount, 0)}
             searchTerm={receivablesSearchTerm}
             onSearchChange={setReceivablesSearchTerm}
             sortConfig={sortConfig}
@@ -1170,8 +1173,8 @@ export default function Financial() {
               overdue: overdueReceivables,
               next7Days: receivablesNext7Days,
               next30Days: receivablesNext30Days,
-              overdueCount: receivablesData.filter((doc: any) => !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now)).length,
-              next7DaysCount: receivablesData.filter((doc: any) => !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow) && !isBefore(new Date(doc.due_date), now)).length,
+              overdueCount: receivablesData.filter((doc: any) => doc.issue_date && !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now)).length,
+              next7DaysCount: receivablesData.filter((doc: any) => doc.issue_date && !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow) && !isBefore(new Date(doc.due_date), now)).length,
             }}
             formatCurrency={formatCurrency}
           />
@@ -1291,12 +1294,14 @@ export default function Financial() {
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
-                            {/* Formatação da data de emissão com dia/mês/ano - busca do projeto associado ou calcula com base no vencimento */}
-                            {project?.issue_date ? 
-                              format(new Date(project.issue_date), 'dd/MM/yyyy') : 
-                              doc.due_date ? 
-                                format(subDays(new Date(doc.due_date), (project?.payment_term || 30)), 'dd/MM/yyyy') : 
-                                '-'}
+                            {/* Data de emissão: mostra apenas se definida, senão mostra badge */}
+                            {doc.issue_date ? (
+                              format(new Date(doc.issue_date), 'dd/MM/yyyy')
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
+                                Sem data
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (
@@ -1358,13 +1363,13 @@ export default function Financial() {
             <CardFooter className="flex justify-between items-center p-4 border-t">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {receivablesData.length || 0} de {receivablesData.length || 0} registros
+                  Mostrando {receivablesData.filter((doc: any) => doc.issue_date).length || 0} de {receivablesData.filter((doc: any) => doc.issue_date).length || 0} registros válidos
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Total pendente:</span>
                   <span className="font-bold">{formatCurrency(
                     receivablesData
-                      .filter((doc: any) => !doc.paid)
+                      .filter((doc: any) => doc.issue_date && !doc.paid)
                       .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0)
                   )}</span>
                 </div>
