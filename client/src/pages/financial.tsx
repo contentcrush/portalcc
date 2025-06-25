@@ -137,9 +137,9 @@ export default function Financial() {
   const [period, setPeriod] = useState<string>("year");
   const [dateRange, setDateRange] = useState<Date | undefined>(new Date());
   const [sortConfig, setSortConfig] = useState<{
-    field: 'amount' | 'document_number' | 'issue_date' | 'due_date' | 'client_name';
+    field: 'amount' | 'document_number' | 'issue_date' | 'due_date' | 'client_name' | 'id';
     direction: 'asc' | 'desc';
-  }>({ field: 'amount', direction: 'asc' });
+  }>({ field: 'id', direction: 'desc' });
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -353,9 +353,13 @@ export default function Financial() {
           aValue = clientA?.name || '';
           bValue = clientB?.name || '';
           break;
+        case 'id':
+          aValue = a.id || 0;
+          bValue = b.id || 0;
+          break;
         default:
-          aValue = a.amount || 0;
-          bValue = b.amount || 0;
+          aValue = a.id || 0;
+          bValue = b.id || 0;
       }
       
       if (sortConfig.direction === 'desc') {
