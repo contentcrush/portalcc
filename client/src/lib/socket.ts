@@ -75,14 +75,16 @@ export function initWebSocket(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     // Se já estiver conectado, apenas retorne a conexão existente
     if (ws instanceof WebSocket && ws.readyState === WebSocket.OPEN) {
-      // WebSocket already connected
+      console.log('WebSocket já está conectado');
       resolve(ws);
       return;
     }
 
     // Se estiver conectando, aguarde a conexão
     if (ws instanceof WebSocket && ws.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket está conectando...');
       ws.onopen = () => {
+        console.log('WebSocket conexão completada');
         resolve(ws!);
       };
       return;
@@ -90,22 +92,26 @@ export function initWebSocket(): Promise<WebSocket> {
 
     // Fechar conexão existente se houver e estiver em outro estado
     if (ws) {
+      console.log('Fechando conexão WebSocket existente...');
       ws.close();
       ws = null;
     }
 
     try {
+      console.log('Iniciando nova conexão WebSocket:', wsUrl);
       ws = new WebSocket(wsUrl);
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
         if (ws && ws.readyState !== WebSocket.OPEN) {
+          console.warn('Timeout ao conectar WebSocket');
           ws.close();
           reject(new Error('Timeout de conexão WebSocket'));
         }
       }, 10000); // 10 segundos de timeout
 
       ws.onopen = () => {
+        console.log('Conexão WebSocket estabelecida com sucesso');
         clearTimeout(connectionTimeout);
         resolve(ws!);
       };
@@ -114,6 +120,7 @@ export function initWebSocket(): Promise<WebSocket> {
         try {
           // Verifica se o evento tem dados e se não é uma string vazia
           if (!event.data || (typeof event.data === 'string' && event.data.trim() === '')) {
+            console.warn('Mensagem WebSocket recebida vazia, ignorando');
             return;
           }
 
@@ -121,8 +128,11 @@ export function initWebSocket(): Promise<WebSocket> {
           
           // Verificar se o objeto data tem propriedades
           if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+            console.warn('Mensagem WebSocket recebida como objeto vazio, ignorando');
             return;
           }
+          
+          console.log('Mensagem WebSocket recebida:', data);
 
           // Despachar para os handlers apropriados com mais opções de propriedades
           // Verifica múltiplos campos possíveis para determinar o tipo de mensagem
@@ -139,49 +149,63 @@ export function initWebSocket(): Promise<WebSocket> {
           
           // Se não encontramos um tipo válido, não prosseguir
           if (!messageType) {
+            console.warn('Mensagem WebSocket sem tipo definido:', data);
             return;
           }
           
           // Se encontramos um tipo de mensagem e temos handlers para ele
           if (messageHandlers[messageType]) {
+            console.log(`Processando mensagem do tipo: ${messageType}`);
             messageHandlers[messageType].forEach(handler => handler(data));
           } else {
             // Se não encontramos o tipo ou não temos handlers, procurar correspondência parcial
             // Isso é útil quando o servidor envia 'financial_updated' mas o cliente espera apenas 'financial'
+            let matchFound = false;
             Object.keys(messageHandlers).forEach(handlerType => {
               if (messageType.includes(handlerType)) {
+                console.log(`Correspondência parcial: '${messageType}' corresponde a '${handlerType}'`);
                 messageHandlers[handlerType].forEach(handler => handler(data));
+                matchFound = true;
               }
             });
+            
+            if (!matchFound) {
+              console.log(`Nenhum handler encontrado para mensagem do tipo: ${messageType}`);
+            }
           }
         } catch (error) {
-          // Error processing WebSocket message
+          console.error('Erro ao processar mensagem WebSocket:', error);
         }
       };
 
       ws.onerror = (error) => {
+        console.error('Erro na conexão WebSocket:', error);
         clearTimeout(connectionTimeout);
         reject(error);
       };
 
       ws.onclose = (event) => {
+        console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason}`);
         
         // Tentar reconectar após um tempo variável (entre 2-5 segundos)
         const reconnectDelay = 2000 + Math.random() * 3000;
         
         setTimeout(() => {
           if (document.visibilityState !== 'hidden') {
+            console.log(`Tentando reconectar WebSocket após ${Math.round(reconnectDelay/1000)}s...`);
             initWebSocket()
-              .then(() => {})
-              .catch(err => {});
+              .then(() => console.log('WebSocket reconectado com sucesso'))
+              .catch(err => console.error('Falha ao reconectar WebSocket:', err));
           } else {
+            console.log('Página em segundo plano, adiando reconexão do WebSocket');
             // Registrar um handler para reconectar quando a página voltar a ser visível
             const onVisibilityChange = () => {
               if (document.visibilityState === 'visible') {
+                console.log('Página visível novamente, reconectando WebSocket...');
                 document.removeEventListener('visibilitychange', onVisibilityChange);
                 initWebSocket()
-                  .then(() => {})
-                  .catch(err => {});
+                  .then(() => console.log('WebSocket reconectado após página ficar visível'))
+                  .catch(err => console.error('Falha ao reconectar WebSocket após visibilidade:', err));
               }
             };
             document.addEventListener('visibilitychange', onVisibilityChange);
@@ -190,6 +214,7 @@ export function initWebSocket(): Promise<WebSocket> {
       };
 
     } catch (error) {
+      console.error('Falha ao inicializar WebSocket:', error);
       reject(error);
     }
   });
@@ -211,16 +236,19 @@ export function onWebSocketMessage(
 
   // Garantir que a conexão WebSocket esteja ativa
   if (!ws || (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING)) {
+    console.log(`Inicializando WebSocket para manipular mensagens do tipo: ${type}`);
+    
     // Inicializar a conexão WebSocket
     initWebSocket()
-      .then(() => {})
-      .catch(error => {});
+      .then(() => console.log(`WebSocket inicializado com sucesso para mensagens do tipo: ${type}`))
+      .catch(error => console.error(`Erro ao inicializar WebSocket para mensagens do tipo: ${type}`, error));
   }
 
   // Retorna uma função para desregistrar este handler
   return () => {
     if (messageHandlers[type]) {
       messageHandlers[type] = messageHandlers[type].filter(h => h !== handler);
+      console.log(`Handler removido para mensagens do tipo: ${type}. Restantes: ${messageHandlers[type].length}`);
     }
   };
 }
@@ -230,6 +258,7 @@ export function onWebSocketMessage(
  */
 export function sendWebSocketMessage(data: any): boolean {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
+    console.warn('WebSocket não está conectado');
     return false;
   }
 
@@ -237,6 +266,7 @@ export function sendWebSocketMessage(data: any): boolean {
     ws.send(JSON.stringify(data));
     return true;
   } catch (error) {
+    console.error('Erro ao enviar mensagem WebSocket:', error);
     return false;
   }
 }
@@ -248,6 +278,7 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
   return new Promise((resolve, reject) => {
     try {
       if (socket && socket.connected) {
+        console.log('Socket.IO já está conectado');
         resolve(socket);
         return;
       }
@@ -268,6 +299,8 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
       });
 
       socket.on('connect', () => {
+        console.log('Socket.IO conectado:', socket!.id);
+
         // Se tem userId e token, autenticar
         if (userId && token) {
           socket!.emit('authenticate', { userId, token });
@@ -277,33 +310,34 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
       });
 
       socket.on('connect_error', (error) => {
-        // Socket.IO connection error
+        console.error('Erro de conexão Socket.IO:', error);
       });
 
       socket.on('disconnect', (reason) => {
-        // Socket.IO disconnected
+        console.log('Socket.IO desconectado:', reason);
       });
 
       // Setup de eventos padrão
       socket.on('error', (error) => {
-        // Socket.IO error
+        console.error('Erro no Socket.IO:', error);
       });
 
       socket.on('authenticated', (response) => {
         if (response.success) {
-          // Authentication successful
+          console.log('Autenticado com sucesso no Socket.IO:', response);
         } else {
-          // Authentication failed
+          console.error('Falha na autenticação Socket.IO:', response.error);
         }
       });
 
       socket.on('notification', (notif) => {
-        // Notification received
+        console.log('Notificação recebida:', notif);
         // Aqui você pode integrar com o sistema de notificações do frontend
         // Por exemplo, com o toast ou um componente de notificação personalizado
       });
 
     } catch (error) {
+      console.error('Erro ao inicializar Socket.IO:', error);
       reject(error);
     }
   });
@@ -314,6 +348,7 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
  */
 export function emitSocketEvent(event: string, data: any): boolean {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return false;
   }
 
@@ -321,6 +356,7 @@ export function emitSocketEvent(event: string, data: any): boolean {
     socket.emit(event, data);
     return true;
   } catch (error) {
+    console.error(`Erro ao emitir evento '${event}':`, error);
     return false;
   }
 }
@@ -330,10 +366,12 @@ export function emitSocketEvent(event: string, data: any): boolean {
  */
 export function joinTaskRoom(taskId: number): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('join-task', taskId);
+  console.log(`Entrou na sala da tarefa ${taskId}`);
 }
 
 /**
@@ -341,10 +379,12 @@ export function joinTaskRoom(taskId: number): void {
  */
 export function leaveTaskRoom(taskId: number): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('leave-task', taskId);
+  console.log(`Saiu da sala da tarefa ${taskId}`);
 }
 
 /**
@@ -352,10 +392,12 @@ export function leaveTaskRoom(taskId: number): void {
  */
 export function joinProjectRoom(projectId: number): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('join-project', projectId);
+  console.log(`Entrou na sala do projeto ${projectId}`);
 }
 
 /**
@@ -363,10 +405,12 @@ export function joinProjectRoom(projectId: number): void {
  */
 export function leaveProjectRoom(projectId: number): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('leave-project', projectId);
+  console.log(`Saiu da sala do projeto ${projectId}`);
 }
 
 /**
@@ -374,6 +418,7 @@ export function leaveProjectRoom(projectId: number): void {
  */
 export function addTaskComment(taskId: number, userId: number, comment: string): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
@@ -385,6 +430,7 @@ export function addTaskComment(taskId: number, userId: number, comment: string):
  */
 export function addProjectComment(projectId: number, userId: number, comment: string): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 
@@ -434,6 +480,7 @@ export function onNewProjectComment(callback: (comment: any) => void): () => voi
  */
 export function onUpdatedProjectComment(callback: (comment: any) => void): () => void {
   if (!socket) {
+    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -452,6 +499,7 @@ export function onUpdatedProjectComment(callback: (comment: any) => void): () =>
  */
 export function onDeletedProjectComment(callback: (data: { id: number }) => void): () => void {
   if (!socket) {
+    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -470,6 +518,7 @@ export function onDeletedProjectComment(callback: (data: { id: number }) => void
  */
 export function onNewProjectCommentReaction(callback: (data: any) => void): () => void {
   if (!socket) {
+    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -488,6 +537,7 @@ export function onNewProjectCommentReaction(callback: (data: any) => void): () =
  */
 export function onDeletedProjectCommentReaction(callback: (data: { id: number, comment_id: number }) => void): () => void {
   if (!socket) {
+    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -506,6 +556,7 @@ export function onDeletedProjectCommentReaction(callback: (data: { id: number, c
  */
 export function addProjectCommentReply(projectId: number, userId: number, comment: string, parentId: number): boolean {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return false;
   }
 
@@ -518,6 +569,7 @@ export function addProjectCommentReply(projectId: number, userId: number, commen
     });
     return true;
   } catch (error) {
+    console.error('Erro ao enviar resposta a comentário de projeto:', error);
     return false;
   }
 }
@@ -532,6 +584,7 @@ export function notifyUser(targetUserId: number, notification: {
   link?: string;
 }): void {
   if (!socket || !socket.connected) {
+    console.warn('Socket.IO não está conectado');
     return;
   }
 

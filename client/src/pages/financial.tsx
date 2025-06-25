@@ -256,6 +256,8 @@ export default function Financial() {
     // Registrar listeners para eventos financeiros (incluindo versões do formato antigo)
     // WebSocket deve processar tanto 'financial_updated' quanto 'financial_update'
     const unregisterFinancialUpdateHandler = onWebSocketMessage('financial_updated', (data) => {
+      console.log('Recebida notificação de atualização financeira (format novo):', data);
+      
       // Invalidar consultas financeiras para recarregar os dados
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -273,6 +275,8 @@ export default function Financial() {
     // Suporte para formato antigo (financial_update sem o 'd')
     // Redundante com a correção no SocketContext, mas mantido por precaução
     const unregisterOldFormatHandler = onWebSocketMessage('financial_update', (data) => {
+      console.log('Recebida notificação de atualização financeira (formato antigo):', data);
+      
       // Invalidar consultas financeiras para recarregar os dados
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -282,6 +286,8 @@ export default function Financial() {
     });
     
     const unregisterCalendarUpdateHandler = onWebSocketMessage('calendar_updated', (data) => {
+      console.log('Recebida notificação de atualização do calendário:', data);
+      
       // Invalidar consultas financeiras para garantir sincronização
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -289,6 +295,7 @@ export default function Financial() {
     
     // Limpar listeners quando o componente for desmontado
     return () => {
+      console.log('Removendo listeners WebSocket da página financeira');
       unregisterFinancialUpdateHandler();
       unregisterOldFormatHandler();
       unregisterCalendarUpdateHandler();
@@ -457,8 +464,10 @@ export default function Financial() {
   const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && doc.issue_date && doc.issue_date !== null);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
+    console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
     return sum + (doc.amount || 0);
   }, 0);
+  console.log('Total calculado (soma real):', totalReceivables);
   
   // Payables total - with safety check
   const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
@@ -523,9 +532,12 @@ export default function Financial() {
     return isDateInRange(doc.payment_date);
   }) || [];
   
+  console.log(`Documentos pagos no período ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}:`, paidDocumentsInPeriod.length);
+  
   // Valor total dos documentos pagos no período selecionado
   const periodRevenue = paidDocumentsInPeriod
     .reduce((sum: number, doc: any) => {
+      console.log(`Documento #${doc.id} (Receita ${getPeriodLabel()}): R$${doc.amount}`);
       return sum + (doc.amount || 0);
     }, 0);
   
