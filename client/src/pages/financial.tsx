@@ -481,8 +481,7 @@ export default function Financial() {
   // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
   const receivablesNext7Days = (receivablesData || [])
     .filter((doc: any) => 
-      doc.issue_date && doc.issue_date !== null && // Deve ter data de emissão válida
-      doc.due_date && 
+      doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
       !doc.paid // Ainda não pagas
