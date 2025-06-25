@@ -136,6 +136,23 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
+### June 25, 2025 - Critical Automatic Date Generation Issue Resolved
+1. **RESOLVED**: Automatic date generation creating invalid financial documents
+   - System was incorrectly creating documents with automatic dates when projects changed status
+   - Fixed ProjectDetailSidebar.tsx to create financial documents without automatic issue_date/due_date
+   - Disabled problematic automation logic in server/automation.ts that was setting fallback dates
+   - Cleaned 17 financial documents with incorrect automatic dates (IDs 19-60)
+
+2. **CORRECTED**: Financial calculations and data integrity
+   - "A Receber" total now accurately calculated as R$ 112.670 (only documents with valid dates)
+   - Documents without proper dates show "Sem data" badges as intended
+   - System now maintains strict data integrity between project dates and financial document dates
+
+3. **ENHANCED**: Document creation workflow
+   - New automatic documents created with NULL dates until manually configured
+   - Clear separation between documents with project-configured dates vs manual entry
+   - Improved user experience with accurate status indicators
+
 ### June 25, 2025 - Financial Navigation Standardization Completed
 1. **COMPLETED**: UI/UX standardization for financial section navigation
    - Created standardized financial components (FinancialTableHeader, FinancialStatusBadge, FinancialQuickStats)
