@@ -89,15 +89,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const connectWebSocket = () => {
       if (!mounted) return;
       
-      console.log('Tentativa de conexão WebSocket via SocketContext...');
-      
       initWebSocket()
         .then(ws => {
           if (!mounted) return;
           
           setWebSocket(ws);
           setIsConnected(true);
-          console.log('WebSocket conectado com sucesso via SocketContext');
           
           // Monitorar estado da conexão
           const checkConnectionInterval = setInterval(() => {
@@ -107,7 +104,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
             }
             
             if (ws.readyState !== WebSocket.OPEN) {
-              console.warn('Conexão WebSocket não está aberta, readyState:', ws.readyState);
               setIsConnected(false);
               
               // Se a conexão foi fechada ou está com erro, tentar reconectar
@@ -122,7 +118,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
                 // Agendar nova tentativa após um atraso
                 const delay = 2000 + Math.random() * 3000;
                 reconnectTimeout = setTimeout(() => {
-                  console.log(`Tentando reconectar WebSocket após ${Math.round(delay/1000)}s...`);
                   connectWebSocket();
                 }, delay);
               }
@@ -138,7 +133,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
           };
         })
         .catch(error => {
-          console.error('Erro ao conectar WebSocket via SocketContext:', error);
           setIsConnected(false);
           
           // Tentar reconectar após um atraso
@@ -148,7 +142,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
               clearTimeout(reconnectTimeout);
             }
             reconnectTimeout = setTimeout(() => {
-              console.log(`Tentando reconectar WebSocket após falha (${Math.round(delay/1000)}s)...`);
               connectWebSocket();
             }, delay);
           }
