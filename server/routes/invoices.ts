@@ -329,18 +329,18 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
             const fileName = item.name.toLowerCase();
             const searchLower = searchPattern.toLowerCase();
             
-            // Extrair número da NFSe para comparação
+            // Extrair número da NFSe para comparação mais robusta
             const fileNfseMatch = fileName.match(/nfse_(\d+)/);
-            const searchNfseMatch = searchLower.match(/nfse_(\d+)/);
+            const searchNfseMatch = searchPattern.toLowerCase().match(/nfse_(\d+)/);
             
             if (fileNfseMatch && searchNfseMatch && fileNfseMatch[1] === searchNfseMatch[1]) {
-              console.log(`Arquivo correspondente encontrado: ${itemPath}`);
+              console.log(`NFSe ${searchNfseMatch[1]} encontrada: ${itemPath}`);
               return itemPath;
             }
             
-            // Verificar outras correspondências
-            if (fileName.includes(searchLower.replace(/\.[^/.]+$/, ""))) {
-              console.log(`Arquivo similar encontrado: ${itemPath}`);
+            // Buscar por padrão de nome mais amplo
+            if (fileName.includes(searchPattern.toLowerCase().replace(/\.[^/.]+$/, ""))) {
+              console.log(`Arquivo correspondente encontrado: ${itemPath}`);
               return itemPath;
             }
           }
