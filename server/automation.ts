@@ -265,38 +265,11 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
           }
         }
       } else {
-        console.log(`[Automação] Projeto ID:${projectId} não tem data de emissão configurada. Usando datas alternativas.`);
+        console.log(`[Automação] Projeto ID:${projectId} não tem data de emissão configurada. Documentos financeiros permanecerão sem datas até serem editados manualmente.`);
         
-        // Se não tiver data de emissão, usar a data de início ou a data atual
-        const fallbackDate = project.startDate ? new Date(project.startDate) : new Date();
-        const formattedFallbackDate = new Date(
-          Date.UTC(
-            fallbackDate.getFullYear(),
-            fallbackDate.getMonth(),
-            fallbackDate.getDate(),
-            12, 0, 0
-          )
-        );
-        
-        // Calcular data de vencimento baseada na data alternativa
-        const paymentTerm = project.payment_term || 30;
-        const fallbackDueDate = new Date(formattedFallbackDate);
-        fallbackDueDate.setDate(fallbackDueDate.getDate() + paymentTerm);
-        
-        // Para documentos pendentes, atualizar com as datas alternativas
-        for (const doc of financialDocs) {
-          if (!doc.paid) {
-            await db.update(financialDocuments)
-              .set({
-                due_date: fallbackDueDate,
-                description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
-              })
-              .where(eq(financialDocuments.id, doc.id));
-            
-            updatedCount++;
-            console.log(`[Automação] Documento financeiro ID:${doc.id} atualizado com data alternativa`);
-          }
-        }
+        // REMOVIDO: Não definir mais datas automáticas para documentos
+        // Os documentos devem permanecer sem datas até serem editados manualmente
+        // Isso evita que apareçam datas onde não deveriam ter
       }
     }
     

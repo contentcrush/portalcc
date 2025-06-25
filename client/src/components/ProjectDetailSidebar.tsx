@@ -337,10 +337,10 @@ export default function ProjectDetailSidebar({ projectId, onClose }: ProjectDeta
         client_id: projectData.client_id,
         document_type: 'invoice',
         amount: projectData.budget || 0,
-        issue_date: issueDateFormatted,
-        due_date: dueDateFormatted,
+        issue_date: null, // Não definir data automática - deve ser preenchida manualmente
+        due_date: null,   // Não definir data automática - deve ser preenchida manualmente
         status: 'pending',
-        description: `Fatura referente ao projeto: ${projectData.name} (Prazo: ${projectData.payment_term || 30} dias)`
+        description: `Fatura referente ao projeto: ${projectData.name} - Aguardando definição de datas`
       };
       
       return apiRequest('POST', '/api/financial-documents', financialDocumentData);
