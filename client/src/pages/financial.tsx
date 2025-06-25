@@ -491,8 +491,7 @@ export default function Financial() {
 
   const receivablesNext30Days = (receivablesData || [])
     .filter((doc: any) => 
-      doc.issue_date && doc.issue_date !== null && // Deve ter data de emissão válida
-      doc.due_date && 
+      doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
       !doc.paid // Ainda não pagas
