@@ -460,17 +460,7 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - considera apenas documentos não pagos
-  console.log('Documentos financeiros (receivables):', receivablesData);
-  
-  // Debug: verificar se os documentos têm issue_date
-  if (receivablesData.length > 0) {
-    console.log('Primeiro documento para debug:', receivablesData[0]);
-    console.log('Campos do primeiro documento:', Object.keys(receivablesData[0]));
-    console.log('issue_date do primeiro documento:', receivablesData[0].issue_date);
-  }
-  
-  // Filtra apenas documentos não pagos E com data de emissão válida
+  // Receivables total - considera apenas documentos não pagos E com data de emissão válida
   const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && doc.issue_date && doc.issue_date !== null);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
