@@ -507,17 +507,26 @@ export default function Financial() {
   }, 0);
   console.log('Total calculado (soma real):', totalReceivables);
   
-  // Payables total
-  const totalPayables = payablesData.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+  // Payables total - with safety check
+  const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Overdue receivables
+  // Overdue receivables - with safety check
   const today = new Date();
-  const overdueReceivables = receivablesData
+  const overdueReceivables = (receivablesData || [])
     .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
-  // Cash flow next 30 days
-  const receivablesNext30Days = receivablesData
+  // Cash flow next 7 and 30 days - with safety checks
+  const receivablesNext7Days = (receivablesData || [])
+    .filter((doc: any) => 
+      doc.due_date && 
+      isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
+      !isBefore(new Date(doc.due_date), today) && // Não vencidas 
+      !doc.paid // Ainda não pagas
+    )
+    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+
+  const receivablesNext30Days = (receivablesData || [])
     .filter((doc: any) => 
       doc.due_date && 
       isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
