@@ -309,54 +309,79 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
       return fs.createReadStream(rootUploadPath).pipe(res);
     }
     
-    // Busca mais robusta - procurar por arquivos com padrão similar
-    const baseFileName = document.invoice_file_name.replace(/\.[^/.]+$/, ""); // Remove extensão
-    const fileExtension = path.extname(document.invoice_file_name);
+    // Busca robusta - procurar por arquivos com padrão similar em todos os diretórios
+    console.log('Iniciando busca robusta por arquivo similar...');
     
-    // Buscar em todos os diretórios financeiros
-    const financialDir = path.join(process.cwd(), 'uploads', 'financial');
-    console.log('Buscando arquivos com padrão similar em:', financialDir);
-    
-    try {
-      const fs = require('fs');
-      const subdirs = fs.readdirSync(financialDir, { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name);
-      
-      for (const subdir of subdirs) {
-        const subdirPath = path.join(financialDir, subdir);
-        const files = fs.readdirSync(subdirPath);
+    // Buscar recursivamente em toda a pasta uploads
+    const searchForFile = (dir, searchPattern) => {
+      try {
+        const items = fs.readdirSync(dir, { withFileTypes: true });
         
-        // Procurar arquivo que contenha o nome base ou tenha padrão similar
-        const matchingFile = files.find(file => 
-          file.includes(baseFileName) || 
-          file.startsWith(baseFileName.split('_')[0]) ||
-          (document.invoice_file_name && file.includes(document.invoice_file_name.split('.')[0]))
-        );
-        
-        if (matchingFile) {
-          const foundPath = path.join(subdirPath, matchingFile);
-          console.log('Arquivo encontrado em:', foundPath);
+        for (const item of items) {
+          const itemPath = path.join(dir, item.name);
           
-          // Definir o tipo de conteúdo correto
-          const ext = path.extname(matchingFile).toLowerCase();
-          let contentType = 'application/octet-stream';
-          
-          if (ext === '.pdf') {
-            contentType = 'application/pdf';
-          } else if (['.jpg', '.jpeg'].includes(ext)) {
-            contentType = 'image/jpeg';
-          } else if (ext === '.png') {
-            contentType = 'image/png';
+          if (item.isDirectory()) {
+            // Buscar recursivamente em subdiretórios
+            const result = searchForFile(itemPath, searchPattern);
+            if (result) return result;
+          } else if (item.isFile()) {
+            // Verificar se o arquivo corresponde ao padrão
+            const fileName = item.name.toLowerCase();
+            const searchLower = searchPattern.toLowerCase();
+            
+            // Extrair número da NFSe para comparação
+            const fileNfseMatch = fileName.match(/nfse_(\d+)/);
+            const searchNfseMatch = searchLower.match(/nfse_(\d+)/);
+            
+            if (fileNfseMatch && searchNfseMatch && fileNfseMatch[1] === searchNfseMatch[1]) {
+              console.log(`Arquivo correspondente encontrado: ${itemPath}`);
+              return itemPath;
+            }
+            
+            // Verificar outras correspondências
+            if (fileName.includes(searchLower.replace(/\.[^/.]+$/, ""))) {
+              console.log(`Arquivo similar encontrado: ${itemPath}`);
+              return itemPath;
+            }
           }
-          
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
-          return fs.createReadStream(foundPath).pipe(res);
         }
+      } catch (error) {
+        console.error(`Erro ao buscar em ${dir}:`, error);
       }
-    } catch (searchError) {
-      console.error('Erro na busca robusta:', searchError);
+      return null;
+    };
+    
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const foundFile = searchForFile(uploadsDir, document.invoice_file_name);
+    
+    if (foundFile) {
+      // Definir o tipo de conteúdo correto
+      const ext = path.extname(foundFile).toLowerCase();
+      let contentType = 'application/octet-stream';
+      
+      if (ext === '.pdf') {
+        contentType = 'application/pdf';
+      } else if (['.jpg', '.jpeg'].includes(ext)) {
+        contentType = 'image/jpeg';
+      } else if (ext === '.png') {
+        contentType = 'image/png';
+      }
+      
+      console.log(`Servindo arquivo encontrado: ${foundFile}`);
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      const stream = fs.createReadStream(foundFile);
+      stream.on('error', (streamError) => {
+        console.error('Erro ao ler arquivo encontrado:', streamError);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Erro ao ler arquivo' });
+        }
+      });
+      
+      return stream.pipe(res);
     }
     
     // Se chegou aqui, não encontrou o arquivo
