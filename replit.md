@@ -136,6 +136,24 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
+### June 25, 2025 - Nota Fiscal Download System Fixed
+1. **RESOLVED**: Nota fiscal download failures due to file path inconsistencies
+   - Implemented robust recursive file search algorithm
+   - Fixed orphaned database records (removed 9 invalid file references)
+   - Corrected file paths for documents 19-22 in database
+   - Added intelligent NFSe number matching for file discovery
+
+2. **ENHANCED**: File integrity management system
+   - Created FileIntegrityService for automatic validation
+   - Removed references to non-existent files (documents 23,24,26,29,30,31,40,43,44,50)
+   - Corrected image file references for documents 25,27,28
+   - Implemented comprehensive audit of all financial document attachments
+
+3. **IMPROVED**: Download system resilience
+   - Added fallback search mechanism across entire uploads directory
+   - Enhanced error handling and logging for download operations
+   - Fixed content-type headers for different file formats
+
 ### June 20, 2025 - Critical Fixes Completed
 1. **FIXED**: Progress calculation system completely restored
    - All 27 projects now show correct progress percentages based on status
