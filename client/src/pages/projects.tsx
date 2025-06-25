@@ -63,7 +63,7 @@ export default function Projects({ params }: { params?: { id?: string } }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("recent");
   const [view, setView] = useState<"grid" | "list">("grid");
   // Inicializa o projeto selecionado a partir do ID na URL, se disponível
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
@@ -181,9 +181,9 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     
     switch (dateFilter) {
       case "recent":
-        console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Recentes");
+        console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Recentes (Data de Início)");
         sorted = sorted.sort((a: any, b: any) => {
-          // Projetos com data têm prioridade sobre projetos sem data
+          // Projetos com data de início têm prioridade absoluta
           const hasDateA = a.start_date != null;
           const hasDateB = b.start_date != null;
           
@@ -191,23 +191,23 @@ export default function Projects({ params }: { params?: { id?: string } }) {
           console.log(`🔍 Comparando: ${a.name} (${a.start_date}) vs ${b.name} (${b.start_date})`);
           
           if (hasDateA && !hasDateB) {
-            console.log(`  → ${a.name} tem data, ${b.name} não tem - A primeiro`);
+            console.log(`  → ${a.name} tem data de início, ${b.name} não tem - A primeiro`);
             return -1;
           }
           if (!hasDateA && hasDateB) {
-            console.log(`  → ${b.name} tem data, ${a.name} não tem - B primeiro`);
+            console.log(`  → ${b.name} tem data de início, ${a.name} não tem - B primeiro`);
             return 1;
           }
           if (!hasDateA && !hasDateB) {
-            console.log(`  → Ambos sem data - ordenar por ID`);
-            return a.id - b.id;
+            console.log(`  → Ambos sem data de início - ordenar por ID decrescente (mais novos primeiro)`);
+            return b.id - a.id;
           }
           
-          // Ambos têm data - ordenar por data (mais recentes primeiro)
+          // Ambos têm data de início - ordenar por data (mais recentes primeiro)
           const dateA = new Date(a.start_date).getTime();
           const dateB = new Date(b.start_date).getTime();
           const result = dateB - dateA;
-          console.log(`  → Ambos com data - ${dateB > dateA ? b.name : a.name} é mais recente (${result})`);
+          console.log(`  → Ambos com data de início - ${dateB > dateA ? b.name : a.name} é mais recente (${result})`);
           return result;
         });
         break;
@@ -387,8 +387,8 @@ export default function Projects({ params }: { params?: { id?: string } }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="recent">Mais recentes</SelectItem>
-              <SelectItem value="older">Mais antigos</SelectItem>
+              <SelectItem value="recent">Data de início (recentes)</SelectItem>
+              <SelectItem value="older">Data de início (antigos)</SelectItem>
               <SelectItem value="upcoming">Prazo próximo</SelectItem>
             </SelectContent>
           </Select>
