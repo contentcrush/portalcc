@@ -108,6 +108,9 @@ import { FinancialRecordActions } from "@/components/financial/FinancialRecordAc
 import { FinancialRecordDetails } from "@/components/financial/FinancialRecordDetails";
 import { PaymentRegistrationDialog } from "@/components/financial/PaymentRegistrationDialog";
 import { EditExpenseDialog } from "@/components/financial/EditExpenseDialog";
+import { FinancialTableHeader } from "@/components/financial/FinancialTableHeader";
+import { FinancialStatusBadge } from "@/components/financial/FinancialStatusBadge";
+import { FinancialQuickStats } from "@/components/financial/FinancialQuickStats";
 
 // Definição de tipos
 interface Transaction {
@@ -140,6 +143,12 @@ export default function Financial() {
     field: 'amount' | 'document_number' | 'issue_date' | 'due_date' | 'client_name' | 'id';
     direction: 'asc' | 'desc';
   }>({ field: 'id', direction: 'desc' });
+  
+  // Estados para filtros das abas A Receber e A Pagar
+  const [receivablesSearchTerm, setReceivablesSearchTerm] = useState<string>("");
+  const [receivablesStatusFilter, setReceivablesStatusFilter] = useState<string>("all");
+  const [payablesSearchTerm, setPayablesSearchTerm] = useState<string>("");
+  const [payablesStatusFilter, setPayablesStatusFilter] = useState<string>("all");
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -321,11 +330,44 @@ export default function Financial() {
 
   // Prepare financial data
   // Agora incluímos todas as faturas, não apenas as não pagas
-  // Ordenadas conforme seleção do usuário
+  // Ordenadas conforme seleção do usuário e filtradas por busca e status
   const receivablesData = useMemo(() => {
-    const filtered = financialDocuments?.filter((doc: any) => 
+    let filtered = financialDocuments?.filter((doc: any) => 
       doc.document_type === 'invoice'
     ) || [];
+    
+    // Aplicar filtro de busca
+    if (receivablesSearchTerm) {
+      const searchLower = receivablesSearchTerm.toLowerCase();
+      filtered = filtered.filter((doc: any) => {
+        const client = clients?.find((c: any) => c.id === doc.client_id);
+        const project = projects?.find((p: any) => p.id === doc.project_id);
+        return (
+          doc.description?.toLowerCase().includes(searchLower) ||
+          doc.document_number?.toLowerCase().includes(searchLower) ||
+          client?.name?.toLowerCase().includes(searchLower) ||
+          project?.name?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Aplicar filtro de status
+    if (receivablesStatusFilter !== "all") {
+      filtered = filtered.filter((doc: any) => {
+        const isOverdue = !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now);
+        
+        switch (receivablesStatusFilter) {
+          case "pending":
+            return !doc.paid && !isOverdue;
+          case "overdue":
+            return isOverdue;
+          case "paid":
+            return doc.paid;
+          default:
+            return true;
+        }
+      });
+    }
     
     const sorted = filtered.sort((a: any, b: any) => {
       let aValue, bValue;
@@ -370,10 +412,41 @@ export default function Financial() {
     });
     
     return sorted;
-  }, [financialDocuments, sortConfig, clients]);
+  }, [financialDocuments, sortConfig, clients, projects, receivablesSearchTerm, receivablesStatusFilter]);
   
   // Incluímos todas as despesas, não apenas as não aprovadas
-  const payablesData = expenses || [];
+  // Filtradas por busca e status
+  const payablesData = useMemo(() => {
+    let filtered = expenses || [];
+    
+    // Aplicar filtro de busca
+    if (payablesSearchTerm) {
+      const searchLower = payablesSearchTerm.toLowerCase();
+      filtered = filtered.filter((expense: any) => 
+        expense.description?.toLowerCase().includes(searchLower) ||
+        expense.category?.toLowerCase().includes(searchLower) ||
+        expense.receipt_number?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Aplicar filtro de status
+    if (payablesStatusFilter !== "all") {
+      filtered = filtered.filter((expense: any) => {
+        switch (payablesStatusFilter) {
+          case "pending":
+            return expense.approved === null || expense.approved === undefined;
+          case "approved":
+            return expense.approved === true;
+          case "rejected":
+            return expense.approved === false;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [expenses, payablesSearchTerm, payablesStatusFilter]);
   
   // Calculate KPIs
   const now = new Date();
@@ -1101,149 +1174,34 @@ export default function Financial() {
 
         {/* Receivables Tab */}
         <TabsContent value="receivables" className="mt-6 space-y-6">
-          {/* Filter controls */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar fatura, cliente ou projeto..."
-                className="w-full sm:w-[300px] pl-8"
-              />
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9">
-                    <Filter className="mr-2 h-3.5 w-3.5" />
-                    Filtros
-                    <ChevronsUpDown className="ml-2 h-3.5 w-3.5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-[220px] p-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Status</h4>
-                      <Select defaultValue="all">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          <SelectItem value="pending">Pendentes</SelectItem>
-                          <SelectItem value="overdue">Vencidas</SelectItem>
-                          <SelectItem value="paid">Pagas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Cliente</h4>
-                      <Select defaultValue="all">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          <SelectItem value="1">Cervejaria Therezópolis</SelectItem>
-                          <SelectItem value="2">Citroen</SelectItem>
-                          <SelectItem value="3">Seara Alimentos</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Vencimento</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <span className="text-xs text-muted-foreground">De</span>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                <span>Selecionar</span>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar mode="single" />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <span className="text-xs text-muted-foreground">Até</span>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                <span>Selecionar</span>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar mode="single" />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" size="sm">Limpar</Button>
-                      <Button size="sm">Aplicar</Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              <Button variant="outline" size="sm" className="h-9">
-                <Download className="mr-2 h-3.5 w-3.5" />
-                Exportar
-              </Button>
-              
-            </div>
-          </div>
+          <FinancialTableHeader
+            title="A Receber"
+            type="receivables"
+            totalCount={receivablesData.length}
+            pendingCount={receivablesData.filter((doc: any) => !doc.paid).length}
+            pendingAmount={receivablesData.filter((doc: any) => !doc.paid).reduce((sum: number, doc: any) => sum + doc.amount, 0)}
+            searchTerm={receivablesSearchTerm}
+            onSearchChange={setReceivablesSearchTerm}
+            statusFilter={receivablesStatusFilter}
+            onStatusFilterChange={setReceivablesStatusFilter}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            onAddNew={() => setNewRecordDialog({ open: true, type: 'invoice' })}
+            formatCurrency={formatCurrency}
+          />
           
-          {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">A Receber (Total)</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalReceivables)}</p>
-                </div>
-                <CreditCard className="h-8 w-8 text-green-600" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Vencidas</p>
-                  <p className="text-2xl font-bold text-red-600">{formatCurrency(overdueReceivables)}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-red-600" />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Próximos 30 dias</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(receivablesNext30Days)}</p>
-                </div>
-                <CalendarIcon className="h-8 w-8 text-blue-600" />
-              </CardContent>
-            </Card>
-          </div>
+          <FinancialQuickStats
+            type="receivables"
+            stats={{
+              total: totalReceivables,
+              overdue: overdueReceivables,
+              next7Days: receivablesNext7Days,
+              next30Days: receivablesNext30Days,
+              overdueCount: receivablesData.filter((doc: any) => !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now)).length,
+              next7DaysCount: receivablesData.filter((doc: any) => !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow) && !isBefore(new Date(doc.due_date), now)).length,
+            }}
+            formatCurrency={formatCurrency}
+          />
           
           {/* Receivables Table */}
           <Card>
