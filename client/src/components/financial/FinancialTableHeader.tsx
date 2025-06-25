@@ -65,16 +65,20 @@ export function FinancialTableHeader({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-          <div className="flex items-center gap-4 mt-2">
-            <Badge variant="outline" className="text-sm">
-              {totalCount} {totalCount === 1 ? 'registro' : 'registros'}
-            </Badge>
-            {pendingCount > 0 && (
-              <Badge variant="secondary" className="text-sm">
-                {pendingCount} pendente{pendingCount !== 1 ? 's' : ''} • {formatCurrency(pendingAmount)}
-              </Badge>
-            )}
-          </div>
+          {(totalCount > 0 || pendingCount > 0) && (
+            <div className="flex items-center gap-4 mt-2">
+              {totalCount > 0 && (
+                <Badge variant="outline" className="text-sm">
+                  {totalCount} {totalCount === 1 ? 'registro' : 'registros'}
+                </Badge>
+              )}
+              {pendingCount > 0 && (
+                <Badge variant="secondary" className="text-sm">
+                  {pendingCount} pendente{pendingCount !== 1 ? 's' : ''} • {formatCurrency(pendingAmount)}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
