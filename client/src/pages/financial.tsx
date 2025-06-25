@@ -160,6 +160,7 @@ export default function Financial() {
   const [detailsRecord, setDetailsRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [paymentRecord, setPaymentRecord] = useState<{ record: any, type: "document" | "expense" } | null>(null);
   const [editExpense, setEditExpense] = useState<any | null>(null);
+  const [newRecordDialog, setNewRecordDialog] = useState<{ open: boolean, type: 'invoice' | 'expense' }>({ open: false, type: 'invoice' });
   
   // Calcular o intervalo de datas com base no período selecionado
   const dateFilterRange = useMemo(() => {
@@ -1354,16 +1355,12 @@ export default function Financial() {
                             {formatCurrency(doc.amount)}
                           </TableCell>
                           <TableCell>
-                            {doc.paid ? (
-                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                {doc.payment_date ? `Pago em ${format(new Date(doc.payment_date), 'dd/MM/yy')}` : 'Pago'}
-                              </Badge>
-                            ) : (
-                              <Badge variant={isOverdue ? "destructive" : "outline"}>
-                                {isOverdue ? "Atrasado" : "Pendente"}
-                              </Badge>
-                            )}
+                            <FinancialStatusBadge
+                              status={doc.status}
+                              paid={doc.paid}
+                              dueDate={doc.due_date}
+                              type="receivable"
+                            />
                           </TableCell>
                           <TableCell className="text-right">
                             <FinancialRecordActions 
@@ -1677,16 +1674,11 @@ export default function Financial() {
                           </TableCell>
                           <TableCell>{paidBy || '-'}</TableCell>
                           <TableCell>
-                            {exp.approved ? (
-                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                <Receipt className="w-3 h-3 mr-1" />
-                                Aprovado
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">
-                                Pendente
-                              </Badge>
-                            )}
+                            <FinancialStatusBadge
+                              status="pending"
+                              approved={exp.approved}
+                              type="payable"
+                            />
                           </TableCell>
                           <TableCell className="text-right">
                             <FinancialRecordActions 
