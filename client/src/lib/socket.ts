@@ -155,38 +155,33 @@ export function initWebSocket(): Promise<WebSocket> {
             });
           }
         } catch (error) {
-          console.error('Erro ao processar mensagem WebSocket:', error);
+          // Error processing WebSocket message
         }
       };
 
       ws.onerror = (error) => {
-        console.error('Erro na conexão WebSocket:', error);
         clearTimeout(connectionTimeout);
         reject(error);
       };
 
       ws.onclose = (event) => {
-        console.log(`Conexão WebSocket fechada: ${event.code} - ${event.reason}`);
         
         // Tentar reconectar após um tempo variável (entre 2-5 segundos)
         const reconnectDelay = 2000 + Math.random() * 3000;
         
         setTimeout(() => {
           if (document.visibilityState !== 'hidden') {
-            console.log(`Tentando reconectar WebSocket após ${Math.round(reconnectDelay/1000)}s...`);
             initWebSocket()
-              .then(() => console.log('WebSocket reconectado com sucesso'))
-              .catch(err => console.error('Falha ao reconectar WebSocket:', err));
+              .then(() => {})
+              .catch(err => {});
           } else {
-            console.log('Página em segundo plano, adiando reconexão do WebSocket');
             // Registrar um handler para reconectar quando a página voltar a ser visível
             const onVisibilityChange = () => {
               if (document.visibilityState === 'visible') {
-                console.log('Página visível novamente, reconectando WebSocket...');
                 document.removeEventListener('visibilitychange', onVisibilityChange);
                 initWebSocket()
-                  .then(() => console.log('WebSocket reconectado após página ficar visível'))
-                  .catch(err => console.error('Falha ao reconectar WebSocket após visibilidade:', err));
+                  .then(() => {})
+                  .catch(err => {});
               }
             };
             document.addEventListener('visibilitychange', onVisibilityChange);
@@ -195,7 +190,6 @@ export function initWebSocket(): Promise<WebSocket> {
       };
 
     } catch (error) {
-      console.error('Falha ao inicializar WebSocket:', error);
       reject(error);
     }
   });
@@ -217,19 +211,16 @@ export function onWebSocketMessage(
 
   // Garantir que a conexão WebSocket esteja ativa
   if (!ws || (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING)) {
-    console.log(`Inicializando WebSocket para manipular mensagens do tipo: ${type}`);
-    
     // Inicializar a conexão WebSocket
     initWebSocket()
-      .then(() => console.log(`WebSocket inicializado com sucesso para mensagens do tipo: ${type}`))
-      .catch(error => console.error(`Erro ao inicializar WebSocket para mensagens do tipo: ${type}`, error));
+      .then(() => {})
+      .catch(error => {});
   }
 
   // Retorna uma função para desregistrar este handler
   return () => {
     if (messageHandlers[type]) {
       messageHandlers[type] = messageHandlers[type].filter(h => h !== handler);
-      console.log(`Handler removido para mensagens do tipo: ${type}. Restantes: ${messageHandlers[type].length}`);
     }
   };
 }
@@ -239,7 +230,6 @@ export function onWebSocketMessage(
  */
 export function sendWebSocketMessage(data: any): boolean {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    console.warn('WebSocket não está conectado');
     return false;
   }
 
@@ -247,7 +237,6 @@ export function sendWebSocketMessage(data: any): boolean {
     ws.send(JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('Erro ao enviar mensagem WebSocket:', error);
     return false;
   }
 }
@@ -259,7 +248,6 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
   return new Promise((resolve, reject) => {
     try {
       if (socket && socket.connected) {
-        console.log('Socket.IO já está conectado');
         resolve(socket);
         return;
       }
@@ -280,8 +268,6 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
       });
 
       socket.on('connect', () => {
-        console.log('Socket.IO conectado:', socket!.id);
-
         // Se tem userId e token, autenticar
         if (userId && token) {
           socket!.emit('authenticate', { userId, token });
@@ -291,28 +277,28 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
       });
 
       socket.on('connect_error', (error) => {
-        console.error('Erro de conexão Socket.IO:', error);
+        // Socket.IO connection error
       });
 
       socket.on('disconnect', (reason) => {
-        console.log('Socket.IO desconectado:', reason);
+        // Socket.IO disconnected
       });
 
       // Setup de eventos padrão
       socket.on('error', (error) => {
-        console.error('Erro no Socket.IO:', error);
+        // Socket.IO error
       });
 
       socket.on('authenticated', (response) => {
         if (response.success) {
-          console.log('Autenticado com sucesso no Socket.IO:', response);
+          // Authentication successful
         } else {
-          console.error('Falha na autenticação Socket.IO:', response.error);
+          // Authentication failed
         }
       });
 
       socket.on('notification', (notif) => {
-        console.log('Notificação recebida:', notif);
+        // Notification received
         // Aqui você pode integrar com o sistema de notificações do frontend
         // Por exemplo, com o toast ou um componente de notificação personalizado
       });
