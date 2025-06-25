@@ -351,37 +351,33 @@ router.get('/financial-documents/:id/invoice/download', async (req, res) => {
       return null;
     };
     
+    // Buscar por número de NFSe nos arquivos existentes
     const uploadsDir = path.join(process.cwd(), 'uploads');
-    const foundFile = searchForFile(uploadsDir, document.invoice_file_name);
+    const nfseNumber = document.invoice_file_name.match(/NFSe_(\d+)/i);
     
-    if (foundFile) {
-      // Definir o tipo de conteúdo correto
-      const ext = path.extname(foundFile).toLowerCase();
-      let contentType = 'application/octet-stream';
+    if (nfseNumber) {
+      const foundFile = searchForFile(uploadsDir, `NFSe_${nfseNumber[1]}`);
       
-      if (ext === '.pdf') {
-        contentType = 'application/pdf';
-      } else if (['.jpg', '.jpeg'].includes(ext)) {
-        contentType = 'image/jpeg';
-      } else if (ext === '.png') {
-        contentType = 'image/png';
+      if (foundFile) {
+        console.log(`Arquivo NFSe ${nfseNumber[1]} encontrado: ${foundFile}`);
+        
+        const ext = path.extname(foundFile).toLowerCase();
+        let contentType = 'application/pdf';
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
+        res.setHeader('Cache-Control', 'no-cache');
+        
+        const stream = fs.createReadStream(foundFile);
+        stream.on('error', (streamError) => {
+          console.error('Erro ao ler arquivo NFSe:', streamError);
+          if (!res.headersSent) {
+            res.status(500).json({ message: 'Erro ao ler arquivo' });
+          }
+        });
+        
+        return stream.pipe(res);
       }
-      
-      console.log(`Servindo arquivo encontrado: ${foundFile}`);
-      
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${document.invoice_file_name}"`);
-      res.setHeader('Cache-Control', 'no-cache');
-      
-      const stream = fs.createReadStream(foundFile);
-      stream.on('error', (streamError) => {
-        console.error('Erro ao ler arquivo encontrado:', streamError);
-        if (!res.headersSent) {
-          res.status(500).json({ message: 'Erro ao ler arquivo' });
-        }
-      });
-      
-      return stream.pipe(res);
     }
     
     // Se chegou aqui, não encontrou o arquivo
