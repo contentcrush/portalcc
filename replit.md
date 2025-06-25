@@ -136,6 +136,17 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
+### June 25, 2025 - Project Ordering Bug Fixed
+1. **RESOLVED**: Critical bug in project sorting using incorrect field name
+   - Fixed ordering system to use correct schema field `startDate` instead of `start_date`
+   - Projects now correctly ordered by "Data de Início" with most recent first
+   - Verified ordering logic with database comparison showing accurate results
+
+2. **IMPROVED**: Project sorting algorithm accuracy
+   - Projects with start dates have absolute priority over projects without dates
+   - Projects without dates sorted by ID (newest first) as fallback
+   - Correct chronological ordering: Seara Gourmet Churrasco (July 5) → Making Of Arena BTG (June 14) → etc.
+
 ### June 25, 2025 - Critical Automatic Date Generation Issue Resolved
 1. **RESOLVED**: Automatic date generation creating invalid financial documents
    - System was incorrectly creating documents with automatic dates when projects changed status

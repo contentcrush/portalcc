@@ -181,41 +181,19 @@ export default function Projects({ params }: { params?: { id?: string } }) {
     
     switch (dateFilter) {
       case "recent":
-        console.log("📅 [ProjectSorting] Aplicando ordenação: Mais Recentes (Data de Início)");
-        
-        // Log completo dos projetos antes da ordenação
-        console.log("📋 [ProjectSorting] Projetos antes da ordenação:", sorted.map(p => ({
-          id: p.id,
-          name: p.name,
-          startDate: p.startDate,
-          hasStartDate: p.startDate != null
-        })));
-        
         sorted = sorted.sort((a: any, b: any) => {
           // Projetos com data de início têm prioridade absoluta
           const hasDateA = a.startDate != null;
           const hasDateB = b.startDate != null;
           
-          if (hasDateA && !hasDateB) {
-            console.log(`  → ${a.name} tem data, ${b.name} não tem - A primeiro`);
-            return -1;
-          }
-          if (!hasDateA && hasDateB) {
-            console.log(`  → ${b.name} tem data, ${a.name} não tem - B primeiro`);
-            return 1;
-          }
-          if (!hasDateA && !hasDateB) {
-            console.log(`  → Ambos sem data - ordenar por ID decrescente (${b.id} vs ${a.id})`);
-            return b.id - a.id;
-          }
+          if (hasDateA && !hasDateB) return -1; // A tem data, B não tem - A primeiro
+          if (!hasDateA && hasDateB) return 1;  // B tem data, A não tem - B primeiro
+          if (!hasDateA && !hasDateB) return b.id - a.id; // Ambos sem data - por ID decrescente
           
           // Ambos têm data de início - ordenar por data (mais recentes primeiro)
           const dateA = new Date(a.startDate).getTime();
           const dateB = new Date(b.startDate).getTime();
-          const result = dateB - dateA;
-          
-          console.log(`  → ${a.name} (${a.startDate}) vs ${b.name} (${b.startDate}) = ${result > 0 ? b.name : a.name} primeiro`);
-          return result;
+          return dateB - dateA;
         });
         break;
         
