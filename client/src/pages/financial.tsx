@@ -144,11 +144,9 @@ export default function Financial() {
     direction: 'asc' | 'desc';
   }>({ field: 'id', direction: 'desc' });
   
-  // Estados para filtros das abas A Receber e A Pagar
+  // Estados para busca nas abas A Receber e A Pagar (simplificado)
   const [receivablesSearchTerm, setReceivablesSearchTerm] = useState<string>("");
-  const [receivablesStatusFilter, setReceivablesStatusFilter] = useState<string>("all");
   const [payablesSearchTerm, setPayablesSearchTerm] = useState<string>("");
-  const [payablesStatusFilter, setPayablesStatusFilter] = useState<string>("all");
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -329,15 +327,14 @@ export default function Financial() {
     }));
   };
 
-  // Prepare financial data
-  // Agora incluímos todas as faturas, não apenas as não pagas
-  // Ordenadas conforme seleção do usuário e filtradas por busca e status
+  // Prepare financial data (simplified - only search and sort)
+  // Incluímos todas as faturas ordenadas conforme seleção do usuário e filtradas apenas por busca
   const receivablesData = useMemo(() => {
     let filtered = financialDocuments?.filter((doc: any) => 
       doc.document_type === 'invoice'
     ) || [];
     
-    // Aplicar filtro de busca
+    // Aplicar apenas filtro de busca (sistema simplificado)
     if (receivablesSearchTerm) {
       const searchLower = receivablesSearchTerm.toLowerCase();
       filtered = filtered.filter((doc: any) => {
@@ -349,24 +346,6 @@ export default function Financial() {
           client?.name?.toLowerCase().includes(searchLower) ||
           project?.name?.toLowerCase().includes(searchLower)
         );
-      });
-    }
-    
-    // Aplicar filtro de status
-    if (receivablesStatusFilter !== "all") {
-      filtered = filtered.filter((doc: any) => {
-        const isOverdue = !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now);
-        
-        switch (receivablesStatusFilter) {
-          case "pending":
-            return !doc.paid && !isOverdue;
-          case "overdue":
-            return isOverdue;
-          case "paid":
-            return doc.paid;
-          default:
-            return true;
-        }
       });
     }
     
@@ -413,7 +392,7 @@ export default function Financial() {
     });
     
     return sorted;
-  }, [financialDocuments, sortConfig, clients, projects, receivablesSearchTerm, receivablesStatusFilter]);
+  }, [financialDocuments, sortConfig, clients, projects, receivablesSearchTerm]);
   
   // Incluímos todas as despesas, não apenas as não aprovadas
   // Filtradas por busca e status
@@ -430,24 +409,10 @@ export default function Financial() {
       );
     }
     
-    // Aplicar filtro de status
-    if (payablesStatusFilter !== "all") {
-      filtered = filtered.filter((expense: any) => {
-        switch (payablesStatusFilter) {
-          case "pending":
-            return expense.approved === null || expense.approved === undefined;
-          case "approved":
-            return expense.approved === true;
-          case "rejected":
-            return expense.approved === false;
-          default:
-            return true;
-        }
-      });
-    }
+
     
     return filtered;
-  }, [expenses, payablesSearchTerm, payablesStatusFilter]);
+  }, [expenses, payablesSearchTerm]);
   
   // Calculate KPIs
   const now = new Date();
@@ -1192,8 +1157,6 @@ export default function Financial() {
             pendingAmount={receivablesData.filter((doc: any) => !doc.paid).reduce((sum: number, doc: any) => sum + doc.amount, 0)}
             searchTerm={receivablesSearchTerm}
             onSearchChange={setReceivablesSearchTerm}
-            statusFilter={receivablesStatusFilter}
-            onStatusFilterChange={setReceivablesStatusFilter}
             sortConfig={sortConfig}
             onSort={handleSort}
             onAddNew={() => setNewRecordDialog({ open: true, type: 'invoice' })}
