@@ -434,7 +434,6 @@ export function onNewProjectComment(callback: (comment: any) => void): () => voi
  */
 export function onUpdatedProjectComment(callback: (comment: any) => void): () => void {
   if (!socket) {
-    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -453,7 +452,6 @@ export function onUpdatedProjectComment(callback: (comment: any) => void): () =>
  */
 export function onDeletedProjectComment(callback: (data: { id: number }) => void): () => void {
   if (!socket) {
-    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -472,7 +470,6 @@ export function onDeletedProjectComment(callback: (data: { id: number }) => void
  */
 export function onNewProjectCommentReaction(callback: (data: any) => void): () => void {
   if (!socket) {
-    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -491,7 +488,6 @@ export function onNewProjectCommentReaction(callback: (data: any) => void): () =
  */
 export function onDeletedProjectCommentReaction(callback: (data: { id: number, comment_id: number }) => void): () => void {
   if (!socket) {
-    console.warn('Socket.IO não está inicializado');
     return () => {};
   }
 
@@ -510,7 +506,6 @@ export function onDeletedProjectCommentReaction(callback: (data: { id: number, c
  */
 export function addProjectCommentReply(projectId: number, userId: number, comment: string, parentId: number): boolean {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return false;
   }
 
@@ -523,7 +518,6 @@ export function addProjectCommentReply(projectId: number, userId: number, commen
     });
     return true;
   } catch (error) {
-    console.error('Erro ao enviar resposta a comentário de projeto:', error);
     return false;
   }
 }
@@ -538,7 +532,6 @@ export function notifyUser(targetUserId: number, notification: {
   link?: string;
 }): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
