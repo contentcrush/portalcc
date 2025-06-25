@@ -15,8 +15,10 @@ interface FinancialQuickStatsProps {
     overdue: number;
     next7Days: number;
     next30Days: number;
+    totalCount: number;
     overdueCount: number;
     next7DaysCount: number;
+    next30DaysCount: number;
   };
   formatCurrency: (value: number) => string;
 }
@@ -28,6 +30,7 @@ export function FinancialQuickStats({ type, stats, formatCurrency }: FinancialQu
     {
       title: isReceivables ? "Total a Receber" : "Total a Pagar",
       value: formatCurrency(stats.total),
+      count: `${stats.totalCount} item${stats.totalCount !== 1 ? 's' : ''}`,
       icon: <DollarSign className="h-5 w-5" />,
       color: isReceivables ? "text-green-600" : "text-red-600",
       bgColor: isReceivables ? "bg-green-50" : "bg-red-50"
@@ -51,6 +54,7 @@ export function FinancialQuickStats({ type, stats, formatCurrency }: FinancialQu
     {
       title: "Próximos 30 dias",
       value: formatCurrency(stats.next30Days),
+      count: `${stats.next30DaysCount} item${stats.next30DaysCount !== 1 ? 's' : ''}`,
       icon: <Calendar className="h-5 w-5" />,
       color: "text-blue-600",
       bgColor: "bg-blue-50"

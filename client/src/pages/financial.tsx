@@ -1168,8 +1168,10 @@ export default function Financial() {
               overdue: overdueReceivables,
               next7Days: receivablesNext7Days,
               next30Days: receivablesNext30Days,
-              overdueCount: receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null && !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), now)).length,
-              next7DaysCount: receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null && !doc.paid && doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow) && !isBefore(new Date(doc.due_date), now)).length,
+              totalCount: (receivablesData || []).filter((doc: any) => !doc.paid).length,
+              overdueCount: (receivablesData || []).filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), now) && !doc.paid).length,
+              next7DaysCount: (receivablesData || []).filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), sevenDaysFromNow) && !isBefore(new Date(doc.due_date), now) && !doc.paid).length,
+              next30DaysCount: (receivablesData || []).filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), thirtyDaysFromNow) && !isBefore(new Date(doc.due_date), now) && !doc.paid).length,
             }}
             formatCurrency={formatCurrency}
           />
