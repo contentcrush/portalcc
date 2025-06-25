@@ -160,11 +160,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
             if (mounted) {
               setSocketIo(socket);
               setSocketIoConnected(true);
-              console.log('Socket.IO conectado com sucesso via SocketContext');
+
             }
           })
           .catch(error => {
-            console.error('Erro ao conectar Socket.IO via SocketContext:', error);
+            // Socket.IO connection failed silently
           });
       }
     }

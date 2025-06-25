@@ -75,16 +75,14 @@ export function initWebSocket(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     // Se já estiver conectado, apenas retorne a conexão existente
     if (ws instanceof WebSocket && ws.readyState === WebSocket.OPEN) {
-      console.log('WebSocket já está conectado');
+      // WebSocket already connected
       resolve(ws);
       return;
     }
 
     // Se estiver conectando, aguarde a conexão
     if (ws instanceof WebSocket && ws.readyState === WebSocket.CONNECTING) {
-      console.log('WebSocket está conectando...');
       ws.onopen = () => {
-        console.log('WebSocket conexão completada');
         resolve(ws!);
       };
       return;
@@ -92,26 +90,22 @@ export function initWebSocket(): Promise<WebSocket> {
 
     // Fechar conexão existente se houver e estiver em outro estado
     if (ws) {
-      console.log('Fechando conexão WebSocket existente...');
       ws.close();
       ws = null;
     }
 
     try {
-      console.log('Iniciando nova conexão WebSocket:', wsUrl);
       ws = new WebSocket(wsUrl);
 
       // Defina um timeout para a conexão
       const connectionTimeout = setTimeout(() => {
         if (ws && ws.readyState !== WebSocket.OPEN) {
-          console.warn('Timeout ao conectar WebSocket');
           ws.close();
           reject(new Error('Timeout de conexão WebSocket'));
         }
       }, 10000); // 10 segundos de timeout
 
       ws.onopen = () => {
-        console.log('Conexão WebSocket estabelecida com sucesso');
         clearTimeout(connectionTimeout);
         resolve(ws!);
       };
@@ -120,7 +114,6 @@ export function initWebSocket(): Promise<WebSocket> {
         try {
           // Verifica se o evento tem dados e se não é uma string vazia
           if (!event.data || (typeof event.data === 'string' && event.data.trim() === '')) {
-            console.warn('Mensagem WebSocket recebida vazia, ignorando');
             return;
           }
 
@@ -128,11 +121,8 @@ export function initWebSocket(): Promise<WebSocket> {
           
           // Verificar se o objeto data tem propriedades
           if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
-            console.warn('Mensagem WebSocket recebida como objeto vazio, ignorando');
             return;
           }
-          
-          console.log('Mensagem WebSocket recebida:', data);
 
           // Despachar para os handlers apropriados com mais opções de propriedades
           // Verifica múltiplos campos possíveis para determinar o tipo de mensagem
@@ -149,29 +139,20 @@ export function initWebSocket(): Promise<WebSocket> {
           
           // Se não encontramos um tipo válido, não prosseguir
           if (!messageType) {
-            console.warn('Mensagem WebSocket sem tipo definido:', data);
             return;
           }
           
           // Se encontramos um tipo de mensagem e temos handlers para ele
           if (messageHandlers[messageType]) {
-            console.log(`Processando mensagem do tipo: ${messageType}`);
             messageHandlers[messageType].forEach(handler => handler(data));
           } else {
             // Se não encontramos o tipo ou não temos handlers, procurar correspondência parcial
             // Isso é útil quando o servidor envia 'financial_updated' mas o cliente espera apenas 'financial'
-            let matchFound = false;
             Object.keys(messageHandlers).forEach(handlerType => {
               if (messageType.includes(handlerType)) {
-                console.log(`Correspondência parcial: '${messageType}' corresponde a '${handlerType}'`);
                 messageHandlers[handlerType].forEach(handler => handler(data));
-                matchFound = true;
               }
             });
-            
-            if (!matchFound) {
-              console.log(`Nenhum handler encontrado para mensagem do tipo: ${messageType}`);
-            }
           }
         } catch (error) {
           console.error('Erro ao processar mensagem WebSocket:', error);
