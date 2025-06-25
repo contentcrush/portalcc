@@ -304,7 +304,6 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
       });
 
     } catch (error) {
-      console.error('Erro ao inicializar Socket.IO:', error);
       reject(error);
     }
   });
@@ -315,7 +314,6 @@ export function initSocketIO(userId?: number, token?: string): Promise<Socket> {
  */
 export function emitSocketEvent(event: string, data: any): boolean {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return false;
   }
 
@@ -323,7 +321,6 @@ export function emitSocketEvent(event: string, data: any): boolean {
     socket.emit(event, data);
     return true;
   } catch (error) {
-    console.error(`Erro ao emitir evento '${event}':`, error);
     return false;
   }
 }
@@ -333,12 +330,10 @@ export function emitSocketEvent(event: string, data: any): boolean {
  */
 export function joinTaskRoom(taskId: number): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('join-task', taskId);
-  console.log(`Entrou na sala da tarefa ${taskId}`);
 }
 
 /**
@@ -346,12 +341,10 @@ export function joinTaskRoom(taskId: number): void {
  */
 export function leaveTaskRoom(taskId: number): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('leave-task', taskId);
-  console.log(`Saiu da sala da tarefa ${taskId}`);
 }
 
 /**
@@ -359,12 +352,10 @@ export function leaveTaskRoom(taskId: number): void {
  */
 export function joinProjectRoom(projectId: number): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('join-project', projectId);
-  console.log(`Entrou na sala do projeto ${projectId}`);
 }
 
 /**
@@ -372,12 +363,10 @@ export function joinProjectRoom(projectId: number): void {
  */
 export function leaveProjectRoom(projectId: number): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
   socket.emit('leave-project', projectId);
-  console.log(`Saiu da sala do projeto ${projectId}`);
 }
 
 /**
@@ -385,7 +374,6 @@ export function leaveProjectRoom(projectId: number): void {
  */
 export function addTaskComment(taskId: number, userId: number, comment: string): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
@@ -397,7 +385,6 @@ export function addTaskComment(taskId: number, userId: number, comment: string):
  */
 export function addProjectComment(projectId: number, userId: number, comment: string): void {
   if (!socket || !socket.connected) {
-    console.warn('Socket.IO não está conectado');
     return;
   }
 
