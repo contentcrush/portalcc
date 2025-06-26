@@ -136,18 +136,24 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
-### June 26, 2025 - Visual Project Date Identification System Completed
-1. **IMPLEMENTED**: "Sem Data" badge system across all project views
+### June 26, 2025 - Critical Financial Calculation Bug Fixed
+1. **RESOLVED**: Major bug in "Total a Receber" calculation underreporting by R$ 201.661,00
+   - Fixed incorrect filtering logic that excluded invoices marked "Aguardando definição de datas"
+   - Removed requirement for `issue_date` in receivables calculation
+   - Corrected calculation to include ALL pending invoices regardless of date status
+   - Verified accurate total: R$ 314.331,00 for 16 pending invoices (was incorrectly R$ 112.670,00)
+
+2. **IMPLEMENTED**: "Sem Data" badge system across all project views
    - Added orange "Sem Data" badges to projects missing start dates
    - Implemented consistently across list view, grid view, kanban board, and Gantt chart
    - Clear visual identification helps users quickly locate projects needing date configuration
    - Badge styling: orange background with border for high visibility
 
-2. **ENHANCED**: User experience for project management workflow
-   - Projects without start dates now clearly visible in all display formats
-   - Consistent badge positioning and styling across components
-   - Easy identification of projects requiring attention in "Datas e Orçamento" section
-   - Improved project data completeness tracking
+3. **ENHANCED**: Financial integrity and user experience
+   - All pending invoices now properly counted in financial dashboard
+   - Consistent calculation logic across receivables, overdue amounts, and record counts
+   - Improved accuracy in financial reporting and cash flow projections
+   - System now correctly handles invoices in "awaiting date definition" status
 
 ### June 25, 2025 - Project Ordering Bug Fixed
 1. **RESOLVED**: Critical bug in project sorting using incorrect field name
