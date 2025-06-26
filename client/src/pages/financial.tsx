@@ -460,8 +460,8 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - considera apenas documentos não pagos E com data de emissão válida
-  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && doc.issue_date && doc.issue_date !== null);
+  // Receivables total - considera TODOS os documentos não pagos (independente de ter data de emissão)
+  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
     console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
@@ -472,10 +472,10 @@ export default function Financial() {
   // Payables total - with safety check
   const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Overdue receivables - with safety check (apenas documentos com data de emissão)
+  // Overdue receivables - with safety check (documentos vencidos independente de data de emissão)
   const today = new Date();
   const overdueReceivables = (receivablesData || [])
-    .filter((doc: any) => doc.issue_date && doc.issue_date !== null && doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
   // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
@@ -1360,13 +1360,13 @@ export default function Financial() {
             <CardFooter className="flex justify-between items-center p-4 border-t">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null).length || 0} de {receivablesData.filter((doc: any) => doc.issue_date && doc.issue_date !== null).length || 0} registros válidos
+                  Mostrando {receivablesData.length || 0} de {receivablesData.length || 0} registros
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">Total pendente:</span>
                   <span className="font-bold">{formatCurrency(
                     receivablesData
-                      .filter((doc: any) => doc.issue_date && doc.issue_date !== null && !doc.paid)
+                      .filter((doc: any) => !doc.paid)
                       .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0)
                   )}</span>
                 </div>
