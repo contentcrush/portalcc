@@ -291,6 +291,11 @@ export default function ProjectKanban({ projects }: ProjectKanbanProps) {
                                       <p className="text-xs text-gray-500 truncate">
                                         {project.client?.name || 'Cliente não especificado'}
                                       </p>
+                                      {!project.startDate && (
+                                        <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-200 ml-auto">
+                                          Sem Data
+                                        </Badge>
+                                      )}
                                     </div>
                                   </div>
                                   

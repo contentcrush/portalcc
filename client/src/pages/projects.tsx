@@ -491,6 +491,11 @@ export default function Projects({ params }: { params?: { id?: string } }) {
                           project.status === 'em_producao' ? 'Em produção' : 
                           project.status}
                         </span>
+                        {!project.startDate && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800 border border-orange-200">
+                            Sem Data
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

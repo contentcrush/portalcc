@@ -136,6 +136,19 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
+### June 26, 2025 - Visual Project Date Identification System Completed
+1. **IMPLEMENTED**: "Sem Data" badge system across all project views
+   - Added orange "Sem Data" badges to projects missing start dates
+   - Implemented consistently across list view, grid view, kanban board, and Gantt chart
+   - Clear visual identification helps users quickly locate projects needing date configuration
+   - Badge styling: orange background with border for high visibility
+
+2. **ENHANCED**: User experience for project management workflow
+   - Projects without start dates now clearly visible in all display formats
+   - Consistent badge positioning and styling across components
+   - Easy identification of projects requiring attention in "Datas e Orçamento" section
+   - Improved project data completeness tracking
+
 ### June 25, 2025 - Project Ordering Bug Fixed
 1. **RESOLVED**: Critical bug in project sorting using incorrect field name
    - Fixed ordering system to use correct schema field `startDate` instead of `start_date`

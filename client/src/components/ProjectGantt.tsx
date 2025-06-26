@@ -362,6 +362,11 @@ export default function ProjectGantt({ projects }: ProjectGanttProps) {
                       <div className="text-xs text-gray-500 flex items-center">
                         {project.client?.name || 'Cliente não especificado'}
                         <StatusBadge status={project.status} minimal className="ml-2" />
+                        {!project.startDate && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800 border border-orange-200">
+                            Sem Data
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

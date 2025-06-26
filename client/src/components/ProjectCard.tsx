@@ -177,11 +177,16 @@ export default function ProjectCard({ project, onOpenDetails }: ProjectCardProps
               </span>
             </div>
           )}
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 flex flex-col gap-1">
             <StatusBadge 
               project={project}
               small={true} 
             />
+            {!project.startDate && (
+              <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-200">
+                Sem Data
+              </Badge>
+            )}
           </div>
           
           <div className="absolute top-3 right-3 z-10">
