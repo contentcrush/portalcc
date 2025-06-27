@@ -1292,13 +1292,16 @@ export default function Financial() {
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
                             {/* Data de emissão: mostra sempre se existe no banco */}
-                            {doc.issue_date && doc.issue_date !== null ? (
-                              format(new Date(doc.issue_date), 'dd/MM/yyyy')
-                            ) : (
-                              <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
-                                Sem data
-                              </Badge>
-                            )}
+                            {(() => {
+                              console.log(`Debug doc ${doc.id}: issue_date = "${doc.issue_date}", type = ${typeof doc.issue_date}, null check = ${doc.issue_date === null}`);
+                              return doc.issue_date && doc.issue_date !== null ? (
+                                format(new Date(doc.issue_date), 'dd/MM/yyyy')
+                              ) : (
+                                <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
+                                  Sem data
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (
