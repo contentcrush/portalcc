@@ -338,9 +338,11 @@ export default function Financial() {
     // Aplicar apenas filtro de busca (sistema simplificado)
     if (receivablesSearchTerm) {
       const searchLower = receivablesSearchTerm.toLowerCase();
+      const clientsArray = Array.isArray(clients) ? clients : [];
+      const projectsArray = Array.isArray(projects) ? projects : [];
       filtered = filtered.filter((doc: any) => {
-        const client = clients?.find((c: any) => c.id === doc.client_id);
-        const project = projects?.find((p: any) => p.id === doc.project_id);
+        const client = clientsArray.find((c: any) => c.id === doc.client_id);
+        const project = projectsArray.find((p: any) => p.id === doc.project_id);
         return (
           doc.description?.toLowerCase().includes(searchLower) ||
           doc.document_number?.toLowerCase().includes(searchLower) ||
@@ -371,8 +373,8 @@ export default function Financial() {
           bValue = b.due_date ? new Date(b.due_date).getTime() : 0;
           break;
         case 'client_name':
-          const clientA = clients?.find((c: any) => c.id === a.client_id);
-          const clientB = clients?.find((c: any) => c.id === b.client_id);
+          const clientA = clientsArray.find((c: any) => c.id === a.client_id);
+          const clientB = clientsArray.find((c: any) => c.id === b.client_id);
           aValue = clientA?.name || '';
           bValue = clientB?.name || '';
           break;
@@ -398,7 +400,8 @@ export default function Financial() {
   // Incluímos todas as despesas, não apenas as não aprovadas
   // Filtradas por busca e status
   const payablesData = useMemo(() => {
-    let filtered = expenses || [];
+    const expensesArray = Array.isArray(expenses) ? expenses : [];
+    let filtered = expensesArray;
     
     // Aplicar filtro de busca
     if (payablesSearchTerm) {

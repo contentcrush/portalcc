@@ -19,7 +19,6 @@ export const pool = new Pool({
   max: 10,
   maxUses: Infinity,
   allowExitOnIdle: false,
-  maxLifetimeSeconds: 0,
   idleTimeoutMillis: 10000,
   // Garantir que o PostgreSQL sempre use UTC
   // para todas as operações relacionadas a datas e horários
