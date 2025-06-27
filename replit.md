@@ -161,6 +161,12 @@ This is a comprehensive project management system built for content production c
    - Eliminated contradictory logic between different status tracking mechanisms
    - Improved financial calculation accuracy and consistency across all dashboard components
 
+5. **CLARIFIED**: Financial document date architecture
+   - **issue_date**: Data de emissão da nota fiscal (cria obrigação legal de pagamento)
+   - **due_date**: Data de vencimento acordada (prazo negociado, base para cálculo de atraso)
+   - **payment_date**: Data efetiva do recebimento (quando o dinheiro foi recebido)
+   - Mantidas as três datas por serem essenciais para controle financeiro completo
+
 ### June 26, 2025 - Critical Financial Calculation Bug Fixed
 1. **RESOLVED**: Major bug in "Total a Receber" calculation underreporting by R$ 201.661,00
    - Fixed incorrect filtering logic that excluded invoices marked "Aguardando definição de datas"
