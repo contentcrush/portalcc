@@ -464,8 +464,8 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - considera TODOS os documentos não pagos (independente de ter data de emissão)
-  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
+  // Receivables total - considera TODOS os documentos não pagos E não arquivados (independente de ter data de emissão)
+  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && !doc.archived);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
     console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
@@ -476,19 +476,20 @@ export default function Financial() {
   // Payables total - with safety check
   const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Overdue receivables - with safety check (documentos vencidos independente de data de emissão)
+  // Overdue receivables - with safety check (documentos vencidos não arquivados independente de data de emissão)
   const today = new Date();
   const overdueReceivables = (receivablesData || [])
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid && !doc.archived)
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
-  // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
+  // Cash flow next 7 and 30 days - with safety checks (apenas documentos não arquivados com data de emissão)
   const receivablesNext7Days = (receivablesData || [])
     .filter((doc: any) => 
       doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid // Ainda não pagas
+      !doc.paid && // Ainda não pagas
+      !doc.archived // Não arquivadas
     )
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
 
@@ -497,7 +498,8 @@ export default function Financial() {
       doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid // Ainda não pagas
+      !doc.paid && // Ainda não pagas
+      !doc.archived // Não arquivadas
     )
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
@@ -507,12 +509,13 @@ export default function Financial() {
     
   const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
   
-  // Due alerts (next 7 days) - documentos com vencimento próximo (independente de data de emissão)
+  // Due alerts (next 7 days) - documentos não arquivados com vencimento próximo (independente de data de emissão)
   const dueFaturas = receivablesData
     .filter((doc: any) => 
       doc.due_date && // Apenas precisa ter data de vencimento
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
-      !doc.paid // Mostrar apenas faturas pendentes
+      !doc.paid && // Mostrar apenas faturas pendentes
+      !doc.archived // Não arquivadas
     );
   
   const dueAlertsCount = dueFaturas.length;
