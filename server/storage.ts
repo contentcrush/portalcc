@@ -2654,16 +2654,18 @@ export class DatabaseStorage implements IStorage {
           document_type: financialDocuments.document_type,
           document_number: financialDocuments.document_number,
           amount: financialDocuments.amount,
+          issue_date: financialDocuments.issue_date,
           due_date: financialDocuments.due_date,
           paid: financialDocuments.paid,
           payment_date: financialDocuments.payment_date,
           payment_notes: financialDocuments.payment_notes,
-          status: financialDocuments.status,
           description: financialDocuments.description,
           invoice_file: financialDocuments.invoice_file,
           invoice_file_name: financialDocuments.invoice_file_name,
-          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+          created_at: financialDocuments.created_at,
+          created_by: financialDocuments.created_by,
+          updated_at: financialDocuments.updated_at,
+          updated_by: financialDocuments.updated_by
         })
         .from(financialDocuments)
         .where(eq(financialDocuments.id, id));
@@ -2710,12 +2712,13 @@ export class DatabaseStorage implements IStorage {
           paid: financialDocuments.paid,
           payment_date: financialDocuments.payment_date,
           payment_notes: financialDocuments.payment_notes,
-          status: financialDocuments.status,
           description: financialDocuments.description,
           invoice_file: financialDocuments.invoice_file,
           invoice_file_name: financialDocuments.invoice_file_name,
-          invoice_file_uploaded_at: financialDocuments.invoice_file_uploaded_at,
-          invoice_file_uploaded_by: financialDocuments.invoice_file_uploaded_by
+          created_at: financialDocuments.created_at,
+          created_by: financialDocuments.created_by,
+          updated_at: financialDocuments.updated_at,
+          updated_by: financialDocuments.updated_by
         })
         .from(financialDocuments);
       } catch (error) {
