@@ -1293,8 +1293,11 @@ export default function Financial() {
                           <TableCell>
                             {/* Data de emissão: mostra sempre se existe no banco */}
                             {(() => {
-                              console.log(`Debug doc ${doc.id}: issue_date = "${doc.issue_date}", type = ${typeof doc.issue_date}, null check = ${doc.issue_date === null}`);
-                              return doc.issue_date && doc.issue_date !== null ? (
+                              console.log(`Debug doc ${doc.id}: issue_date = "${doc.issue_date}", type = ${typeof doc.issue_date}, null check = ${doc.issue_date === null}, truthy check = ${!!doc.issue_date}`);
+                              const hasValidDate = doc.issue_date && doc.issue_date !== null && doc.issue_date !== "null";
+                              console.log(`Doc ${doc.id} - hasValidDate: ${hasValidDate}`);
+                              
+                              return hasValidDate ? (
                                 format(new Date(doc.issue_date), 'dd/MM/yyyy')
                               ) : (
                                 <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
