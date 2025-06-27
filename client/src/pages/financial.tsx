@@ -460,68 +460,91 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - considera TODOS os documentos não pagos (independente de ter data de emissão)
-  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
-  
-  const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
-    console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
-    return sum + (doc.amount || 0);
-  }, 0);
-  console.log('Total calculado (soma real):', totalReceivables);
-  
-  // Payables total - with safety check
-  const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
-  
-  // Overdue receivables - with safety check (documentos vencidos independente de data de emissão)
-  const today = new Date();
-  const overdueReceivables = (receivablesData || [])
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
-  
-  // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
-  const receivablesNext7Days = (receivablesData || [])
-    .filter((doc: any) => 
-      doc.due_date && // Apenas precisa ter data de vencimento válida
-      isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
-      !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid // Ainda não pagas
-    )
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
-
-  const receivablesNext30Days = (receivablesData || [])
-    .filter((doc: any) => 
-      doc.due_date && // Apenas precisa ter data de vencimento válida
-      isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
-      !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid // Ainda não pagas
-    )
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+  // Cálculos financeiros otimizados com useMemo para evitar recálculos desnecessários
+  const financialCalculations = useMemo(() => {
+    const today = new Date();
+    const sevenDaysFromNow = addDays(today, 7);
+    const thirtyDaysFromNow = addDays(today, 30);
     
-  const payablesNext30Days = payablesData
-    .filter((exp: any) => exp.date && isBefore(new Date(exp.date), thirtyDaysFromNow))
-    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    // Filtrar documentos não pagos uma única vez
+    const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
     
-  const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
-  
-  // Due alerts (next 7 days) - valor total em vez da contagem (apenas documentos com data de emissão)
-  const dueFaturas = receivablesData
-    .filter((doc: any) => 
-      doc.issue_date && doc.issue_date !== null && // Deve ter data de emissão válida
-      doc.due_date && 
-      isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
-      !doc.paid // Mostrar apenas faturas pendentes
-    );
-  
-  const dueAlertsCount = dueFaturas.length;
-  
-  // Total financeiro dos alertas
-  const dueAlerts = dueFaturas
-    .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
+    // Categorizar por períodos em uma única passagem
+    const categorizedReceivables = unpaidReceivables.reduce((acc, doc) => {
+      const amount = doc.amount || 0;
+      acc.total += amount;
+      
+      if (doc.due_date) {
+        const dueDate = new Date(doc.due_date);
+        
+        if (isBefore(dueDate, today)) {
+          acc.overdue.amount += amount;
+          acc.overdue.docs.push(doc);
+        } else if (isBefore(dueDate, sevenDaysFromNow)) {
+          acc.next7Days.amount += amount;
+          acc.next7Days.docs.push(doc);
+        } else if (isBefore(dueDate, thirtyDaysFromNow)) {
+          acc.next30Days.amount += amount;
+          acc.next30Days.docs.push(doc);
+        }
+      }
+      
+      return acc;
+    }, {
+      total: 0,
+      overdue: { amount: 0, docs: [] as any[] },
+      next7Days: { amount: 0, docs: [] as any[] },
+      next30Days: { amount: 0, docs: [] as any[] }
+    });
     
-  // Payables next 7 days
-  const payablesNext7Days = payablesData
-    .filter((exp: any) => exp.date && isBefore(new Date(exp.date), sevenDaysFromNow))
-    .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    // Cálculos de despesas
+    const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    
+    const payablesNext30Days = payablesData
+      .filter((exp: any) => exp.date && isBefore(new Date(exp.date), thirtyDaysFromNow))
+      .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+      
+    const payablesNext7Days = payablesData
+      .filter((exp: any) => exp.date && isBefore(new Date(exp.date), sevenDaysFromNow))
+      .reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
+    
+    console.log('Cálculos financeiros otimizados:', {
+      totalReceivables: categorizedReceivables.total,
+      overdueAmount: categorizedReceivables.overdue.amount,
+      next7DaysAmount: categorizedReceivables.next7Days.amount
+    });
+    
+    return {
+      totalReceivables: categorizedReceivables.total,
+      unpaidReceivables,
+      overdueReceivables: categorizedReceivables.overdue.amount,
+      receivablesNext7Days: categorizedReceivables.next7Days.amount,
+      receivablesNext30Days: categorizedReceivables.next30Days.amount,
+      dueFaturas: categorizedReceivables.next7Days.docs,
+      dueAlertsCount: categorizedReceivables.next7Days.docs.length,
+      dueAlerts: categorizedReceivables.next7Days.amount,
+      totalPayables,
+      payablesNext7Days,
+      payablesNext30Days,
+      cashFlowNext30Days: categorizedReceivables.next30Days.amount - payablesNext30Days
+    };
+  }, [receivablesData, payablesData]);
+  
+  // Extrair valores calculados
+  const {
+    totalReceivables,
+    unpaidReceivables,
+    overdueReceivables,
+    receivablesNext7Days,
+    receivablesNext30Days,
+    dueFaturas,
+    dueAlertsCount,
+    dueAlerts,
+    totalPayables,
+    payablesNext7Days,
+    payablesNext30Days,
+    cashFlowNext30Days
+  } = financialCalculations;
   
   // Receita - documentos pagos no período selecionado
   const { startDate, endDate } = dateFilterRange;
