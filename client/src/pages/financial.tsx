@@ -330,9 +330,10 @@ export default function Financial() {
   // Prepare financial data (simplified - only search and sort)
   // Incluímos todas as faturas ordenadas conforme seleção do usuário e filtradas apenas por busca
   const receivablesData = useMemo(() => {
-    let filtered = financialDocuments?.filter((doc: any) => 
+    const documentsArray = Array.isArray(financialDocuments) ? financialDocuments : [];
+    let filtered = documentsArray.filter((doc: any) => 
       doc.document_type === 'invoice'
-    ) || [];
+    );
     
     // Aplicar apenas filtro de busca (sistema simplificado)
     if (receivablesSearchTerm) {
