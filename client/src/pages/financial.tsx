@@ -507,11 +507,10 @@ export default function Financial() {
     
   const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
   
-  // Due alerts (next 7 days) - valor total em vez da contagem (apenas documentos com data de emissão)
+  // Due alerts (next 7 days) - documentos com vencimento próximo (independente de data de emissão)
   const dueFaturas = receivablesData
     .filter((doc: any) => 
-      doc.issue_date && doc.issue_date !== null && // Deve ter data de emissão válida
-      doc.due_date && 
+      doc.due_date && // Apenas precisa ter data de vencimento
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !doc.paid // Mostrar apenas faturas pendentes
     );
@@ -531,10 +530,11 @@ export default function Financial() {
   const { startDate, endDate } = dateFilterRange;
   
   // Documentos pagos no período selecionado
-  const paidDocumentsInPeriod = financialDocuments?.filter((doc: any) => {
+  const documentsArray = Array.isArray(financialDocuments) ? financialDocuments : [];
+  const paidDocumentsInPeriod = documentsArray.filter((doc: any) => {
     if (!doc.paid || !doc.payment_date) return false;
     return isDateInRange(doc.payment_date);
-  }) || [];
+  });
   
   console.log(`Documentos pagos no período ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}:`, paidDocumentsInPeriod.length);
   
