@@ -330,19 +330,16 @@ export default function Financial() {
   // Prepare financial data (simplified - only search and sort)
   // Incluímos todas as faturas ordenadas conforme seleção do usuário e filtradas apenas por busca
   const receivablesData = useMemo(() => {
-    const documentsArray = Array.isArray(financialDocuments) ? financialDocuments : [];
-    let filtered = documentsArray.filter((doc: any) => 
+    let filtered = financialDocuments?.filter((doc: any) => 
       doc.document_type === 'invoice'
-    );
+    ) || [];
     
     // Aplicar apenas filtro de busca (sistema simplificado)
     if (receivablesSearchTerm) {
       const searchLower = receivablesSearchTerm.toLowerCase();
-      const clientsArray = Array.isArray(clients) ? clients : [];
-      const projectsArray = Array.isArray(projects) ? projects : [];
       filtered = filtered.filter((doc: any) => {
-        const client = clientsArray.find((c: any) => c.id === doc.client_id);
-        const project = projectsArray.find((p: any) => p.id === doc.project_id);
+        const client = clients?.find((c: any) => c.id === doc.client_id);
+        const project = projects?.find((p: any) => p.id === doc.project_id);
         return (
           doc.description?.toLowerCase().includes(searchLower) ||
           doc.document_number?.toLowerCase().includes(searchLower) ||
@@ -373,8 +370,8 @@ export default function Financial() {
           bValue = b.due_date ? new Date(b.due_date).getTime() : 0;
           break;
         case 'client_name':
-          const clientA = clientsArray.find((c: any) => c.id === a.client_id);
-          const clientB = clientsArray.find((c: any) => c.id === b.client_id);
+          const clientA = clients?.find((c: any) => c.id === a.client_id);
+          const clientB = clients?.find((c: any) => c.id === b.client_id);
           aValue = clientA?.name || '';
           bValue = clientB?.name || '';
           break;
@@ -400,8 +397,7 @@ export default function Financial() {
   // Incluímos todas as despesas, não apenas as não aprovadas
   // Filtradas por busca e status
   const payablesData = useMemo(() => {
-    const expensesArray = Array.isArray(expenses) ? expenses : [];
-    let filtered = expensesArray;
+    let filtered = expenses || [];
     
     // Aplicar filtro de busca
     if (payablesSearchTerm) {
@@ -464,8 +460,8 @@ export default function Financial() {
     ];
   };
   
-  // Receivables total - considera TODOS os documentos não pagos E não arquivados (independente de ter data de emissão)
-  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid && !doc.archived);
+  // Receivables total - considera TODOS os documentos não pagos (independente de ter data de emissão)
+  const unpaidReceivables = receivablesData.filter((doc: any) => !doc.paid);
   
   const totalReceivables = unpaidReceivables.reduce((sum: number, doc: any) => {
     console.log(`Documento #${doc.id} (A Receber): R$${doc.amount}`);
@@ -476,20 +472,19 @@ export default function Financial() {
   // Payables total - with safety check
   const totalPayables = (payablesData || []).reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
   
-  // Overdue receivables - with safety check (documentos vencidos não arquivados independente de data de emissão)
+  // Overdue receivables - with safety check (documentos vencidos independente de data de emissão)
   const today = new Date();
   const overdueReceivables = (receivablesData || [])
-    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid && !doc.archived)
+    .filter((doc: any) => doc.due_date && isBefore(new Date(doc.due_date), today) && !doc.paid)
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
   
-  // Cash flow next 7 and 30 days - with safety checks (apenas documentos não arquivados com data de emissão)
+  // Cash flow next 7 and 30 days - with safety checks (apenas documentos com data de emissão)
   const receivablesNext7Days = (receivablesData || [])
     .filter((doc: any) => 
       doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid && // Ainda não pagas
-      !doc.archived // Não arquivadas
+      !doc.paid // Ainda não pagas
     )
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
 
@@ -498,8 +493,7 @@ export default function Financial() {
       doc.due_date && // Apenas precisa ter data de vencimento válida
       isBefore(new Date(doc.due_date), thirtyDaysFromNow) && 
       !isBefore(new Date(doc.due_date), today) && // Não vencidas 
-      !doc.paid && // Ainda não pagas
-      !doc.archived // Não arquivadas
+      !doc.paid // Ainda não pagas
     )
     .reduce((sum: number, doc: any) => sum + (doc.amount || 0), 0);
     
@@ -509,13 +503,13 @@ export default function Financial() {
     
   const cashFlowNext30Days = receivablesNext30Days - payablesNext30Days;
   
-  // Due alerts (next 7 days) - documentos não arquivados com vencimento próximo (independente de data de emissão)
+  // Due alerts (next 7 days) - valor total em vez da contagem (apenas documentos com data de emissão)
   const dueFaturas = receivablesData
     .filter((doc: any) => 
-      doc.due_date && // Apenas precisa ter data de vencimento
+      doc.issue_date && doc.issue_date !== null && // Deve ter data de emissão válida
+      doc.due_date && 
       isBefore(new Date(doc.due_date), sevenDaysFromNow) && 
-      !doc.paid && // Mostrar apenas faturas pendentes
-      !doc.archived // Não arquivadas
+      !doc.paid // Mostrar apenas faturas pendentes
     );
   
   const dueAlertsCount = dueFaturas.length;
@@ -533,11 +527,10 @@ export default function Financial() {
   const { startDate, endDate } = dateFilterRange;
   
   // Documentos pagos no período selecionado
-  const documentsArray = Array.isArray(financialDocuments) ? financialDocuments : [];
-  const paidDocumentsInPeriod = documentsArray.filter((doc: any) => {
+  const paidDocumentsInPeriod = financialDocuments?.filter((doc: any) => {
     if (!doc.paid || !doc.payment_date) return false;
     return isDateInRange(doc.payment_date);
-  });
+  }) || [];
   
   console.log(`Documentos pagos no período ${format(startDate, 'dd/MM/yyyy')} a ${format(endDate, 'dd/MM/yyyy')}:`, paidDocumentsInPeriod.length);
   
@@ -1299,19 +1292,13 @@ export default function Financial() {
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
                             {/* Data de emissão: mostra sempre se existe no banco */}
-                            {(() => {
-                              console.log(`Debug doc ${doc.id}: issue_date = "${doc.issue_date}", type = ${typeof doc.issue_date}, null check = ${doc.issue_date === null}, truthy check = ${!!doc.issue_date}`);
-                              const hasValidDate = doc.issue_date && doc.issue_date !== null && doc.issue_date !== "null";
-                              console.log(`Doc ${doc.id} - hasValidDate: ${hasValidDate}`);
-                              
-                              return hasValidDate ? (
-                                format(new Date(doc.issue_date), 'dd/MM/yyyy')
-                              ) : (
-                                <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
-                                  Sem data
-                                </Badge>
-                              );
-                            })()}
+                            {doc.issue_date && doc.issue_date !== null ? (
+                              format(new Date(doc.issue_date), 'dd/MM/yyyy')
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
+                                Sem data
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (

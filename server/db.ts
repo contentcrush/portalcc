@@ -3,7 +3,6 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "../shared/schema";
 
-// Configure WebSocket for Neon in Node.js environment
 neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
@@ -16,10 +15,6 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 10000,
-  max: 10,
-  maxUses: Infinity,
-  allowExitOnIdle: false,
-  idleTimeoutMillis: 10000,
   // Garantir que o PostgreSQL sempre use UTC
   // para todas as operações relacionadas a datas e horários
   options: `-c timezone=UTC`

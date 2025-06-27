@@ -136,18 +136,6 @@ This is a comprehensive project management system built for content production c
 
 ## Recent Changes
 
-### June 27, 2025 - Financial Document Archive Filter Bug Fixed
-1. **RESOLVED**: Major bug where archived documents were included in financial calculations
-   - Document #38 (R$ 18.500) was archived but still appearing in "A Receber" totals
-   - Added `!doc.archived` filter to all financial calculations in frontend
-   - Corrected total from R$ 314.331,00 to R$ 295.831,00 (15 active invoices)
-   - Fixed calculations for overdue amounts, cash flow projections, and due alerts
-
-2. **IDENTIFIED**: 18 documents were archived during system migration on May 29, 2025
-   - All archived with reason "Migração para novo sistema financeiro robusto"
-   - System now properly excludes archived documents from active financial reporting
-   - Maintains data integrity while preserving historical records
-
 ### June 26, 2025 - Critical Financial Calculation Bug Fixed
 1. **RESOLVED**: Major bug in "Total a Receber" calculation underreporting by R$ 201.661,00
    - Fixed incorrect filtering logic that excluded invoices marked "Aguardando definição de datas"
