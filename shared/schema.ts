@@ -279,15 +279,6 @@ export const clientInteractions = pgTable("client_interactions", {
   date: timestamp("date").defaultNow(),
 });
 
-// Enum para status de documentos financeiros
-export const financialStatusEnum = pgEnum('financial_status', [
-  'pending',     // Pendente de aprovação
-  'approved',    // Aprovado para pagamento/recebimento
-  'paid',        // Pago/Recebido
-  'cancelled',   // Cancelado
-  'archived'     // Arquivado (dados antigos)
-]);
-
 export const financialDocuments = pgTable("financial_documents", {
   id: serial("id").primaryKey(),
   project_id: integer("project_id"),
@@ -300,24 +291,17 @@ export const financialDocuments = pgTable("financial_documents", {
   paid: boolean("paid").default(false),
   payment_date: timestamp("payment_date"),
   payment_notes: text("payment_notes"),
-  status: financialStatusEnum("status").default("pending"),
   description: text("description"),
   invoice_file: text("invoice_file"),
   invoice_file_name: text("invoice_file_name"),
   invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"),
   invoice_file_uploaded_by: integer("invoice_file_uploaded_by"),
   
-  // Campos de auditoria
+  // Campos essenciais de auditoria
   created_at: timestamp("created_at").defaultNow(),
   created_by: integer("created_by").notNull(),
   updated_at: timestamp("updated_at").defaultNow(),
   updated_by: integer("updated_by"),
-  
-  // Campos de controle
-  version: integer("version").default(1), // Versionamento para controle de concorrência
-  archived: boolean("archived").default(false), // Para marcar documentos antigos
-  archived_at: timestamp("archived_at"),
-  archived_by: integer("archived_by"),
   archive_reason: text("archive_reason"),
 });
 
@@ -363,15 +347,11 @@ export const expenses = pgTable("expenses", {
   amount: doublePrecision("amount").notNull(),
   date: timestamp("date").notNull(),
   paid_by: integer("paid_by"),
-  paid: boolean("paid").default(false),
-  reimbursement: boolean("reimbursement").default(false),
+  approved: boolean("approved"), // null = aguardando, true = aprovada, false = negada
   receipt: text("receipt"),
-  approved: boolean("approved").default(false),
+  invoice_file: text("invoice_file"),
+  invoice_file_name: text("invoice_file_name"),
   creation_date: timestamp("creation_date").defaultNow(),
-  invoice_file: text("invoice_file"), // URL para o arquivo da nota fiscal
-  invoice_file_name: text("invoice_file_name"), // Nome original do arquivo
-  invoice_file_uploaded_at: timestamp("invoice_file_uploaded_at"), // Data do upload
-  invoice_file_uploaded_by: integer("invoice_file_uploaded_by"), // Usuário que fez o upload
 });
 
 export const events = pgTable("events", {
