@@ -28,9 +28,7 @@ export class FinancialAuditService {
         .values({
           ...documentData,
           created_by: userId,
-          updated_by: userId,
-          status: 'pending',
-          version: 1
+          updated_by: userId
         })
         .returning();
 
@@ -70,23 +68,11 @@ export class FinancialAuditService {
         throw new Error('Documento financeiro não encontrado');
       }
 
-      // Permitir pagamento de documentos arquivados, mas bloquear outras modificações
-      if (currentDocument.archived && !updates.payment_date) {
-        throw new Error('Não é possível modificar documentos arquivados (exceto para registrar pagamento)');
-      }
-
-      // 2. Verificar se há conflito de versão (otimistic locking)
-      const currentVersion = currentDocument.version || 1;
-      if (updates.version && updates.version !== currentVersion) {
-        throw new Error('Conflito de versão detectado. O documento foi modificado por outro usuário.');
-      }
-
-      // 3. Preparar dados da atualização
+      // 2. Preparar dados da atualização
       const updateData = {
         ...updates,
         updated_by: userId,
-        updated_at: new Date(),
-        version: currentVersion + 1
+        updated_at: new Date()
       };
 
       // 4. Executar a atualização
@@ -126,7 +112,7 @@ export class FinancialAuditService {
   ) {
     return await this.updateDocument(
       documentId,
-      { status: 'approved' },
+      {}, // Removido status que não existe mais
       userId,
       `Aprovação: ${reason}`,
       sessionInfo
@@ -148,7 +134,6 @@ export class FinancialAuditService {
     return await this.updateDocument(
       documentId,
       {
-        status: 'paid',
         paid: true,
         ...paymentData
       },
@@ -170,10 +155,6 @@ export class FinancialAuditService {
     return await this.updateDocument(
       documentId,
       {
-        status: 'archived',
-        archived: true,
-        archived_at: new Date(),
-        archived_by: userId,
         archive_reason: reason
       },
       userId,
