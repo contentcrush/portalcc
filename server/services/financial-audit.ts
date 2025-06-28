@@ -72,11 +72,25 @@ export class FinancialAuditService {
 
       console.log(`[DEBUG_ISSUE_DATE] updateData final antes do SQL:`, JSON.stringify(updateData, null, 2));
 
+      // Filtrar apenas campos que existem na tabela real
+      const allowedFields = ['issue_date', 'due_date', 'payment_date', 'updated_at', 'updated_by'];
+      const filteredUpdateData: any = {};
+      
+      for (const [key, value] of Object.entries(updateData)) {
+        if (allowedFields.includes(key)) {
+          filteredUpdateData[key] = value;
+        } else {
+          console.log(`[DEBUG_ISSUE_DATE] Campo ${key} filtrado (não existe na tabela)`);
+        }
+      }
+      
+      console.log(`[DEBUG_ISSUE_DATE] updateData filtrado:`, JSON.stringify(filteredUpdateData, null, 2));
+
       // Executar a atualização
       console.log(`[DEBUG_ISSUE_DATE] Executando UPDATE no banco...`);
       const [updatedDocument] = await db
         .update(financialDocuments)
-        .set(updateData)
+        .set(filteredUpdateData)
         .where(eq(financialDocuments.id, documentId))
         .returning();
 
