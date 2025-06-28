@@ -39,11 +39,22 @@ export function EditableDate({ documentId, currentDate, fieldName, fieldLabel }:
       };
       
       const response = await apiRequest("PATCH", `/api/financial-documents/${documentId}`, updateData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha na atualização');
+      }
       return await response.json();
     },
     onSuccess: (updatedDocument) => {
       console.log(`[EditableDate] ${fieldLabel} atualizada com sucesso:`, updatedDocument);
+      
+      // Invalidar múltiplas queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['/api/financial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/financial-documents', documentId] });
+      
+      // Forçar refetch imediato
+      queryClient.refetchQueries({ queryKey: ['/api/financial-documents'] });
+      
       showSuccessToast(toast, `${fieldLabel} atualizada com sucesso`);
       setIsEditing(false);
     },
