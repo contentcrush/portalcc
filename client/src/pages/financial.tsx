@@ -111,7 +111,7 @@ import { EditExpenseDialog } from "@/components/financial/EditExpenseDialog";
 import { FinancialTableHeader } from "@/components/financial/FinancialTableHeader";
 import { FinancialStatusBadge } from "@/components/financial/FinancialStatusBadge";
 import { FinancialQuickStats } from "@/components/financial/FinancialQuickStats";
-import { EditableDate } from "@/components/financial/EditableDate";
+import { EditableDateFixed as EditableDate } from "@/components/financial/EditableDateFixed";
 
 // Definição de tipos
 interface Transaction {
