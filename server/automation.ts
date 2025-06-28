@@ -969,11 +969,16 @@ export async function syncFinancialEvents(): Promise<{ success: boolean, message
         )
       );
     
-    // Busca despesas com data futura
+    // Busca despesas não pagas e com data futura
     const expensesList = await db
       .select()
       .from(expenses)
-      .where(gte(expenses.date, new Date()));
+      .where(
+        and(
+          eq(expenses.paid, false),
+          gte(expenses.date, new Date())
+        )
+      );
     
     let eventsCreated = 0;
     

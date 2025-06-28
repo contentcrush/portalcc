@@ -111,7 +111,6 @@ import { EditExpenseDialog } from "@/components/financial/EditExpenseDialog";
 import { FinancialTableHeader } from "@/components/financial/FinancialTableHeader";
 import { FinancialStatusBadge } from "@/components/financial/FinancialStatusBadge";
 import { FinancialQuickStats } from "@/components/financial/FinancialQuickStats";
-import { EditableDateFixed as EditableDate } from "@/components/financial/EditableDateFixed";
 
 // Definição de tipos
 interface Transaction {
@@ -1315,12 +1314,14 @@ export default function Financial() {
                           <TableCell>{client?.name || '-'}</TableCell>
                           <TableCell>{project?.name || '-'}</TableCell>
                           <TableCell>
-                            <EditableDate
-                              documentId={doc.id}
-                              currentDate={doc.issue_date}
-                              fieldName="issue_date"
-                              fieldLabel="Data de Emissão"
-                            />
+                            {/* Data de emissão: mostra sempre se existe no banco */}
+                            {doc.issue_date && doc.issue_date !== null ? (
+                              format(new Date(doc.issue_date), 'dd/MM/yyyy')
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
+                                Sem data
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {doc.due_date ? (

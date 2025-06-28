@@ -302,6 +302,7 @@ export const financialDocuments = pgTable("financial_documents", {
   created_by: integer("created_by").notNull(),
   updated_at: timestamp("updated_at").defaultNow(),
   updated_by: integer("updated_by"),
+  archive_reason: text("archive_reason"),
 });
 
 // Tabela de auditoria para todas as operações financeiras

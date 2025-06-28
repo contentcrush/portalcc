@@ -5,10 +5,11 @@ import crypto from "crypto";
 import type { FinancialDocument, InsertFinancialAuditLog } from "@shared/schema";
 
 /**
- * Serviço de Auditoria Financeira 
+ * Serviço de Auditoria Financeira Profissional
  * 
- * Implementa auditoria e integridade de dados para documentos financeiros
- * adaptado ao schema limpo sem campos status/archived/version.
+ * Implementa controles rigorosos de auditoria, versionamento e integridade
+ * de dados para documentos financeiros, seguindo padrões de sistemas ERP
+ * profissionais como SAP e Oracle Financials.
  */
 export class FinancialAuditService {
   
@@ -27,7 +28,9 @@ export class FinancialAuditService {
         .values({
           ...documentData,
           created_by: userId,
-          updated_by: userId
+          updated_by: userId,
+          status: 'pending',
+          version: 1
         })
         .returning();
 
@@ -47,7 +50,7 @@ export class FinancialAuditService {
   }
 
   /**
-   * Atualiza um documento financeiro com auditoria simplificada
+   * Atualiza um documento financeiro com controle de concorrência e auditoria
    */
   static async updateDocument(
     documentId: number,
@@ -56,57 +59,60 @@ export class FinancialAuditService {
     reason: string,
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
-    try {
-      console.log(`[DEBUG_ISSUE_DATE] ===== FinancialAudit.updateDocument INÍCIO =====`);
-      console.log(`[DEBUG_ISSUE_DATE] DocumentId: ${documentId}`);
-      console.log(`[DEBUG_ISSUE_DATE] Updates recebidos:`, JSON.stringify(updates, null, 2));
-      console.log(`[DEBUG_ISSUE_DATE] UserId: ${userId}`);
-      console.log(`[DEBUG_ISSUE_DATE] Reason: ${reason}`);
-      
-      // Preparar dados da atualização
-      const updateData = {
-        ...updates,
-        updated_by: userId,
-        updated_at: new Date()
-      };
+    return await db.transaction(async (tx) => {
+      // 1. Buscar documento atual para controle de concorrência
+      const [currentDocument] = await tx
+        .select()
+        .from(financialDocuments)
+        .where(eq(financialDocuments.id, documentId));
 
-      console.log(`[DEBUG_ISSUE_DATE] updateData final antes do SQL:`, JSON.stringify(updateData, null, 2));
-
-      // Filtrar apenas campos que existem na tabela real
-      const allowedFields = ['issue_date', 'due_date', 'payment_date', 'updated_at', 'updated_by'];
-      const filteredUpdateData: any = {};
-      
-      for (const [key, value] of Object.entries(updateData)) {
-        if (allowedFields.includes(key)) {
-          filteredUpdateData[key] = value;
-        } else {
-          console.log(`[DEBUG_ISSUE_DATE] Campo ${key} filtrado (não existe na tabela)`);
-        }
-      }
-      
-      console.log(`[DEBUG_ISSUE_DATE] updateData filtrado:`, JSON.stringify(filteredUpdateData, null, 2));
-
-      // Executar a atualização
-      console.log(`[DEBUG_ISSUE_DATE] Executando UPDATE no banco...`);
-      const [updatedDocument] = await db
-        .update(financialDocuments)
-        .set(filteredUpdateData)
-        .where(eq(financialDocuments.id, documentId))
-        .returning();
-
-      console.log(`[DEBUG_ISSUE_DATE] Resultado do UPDATE:`, JSON.stringify(updatedDocument, null, 2));
-
-      if (!updatedDocument) {
-        console.log(`[DEBUG_ISSUE_DATE] ERRO: Documento não encontrado após UPDATE`);
+      if (!currentDocument) {
         throw new Error('Documento financeiro não encontrado');
       }
 
-      console.log(`[DEBUG_ISSUE_DATE] ===== FinancialAudit.updateDocument SUCESSO =====`);
+      // Permitir pagamento de documentos arquivados, mas bloquear outras modificações
+      if (currentDocument.archived && !updates.payment_date) {
+        throw new Error('Não é possível modificar documentos arquivados (exceto para registrar pagamento)');
+      }
+
+      // 2. Verificar se há conflito de versão (otimistic locking)
+      const currentVersion = currentDocument.version || 1;
+      if (updates.version && updates.version !== currentVersion) {
+        throw new Error('Conflito de versão detectado. O documento foi modificado por outro usuário.');
+      }
+
+      // 3. Preparar dados da atualização
+      const updateData = {
+        ...updates,
+        updated_by: userId,
+        updated_at: new Date(),
+        version: currentVersion + 1
+      };
+
+      // 4. Executar a atualização
+      const [updatedDocument] = await tx
+        .update(financialDocuments)
+        .set(updateData)
+        .where(eq(financialDocuments.id, documentId))
+        .returning();
+
+      if (!updatedDocument) {
+        throw new Error('Falha na atualização devido a conflito de concorrência');
+      }
+
+      // 5. Registrar na auditoria
+      await this.logAction(tx, {
+        document_id: documentId,
+        action: 'update',
+        user_id: userId,
+        old_values: currentDocument,
+        new_values: updatedDocument,
+        reason,
+        ...sessionInfo
+      });
+
       return updatedDocument;
-    } catch (error) {
-      console.error(`[FinancialAudit] Erro ao atualizar documento ${documentId}:`, error);
-      throw error;
-    }
+    });
   }
 
   /**
@@ -120,7 +126,7 @@ export class FinancialAuditService {
   ) {
     return await this.updateDocument(
       documentId,
-      {}, // Removido status que não existe mais
+      { status: 'approved' },
       userId,
       `Aprovação: ${reason}`,
       sessionInfo
@@ -142,6 +148,7 @@ export class FinancialAuditService {
     return await this.updateDocument(
       documentId,
       {
+        status: 'paid',
         paid: true,
         ...paymentData
       },
@@ -163,6 +170,10 @@ export class FinancialAuditService {
     return await this.updateDocument(
       documentId,
       {
+        status: 'archived',
+        archived: true,
+        archived_at: new Date(),
+        archived_by: userId,
         archive_reason: reason
       },
       userId,
@@ -182,7 +193,7 @@ export class FinancialAuditService {
   ) {
     return await this.updateDocument(
       documentId,
-      {}, // Removido status que não existe mais
+      { status: 'cancelled' },
       userId,
       `Cancelamento: ${reason}`,
       sessionInfo
@@ -262,7 +273,8 @@ export class FinancialAuditService {
   static async getActiveDocuments() {
     return await db
       .select()
-      .from(financialDocuments);
+      .from(financialDocuments)
+      .where(eq(financialDocuments.archived, false));
   }
 
   /**
@@ -275,16 +287,19 @@ export class FinancialAuditService {
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
     return await db.transaction(async (tx) => {
-      // Buscar documentos do projeto
+      // Buscar documentos ativos do projeto
       const existingDocs = await tx
         .select()
         .from(financialDocuments)
-        .where(eq(financialDocuments.project_id, projectId));
+        .where(and(
+          eq(financialDocuments.project_id, projectId),
+          eq(financialDocuments.archived, false)
+        ));
 
       // Se há mudança no valor do projeto, atualizar documentos pendentes
       if (projectData.value && existingDocs.length > 0) {
         for (const doc of existingDocs) {
-          if (!doc.paid && doc.amount !== projectData.value) {
+          if (doc.status === 'pending' && doc.amount !== projectData.value) {
             await this.updateDocument(
               doc.id,
               { amount: projectData.value },
