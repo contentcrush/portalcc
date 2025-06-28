@@ -2534,6 +2534,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
+      console.log(`[FinancialAPI] PATCH /api/financial-documents/${id}`);
+      console.log(`[FinancialAPI] Dados recebidos:`, JSON.stringify(req.body, null, 2));
+      console.log(`[FinancialAPI] Usuário: ${req.user!.id} (${req.user!.username})`);
+      
+      // Processar datas antes de passar para o serviço
+      const updateData = { ...req.body };
+      
+      // Converter datas string para Date objects se necessário
+      const dateFields = ['issue_date', 'due_date', 'payment_date'];
+      dateFields.forEach(field => {
+        if (updateData[field] && typeof updateData[field] === 'string') {
+          updateData[field] = new Date(updateData[field]);
+          console.log(`[FinancialAPI] Campo ${field} convertido para Date:`, updateData[field]);
+        }
+      });
+      
       // Importar o serviço de auditoria financeira
       const { FinancialAuditService } = await import('./services/financial-audit');
       
@@ -2544,13 +2560,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId: req.sessionID
       };
       
+      console.log(`[FinancialAPI] Chamando FinancialAuditService.updateDocument...`);
       const updatedDocument = await FinancialAuditService.updateDocument(
         id,
-        req.body,
+        updateData,
         req.user!.id,
         req.body.reason || 'Atualização manual via interface',
         sessionInfo
       );
+      
+      console.log(`[FinancialAPI] Documento atualizado:`, JSON.stringify(updatedDocument, null, 2));
       
       if (!updatedDocument) {
         return res.status(404).json({ message: "Financial document not found" });
