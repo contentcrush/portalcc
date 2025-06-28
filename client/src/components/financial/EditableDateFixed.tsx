@@ -32,18 +32,34 @@ export function EditableDateFixed({ documentId, currentDate, fieldName, fieldLab
 
   const updateDateMutation = useMutation({
     mutationFn: async (date: Date | null) => {
-      console.log(`[EditableDateFixed] Atualizando ${fieldName} do documento ${documentId}:`, date);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] ===== INÍCIO updateDateMutation =====`);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] DocumentId: ${documentId}`);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] FieldName: ${fieldName}`);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Date recebida:`, date);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Date tipo:`, typeof date);
       
       const updateData = {
         [fieldName]: date ? date.toISOString() : null
       };
       
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] updateData construído:`, JSON.stringify(updateData, null, 2));
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Fazendo PATCH para: /api/financial-documents/${documentId}`);
+      
       const response = await apiRequest("PATCH", `/api/financial-documents/${documentId}`, updateData);
+      
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Response status:`, response.status);
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Response ok:`, response.ok);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.log(`[DEBUG_ISSUE_DATE_FRONTEND] ERRO response:`, errorData);
         throw new Error(errorData.message || 'Falha na atualização');
       }
-      return await response.json();
+      
+      const result = await response.json();
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] Response data:`, JSON.stringify(result, null, 2));
+      console.log(`[DEBUG_ISSUE_DATE_FRONTEND] ===== FIM updateDateMutation =====`);
+      return result;
     },
     onSuccess: (updatedDocument) => {
       console.log(`[EditableDateFixed] ${fieldLabel} atualizada com sucesso:`, updatedDocument);

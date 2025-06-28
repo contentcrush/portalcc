@@ -2534,21 +2534,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       
-      console.log(`[FinancialAPI] PATCH /api/financial-documents/${id}`);
-      console.log(`[FinancialAPI] Dados recebidos:`, JSON.stringify(req.body, null, 2));
-      console.log(`[FinancialAPI] Usuário: ${req.user!.id} (${req.user!.username})`);
+      console.log(`[DEBUG_ISSUE_DATE] ===== INÍCIO PATCH /api/financial-documents/${id} =====`);
+      console.log(`[DEBUG_ISSUE_DATE] Raw body:`, req.body);
+      console.log(`[DEBUG_ISSUE_DATE] Raw body JSON:`, JSON.stringify(req.body, null, 2));
+      console.log(`[DEBUG_ISSUE_DATE] Content-Type:`, req.get('Content-Type'));
+      console.log(`[DEBUG_ISSUE_DATE] Usuário: ${req.user!.id} (${req.user!.username})`);
       
       // Processar datas antes de passar para o serviço
       const updateData = { ...req.body };
       
-      // Converter datas string para Date objects se necessário
+      // Log detalhado do processamento de datas
       const dateFields = ['issue_date', 'due_date', 'payment_date'];
       dateFields.forEach(field => {
-        if (updateData[field] && typeof updateData[field] === 'string') {
-          updateData[field] = new Date(updateData[field]);
-          console.log(`[FinancialAPI] Campo ${field} convertido para Date:`, updateData[field]);
+        if (updateData[field] !== undefined) {
+          console.log(`[DEBUG_ISSUE_DATE] Campo ${field} - Valor original:`, updateData[field], `(tipo: ${typeof updateData[field]})`);
+          
+          if (updateData[field] && typeof updateData[field] === 'string') {
+            const originalValue = updateData[field];
+            updateData[field] = new Date(updateData[field]);
+            console.log(`[DEBUG_ISSUE_DATE] Campo ${field} convertido:`, originalValue, `->`, updateData[field]);
+          } else if (updateData[field] === null) {
+            console.log(`[DEBUG_ISSUE_DATE] Campo ${field} é NULL - mantendo como null`);
+          }
         }
       });
+      
+      console.log(`[DEBUG_ISSUE_DATE] updateData final:`, JSON.stringify(updateData, null, 2));
       
       // Importar o serviço de auditoria financeira
       const { FinancialAuditService } = await import('./services/financial-audit');
@@ -2557,10 +2568,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionInfo = {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
-        sessionId: req.sessionID
+        sessionId: req.sessionID || 'no-session'
       };
       
-      console.log(`[FinancialAPI] Chamando FinancialAuditService.updateDocument...`);
+      console.log(`[DEBUG_ISSUE_DATE] Chamando FinancialAuditService.updateDocument...`);
       const updatedDocument = await FinancialAuditService.updateDocument(
         id,
         updateData,

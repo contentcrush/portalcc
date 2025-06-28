@@ -57,7 +57,11 @@ export class FinancialAuditService {
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
     try {
-      console.log(`[FinancialAudit] Atualizando documento ${documentId}:`, updates);
+      console.log(`[DEBUG_ISSUE_DATE] ===== FinancialAudit.updateDocument INÍCIO =====`);
+      console.log(`[DEBUG_ISSUE_DATE] DocumentId: ${documentId}`);
+      console.log(`[DEBUG_ISSUE_DATE] Updates recebidos:`, JSON.stringify(updates, null, 2));
+      console.log(`[DEBUG_ISSUE_DATE] UserId: ${userId}`);
+      console.log(`[DEBUG_ISSUE_DATE] Reason: ${reason}`);
       
       // Preparar dados da atualização
       const updateData = {
@@ -66,18 +70,24 @@ export class FinancialAuditService {
         updated_at: new Date()
       };
 
+      console.log(`[DEBUG_ISSUE_DATE] updateData final antes do SQL:`, JSON.stringify(updateData, null, 2));
+
       // Executar a atualização
+      console.log(`[DEBUG_ISSUE_DATE] Executando UPDATE no banco...`);
       const [updatedDocument] = await db
         .update(financialDocuments)
         .set(updateData)
         .where(eq(financialDocuments.id, documentId))
         .returning();
 
+      console.log(`[DEBUG_ISSUE_DATE] Resultado do UPDATE:`, JSON.stringify(updatedDocument, null, 2));
+
       if (!updatedDocument) {
+        console.log(`[DEBUG_ISSUE_DATE] ERRO: Documento não encontrado após UPDATE`);
         throw new Error('Documento financeiro não encontrado');
       }
 
-      console.log(`[FinancialAudit] Documento ${documentId} atualizado com sucesso`);
+      console.log(`[DEBUG_ISSUE_DATE] ===== FinancialAudit.updateDocument SUCESSO =====`);
       return updatedDocument;
     } catch (error) {
       console.error(`[FinancialAudit] Erro ao atualizar documento ${documentId}:`, error);
