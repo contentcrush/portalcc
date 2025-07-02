@@ -70,23 +70,13 @@ export class FinancialAuditService {
         throw new Error('Documento financeiro não encontrado');
       }
 
-      // Permitir pagamento de documentos arquivados, mas bloquear outras modificações
-      if (currentDocument.archived && !updates.payment_date) {
-        throw new Error('Não é possível modificar documentos arquivados (exceto para registrar pagamento)');
-      }
-
-      // 2. Verificar se há conflito de versão (otimistic locking)
-      const currentVersion = currentDocument.version || 1;
-      if (updates.version && updates.version !== currentVersion) {
-        throw new Error('Conflito de versão detectado. O documento foi modificado por outro usuário.');
-      }
-
-      // 3. Preparar dados da atualização
+      // Com o schema simplificado, não há mais campos de arquivamento ou versionamento
+      
+      // 2. Preparar dados da atualização
       const updateData = {
         ...updates,
         updated_by: userId,
-        updated_at: new Date(),
-        version: currentVersion + 1
+        updated_at: new Date()
       };
 
       // 4. Executar a atualização
@@ -124,9 +114,11 @@ export class FinancialAuditService {
     reason: string,
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
+    // Com o schema simplificado, aprovação não precisa modificar campos específicos
+    // Apenas registra a auditoria da aprovação
     return await this.updateDocument(
       documentId,
-      { status: 'approved' },
+      { updated_at: new Date() }, // Apenas atualiza timestamp
       userId,
       `Aprovação: ${reason}`,
       sessionInfo
@@ -148,7 +140,6 @@ export class FinancialAuditService {
     return await this.updateDocument(
       documentId,
       {
-        status: 'paid',
         paid: true,
         ...paymentData
       },
@@ -167,15 +158,11 @@ export class FinancialAuditService {
     reason: string,
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
+    // Com o schema simplificado, o arquivamento é apenas uma operação lógica
+    // registrada na auditoria, sem campos específicos de arquivamento
     return await this.updateDocument(
       documentId,
-      {
-        status: 'archived',
-        archived: true,
-        archived_at: new Date(),
-        archived_by: userId,
-        archive_reason: reason
-      },
+      { updated_at: new Date() }, // Apenas atualiza timestamp
       userId,
       `Arquivamento: ${reason}`,
       sessionInfo
@@ -191,9 +178,11 @@ export class FinancialAuditService {
     reason: string,
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
+    // Com o schema simplificado, cancelamento é apenas uma operação lógica
+    // registrada na auditoria, sem campos específicos de status
     return await this.updateDocument(
       documentId,
-      { status: 'cancelled' },
+      { updated_at: new Date() }, // Apenas atualiza timestamp
       userId,
       `Cancelamento: ${reason}`,
       sessionInfo
@@ -268,13 +257,12 @@ export class FinancialAuditService {
   }
 
   /**
-   * Busca documentos não arquivados para relatórios
+   * Busca todos os documentos ativos para relatórios
    */
   static async getActiveDocuments() {
     return await db
       .select()
-      .from(financialDocuments)
-      .where(eq(financialDocuments.archived, false));
+      .from(financialDocuments);
   }
 
   /**
