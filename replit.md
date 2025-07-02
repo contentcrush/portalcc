@@ -189,6 +189,12 @@ This is a comprehensive project management system built for content production c
    - Fixed server/storage.ts to include issue_date and payment_term in project queries
    - Edit form now properly loads existing issue_date values for projects
 
+5. **MASS CORRECTION**: Applied issue_date standardization across all projects
+   - Updated 17 projects to inherit issue_date from their start_date
+   - Set fallback issue_date for 2 projects without start_date (Filmagem Convenção, Therezópolis Session IPA)
+   - Synchronized 16 financial documents with updated project dates
+   - All 31 projects now have consistent issue_date values for proper financial tracking
+
 ### July 02, 2025 - Payment Confirmation Bug Fixed  
 1. **RESOLVED**: Critical payment confirmation error "Falha ao registrar pagamento"
    - Fixed FinancialAuditService.markAsPaid method attempting to update removed `status` field
