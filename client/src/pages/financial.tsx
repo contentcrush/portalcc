@@ -483,8 +483,8 @@ export default function Financial() {
         } else if (isBefore(dueDate, sevenDaysFromNow)) {
           acc.next7Days.amount += amount;
           acc.next7Days.docs.push(doc);
-        } else if (isBefore(dueDate, thirtyDaysFromNow)) {
-          // Próximos 30 dias = todos os documentos até 30 dias (incluindo os 7 dias)
+        } else if (dueDate >= today && dueDate <= thirtyDaysFromNow) {
+          // Próximos 30 dias = documentos com vencimento entre hoje e 30 dias
           acc.next30Days.amount += amount;
           acc.next30Days.docs.push(doc);
         }
