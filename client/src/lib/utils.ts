@@ -597,18 +597,25 @@ export function getNormalizedProjectStatus(project: Project | undefined | null):
 }
 
 /**
- * Verifica se um projeto tem um status especial (atrasado, pausado, cancelado)
- * mas deve ter suas etapas de produção interativas.
+ * Verifica se um projeto permite interação com suas etapas de produção.
+ * Projetos cancelados não devem ter etapas interativas.
+ * Projetos normais, atrasados ou pausados devem ter etapas interativas.
  * 
  * @param project O objeto do projeto
- * @returns Se o projeto tem status especial mas etapas interativas
+ * @returns Se o projeto permite interação com suas etapas
  */
 export function hasInteractiveStages(project: Project | undefined | null): boolean {
   if (!project) return false;
   
   const { specialStatus } = getNormalizedProjectStatus(project);
-  // Se tiver um status especial, as etapas devem estar interativas
-  return specialStatus !== null;
+  
+  // Projetos cancelados não devem ter etapas interativas
+  if (specialStatus === 'cancelado' || project.special_status === 'canceled') {
+    return false;
+  }
+  
+  // Todos os outros projetos (normais, atrasados, pausados) devem ter etapas interativas
+  return true;
 }
 
 export function calculateTaskDaysOverdue(task: Task): number {

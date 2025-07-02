@@ -189,6 +189,24 @@ This is a comprehensive project management system built for content production c
    - Fixed server/storage.ts to include issue_date and payment_term in project queries
    - Edit form now properly loads existing issue_date values for projects
 
+### July 02, 2025 - User Permission and Interface Interaction Bugs Fixed
+1. **RESOLVED**: Renata's permission system blocking operations
+   - Fixed empty permissions array `[]` for admin user Renata (ID: 9)
+   - Added complete admin permissions to resolve authentication middleware issues
+   - Corrected project creation, deletion, and status change permissions
+
+2. **RESOLVED**: Critical UI interaction bug in project status changes
+   - Fixed inverted logic in `hasInteractiveStages()` function
+   - Issue: Normal projects had `opacity-80` making buttons appear disabled
+   - Root cause: Function returned `false` for projects without special status
+   - Solution: Now returns `true` for all projects except canceled ones
+   - Impact: All project status transitions now work properly in the interface
+
+3. **ENHANCED**: Project status interaction reliability
+   - Improved visual feedback for available actions
+   - Clear distinction between interactive and disabled project stages
+   - Status change to "Proposta Aceita" now works seamlessly for all users
+
 ### July 02, 2025 - Payment Confirmation Bug Fixed  
 1. **RESOLVED**: Critical payment confirmation error "Falha ao registrar pagamento"
    - Fixed FinancialAuditService.markAsPaid method attempting to update removed `status` field
