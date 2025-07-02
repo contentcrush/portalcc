@@ -167,7 +167,24 @@ This is a comprehensive project management system built for content production c
    - **payment_date**: Data efetiva do recebimento (quando o dinheiro foi recebido)
    - Mantidas as três datas por serem essenciais para controle financeiro completo
 
-### July 02, 2025 - Payment Confirmation Bug Fixed
+### July 02, 2025 - Critical Date Emission Registration Bug Fixed
+1. **RESOLVED**: Critical bug in financial document date synchronization system
+   - Fixed syncProjectDatesWithFinancialDocuments function missing `issue_date` update
+   - Root cause: automation was only updating `due_date` but not `issue_date` for financial documents
+   - Projects had correct issue_date but documents showed "Sem data" due to NULL issue_date field
+   - Corrected documents for Diego Hypólito (ID: 43) and Seara Gourmet Tenis Arena BTG (ID: 35)
+
+2. **TECHNICAL DETAILS**: Bug was in server/automation.ts line 255-260
+   - Missing: `issue_date: formattedIssueDate` in database update operation
+   - All future project date changes will now properly sync issue_date to financial documents
+   - Manual correction applied to existing affected documents via SQL update
+
+3. **ENHANCED**: Date synchronization system reliability
+   - Financial documents now properly inherit issue_date from parent project
+   - System maintains accurate "Data de Emissão" display across all interfaces
+   - Fixed inconsistency between project dates and financial document dates
+
+### July 02, 2025 - Payment Confirmation Bug Fixed  
 1. **RESOLVED**: Critical payment confirmation error "Falha ao registrar pagamento"
    - Fixed FinancialAuditService.markAsPaid method attempting to update removed `status` field
    - Corrected all audit service methods to work with simplified schema (no status, version, archived fields)

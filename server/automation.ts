@@ -254,7 +254,8 @@ export async function syncProjectDatesWithFinancialDocuments(projectId: number) 
           if (!doc.paid) {
             await db.update(financialDocuments)
               .set({
-                // Removida referência a creation_date
+                // ✅ CORRIGIDO: Agora atualiza o issue_date dos documentos financeiros
+                issue_date: formattedIssueDate,
                 due_date: dueDate,
                 description: `Fatura referente ao projeto: ${project.name} (Prazo: ${paymentTerm} dias)`
               })
