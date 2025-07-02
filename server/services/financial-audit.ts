@@ -29,8 +29,7 @@ export class FinancialAuditService {
           ...documentData,
           created_by: userId,
           updated_by: userId,
-          status: 'pending',
-          version: 1
+          paid: false // Schema simplificado usa apenas paid boolean
         })
         .returning();
 
@@ -275,19 +274,19 @@ export class FinancialAuditService {
     sessionInfo: { ip?: string; userAgent?: string; sessionId?: string } = {}
   ) {
     return await db.transaction(async (tx) => {
-      // Buscar documentos ativos do projeto
+      // Buscar todos os documentos não pagos do projeto
       const existingDocs = await tx
         .select()
         .from(financialDocuments)
         .where(and(
           eq(financialDocuments.project_id, projectId),
-          eq(financialDocuments.archived, false)
+          eq(financialDocuments.paid, false)
         ));
 
       // Se há mudança no valor do projeto, atualizar documentos pendentes
       if (projectData.value && existingDocs.length > 0) {
         for (const doc of existingDocs) {
-          if (doc.status === 'pending' && doc.amount !== projectData.value) {
+          if (doc.amount !== projectData.value) {
             await this.updateDocument(
               doc.id,
               { amount: projectData.value },

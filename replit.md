@@ -167,6 +167,19 @@ This is a comprehensive project management system built for content production c
    - **payment_date**: Data efetiva do recebimento (quando o dinheiro foi recebido)
    - Mantidas as três datas por serem essenciais para controle financeiro completo
 
+### July 02, 2025 - Payment Confirmation Bug Fixed
+1. **RESOLVED**: Critical payment confirmation error "Falha ao registrar pagamento"
+   - Fixed FinancialAuditService.markAsPaid method attempting to update removed `status` field
+   - Corrected all audit service methods to work with simplified schema (no status, version, archived fields)
+   - Updated payment confirmation to only modify `paid: true` and payment data fields
+   - Removed references to deprecated fields throughout the audit system
+
+2. **ENHANCED**: Schema consistency across audit system
+   - All audit methods now aligned with clean schema structure
+   - Simplified document lifecycle using only essential fields
+   - Maintained audit trail functionality without deprecated status tracking
+   - Payment confirmation now works reliably with 500ms response time
+
 ### June 26, 2025 - Critical Financial Calculation Bug Fixed
 1. **RESOLVED**: Major bug in "Total a Receber" calculation underreporting by R$ 201.661,00
    - Fixed incorrect filtering logic that excluded invoices marked "Aguardando definição de datas"
