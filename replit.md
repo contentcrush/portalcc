@@ -184,6 +184,11 @@ This is a comprehensive project management system built for content production c
    - System maintains accurate "Data de Emissão" display across all interfaces
    - Fixed inconsistency between project dates and financial document dates
 
+4. **RESOLVED**: Project edit form not showing issue_date values
+   - Root cause: getProjects() API missing issue_date and payment_term in field selection
+   - Fixed server/storage.ts to include issue_date and payment_term in project queries
+   - Edit form now properly loads existing issue_date values for projects
+
 ### July 02, 2025 - Payment Confirmation Bug Fixed  
 1. **RESOLVED**: Critical payment confirmation error "Falha ao registrar pagamento"
    - Fixed FinancialAuditService.markAsPaid method attempting to update removed `status` field

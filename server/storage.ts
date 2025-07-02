@@ -1968,7 +1968,10 @@ export class DatabaseStorage implements IStorage {
         startDate: projects.startDate,
         endDate: projects.endDate,
         progress: projects.progress,
-        thumbnail: projects.thumbnail
+        thumbnail: projects.thumbnail,
+        // ✅ CORRIGIDO: Incluindo issue_date e payment_term na seleção
+        issue_date: projects.issue_date,
+        payment_term: projects.payment_term
       }).from(projects)
         .orderBy(desc(projects.creation_date || projects.id));
       
